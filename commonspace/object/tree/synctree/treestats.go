@@ -25,9 +25,13 @@ func (t *TreeStatsCollector) Register(tree *syncTree) {
 
 func (t *TreeStatsCollector) Collect() []TreeStats {
 	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	stats := make([]TreeStats, 0, len(t.trees))
+	trees := make([]*syncTree, 0, len(t.trees))
 	for _, tree := range t.trees {
+		trees = append(trees, tree)
+	}
+	t.mutex.Unlock()
+	stats := make([]TreeStats, 0, len(t.trees))
+	for _, tree := range trees {
 		tree.Lock()
 		stats = append(stats, TreeStats{
 			TreeLen:         tree.Len(),

@@ -31,13 +31,14 @@ var (
 	// ProtoVersion 4 - new sync compatible version
 	// ProtoVersion 5 - sync with no entry space
 	// ProtoVersion 6 - sync with key value messages
-	CompatibleVersion = uint32(4)
-	ProtoVersion      = uint32(5)
-	KeyValueVersion   = uint32(6)
+	// ProtoVersion 7 - sync with new invites
+	CompatibleVersion = uint32(5)
+	ProtoVersion      = uint32(6)
+	NewInvitesVersion = uint32(7)
 )
 
 var (
-	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion, KeyValueVersion}
+	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion, NewInvitesVersion}
 )
 
 func New() SecureService {

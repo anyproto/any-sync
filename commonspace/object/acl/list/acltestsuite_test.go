@@ -53,6 +53,7 @@ func TestAclExecutor(t *testing.T) {
 		{"a.init::a", nil},
 		// creating an invite
 		{"a.invite::invId", nil},
+		{"a.invite_anyone::oldInvId,r", nil},
 		// cannot self join
 		{"a.join::invId", ErrInsufficientPermissions},
 		// now b can join
@@ -89,7 +90,7 @@ func TestAclExecutor(t *testing.T) {
 		{"g.join::inv1Id", nil},
 		{"g.cancel::g", nil},
 		// e cannot approve cancelled request
-		{"e.approve::g,rw", fmt.Errorf("no join records for approve")},
+		{"e.approve::g,rw", fmt.Errorf("no join records to approve")},
 		{"g.join::inv1Id", nil},
 		{"e.decline::g", nil},
 		// g cannot cancel declined request
@@ -128,6 +129,27 @@ func TestAclExecutor(t *testing.T) {
 		{"a.changes::guest,none", ErrInsufficientPermissions},
 		// can't change permission of existing user to guest, should be only possible to create it with add
 		{"a.changes::r,g", ErrInsufficientPermissions},
+		{"a.invite_anyone::invAnyoneId,rw", nil},
+		{"new.invite_join::invAnyoneId", nil},
+		// invite keys persist after user removal
+		{"a.remove::new", nil},
+		{"new1.invite_join::invAnyoneId", nil},
+		{"a.revoke::invAnyoneId", nil},
+		{"new2.invite_join::invAnyoneId", ErrNoSuchInvite},
+		{"a.invite_change::oldInvId,a", nil},
+		{"new2.invite_join::oldInvId", nil},
+		{"new2.add::new3,r,new3m", nil},
+		{"a.batch::revoke:oldInvId;invite_anyone:someId,a", nil},
+		{"new4.invite_join::someId", nil},
+		{"new4.add::super,r,superm", nil},
+		// check that users can't join using request to join for anyone can join links
+		{"new5.join::someId", ErrNoSuchInvite},
+		{"a.invite::requestJoinId", nil},
+		{"joiner.join::requestJoinId", nil},
+		// check that users can join under a different link even after they created a request to join
+		{"joiner.invite_join::someId", nil},
+		// check that they can't be approved after they joined under a different link
+		{"a.approve::joiner,rw", fmt.Errorf("no join records to approve")},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

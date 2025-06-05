@@ -130,14 +130,13 @@ type objectTree struct {
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
 	newChangesBuf   []*Change
 	newSnapshotsBuf []*Change
-	notSeenIdxBuf   []int
 
 	snapshotPath []string
 
 	sync.Mutex
 }
 
-func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (err error) {
+func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (added []*Change, err error) {
 	var (
 		ourPath []string
 		oldTree = ot.tree
@@ -146,10 +145,10 @@ func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string,
 		// TODO: add error handling
 		ourPath, err = ot.SnapshotPath()
 		if err != nil {
-			return fmt.Errorf("rebuild from storage: %w", err)
+			return nil, fmt.Errorf("rebuild from storage: %w", err)
 		}
 	}
-	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
+	ot.tree, added, err = ot.treeBuilder.buildWithAdded(treeBuilderOpts{
 		theirHeads:        theirHeads,
 		ourSnapshotPath:   ourPath,
 		theirSnapshotPath: theirSnapshotPath,
@@ -178,7 +177,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string,
 
 	// it is a good question whether we need to validate everything
 	// because maybe we can trust the stuff that is already in the storage
-	return ot.validateTree(nil)
+	return added, ot.validateTree(nil)
 }
 
 func (ot *objectTree) Id() string {
@@ -406,7 +405,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 	}
 
 	rollback := func() {
-		rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
+		_, rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 		if rebuildErr != nil {
 			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 		}
@@ -436,7 +435,6 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
 	// resetting buffers
 	ot.newChangesBuf = ot.newChangesBuf[:0]
-	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
 	ot.difSnapshotBuf = ot.difSnapshotBuf[:0]
 	ot.newSnapshotsBuf = ot.newSnapshotsBuf[:0]
 
@@ -453,7 +451,7 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	)
 
 	// filtering changes, verifying and unmarshalling them
-	for idx, ch := range changesPayload.RawChanges {
+	for _, ch := range changesPayload.RawChanges {
 		// not unmarshalling the changes if they were already added either as unattached or attached
 		if _, exists := ot.tree.attached[ch.Id]; exists {
 			continue
@@ -468,16 +466,16 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 				return
 			}
 		}
+		change.rawChange = ch
 
 		if change.IsSnapshot {
 			ot.newSnapshotsBuf = append(ot.newSnapshotsBuf, change)
 		}
 		ot.newChangesBuf = append(ot.newChangesBuf, change)
-		ot.notSeenIdxBuf = append(ot.notSeenIdxBuf, idx)
 	}
 
 	// if no new changes, then returning
-	if len(ot.notSeenIdxBuf) == 0 {
+	if len(ot.newChangesBuf) == 0 {
 		addResult = AddResult{
 			OldHeads: prevHeadsCopy,
 			Heads:    prevHeadsCopy,
@@ -491,7 +489,7 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 		headsToUse    = changesPayload.NewHeads
 	)
 	// if our validator provides filtering mechanism then we use it
-	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
+	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf = ot.validator.FilterChanges(ot.aclList, ot.newChangesBuf, ot.newSnapshotsBuf)
 	if filteredHeads {
 		// if we filtered some of the heads, then we don't know which heads to use
 		headsToUse = []string{}
@@ -553,22 +551,23 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	}
 	log := log.With(zap.String("treeId", ot.id))
 	if shouldRebuildFromStorage {
-		err = ot.rebuildFromStorage(headsToUse, changesPayload.SnapshotPath, ot.newChangesBuf)
+		var added []*Change
+		added, err = ot.rebuildFromStorage(headsToUse, changesPayload.SnapshotPath, ot.newChangesBuf)
 		if err != nil {
 			log.Error("failed to rebuild with new heads", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// rebuilding without new changes
-			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
+			_, rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild from storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, changesPayload.RawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, added)
 		if err != nil {
 			log.Error("failed to create add result", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
+			_, rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
@@ -595,12 +594,12 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 			err = fmt.Errorf("%w: %w", ErrHasInvalidChanges, err)
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, mode, changesPayload.RawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
 			rollback(treeChangesAdded)
-			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
+			_, rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild after add result (add to tree)", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
@@ -610,43 +609,27 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	}
 }
 
-func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
-	headsCopy := func() []string {
-		newHeads := make([]string, 0, len(ot.tree.Heads()))
-		newHeads = append(newHeads, ot.tree.Heads()...)
-		return newHeads
-	}
-
-	// returns changes that we added to the tree as attached this round
-	// they can include not only the changes that were added now,
-	// but also the changes that were previously in the tree
-	getAddedChanges := func() (added []StorageChange, err error) {
-		for _, idx := range ot.notSeenIdxBuf {
-			rawChange := rawChanges[idx]
-			if ch, exists := ot.tree.attached[rawChange.Id]; exists {
-				ot.flusher.MarkNewChange(ch)
-				added = append(added, StorageChange{
-					RawChange:       rawChange.RawChange,
-					PrevIds:         ch.PreviousIds,
-					Id:              ch.Id,
-					SnapshotCounter: ch.SnapshotCounter,
-					SnapshotId:      ch.SnapshotId,
-					OrderId:         ch.OrderId,
-					ChangeSize:      len(rawChange.RawChange),
-				})
-			}
-		}
-		return
-	}
-
+func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, changes []*Change) (addResult AddResult, err error) {
+	newHeads := make([]string, 0, len(ot.tree.Heads()))
+	newHeads = append(newHeads, ot.tree.Heads()...)
 	var added []StorageChange
-	added, err = getAddedChanges()
-	if err != nil {
-		return
+	for _, ch := range changes {
+		rawChange := ch.rawChange
+		ot.flusher.MarkNewChange(ch)
+		added = append(added, StorageChange{
+			RawChange:       rawChange.RawChange,
+			PrevIds:         ch.PreviousIds,
+			Id:              ch.Id,
+			SnapshotCounter: ch.SnapshotCounter,
+			SnapshotId:      ch.SnapshotId,
+			OrderId:         ch.OrderId,
+			ChangeSize:      len(rawChange.RawChange),
+		})
+		ch.rawChange = nil
 	}
 	addResult = AddResult{
 		OldHeads: oldHeads,
-		Heads:    headsCopy(),
+		Heads:    newHeads,
 		Added:    added,
 		Mode:     mode,
 	}

@@ -22,6 +22,31 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+type AclInviteType int32
+
+const (
+	AclInviteType_RequestToJoin AclInviteType = 0
+	AclInviteType_AnyoneCanJoin AclInviteType = 1
+)
+
+var AclInviteType_name = map[int32]string{
+	0: "RequestToJoin",
+	1: "AnyoneCanJoin",
+}
+
+var AclInviteType_value = map[string]int32{
+	"RequestToJoin": 0,
+	"AnyoneCanJoin": 1,
+}
+
+func (x AclInviteType) String() string {
+	return proto.EnumName(AclInviteType_name, int32(x))
+}
+
+func (AclInviteType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{0}
+}
+
 // AclUserPermissions contains different possible user roles
 type AclUserPermissions int32
 
@@ -57,7 +82,7 @@ func (x AclUserPermissions) String() string {
 }
 
 func (AclUserPermissions) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{0}
+	return fileDescriptor_c8e9f754f34e929b, []int{1}
 }
 
 // AclRoot is a root of access control list
@@ -179,7 +204,10 @@ func (m *AclRoot) GetEncryptedOwnerMetadata() []byte {
 
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 type AclAccountInvite struct {
-	InviteKey []byte `protobuf:"bytes,1,opt,name=inviteKey,proto3" json:"inviteKey,omitempty"`
+	InviteKey        []byte             `protobuf:"bytes,1,opt,name=inviteKey,proto3" json:"inviteKey,omitempty"`
+	InviteType       AclInviteType      `protobuf:"varint,2,opt,name=inviteType,proto3,enum=aclrecord.AclInviteType" json:"inviteType,omitempty"`
+	Permissions      AclUserPermissions `protobuf:"varint,3,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
+	EncryptedReadKey []byte             `protobuf:"bytes,4,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 }
 
 func (m *AclAccountInvite) Reset()         { *m = AclAccountInvite{} }
@@ -230,6 +258,87 @@ func (m *AclAccountInvite) GetInviteKey() []byte {
 	return nil
 }
 
+func (m *AclAccountInvite) GetInviteType() AclInviteType {
+	if m != nil {
+		return m.InviteType
+	}
+	return AclInviteType_RequestToJoin
+}
+
+func (m *AclAccountInvite) GetPermissions() AclUserPermissions {
+	if m != nil {
+		return m.Permissions
+	}
+	return AclUserPermissions_None
+}
+
+func (m *AclAccountInvite) GetEncryptedReadKey() []byte {
+	if m != nil {
+		return m.EncryptedReadKey
+	}
+	return nil
+}
+
+type AclAccountInviteChange struct {
+	InviteRecordId string             `protobuf:"bytes,1,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
+	Permissions    AclUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
+}
+
+func (m *AclAccountInviteChange) Reset()         { *m = AclAccountInviteChange{} }
+func (m *AclAccountInviteChange) String() string { return proto.CompactTextString(m) }
+func (*AclAccountInviteChange) ProtoMessage()    {}
+func (*AclAccountInviteChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{2}
+}
+func (m *AclAccountInviteChange) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountInviteChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountInviteChange.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountInviteChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+func (m *AclAccountInviteChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountInviteChange.Merge(m, src)
+}
+func (m *AclAccountInviteChange) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountInviteChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountInviteChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountInviteChange proto.InternalMessageInfo
+
+func (m *AclAccountInviteChange) GetInviteRecordId() string {
+	if m != nil {
+		return m.InviteRecordId
+	}
+	return ""
+}
+
+func (m *AclAccountInviteChange) GetPermissions() AclUserPermissions {
+	if m != nil {
+		return m.Permissions
+	}
+	return AclUserPermissions_None
+}
+
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
 type AclAccountRequestJoin struct {
 	InviteIdentity          []byte `protobuf:"bytes,1,opt,name=inviteIdentity,proto3" json:"inviteIdentity,omitempty"`
@@ -243,7 +352,7 @@ func (m *AclAccountRequestJoin) Reset()         { *m = AclAccountRequestJoin{} }
 func (m *AclAccountRequestJoin) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRequestJoin) ProtoMessage()    {}
 func (*AclAccountRequestJoin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{2}
+	return fileDescriptor_c8e9f754f34e929b, []int{3}
 }
 func (m *AclAccountRequestJoin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -308,6 +417,93 @@ func (m *AclAccountRequestJoin) GetMetadata() []byte {
 	return nil
 }
 
+// AclInviteJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
+// The person must encrypt the key with its own public key
+type AclAccountInviteJoin struct {
+	Identity                []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	InviteRecordId          string `protobuf:"bytes,2,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
+	InviteIdentitySignature []byte `protobuf:"bytes,3,opt,name=inviteIdentitySignature,proto3" json:"inviteIdentitySignature,omitempty"`
+	// Metadata is encrypted with metadata key of the space
+	Metadata         []byte `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	EncryptedReadKey []byte `protobuf:"bytes,5,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
+}
+
+func (m *AclAccountInviteJoin) Reset()         { *m = AclAccountInviteJoin{} }
+func (m *AclAccountInviteJoin) String() string { return proto.CompactTextString(m) }
+func (*AclAccountInviteJoin) ProtoMessage()    {}
+func (*AclAccountInviteJoin) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{4}
+}
+func (m *AclAccountInviteJoin) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountInviteJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountInviteJoin.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountInviteJoin) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+func (m *AclAccountInviteJoin) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountInviteJoin.Merge(m, src)
+}
+func (m *AclAccountInviteJoin) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountInviteJoin) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountInviteJoin.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountInviteJoin proto.InternalMessageInfo
+
+func (m *AclAccountInviteJoin) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *AclAccountInviteJoin) GetInviteRecordId() string {
+	if m != nil {
+		return m.InviteRecordId
+	}
+	return ""
+}
+
+func (m *AclAccountInviteJoin) GetInviteIdentitySignature() []byte {
+	if m != nil {
+		return m.InviteIdentitySignature
+	}
+	return nil
+}
+
+func (m *AclAccountInviteJoin) GetMetadata() []byte {
+	if m != nil {
+		return m.Metadata
+	}
+	return nil
+}
+
+func (m *AclAccountInviteJoin) GetEncryptedReadKey() []byte {
+	if m != nil {
+		return m.EncryptedReadKey
+	}
+	return nil
+}
+
 // AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
 type AclAccountRequestAccept struct {
 	Identity         []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
@@ -320,7 +516,7 @@ func (m *AclAccountRequestAccept) Reset()         { *m = AclAccountRequestAccept
 func (m *AclAccountRequestAccept) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRequestAccept) ProtoMessage()    {}
 func (*AclAccountRequestAccept) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{3}
+	return fileDescriptor_c8e9f754f34e929b, []int{5}
 }
 func (m *AclAccountRequestAccept) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -394,7 +590,7 @@ func (m *AclAccountRequestDecline) Reset()         { *m = AclAccountRequestDecli
 func (m *AclAccountRequestDecline) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRequestDecline) ProtoMessage()    {}
 func (*AclAccountRequestDecline) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{4}
+	return fileDescriptor_c8e9f754f34e929b, []int{6}
 }
 func (m *AclAccountRequestDecline) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -447,7 +643,7 @@ func (m *AclAccountInviteRevoke) Reset()         { *m = AclAccountInviteRevoke{}
 func (m *AclAccountInviteRevoke) String() string { return proto.CompactTextString(m) }
 func (*AclAccountInviteRevoke) ProtoMessage()    {}
 func (*AclAccountInviteRevoke) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{5}
+	return fileDescriptor_c8e9f754f34e929b, []int{7}
 }
 func (m *AclAccountInviteRevoke) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -501,7 +697,7 @@ func (m *AclEncryptedReadKey) Reset()         { *m = AclEncryptedReadKey{} }
 func (m *AclEncryptedReadKey) String() string { return proto.CompactTextString(m) }
 func (*AclEncryptedReadKey) ProtoMessage()    {}
 func (*AclEncryptedReadKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{6}
+	return fileDescriptor_c8e9f754f34e929b, []int{8}
 }
 func (m *AclEncryptedReadKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -561,7 +757,7 @@ func (m *AclAccountPermissionChanges) Reset()         { *m = AclAccountPermissio
 func (m *AclAccountPermissionChanges) String() string { return proto.CompactTextString(m) }
 func (*AclAccountPermissionChanges) ProtoMessage()    {}
 func (*AclAccountPermissionChanges) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{7}
+	return fileDescriptor_c8e9f754f34e929b, []int{9}
 }
 func (m *AclAccountPermissionChanges) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -614,7 +810,7 @@ func (m *AclAccountsAdd) Reset()         { *m = AclAccountsAdd{} }
 func (m *AclAccountsAdd) String() string { return proto.CompactTextString(m) }
 func (*AclAccountsAdd) ProtoMessage()    {}
 func (*AclAccountsAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{8}
+	return fileDescriptor_c8e9f754f34e929b, []int{10}
 }
 func (m *AclAccountsAdd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -670,7 +866,7 @@ func (m *AclAccountAdd) Reset()         { *m = AclAccountAdd{} }
 func (m *AclAccountAdd) String() string { return proto.CompactTextString(m) }
 func (*AclAccountAdd) ProtoMessage()    {}
 func (*AclAccountAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{9}
+	return fileDescriptor_c8e9f754f34e929b, []int{11}
 }
 func (m *AclAccountAdd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -744,7 +940,7 @@ func (m *AclAccountRequestCancel) Reset()         { *m = AclAccountRequestCancel
 func (m *AclAccountRequestCancel) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRequestCancel) ProtoMessage()    {}
 func (*AclAccountRequestCancel) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{10}
+	return fileDescriptor_c8e9f754f34e929b, []int{12}
 }
 func (m *AclAccountRequestCancel) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -798,7 +994,7 @@ func (m *AclAccountPermissionChange) Reset()         { *m = AclAccountPermission
 func (m *AclAccountPermissionChange) String() string { return proto.CompactTextString(m) }
 func (*AclAccountPermissionChange) ProtoMessage()    {}
 func (*AclAccountPermissionChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{11}
+	return fileDescriptor_c8e9f754f34e929b, []int{13}
 }
 func (m *AclAccountPermissionChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -856,14 +1052,15 @@ type AclReadKeyChange struct {
 	// EncryptedMetadataPrivKey is encrypted with new read key
 	EncryptedMetadataPrivKey []byte `protobuf:"bytes,3,opt,name=encryptedMetadataPrivKey,proto3" json:"encryptedMetadataPrivKey,omitempty"`
 	// EncryptedOldReadKey is encrypted with new read key
-	EncryptedOldReadKey []byte `protobuf:"bytes,4,opt,name=encryptedOldReadKey,proto3" json:"encryptedOldReadKey,omitempty"`
+	EncryptedOldReadKey []byte                 `protobuf:"bytes,4,opt,name=encryptedOldReadKey,proto3" json:"encryptedOldReadKey,omitempty"`
+	InviteKeys          []*AclEncryptedReadKey `protobuf:"bytes,5,rep,name=inviteKeys,proto3" json:"inviteKeys,omitempty"`
 }
 
 func (m *AclReadKeyChange) Reset()         { *m = AclReadKeyChange{} }
 func (m *AclReadKeyChange) String() string { return proto.CompactTextString(m) }
 func (*AclReadKeyChange) ProtoMessage()    {}
 func (*AclReadKeyChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{12}
+	return fileDescriptor_c8e9f754f34e929b, []int{14}
 }
 func (m *AclReadKeyChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -928,6 +1125,13 @@ func (m *AclReadKeyChange) GetEncryptedOldReadKey() []byte {
 	return nil
 }
 
+func (m *AclReadKeyChange) GetInviteKeys() []*AclEncryptedReadKey {
+	if m != nil {
+		return m.InviteKeys
+	}
+	return nil
+}
+
 // AclAccountRemove removes an account and changes read key for space
 type AclAccountRemove struct {
 	Identities    [][]byte          `protobuf:"bytes,1,rep,name=identities,proto3" json:"identities,omitempty"`
@@ -938,7 +1142,7 @@ func (m *AclAccountRemove) Reset()         { *m = AclAccountRemove{} }
 func (m *AclAccountRemove) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRemove) ProtoMessage()    {}
 func (*AclAccountRemove) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{13}
+	return fileDescriptor_c8e9f754f34e929b, []int{15}
 }
 func (m *AclAccountRemove) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -997,7 +1201,7 @@ func (m *AclAccountRequestRemove) Reset()         { *m = AclAccountRequestRemove
 func (m *AclAccountRequestRemove) String() string { return proto.CompactTextString(m) }
 func (*AclAccountRequestRemove) ProtoMessage()    {}
 func (*AclAccountRequestRemove) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{14}
+	return fileDescriptor_c8e9f754f34e929b, []int{16}
 }
 func (m *AclAccountRequestRemove) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1050,6 +1254,8 @@ type AclContentValue struct {
 	//	*AclContentValue_PermissionChanges
 	//	*AclContentValue_AccountsAdd
 	//	*AclContentValue_RequestCancel
+	//	*AclContentValue_InviteJoin
+	//	*AclContentValue_InviteChange
 	Value isAclContentValueValue `protobuf_oneof:"value"`
 }
 
@@ -1057,7 +1263,7 @@ func (m *AclContentValue) Reset()         { *m = AclContentValue{} }
 func (m *AclContentValue) String() string { return proto.CompactTextString(m) }
 func (*AclContentValue) ProtoMessage()    {}
 func (*AclContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{15}
+	return fileDescriptor_c8e9f754f34e929b, []int{17}
 }
 func (m *AclContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1136,6 +1342,12 @@ type AclContentValue_AccountsAdd struct {
 type AclContentValue_RequestCancel struct {
 	RequestCancel *AclAccountRequestCancel `protobuf:"bytes,12,opt,name=requestCancel,proto3,oneof" json:"requestCancel,omitempty"`
 }
+type AclContentValue_InviteJoin struct {
+	InviteJoin *AclAccountInviteJoin `protobuf:"bytes,13,opt,name=inviteJoin,proto3,oneof" json:"inviteJoin,omitempty"`
+}
+type AclContentValue_InviteChange struct {
+	InviteChange *AclAccountInviteChange `protobuf:"bytes,14,opt,name=inviteChange,proto3,oneof" json:"inviteChange,omitempty"`
+}
 
 func (*AclContentValue_Invite) isAclContentValueValue()               {}
 func (*AclContentValue_InviteRevoke) isAclContentValueValue()         {}
@@ -1149,6 +1361,8 @@ func (*AclContentValue_AccountRequestRemove) isAclContentValueValue() {}
 func (*AclContentValue_PermissionChanges) isAclContentValueValue()    {}
 func (*AclContentValue_AccountsAdd) isAclContentValueValue()          {}
 func (*AclContentValue_RequestCancel) isAclContentValueValue()        {}
+func (*AclContentValue_InviteJoin) isAclContentValueValue()           {}
+func (*AclContentValue_InviteChange) isAclContentValueValue()         {}
 
 func (m *AclContentValue) GetValue() isAclContentValueValue {
 	if m != nil {
@@ -1241,6 +1455,20 @@ func (m *AclContentValue) GetRequestCancel() *AclAccountRequestCancel {
 	return nil
 }
 
+func (m *AclContentValue) GetInviteJoin() *AclAccountInviteJoin {
+	if x, ok := m.GetValue().(*AclContentValue_InviteJoin); ok {
+		return x.InviteJoin
+	}
+	return nil
+}
+
+func (m *AclContentValue) GetInviteChange() *AclAccountInviteChange {
+	if x, ok := m.GetValue().(*AclContentValue_InviteChange); ok {
+		return x.InviteChange
+	}
+	return nil
+}
+
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*AclContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
@@ -1256,6 +1484,8 @@ func (*AclContentValue) XXX_OneofWrappers() []interface{} {
 		(*AclContentValue_PermissionChanges)(nil),
 		(*AclContentValue_AccountsAdd)(nil),
 		(*AclContentValue_RequestCancel)(nil),
+		(*AclContentValue_InviteJoin)(nil),
+		(*AclContentValue_InviteChange)(nil),
 	}
 }
 
@@ -1268,7 +1498,7 @@ func (m *AclData) Reset()         { *m = AclData{} }
 func (m *AclData) String() string { return proto.CompactTextString(m) }
 func (*AclData) ProtoMessage()    {}
 func (*AclData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{16}
+	return fileDescriptor_c8e9f754f34e929b, []int{18}
 }
 func (m *AclData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1313,10 +1543,13 @@ func (m *AclData) GetAclContent() []*AclContentValue {
 }
 
 func init() {
+	proto.RegisterEnum("aclrecord.AclInviteType", AclInviteType_name, AclInviteType_value)
 	proto.RegisterEnum("aclrecord.AclUserPermissions", AclUserPermissions_name, AclUserPermissions_value)
 	proto.RegisterType((*AclRoot)(nil), "aclrecord.AclRoot")
 	proto.RegisterType((*AclAccountInvite)(nil), "aclrecord.AclAccountInvite")
+	proto.RegisterType((*AclAccountInviteChange)(nil), "aclrecord.AclAccountInviteChange")
 	proto.RegisterType((*AclAccountRequestJoin)(nil), "aclrecord.AclAccountRequestJoin")
+	proto.RegisterType((*AclAccountInviteJoin)(nil), "aclrecord.AclAccountInviteJoin")
 	proto.RegisterType((*AclAccountRequestAccept)(nil), "aclrecord.AclAccountRequestAccept")
 	proto.RegisterType((*AclAccountRequestDecline)(nil), "aclrecord.AclAccountRequestDecline")
 	proto.RegisterType((*AclAccountInviteRevoke)(nil), "aclrecord.AclAccountInviteRevoke")
@@ -1338,71 +1571,80 @@ func init() {
 }
 
 var fileDescriptor_c8e9f754f34e929b = []byte{
-	// 1020 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0x4f, 0x6f, 0xdc, 0x44,
-	0x14, 0xb7, 0x77, 0x93, 0x6c, 0xf6, 0x39, 0x49, 0xdd, 0x29, 0xb4, 0x6e, 0x0a, 0xab, 0x65, 0x50,
-	0xab, 0x55, 0x85, 0x9a, 0x6a, 0x51, 0x2b, 0x54, 0x81, 0x52, 0x37, 0xa9, 0xba, 0x69, 0x55, 0xa8,
-	0xa6, 0xa2, 0x45, 0x48, 0x20, 0x39, 0xe3, 0x51, 0x31, 0xf8, 0xcf, 0x32, 0x9e, 0x5d, 0xb4, 0xdf,
-	0x82, 0x1b, 0x5f, 0x84, 0x2b, 0x77, 0x0e, 0x1c, 0x7a, 0xe4, 0x88, 0x92, 0x1b, 0x37, 0xbe, 0x01,
-	0x9a, 0xb1, 0xd7, 0xf6, 0x78, 0xbd, 0x9b, 0xe4, 0xd0, 0x43, 0x12, 0xcf, 0xfb, 0x37, 0xef, 0xfd,
-	0xde, 0x6f, 0xde, 0x4c, 0xe0, 0x73, 0x9a, 0x44, 0x51, 0x12, 0xa7, 0x63, 0x8f, 0xb2, 0xbd, 0xe4,
-	0xf8, 0x47, 0x46, 0xc5, 0x9e, 0x47, 0x43, 0xf9, 0xc3, 0x19, 0x4d, 0xb8, 0x3f, 0xe6, 0x89, 0x48,
-	0xf6, 0xd4, 0xef, 0xb4, 0x94, 0xde, 0x51, 0x02, 0xd4, 0x2d, 0x04, 0xf8, 0xbf, 0x16, 0x74, 0x5c,
-	0x1a, 0x92, 0x24, 0x11, 0x68, 0x17, 0x36, 0x03, 0x9f, 0xc5, 0x22, 0x10, 0x33, 0xc7, 0xec, 0x9b,
-	0x83, 0x2d, 0x52, 0xac, 0xd1, 0x07, 0xd0, 0x8d, 0xbc, 0x54, 0x30, 0xfe, 0x8c, 0xcd, 0x9c, 0x96,
-	0x52, 0x96, 0x02, 0xe4, 0x40, 0x47, 0xa5, 0x72, 0xe4, 0x3b, 0xed, 0xbe, 0x39, 0xe8, 0x92, 0xf9,
-	0x12, 0xdd, 0x06, 0x9b, 0xc5, 0x94, 0xcf, 0xc6, 0x82, 0xf9, 0x84, 0x79, 0xbe, 0x74, 0x5f, 0x53,
-	0xee, 0x0b, 0x72, 0xb9, 0x87, 0x08, 0x22, 0x96, 0x0a, 0x2f, 0x1a, 0x3b, 0xeb, 0x7d, 0x73, 0xd0,
-	0x26, 0xa5, 0x00, 0x7d, 0x02, 0x97, 0xe7, 0xd9, 0xbc, 0x0c, 0xde, 0xc4, 0x9e, 0x98, 0x70, 0xe6,
-	0x6c, 0xa8, 0x50, 0x8b, 0x0a, 0x74, 0x0b, 0x76, 0x22, 0x26, 0x3c, 0xdf, 0x13, 0xde, 0x8b, 0xc9,
-	0xb1, 0xdc, 0xb5, 0xa3, 0x4c, 0x6b, 0x52, 0xf4, 0x00, 0x9c, 0x22, 0x8f, 0xe7, 0x73, 0x15, 0x0f,
-	0xa6, 0xd2, 0x63, 0x53, 0x79, 0x2c, 0xd5, 0xa3, 0xfb, 0x70, 0xb5, 0xd0, 0x7d, 0xf5, 0x4b, 0xcc,
-	0xf8, 0xdc, 0xc0, 0xe9, 0x2a, 0xcf, 0x25, 0x5a, 0x7c, 0x17, 0x6c, 0x97, 0x86, 0x2e, 0xa5, 0xc9,
-	0x24, 0x16, 0x47, 0xf1, 0x34, 0x10, 0x4c, 0xd6, 0x1e, 0xa8, 0x2f, 0xb9, 0x71, 0x06, 0x7e, 0x29,
-	0xc0, 0x7f, 0x98, 0xf0, 0x7e, 0xe9, 0x42, 0xd8, 0xcf, 0x13, 0x96, 0x8a, 0xa7, 0x49, 0x10, 0xcb,
-	0x3a, 0x33, 0xb3, 0x23, 0xbd, 0x73, 0x35, 0x69, 0x69, 0x47, 0x54, 0xdf, 0x8f, 0x7c, 0xd5, 0xc4,
-	0x2e, 0xa9, 0x49, 0xd1, 0x67, 0x70, 0x4d, 0xf7, 0x2c, 0xb1, 0x6e, 0xab, 0xc0, 0xcb, 0xd4, 0x92,
-	0x3d, 0x73, 0x6c, 0xf3, 0x0e, 0x17, 0x6b, 0xfc, 0x97, 0x09, 0xd7, 0x16, 0xf2, 0x77, 0x29, 0x65,
-	0xe3, 0xd5, 0xac, 0x1b, 0xc0, 0x25, 0x9e, 0x19, 0xd7, 0xd2, 0xae, 0x8b, 0x1b, 0x79, 0xd6, 0x5e,
-	0xc2, 0xb3, 0x7d, 0xb0, 0xc6, 0x8c, 0x47, 0x41, 0x9a, 0x06, 0x49, 0x9c, 0xaa, 0x64, 0x77, 0x86,
-	0x1f, 0xde, 0x29, 0x4f, 0x89, 0x4b, 0xc3, 0xaf, 0x53, 0xc6, 0x5f, 0x94, 0x46, 0xa4, 0xea, 0x81,
-	0x0f, 0xc1, 0x59, 0xa8, 0xe6, 0x90, 0xd1, 0x30, 0x88, 0x59, 0x53, 0xca, 0x66, 0x63, 0xca, 0xf8,
-	0x21, 0x5c, 0xad, 0xd3, 0x80, 0xb0, 0x69, 0xf2, 0x13, 0x6b, 0x68, 0x96, 0xd9, 0xd4, 0x2c, 0xfc,
-	0x1d, 0x5c, 0x71, 0x69, 0xf8, 0xb8, 0x5e, 0xdf, 0x2a, 0x44, 0x9b, 0x70, 0x6a, 0x35, 0xe3, 0x84,
-	0xbf, 0x87, 0x1b, 0x65, 0x82, 0x25, 0x18, 0x07, 0x3f, 0x78, 0xf1, 0x1b, 0x96, 0xa2, 0x7d, 0xe8,
-	0xd0, 0xec, 0xd3, 0x31, 0xfb, 0xed, 0x81, 0x35, 0xbc, 0xa9, 0x43, 0xb8, 0xc4, 0x91, 0xcc, 0xbd,
-	0xf0, 0x08, 0x76, 0x4a, 0xb3, 0xd4, 0xf5, 0x7d, 0x74, 0x1f, 0xba, 0x9e, 0xef, 0x07, 0x42, 0xf5,
-	0x25, 0x0b, 0xea, 0x34, 0x06, 0x75, 0x7d, 0x9f, 0x94, 0xa6, 0xf8, 0x77, 0x13, 0xb6, 0x35, 0xe5,
-	0x4a, 0x0c, 0x6a, 0xfd, 0x6f, 0x5d, 0xb4, 0xff, 0x1a, 0xd5, 0xdb, 0x3a, 0xd5, 0x2f, 0x32, 0xf0,
-	0xf0, 0xbd, 0x86, 0x53, 0x71, 0xe0, 0xc5, 0x94, 0x85, 0x72, 0x0b, 0xae, 0x37, 0xbf, 0x58, 0xe3,
-	0x19, 0xec, 0x2e, 0x87, 0xf7, 0x9d, 0x56, 0x8e, 0xff, 0x35, 0xd5, 0xec, 0xca, 0x0b, 0xc8, 0x77,
-	0x7c, 0x08, 0x96, 0x97, 0x25, 0xf3, 0x8c, 0xcd, 0xe6, 0x7d, 0xeb, 0xe9, 0x51, 0xeb, 0x24, 0x25,
-	0x55, 0x97, 0x86, 0x69, 0xdd, 0xba, 0xf0, 0xb4, 0x6e, 0x9f, 0x31, 0xad, 0xef, 0xc2, 0x95, 0x72,
-	0x1e, 0x87, 0xb5, 0xde, 0x34, 0xa9, 0xf0, 0xa4, 0x3a, 0xa7, 0x09, 0x8b, 0x92, 0x29, 0x43, 0x3d,
-	0x80, 0x1c, 0xcd, 0x20, 0xe7, 0xfd, 0x16, 0xa9, 0x48, 0x90, 0x0b, 0xdb, 0xbc, 0x0a, 0x8e, 0x2a,
-	0xc4, 0x1a, 0xde, 0xd0, 0xd1, 0xd0, 0xf0, 0x23, 0xba, 0x07, 0xbe, 0xde, 0xc0, 0x8a, 0x6c, 0x77,
-	0xfc, 0x5b, 0x07, 0x2e, 0xb9, 0x34, 0x3c, 0x48, 0x62, 0xc1, 0x62, 0xf1, 0xca, 0x0b, 0x27, 0x0c,
-	0xdd, 0x83, 0x8d, 0x6c, 0x2c, 0xa8, 0x6e, 0x2f, 0x6c, 0xa5, 0xcd, 0x97, 0x91, 0x41, 0x72, 0x63,
-	0xf4, 0x04, 0xb6, 0x82, 0xca, 0xcc, 0xc9, 0xf3, 0xfc, 0x68, 0x85, 0x73, 0x66, 0x38, 0x32, 0x88,
-	0xe6, 0x88, 0x0e, 0xc1, 0xe2, 0xe5, 0x85, 0xa4, 0xda, 0x60, 0x0d, 0xfb, 0x8d, 0x71, 0x2a, 0x17,
-	0xd7, 0xc8, 0x20, 0x55, 0x37, 0xf4, 0x54, 0xe2, 0x56, 0xb9, 0x16, 0x54, 0x5f, 0xac, 0x21, 0x5e,
-	0x15, 0x27, 0xb3, 0x1c, 0x19, 0x44, 0x77, 0x45, 0x2f, 0xc1, 0x1e, 0xd7, 0x4e, 0x85, 0x7a, 0x4e,
-	0x9c, 0x77, 0x42, 0x8d, 0x0c, 0xb2, 0x10, 0x00, 0x1d, 0xc0, 0xb6, 0x57, 0x65, 0x82, 0x7a, 0x7a,
-	0x2c, 0x43, 0x3b, 0x33, 0x91, 0x99, 0x69, 0x3e, 0x32, 0x88, 0xce, 0x8e, 0xce, 0x99, 0xec, 0xc8,
-	0xca, 0xab, 0x1e, 0xb7, 0xe7, 0xb0, 0xc3, 0xb5, 0x3b, 0x47, 0x3d, 0x54, 0xac, 0xe1, 0xc7, 0xab,
-	0xb0, 0xca, 0x4d, 0x47, 0x06, 0xa9, 0x39, 0xa3, 0x6f, 0xe0, 0x3d, 0xaf, 0x81, 0x6b, 0xea, 0x0d,
-	0x73, 0x46, 0x03, 0x8a, 0x32, 0x1b, 0x23, 0xa0, 0x57, 0x70, 0xb9, 0x0e, 0x63, 0xea, 0x80, 0x0a,
-	0x7b, 0xeb, 0x5c, 0x8d, 0x48, 0x47, 0x06, 0x59, 0x0c, 0x81, 0xbe, 0x28, 0xe6, 0x8d, 0xbc, 0x34,
-	0x1c, 0x4b, 0x45, 0xbc, 0xde, 0x18, 0x51, 0x1a, 0x48, 0xaa, 0x55, 0xec, 0x2b, 0x54, 0xcb, 0x66,
-	0xad, 0xb3, 0x75, 0x76, 0xa5, 0x99, 0x65, 0x85, 0x6a, 0x99, 0xe0, 0x51, 0x07, 0xd6, 0xa7, 0xf2,
-	0x14, 0xe2, 0xc7, 0xea, 0x19, 0x7d, 0x28, 0x6f, 0x80, 0x07, 0x00, 0x5e, 0x71, 0x46, 0xf3, 0x69,
-	0xb8, 0xab, 0x07, 0xaf, 0x1e, 0x60, 0x52, 0xb1, 0xbe, 0xfd, 0x1a, 0xd0, 0xe2, 0x08, 0x46, 0x9b,
-	0xb0, 0xf6, 0x65, 0x12, 0x33, 0xdb, 0x40, 0x5d, 0x58, 0x57, 0x6f, 0x49, 0xdb, 0x94, 0x9f, 0xae,
-	0x1f, 0x05, 0xb1, 0xdd, 0x42, 0x00, 0x1b, 0xaf, 0x79, 0x20, 0x18, 0xb7, 0xdb, 0xf2, 0x5b, 0xf2,
-	0x87, 0x71, 0x7b, 0x4d, 0x9a, 0x3c, 0x91, 0xc9, 0xda, 0xeb, 0x8f, 0xf6, 0xff, 0x3c, 0xe9, 0x99,
-	0x6f, 0x4f, 0x7a, 0xe6, 0x3f, 0x27, 0x3d, 0xf3, 0xd7, 0xd3, 0x9e, 0xf1, 0xf6, 0xb4, 0x67, 0xfc,
-	0x7d, 0xda, 0x33, 0xbe, 0xbd, 0x79, 0xae, 0x7f, 0x25, 0x8e, 0x37, 0xd4, 0x9f, 0x4f, 0xff, 0x0f,
-	0x00, 0x00, 0xff, 0xff, 0xb7, 0x65, 0xd3, 0x8c, 0x7a, 0x0c, 0x00, 0x00,
+	// 1155 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x41, 0x8f, 0xdb, 0x54,
+	0x10, 0xb6, 0x93, 0xcd, 0x66, 0x33, 0xd9, 0x4d, 0xbd, 0xaf, 0xa5, 0x75, 0xb7, 0x10, 0x82, 0x51,
+	0xab, 0x68, 0x85, 0xba, 0x28, 0x68, 0xab, 0xaa, 0x02, 0xb6, 0x6e, 0xb6, 0x6a, 0xd2, 0xaa, 0x50,
+	0xbd, 0x96, 0x16, 0x21, 0x81, 0xe4, 0xb5, 0x9f, 0x8a, 0xc1, 0xb1, 0x83, 0xfd, 0x12, 0x94, 0x23,
+	0xff, 0x80, 0xff, 0xc0, 0x8d, 0x33, 0x57, 0xee, 0x1c, 0x38, 0xf4, 0x06, 0x07, 0x0e, 0x68, 0xf7,
+	0x17, 0xf0, 0x0f, 0xd0, 0x7b, 0x76, 0xec, 0xf7, 0x1c, 0x3b, 0xc9, 0x0a, 0xa1, 0x1e, 0xda, 0xb5,
+	0xe7, 0xcd, 0xcc, 0xfb, 0x66, 0xe6, 0x9b, 0x99, 0x18, 0x3e, 0xb4, 0x83, 0xd1, 0x28, 0xf0, 0xa3,
+	0xb1, 0x65, 0x93, 0x83, 0xe0, 0xe4, 0x1b, 0x62, 0xd3, 0x03, 0xcb, 0xf6, 0xd8, 0xbf, 0x90, 0xd8,
+	0x41, 0xe8, 0x8c, 0xc3, 0x80, 0x06, 0x07, 0xfc, 0xff, 0x28, 0x93, 0xde, 0xe4, 0x02, 0xd4, 0x48,
+	0x05, 0xc6, 0x3f, 0x15, 0xa8, 0x9b, 0xb6, 0x87, 0x83, 0x80, 0xa2, 0x3d, 0xd8, 0x72, 0x1d, 0xe2,
+	0x53, 0x97, 0xce, 0x74, 0xb5, 0xa3, 0x76, 0xb7, 0x71, 0xfa, 0x8e, 0xde, 0x84, 0xc6, 0xc8, 0x8a,
+	0x28, 0x09, 0x1f, 0x91, 0x99, 0x5e, 0xe1, 0x87, 0x99, 0x00, 0xe9, 0x50, 0xe7, 0x50, 0x86, 0x8e,
+	0x5e, 0xed, 0xa8, 0xdd, 0x06, 0x9e, 0xbf, 0xa2, 0x7d, 0xd0, 0x88, 0x6f, 0x87, 0xb3, 0x31, 0x25,
+	0x0e, 0x26, 0x96, 0xc3, 0xcc, 0x37, 0xb8, 0xf9, 0x82, 0x9c, 0xdd, 0x41, 0xdd, 0x11, 0x89, 0xa8,
+	0x35, 0x1a, 0xeb, 0xb5, 0x8e, 0xda, 0xad, 0xe2, 0x4c, 0x80, 0xde, 0x83, 0xdd, 0x39, 0x9a, 0xa7,
+	0xee, 0x4b, 0xdf, 0xa2, 0x93, 0x90, 0xe8, 0x9b, 0xdc, 0xd5, 0xe2, 0x01, 0xba, 0x01, 0xad, 0x11,
+	0xa1, 0x96, 0x63, 0x51, 0xeb, 0xc9, 0xe4, 0x84, 0xdd, 0x5a, 0xe7, 0xaa, 0x39, 0x29, 0xba, 0x03,
+	0x7a, 0x8a, 0xe3, 0xf1, 0xfc, 0x28, 0x74, 0xa7, 0xcc, 0x62, 0x8b, 0x5b, 0x94, 0x9e, 0xa3, 0x5b,
+	0x70, 0x39, 0x3d, 0xfb, 0xf4, 0x7b, 0x9f, 0x84, 0x73, 0x05, 0xbd, 0xc1, 0x2d, 0x4b, 0x4e, 0x8d,
+	0x3f, 0x54, 0xd0, 0x4c, 0xdb, 0x33, 0x6d, 0x3b, 0x98, 0xf8, 0x74, 0xe8, 0x4f, 0x5d, 0x4a, 0x58,
+	0xf0, 0x2e, 0x7f, 0x62, 0x37, 0xc7, 0xd9, 0xcf, 0x04, 0xe8, 0x36, 0x40, 0xfc, 0xf2, 0x6c, 0x36,
+	0x26, 0x3c, 0xff, 0xad, 0x9e, 0x7e, 0x33, 0xab, 0xab, 0x69, 0x7b, 0xc3, 0xf4, 0x1c, 0x0b, 0xba,
+	0xe8, 0x08, 0x9a, 0x63, 0x12, 0x8e, 0xdc, 0x28, 0x72, 0x03, 0x3f, 0xe2, 0xe5, 0x69, 0xf5, 0xde,
+	0x92, 0x4d, 0x3f, 0x8b, 0x48, 0xf8, 0x24, 0x53, 0xc2, 0xa2, 0xc5, 0x79, 0x2a, 0x68, 0xfc, 0xa0,
+	0xc2, 0xe5, 0x7c, 0x64, 0xfd, 0xaf, 0x2d, 0xff, 0x25, 0x2f, 0x48, 0x8c, 0x0a, 0xf3, 0x6b, 0x87,
+	0x0e, 0x0f, 0xb2, 0x81, 0x73, 0xd2, 0x3c, 0xde, 0xca, 0x79, 0xf1, 0x1a, 0xbf, 0xaa, 0xf0, 0x46,
+	0x86, 0x01, 0x93, 0xef, 0x26, 0x24, 0xa2, 0x0f, 0x03, 0xd7, 0xcf, 0x20, 0x0c, 0x65, 0x96, 0xe7,
+	0xa4, 0x05, 0x50, 0x2b, 0x85, 0x50, 0x6f, 0xc3, 0x15, 0xd9, 0x32, 0xe3, 0x65, 0x95, 0x3b, 0x2e,
+	0x3b, 0x66, 0x9d, 0x36, 0xe7, 0x61, 0x92, 0xcb, 0xf4, 0xdd, 0xf8, 0x4b, 0x85, 0x4b, 0xf9, 0x1c,
+	0x72, 0xf8, 0xcb, 0xda, 0xf3, 0xb5, 0x42, 0x2e, 0xa4, 0x48, 0xad, 0x84, 0x22, 0xbf, 0xab, 0x70,
+	0x65, 0xa1, 0x3c, 0xa6, 0x6d, 0x93, 0xf1, 0xf2, 0x01, 0xd4, 0x85, 0x0b, 0x61, 0xac, 0x9c, 0x0b,
+	0x31, 0x2f, 0x2e, 0x44, 0x53, 0x2d, 0x19, 0x39, 0x39, 0xb6, 0x6d, 0x9c, 0x9b, 0x6d, 0xc7, 0xa0,
+	0x2f, 0x44, 0x73, 0x4c, 0x6c, 0xcf, 0xf5, 0x49, 0x11, 0x64, 0xb5, 0x10, 0xb2, 0x71, 0x77, 0xb1,
+	0x6d, 0x30, 0x99, 0x06, 0xdf, 0xae, 0xdd, 0x36, 0xc6, 0x97, 0x70, 0xd1, 0xb4, 0xbd, 0xfb, 0xf9,
+	0xf8, 0x96, 0x65, 0xb4, 0x28, 0x4f, 0x95, 0x92, 0xaa, 0x7d, 0x05, 0xd7, 0x32, 0x80, 0x59, 0x32,
+	0xe2, 0xde, 0x8e, 0xd0, 0x11, 0xd4, 0xed, 0xf8, 0x51, 0x57, 0x3b, 0xd5, 0x6e, 0xb3, 0x77, 0x5d,
+	0x4e, 0x61, 0x89, 0x21, 0x9e, 0x5b, 0x19, 0x03, 0x68, 0x65, 0x6a, 0x91, 0xe9, 0x38, 0xe8, 0x16,
+	0x34, 0x2c, 0xc7, 0x71, 0x29, 0xaf, 0x4b, 0xec, 0x54, 0x2f, 0x74, 0x6a, 0x3a, 0x0e, 0xce, 0x54,
+	0x8d, 0x5f, 0x54, 0xd8, 0x91, 0x0e, 0x97, 0xe6, 0xe0, 0xbf, 0x4e, 0x1b, 0xa9, 0x2d, 0xaa, 0x6b,
+	0xb4, 0x45, 0xd9, 0xe4, 0x3c, 0x2c, 0xe8, 0x8a, 0xbe, 0xe5, 0xdb, 0xc4, 0x63, 0x57, 0x84, 0x72,
+	0xf1, 0xd3, 0x77, 0x63, 0x06, 0x7b, 0xe5, 0xe9, 0xfd, 0x5f, 0x23, 0x37, 0x7e, 0xae, 0xf0, 0x2d,
+	0x96, 0x04, 0x90, 0xdc, 0x78, 0x17, 0x9a, 0x56, 0x0c, 0xe6, 0x11, 0x99, 0xcd, 0xeb, 0xd6, 0x96,
+	0xbd, 0xe6, 0x49, 0x8a, 0x45, 0x93, 0x82, 0xc5, 0x5d, 0x39, 0xf7, 0xe2, 0xae, 0xae, 0x58, 0xdc,
+	0xef, 0xc3, 0xc5, 0x6c, 0x35, 0x7b, 0xb9, 0xda, 0x14, 0x1d, 0xa1, 0x8f, 0xe7, 0xfb, 0x97, 0x87,
+	0x55, 0x5b, 0x2b, 0x2c, 0xc1, 0xc2, 0x98, 0x88, 0x1b, 0x1f, 0x93, 0x51, 0x30, 0x25, 0xa8, 0x0d,
+	0x90, 0x54, 0xc3, 0x4d, 0xfa, 0x66, 0x1b, 0x0b, 0x12, 0x64, 0xc2, 0x4e, 0x28, 0x26, 0x97, 0x27,
+	0xa2, 0xd9, 0xbb, 0x26, 0x5f, 0x2b, 0xe5, 0x1f, 0xcb, 0x16, 0xc6, 0xd5, 0x02, 0x56, 0xc5, 0xb7,
+	0x1b, 0x3f, 0x6d, 0xc1, 0x05, 0xd3, 0xf6, 0xfa, 0x81, 0x4f, 0x89, 0x4f, 0x9f, 0x5b, 0xde, 0x84,
+	0xa0, 0x43, 0xd8, 0x8c, 0x31, 0x73, 0xb6, 0x2c, 0x5c, 0x25, 0xcd, 0xa7, 0x81, 0x82, 0x13, 0x65,
+	0xf4, 0x00, 0xb6, 0x5d, 0x61, 0x66, 0x25, 0x38, 0xdf, 0x59, 0x62, 0x1c, 0x2b, 0x0e, 0x14, 0x2c,
+	0x19, 0xa2, 0x63, 0x68, 0x86, 0xd9, 0xbe, 0xe6, 0x65, 0x6c, 0xf6, 0x3a, 0x85, 0x7e, 0x84, 0xbd,
+	0x3e, 0x50, 0xb0, 0x68, 0x86, 0x1e, 0xb2, 0xbc, 0x09, 0x6b, 0x85, 0xd7, 0xb5, 0xd9, 0x33, 0x96,
+	0xf9, 0x89, 0x35, 0x07, 0x0a, 0x96, 0x4d, 0xd1, 0x53, 0xd0, 0xc6, 0xb9, 0xae, 0xe2, 0x9b, 0x6d,
+	0xdd, 0x09, 0x37, 0x50, 0xf0, 0x82, 0x03, 0xd4, 0x87, 0x1d, 0x4b, 0x64, 0x02, 0xff, 0x15, 0x5b,
+	0x96, 0xed, 0x58, 0x85, 0x21, 0x93, 0x6c, 0x98, 0x13, 0x99, 0x1d, 0xf5, 0x95, 0xec, 0x88, 0xc3,
+	0x13, 0xdb, 0xf5, 0x31, 0xb4, 0x42, 0x69, 0x67, 0xf1, 0xdf, 0xbc, 0xcd, 0xde, 0xbb, 0xcb, 0x72,
+	0x95, 0xa8, 0x0e, 0x14, 0x9c, 0x33, 0x46, 0x9f, 0xc3, 0x25, 0xab, 0x80, 0x6b, 0xfc, 0xe7, 0xf0,
+	0x8a, 0x02, 0xa4, 0x61, 0x16, 0x7a, 0x40, 0xcf, 0x61, 0x37, 0x9f, 0xc6, 0x48, 0x07, 0xee, 0xf6,
+	0xc6, 0x5a, 0x85, 0x88, 0x06, 0x0a, 0x5e, 0x74, 0x81, 0x3e, 0x4a, 0xe7, 0x15, 0x5b, 0x3a, 0x7a,
+	0x93, 0x7b, 0xbc, 0x5a, 0xe8, 0x91, 0x29, 0x30, 0xaa, 0x09, 0xfa, 0x02, 0xd5, 0xe2, 0x59, 0xad,
+	0x6f, 0xaf, 0x8e, 0x34, 0xd6, 0x14, 0xa8, 0x96, 0x8c, 0x79, 0x73, 0x3e, 0x62, 0x38, 0xf7, 0x77,
+	0xb8, 0xa3, 0xb7, 0x97, 0xf4, 0x50, 0x42, 0x7d, 0xc1, 0x28, 0x6b, 0xc4, 0x84, 0x12, 0xad, 0x95,
+	0x8d, 0x98, 0x12, 0x43, 0x32, 0xbc, 0x57, 0x87, 0xda, 0x94, 0x4d, 0x04, 0xe3, 0x3e, 0xff, 0x3a,
+	0x3c, 0x66, 0xdb, 0xec, 0x0e, 0x80, 0x95, 0xce, 0x8b, 0x64, 0xb2, 0xef, 0xc9, 0xae, 0xc5, 0x61,
+	0x82, 0x05, 0xed, 0xfd, 0x43, 0xbe, 0x93, 0xb3, 0x2f, 0x14, 0xb4, 0x0b, 0x3b, 0x49, 0x3a, 0x9e,
+	0x05, 0x0c, 0xba, 0xa6, 0x30, 0x91, 0xe9, 0xcf, 0x02, 0x9f, 0xf4, 0x2d, 0x9f, 0x8b, 0xd4, 0xfd,
+	0x17, 0x80, 0x16, 0xb7, 0x10, 0xda, 0x82, 0x8d, 0x4f, 0x02, 0x9f, 0x68, 0x0a, 0x6a, 0x40, 0x8d,
+	0x7f, 0x59, 0x69, 0x2a, 0x7b, 0x34, 0x9d, 0x91, 0xeb, 0x6b, 0x15, 0x04, 0xb0, 0xf9, 0x22, 0x74,
+	0x29, 0x09, 0xb5, 0x2a, 0x7b, 0x66, 0x2d, 0x40, 0x42, 0x6d, 0x83, 0xa9, 0x3c, 0x60, 0x37, 0x6a,
+	0xb5, 0x7b, 0x47, 0xbf, 0x9d, 0xb6, 0xd5, 0x57, 0xa7, 0x6d, 0xf5, 0xef, 0xd3, 0xb6, 0xfa, 0xe3,
+	0x59, 0x5b, 0x79, 0x75, 0xd6, 0x56, 0xfe, 0x3c, 0x6b, 0x2b, 0x5f, 0x5c, 0x5f, 0xeb, 0xc3, 0xfa,
+	0x64, 0x93, 0xff, 0xf9, 0xe0, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xae, 0x8a, 0x0f, 0xac, 0x88,
+	0x0f, 0x00, 0x00,
 }
 
 func (m *AclRoot) Marshal() (dAtA []byte, err error) {
@@ -1509,10 +1751,62 @@ func (m *AclAccountInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.EncryptedReadKey) > 0 {
+		i -= len(m.EncryptedReadKey)
+		copy(dAtA[i:], m.EncryptedReadKey)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKey)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.Permissions != 0 {
+		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.InviteType != 0 {
+		i = encodeVarintAclrecord(dAtA, i, uint64(m.InviteType))
+		i--
+		dAtA[i] = 0x10
+	}
 	if len(m.InviteKey) > 0 {
 		i -= len(m.InviteKey)
 		copy(dAtA[i:], m.InviteKey)
 		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountInviteChange) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountInviteChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountInviteChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Permissions != 0 {
+		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.InviteRecordId) > 0 {
+		i -= len(m.InviteRecordId)
+		copy(dAtA[i:], m.InviteRecordId)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteRecordId)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1564,6 +1858,64 @@ func (m *AclAccountRequestJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.InviteIdentity)
 		copy(dAtA[i:], m.InviteIdentity)
 		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteIdentity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountInviteJoin) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountInviteJoin) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountInviteJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.EncryptedReadKey) > 0 {
+		i -= len(m.EncryptedReadKey)
+		copy(dAtA[i:], m.EncryptedReadKey)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKey)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Metadata) > 0 {
+		i -= len(m.Metadata)
+		copy(dAtA[i:], m.Metadata)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Metadata)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.InviteIdentitySignature) > 0 {
+		i -= len(m.InviteIdentitySignature)
+		copy(dAtA[i:], m.InviteIdentitySignature)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteIdentitySignature)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.InviteRecordId) > 0 {
+		i -= len(m.InviteRecordId)
+		copy(dAtA[i:], m.InviteRecordId)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteRecordId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1924,6 +2276,20 @@ func (m *AclReadKeyChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.InviteKeys) > 0 {
+		for iNdEx := len(m.InviteKeys) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.InviteKeys[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintAclrecord(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if len(m.EncryptedOldReadKey) > 0 {
 		i -= len(m.EncryptedOldReadKey)
 		copy(dAtA[i:], m.EncryptedOldReadKey)
@@ -2313,6 +2679,48 @@ func (m *AclContentValue_RequestCancel) MarshalToSizedBuffer(dAtA []byte) (int, 
 	}
 	return len(dAtA) - i, nil
 }
+func (m *AclContentValue_InviteJoin) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclContentValue_InviteJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.InviteJoin != nil {
+		{
+			size, err := m.InviteJoin.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAclrecord(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x6a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *AclContentValue_InviteChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclContentValue_InviteChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.InviteChange != nil {
+		{
+			size, err := m.InviteChange.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAclrecord(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x72
+	}
+	return len(dAtA) - i, nil
+}
 func (m *AclData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2415,6 +2823,32 @@ func (m *AclAccountInvite) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
+	if m.InviteType != 0 {
+		n += 1 + sovAclrecord(uint64(m.InviteType))
+	}
+	if m.Permissions != 0 {
+		n += 1 + sovAclrecord(uint64(m.Permissions))
+	}
+	l = len(m.EncryptedReadKey)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountInviteChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.InviteRecordId)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	if m.Permissions != 0 {
+		n += 1 + sovAclrecord(uint64(m.Permissions))
+	}
 	return n
 }
 
@@ -2437,6 +2871,35 @@ func (m *AclAccountRequestJoin) Size() (n int) {
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	l = len(m.Metadata)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountInviteJoin) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.InviteRecordId)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.InviteIdentitySignature)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.Metadata)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.EncryptedReadKey)
 	if l > 0 {
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
@@ -2616,6 +3079,12 @@ func (m *AclReadKeyChange) Size() (n int) {
 	l = len(m.EncryptedOldReadKey)
 	if l > 0 {
 		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	if len(m.InviteKeys) > 0 {
+		for _, e := range m.InviteKeys {
+			l = e.Size()
+			n += 1 + l + sovAclrecord(uint64(l))
+		}
 	}
 	return n
 }
@@ -2800,6 +3269,30 @@ func (m *AclContentValue_RequestCancel) Size() (n int) {
 	_ = l
 	if m.RequestCancel != nil {
 		l = m.RequestCancel.Size()
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+func (m *AclContentValue_InviteJoin) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.InviteJoin != nil {
+		l = m.InviteJoin.Size()
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+func (m *AclContentValue_InviteChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.InviteChange != nil {
+		l = m.InviteChange.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
@@ -3227,6 +3720,179 @@ func (m *AclAccountInvite) Unmarshal(dAtA []byte) error {
 				m.InviteKey = []byte{}
 			}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteType", wireType)
+			}
+			m.InviteType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.InviteType |= AclInviteType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			m.Permissions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Permissions |= AclUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EncryptedReadKey = append(m.EncryptedReadKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.EncryptedReadKey == nil {
+				m.EncryptedReadKey = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountInviteChange) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountInviteChange: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountInviteChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteRecordId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			m.Permissions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Permissions |= AclUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAclrecord(dAtA[iNdEx:])
@@ -3409,6 +4075,224 @@ func (m *AclAccountRequestJoin) Unmarshal(dAtA []byte) error {
 			m.Metadata = append(m.Metadata[:0], dAtA[iNdEx:postIndex]...)
 			if m.Metadata == nil {
 				m.Metadata = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountInviteJoin) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountInviteJoin: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountInviteJoin: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteRecordId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteIdentitySignature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteIdentitySignature = append(m.InviteIdentitySignature[:0], dAtA[iNdEx:postIndex]...)
+			if m.InviteIdentitySignature == nil {
+				m.InviteIdentitySignature = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Metadata = append(m.Metadata[:0], dAtA[iNdEx:postIndex]...)
+			if m.Metadata == nil {
+				m.Metadata = []byte{}
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EncryptedReadKey = append(m.EncryptedReadKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.EncryptedReadKey == nil {
+				m.EncryptedReadKey = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -4572,6 +5456,40 @@ func (m *AclReadKeyChange) Unmarshal(dAtA []byte) error {
 				m.EncryptedOldReadKey = []byte{}
 			}
 			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteKeys", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteKeys = append(m.InviteKeys, &AclEncryptedReadKey{})
+			if err := m.InviteKeys[len(m.InviteKeys)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAclrecord(dAtA[iNdEx:])
@@ -5209,6 +6127,76 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Value = &AclContentValue_RequestCancel{v}
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteJoin", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AclAccountInviteJoin{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &AclContentValue_InviteJoin{v}
+			iNdEx = postIndex
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteChange", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AclAccountInviteChange{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &AclContentValue_InviteChange{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

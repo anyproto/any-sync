@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -24,17 +25,6 @@ type RWLocker interface {
 	sync.Locker
 	RLock()
 	RUnlock()
-}
-
-type AcceptorVerifier interface {
-	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
-}
-
-type NoOpAcceptorVerifier struct {
-}
-
-func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
-	return nil
 }
 
 type AclList interface {
@@ -75,6 +65,7 @@ type aclList struct {
 	keyStorage    crypto.KeyStorage
 	aclState      *AclState
 	storage       Storage
+	verifier      recordverifier.AcceptorVerifier
 
 	sync.RWMutex
 }
@@ -84,10 +75,10 @@ type internalDeps struct {
 	keyStorage       crypto.KeyStorage
 	stateBuilder     *aclStateBuilder
 	recordBuilder    AclRecordBuilder
-	acceptorVerifier AcceptorVerifier
+	acceptorVerifier recordverifier.AcceptorVerifier
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage Storage, verifier AcceptorVerifier) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage Storage, verifier recordverifier.AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
 	deps := internalDeps{
 		storage:          storage,
@@ -159,6 +150,7 @@ func build(deps internalDeps) (list AclList, err error) {
 		stateBuilder:  stateBuilder,
 		recordBuilder: recBuilder,
 		storage:       storage,
+		verifier:      deps.acceptorVerifier,
 		id:            id,
 	}
 	stateBuilder.Init(id)
@@ -186,6 +178,7 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid
 		return
 	}
 	stateCopy := a.aclState.Copy()
+	stateCopy.contentValidator = newContentValidator(stateCopy.keyStore, stateCopy, recordverifier.NewValidateFull())
 	err = stateCopy.ApplyRecord(record)
 	if err != nil || afterValid == nil {
 		return

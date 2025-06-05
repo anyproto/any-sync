@@ -10,7 +10,6 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
-	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"storj.io/drpc"
@@ -44,113 +43,11 @@ import (
 	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/testconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/syncqueues"
 )
-
-type mockConf struct {
-	id            string
-	networkId     string
-	configuration nodeconf.Configuration
-}
-
-func (m *mockConf) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
-	return nodeconf.NetworkCompatibilityStatusOk
-}
-
-func (m *mockConf) Init(a *app.App) (err error) {
-	accountKeys := a.MustComponent(accountService.CName).(accountService.Service).Account()
-	networkId := accountKeys.SignKey.GetPublic().Network()
-	node := nodeconf.Node{
-		PeerId:    accountKeys.PeerId,
-		Addresses: []string{"127.0.0.1:4430"},
-		Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},
-	}
-	m.id = networkId
-	m.networkId = networkId
-	m.configuration = nodeconf.Configuration{
-		Id:           networkId,
-		NetworkId:    networkId,
-		Nodes:        []nodeconf.Node{node},
-		CreationTime: time.Now(),
-	}
-	return nil
-}
-
-func (m *mockConf) Name() (name string) {
-	return nodeconf.CName
-}
-
-func (m *mockConf) Run(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockConf) Close(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockConf) Id() string {
-	return m.id
-}
-
-func (m *mockConf) Configuration() nodeconf.Configuration {
-	return m.configuration
-}
-
-func (m *mockConf) NodeIds(spaceId string) []string {
-	var nodeIds []string
-	for _, node := range m.configuration.Nodes {
-		nodeIds = append(nodeIds, node.PeerId)
-	}
-	return nodeIds
-}
-
-func (m *mockConf) IsResponsible(spaceId string) bool {
-	return true
-}
-
-func (m *mockConf) FilePeers() []string {
-	return nil
-}
-
-func (m *mockConf) ConsensusPeers() []string {
-	return nil
-}
-
-func (m *mockConf) CoordinatorPeers() []string {
-	return nil
-}
-
-func (m *mockConf) NamingNodePeers() []string {
-	return nil
-}
-
-func (m *mockConf) PaymentProcessingNodePeers() []string {
-	return nil
-}
-
-func (m *mockConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
-	if peerId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Addresses, true
-	}
-	return nil, false
-}
-
-func (m *mockConf) CHash() chash.CHash {
-	return nil
-}
-
-func (m *mockConf) Partition(spaceId string) (part int) {
-	return 0
-}
-
-func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
-	if nodeId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Types
-	}
-	return nil
-}
 
 var _ nodeclient.NodeClient = (*mockNodeClient)(nil)
 
@@ -174,6 +71,7 @@ func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *c
 }
 
 type mockPeerManager struct {
+	peer peer.Peer
 }
 
 func (p *mockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
@@ -193,6 +91,9 @@ func (p *mockPeerManager) Name() (name string) {
 }
 
 func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	if p.peer != nil {
+		return []peer.Peer{p.peer}, nil
+	}
 	return nil, nil
 }
 
@@ -218,6 +119,7 @@ func (m *testPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 type mockPeerManagerProvider struct {
+	peer peer.Peer
 }
 
 func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
@@ -229,7 +131,7 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
-	return &mockPeerManager{}, nil
+	return &mockPeerManager{m.peer}, nil
 }
 
 type mockPool struct {
@@ -594,7 +496,10 @@ func (s *streamOpener) NewReadMessage() drpc.Message {
 }
 
 func (s *streamOpener) Init(a *app.App) (err error) {
-	s.spaceGetter = a.MustComponent(RpcName).(*RpcServer)
+	sp := a.Component(RpcName)
+	if sp != nil {
+		s.spaceGetter = sp.(*RpcServer)
+	}
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	return nil
 }
@@ -654,7 +559,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		app:                  &app.App{},
 		config:               &mockConfig{},
 		account:              &accounttest.AccountTestService{},
-		configurationService: &mockConf{},
+		configurationService: &testconf.StubConf{},
 		streamOpener:         newStreamOpener("spaceId"),
 		peerManagerProvider:  &testPeerManagerProvider{},
 		storageProvider:      &spaceStorageProvider{rootPath: t.TempDir()},
@@ -699,7 +604,7 @@ func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys,
 		app:                  &app.App{},
 		config:               &mockConfig{},
 		account:              accounttest.NewWithAcc(keys),
-		configurationService: &mockConf{},
+		configurationService: &testconf.StubConf{},
 		storageProvider:      provider,
 		streamOpener:         newStreamOpener(spaceId),
 		peerManagerProvider:  &testPeerManagerProvider{},

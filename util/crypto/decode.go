@@ -2,8 +2,10 @@ package crypto
 
 import (
 	"encoding/base64"
-	"github.com/anyproto/any-sync/util/strkey"
+
 	"github.com/libp2p/go-libp2p/core/peer"
+
+	"github.com/anyproto/any-sync/util/strkey"
 )
 
 func EncodeKeyToString[T Key](key T) (str string, err error) {
@@ -54,4 +56,12 @@ func DecodePeerId(peerId string) (PubKey, error) {
 		return nil, err
 	}
 	return UnmarshalEd25519PublicKey(raw)
+}
+
+func DecodeNetworkId(networkId string) (PubKey, error) {
+	pubKeyRaw, err := strkey.Decode(strkey.NetworkAddressVersionByte, networkId)
+	if err != nil {
+		return nil, err
+	}
+	return UnmarshalEd25519PublicKey(pubKeyRaw)
 }
