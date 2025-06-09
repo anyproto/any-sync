@@ -142,6 +142,8 @@ func TestAclExecutor(t *testing.T) {
 		{"a.batch::revoke:oldInvId;invite_anyone:someId,a", nil},
 		{"new4.invite_join::someId", nil},
 		{"new4.add::super,r,superm", nil},
+		// check that users can't join using request to join for anyone can join links
+		{"new5.join::someId", ErrNoSuchInvite},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

@@ -488,7 +488,7 @@ func (a *aclRecordBuilder) buildInviteRevoke(inviteRecordId string) (value *aclr
 func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
 	var inviteId string
 	for id, inv := range a.state.invites {
-		if inv.Key.Equals(payload.InviteKey.GetPublic()) && inv.Type == aclrecordproto.AclInviteType_RequestToJoin {
+		if inv.Key.Equals(payload.InviteKey.GetPublic()) {
 			inviteId = id
 		}
 	}
