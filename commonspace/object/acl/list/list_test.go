@@ -310,6 +310,27 @@ func TestAclList_MetadataDecrypt(t *testing.T) {
 	require.NotEqual(t, mockMetadata, meta)
 }
 
+func TestAclList_ValidateUsesCorrectVerifier(t *testing.T) {
+	fx := newFixture(t)
+	var ownerAcl = fx.ownerAcl
+	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New()
+	ownerAcl.verifier = recordverifier.New()
+	// building invite
+	inv, err := ownerAcl.RecordBuilder().BuildInvite()
+	require.NoError(t, err)
+	isCalled := false
+	ok := ownerAcl.aclState.contentValidator.(*contentValidator).verifier.ShouldValidate()
+	require.False(t, ok)
+	err = fx.ownerAcl.ValidateRawRecord(inv.InviteRec, func(state *AclState) error {
+		isCalled = true
+		// check that we change the validator to the verifying one
+		require.True(t, state.contentValidator.(*contentValidator).verifier.ShouldValidate())
+		return nil
+	})
+	require.NoError(t, err)
+	require.True(t, isCalled)
+}
+
 func TestAclList_ReadKeyChange(t *testing.T) {
 	fx := newFixture(t)
 	var (

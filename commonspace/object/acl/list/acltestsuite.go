@@ -218,7 +218,7 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 				}
 			}
 			if recId == "" {
-				return nil, fmt.Errorf("no join records for approve")
+				return nil, fmt.Errorf("no join records to approve")
 			}
 			perms := getPerm(argParts[1])
 			afterAll = append(afterAll, func() {
@@ -461,7 +461,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			}
 		}
 		if recId == "" {
-			return fmt.Errorf("no join records for approve")
+			return fmt.Errorf("no join records to approve")
 		}
 		perms := getPerm(argParts[1])
 		res, err := acl.RecordBuilder().BuildRequestAccept(RequestAcceptPayload{

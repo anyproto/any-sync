@@ -35,7 +35,7 @@ type ObjectTreeValidator interface {
 	ValidateFullTree(tree *Tree, aclList list.AclList) error
 	// ValidateNewChanges should always be entered while holding a read lock on AclList
 	ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error
-	FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change, indexes []int) (filteredHeads bool, filtered, filteredSnapshots []*Change, newIndexes []int)
+	FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change) (filteredHeads bool, filtered, filteredSnapshots []*Change)
 }
 
 type noOpTreeValidator struct {
@@ -57,14 +57,13 @@ func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList,
 	return nil
 }
 
-func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change, indexes []int) (filteredHeads bool, filtered, filteredSnapshots []*Change, newIndexes []int) {
+func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change) (filteredHeads bool, filtered, filteredSnapshots []*Change) {
 	if n.filterFunc == nil {
-		return false, changes, snapshots, indexes
+		return false, changes, snapshots
 	}
-	for idx, c := range changes {
+	for _, c := range changes {
 		// only taking changes which we can read
 		if n.filterFunc(c) {
-			newIndexes = append(newIndexes, indexes[idx])
 			filtered = append(filtered, c)
 			if c.IsSnapshot {
 				filteredSnapshots = append(filteredSnapshots, c)
@@ -106,24 +105,22 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 	return
 }
 
-func (v *objectTreeValidator) FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change, indexes []int) (filteredHeads bool, filtered, filteredSnapshots []*Change, newIndexes []int) {
+func (v *objectTreeValidator) FilterChanges(aclList list.AclList, changes []*Change, snapshots []*Change) (filteredHeads bool, filtered, filteredSnapshots []*Change) {
 	if !v.shouldFilter {
-		return false, changes, snapshots, indexes
+		return false, changes, snapshots
 	}
 	aclList.RLock()
 	defer aclList.RUnlock()
 	state := aclList.AclState()
-	for idx, c := range changes {
+	for _, c := range changes {
 		// this has to be a root
 		if c.PreviousIds == nil {
-			newIndexes = append(newIndexes, indexes[idx])
 			filtered = append(filtered, c)
 			filteredSnapshots = append(filteredSnapshots, c)
 			continue
 		}
 		// only taking changes which we can read and for which we have acl heads
 		if keys, exists := state.Keys()[c.ReadKeyId]; aclList.HasHead(c.AclHeadId) && exists && keys.ReadKey != nil {
-			newIndexes = append(newIndexes, indexes[idx])
 			filtered = append(filtered, c)
 			if c.IsSnapshot {
 				filteredSnapshots = append(filteredSnapshots, c)
