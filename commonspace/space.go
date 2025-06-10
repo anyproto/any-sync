@@ -59,6 +59,7 @@ type Space interface {
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 	KeyValue() kvinterfaces.KeyValueService
+	PeerManager() peermanager.PeerManager
 
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
@@ -181,6 +182,10 @@ func (s *space) TreeSyncer() treesyncer.TreeSyncer {
 
 func (s *space) AclClient() aclclient.AclSpaceClient {
 	return s.aclClient
+}
+
+func (s *space) PeerManager() peermanager.PeerManager {
+	return s.peerManager
 }
 
 func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) {

@@ -20,6 +20,7 @@ import (
 	kvinterfaces "github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	treesyncer "github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	objecttreebuilder "github.com/anyproto/any-sync/commonspace/objecttreebuilder"
+	peermanager "github.com/anyproto/any-sync/commonspace/peermanager"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	objectmessages "github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -235,6 +236,20 @@ func (m *MockSpace) KeyValue() kvinterfaces.KeyValueService {
 func (mr *MockSpaceMockRecorder) KeyValue() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyValue", reflect.TypeOf((*MockSpace)(nil).KeyValue))
+}
+
+// PeerManager mocks base method.
+func (m *MockSpace) PeerManager() peermanager.PeerManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PeerManager")
+	ret0, _ := ret[0].(peermanager.PeerManager)
+	return ret0
+}
+
+// PeerManager indicates an expected call of PeerManager.
+func (mr *MockSpaceMockRecorder) PeerManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeerManager", reflect.TypeOf((*MockSpace)(nil).PeerManager))
 }
 
 // Storage mocks base method.
