@@ -233,7 +233,57 @@ message VerifyAppStoreReceiptRequestSigned {
 }
 
 message VerifyAppStoreReceiptResponse {
+  
+}
 
+message CodeGetInfoRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+  // this is the owner's main EOA (Externally Owned Account) address
+  // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+  // this is required to reserve a name for the owner (later that is done by user)
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  string ownerEthAddress = 2;
+  // code received in the email
+  string code = 3;
+}
+
+message CodeGetInfoRequestSigned {
+  // CodeGetInfoRequest
+  bytes payload = 1;
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message CodeGetInfoResponse {
+  uint32 tier = 1;
+}
+
+message CodeRedeemRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+  // this is the owner's main EOA (Externally Owned Account) address
+  // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+  // this is required to reserve a name for the owner (later that is done by user)
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  string ownerEthAddress = 2;
+  // if empty - then no name requested
+  string requestedAnyName = 3;
+  // code received in the email
+  string code = 4;
+}
+
+message CodeRedeemRequestSigned {
+  // CodeRedeemRequest
+  bytes payload = 1;
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message CodeRedeemResponse {
+  bool success = 1;
 }
 
 enum ErrorCodes {
@@ -262,6 +312,9 @@ enum ErrorCodes {
   AppleInvalidReceipt = 18;
   ApplePurchaseRegistration = 19;
   AppleSubscriptionRenew = 20;
+
+  CodeNotFound = 21;
+  CodeAlreadyUsed = 22;
 
   ErrorOffset = 600;
 }
@@ -309,4 +362,7 @@ service AnyPaymentProcessing {
   // Verify purchase in case subscription was bought via AppStore
   // Incoming receipt contains all information to register purchase on Payment Node
   rpc VerifyAppStoreReceipt(VerifyAppStoreReceiptRequestSigned) returns (VerifyAppStoreReceiptResponse) {}
+
+  rpc CodeGetInfo(CodeGetInfoRequestSigned) returns (CodeGetInfoResponse) {}
+  rpc CodeRedeem(CodeRedeemRequestSigned) returns (CodeRedeemResponse) {}
 }

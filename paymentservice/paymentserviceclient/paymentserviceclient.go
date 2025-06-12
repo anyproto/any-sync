@@ -4,6 +4,7 @@ package paymentserviceclient
 import (
 	"context"
 	"errors"
+
 	"github.com/anyproto/any-sync/net"
 
 	"github.com/anyproto/any-sync/app"
@@ -34,6 +35,8 @@ type AnyPpClientService interface {
 	FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubscriptionRequestSigned) (out *pp.FinalizeSubscriptionResponse, err error)
 	GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error)
 	VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error)
+	CodeGetInfo(ctx context.Context, in *pp.CodeGetInfoRequestSigned) (out *pp.CodeGetInfoResponse, err error)
+	CodeRedeem(ctx context.Context, in *pp.CodeRedeemRequestSigned) (out *pp.CodeRedeemResponse, err error)
 
 	app.Component
 }
@@ -180,6 +183,26 @@ func (s *service) IsNameValid(ctx context.Context, in *pp.IsNameValidRequest) (o
 func (s *service) VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.VerifyAppStoreReceipt(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) CodeGetInfo(ctx context.Context, in *pp.CodeGetInfoRequestSigned) (out *pp.CodeGetInfoResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.CodeGetInfo(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) CodeRedeem(ctx context.Context, in *pp.CodeRedeemRequestSigned) (out *pp.CodeRedeemResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.CodeRedeem(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
