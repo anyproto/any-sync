@@ -137,6 +137,10 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 type mockPool struct {
 }
 
+func (m *mockPool) Flush(ctx context.Context) error {
+	return nil
+}
+
 func (m *mockPool) Run(ctx context.Context) (err error) {
 	return nil
 }

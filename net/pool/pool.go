@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -25,6 +26,8 @@ type Pool interface {
 	AddPeer(ctx context.Context, p peer.Peer) (err error)
 	// Pick check if connection with peer exist without dial
 	Pick(ctx context.Context, id string) (pr peer.Peer, err error)
+	// Flush removes all connections from the pool
+	Flush(ctx context.Context) error
 }
 
 type poolStats struct {
@@ -35,6 +38,7 @@ type pool struct {
 	outgoing    ocache.OCache
 	incoming    ocache.OCache
 	statService debugstat.StatService
+	flushMx     sync.RWMutex
 }
 
 func (p *pool) Name() (name string) {
@@ -42,6 +46,8 @@ func (p *pool) Name() (name string) {
 }
 
 func (p *pool) Get(ctx context.Context, id string) (pr peer.Peer, err error) {
+	p.flushMx.RLock()
+	defer p.flushMx.RUnlock()
 	// if we have incoming connection - try to reuse it
 	if pr, err = p.get(ctx, p.incoming, id); err != nil {
 		// or try to get or create outgoing
@@ -63,23 +69,48 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 	return p.Get(ctx, id)
 }
 
-func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
-	// finding existing connection
+func (p *pool) Flush(ctx context.Context) error {
+	p.flushMx.Lock()
+	defer p.flushMx.Unlock()
+	p.incoming.ForEach(func(v ocache.Object) (isContinue bool) {
+		pr := v.(peer.Peer)
+		_, _ = p.incoming.Remove(ctx, pr.Id())
+		return true
+	})
+	p.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {
+		pr := v.(peer.Peer)
+		_, _ = p.outgoing.Remove(ctx, pr.Id())
+		return true
+	})
+	return nil
+}
+
+func (p *pool) getIfActive(ctx context.Context, peerIds []string) peer.Peer {
+	p.flushMx.RLock()
+	defer p.flushMx.RUnlock()
 	for _, peerId := range peerIds {
 		if v, err := p.incoming.Pick(ctx, peerId); err == nil {
 			pr := v.(peer.Peer)
 			if !pr.IsClosed() {
-				return pr, nil
+				return pr
 			}
 			_, _ = p.incoming.Remove(ctx, peerId)
 		}
 		if v, err := p.outgoing.Pick(ctx, peerId); err == nil {
 			pr := v.(peer.Peer)
 			if !pr.IsClosed() {
-				return pr, nil
+				return pr
 			}
 			_, _ = p.outgoing.Remove(ctx, peerId)
 		}
+	}
+	return nil
+}
+
+func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
+	pr := p.getIfActive(ctx, peerIds)
+	if pr != nil {
+		return pr, nil
 	}
 	// shuffle ids for better consistency
 	indexes := make([]int, len(peerIds))
@@ -107,6 +138,8 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 }
 
 func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
+	p.flushMx.RLock()
+	defer p.flushMx.RUnlock()
 	if err = p.incoming.Add(pr.Id(), pr); err != nil {
 		if err == ocache.ErrExists {
 			// in case when an incoming connection with a peer already exists, we close and remove an existing connection
@@ -123,6 +156,8 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 }
 
 func (p *pool) Pick(ctx context.Context, id string) (pr peer.Peer, err error) {
+	p.flushMx.RLock()
+	defer p.flushMx.RUnlock()
 	// check if connection with peer exist without dial
 	if pr, err = p.pick(ctx, p.incoming, id); err != nil {
 		return p.pick(ctx, p.outgoing, id)

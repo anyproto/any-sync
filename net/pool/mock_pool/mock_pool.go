@@ -54,6 +54,20 @@ func (mr *MockPoolMockRecorder) AddPeer(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPeer", reflect.TypeOf((*MockPool)(nil).AddPeer), arg0, arg1)
 }
 
+// Flush mocks base method.
+func (m *MockPool) Flush(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Flush", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Flush indicates an expected call of Flush.
+func (mr *MockPoolMockRecorder) Flush(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockPool)(nil).Flush), arg0)
+}
+
 // Get mocks base method.
 func (m *MockPool) Get(arg0 context.Context, arg1 string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
@@ -148,6 +162,20 @@ func (m *MockService) Close(arg0 context.Context) error {
 func (mr *MockServiceMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), arg0)
+}
+
+// Flush mocks base method.
+func (m *MockService) Flush(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Flush", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Flush indicates an expected call of Flush.
+func (mr *MockServiceMockRecorder) Flush(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockService)(nil).Flush), arg0)
 }
 
 // Get mocks base method.

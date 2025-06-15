@@ -21,6 +21,10 @@ type TestPool struct {
 	ts    *TestServer
 }
 
+func (t *TestPool) Flush(ctx context.Context) error {
+	return nil
+}
+
 func (t *TestPool) Init(a *app.App) (err error) {
 	return nil
 }
