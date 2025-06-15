@@ -25,6 +25,8 @@ type Pool interface {
 	AddPeer(ctx context.Context, p peer.Peer) (err error)
 	// Pick check if connection with peer exist without dial
 	Pick(ctx context.Context, id string) (pr peer.Peer, err error)
+	// Flush removes all connections from the pool
+	Flush(ctx context.Context) error
 }
 
 type poolStats struct {
@@ -61,6 +63,20 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 	}
 	_, _ = source.Remove(ctx, id)
 	return p.Get(ctx, id)
+}
+
+func (p *pool) Flush(ctx context.Context) error {
+	p.incoming.ForEach(func(v ocache.Object) (isContinue bool) {
+		pr := v.(peer.Peer)
+		_, _ = p.incoming.Remove(ctx, pr.Id())
+		return true
+	})
+	p.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {
+		pr := v.(peer.Peer)
+		_, _ = p.outgoing.Remove(ctx, pr.Id())
+		return true
+	})
+	return nil
 }
 
 func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
