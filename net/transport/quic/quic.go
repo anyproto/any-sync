@@ -56,6 +56,7 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 	}
 	q.quicConf = &quic.Config{
 		HandshakeIdleTimeout: time.Duration(q.conf.DialTimeoutSec) * time.Second,
+		InitialPacketSize:    1200,
 		MaxIncomingStreams:   q.conf.MaxStreams,
 		KeepAlivePeriod:      time.Duration(q.conf.KeepAlivePeriodSec) * time.Second,
 	}
