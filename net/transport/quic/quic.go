@@ -56,7 +56,7 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 	}
 	q.quicConf = &quic.Config{
 		HandshakeIdleTimeout: time.Duration(q.conf.DialTimeoutSec) * time.Second,
-		InitialPacketSize:    1200,
+		InitialPacketSize:    q.conf.InitialPacketSize,
 		MaxIncomingStreams:   q.conf.MaxStreams,
 		KeepAlivePeriod:      time.Duration(q.conf.KeepAlivePeriodSec) * time.Second,
 	}
@@ -107,6 +107,11 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 }
 
 func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
+	tm := time.Now()
+	defer func() {
+		str := fmt.Sprintf("quic dial %s took %dms", addr, time.Since(tm).Milliseconds())
+		mylogger.DebugLog(str)
+	}()
 	tlsConf, keyCh, err := q.secure.TlsConfig()
 	if err != nil {
 		return nil, err
