@@ -9,5 +9,6 @@ type Config struct {
 	WriteTimeoutSec    int      `yaml:"writeTimeoutSec"`
 	DialTimeoutSec     int      `yaml:"dialTimeoutSec"`
 	MaxStreams         int64    `yaml:"maxStreams"`
+	InitialPacketSize  uint16   `yaml:"initialPacketSize"`
 	KeepAlivePeriodSec int      `yaml:"keepAlivePeriodSec"`
 }
