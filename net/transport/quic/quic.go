@@ -107,11 +107,6 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 }
 
 func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
-	tm := time.Now()
-	defer func() {
-		str := fmt.Sprintf("quic dial %s took %dms", addr, time.Since(tm).Milliseconds())
-		mylogger.DebugLog(str)
-	}()
 	tlsConf, keyCh, err := q.secure.TlsConfig()
 	if err != nil {
 		return nil, err
