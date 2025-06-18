@@ -91,7 +91,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) 
 		log.Error("failed to acquire a DRPC connection to namingnode", zap.Error(err))
 		return err
 	}
-	defer peer.ReleaseDrpcConn(dc)
+	defer peer.ReleaseDrpcConn(ctx, dc)
 
 	return fn(nsp.NewDRPCAnynsClient(dc))
 }
@@ -110,8 +110,7 @@ func (s *service) doClientAA(ctx context.Context, fn func(cl nsp.DRPCAnynsAccoun
 	if err != nil {
 		return err
 	}
-	defer peer.ReleaseDrpcConn(dc)
-
+	defer peer.ReleaseDrpcConn(ctx, dc)
 	return fn(nsp.NewDRPCAnynsAccountAbstractionClient(dc))
 }
 
