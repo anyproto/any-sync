@@ -56,12 +56,13 @@ func WithPrometheus(reg *prometheus.Registry, namespace, subsystem string) Optio
 	}
 }
 
-func WithPrometheusMetrics(hit, miss, gc prometheus.Counter) Option {
+func WithPrometheusMetrics(hit, miss, gc prometheus.Counter, size prometheus.GaugeFunc) Option {
 	return func(cache *oCache) {
 		cache.metrics = &metrics{
 			hit:  hit,
 			miss: miss,
 			gc:   gc,
+			size: size,
 		}
 	}
 }
