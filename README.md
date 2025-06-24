@@ -30,7 +30,7 @@ Features:
 - Simultaneous support of p2p and remote communication
 
 ## Protocol explanation
-Plese read the [overview](https://tech.anytype.io/any-sync/overview) of protocol entities and design.
+Plese read the [overview](https://sync.any.org) of protocol entities and design.
 
 ## Implementation
 
