@@ -14,7 +14,9 @@ Thanks to its local-first design, `any-sync` achieves better-than-cloud performa
 
 ## Use Cases
 
-With `any-sync`, developers can create next-generation alternatives to apps like Telegram, Discord, or Slack, and decentralized social and media-sharing platforms. Imagine privacy-centric and decentralized reimaginings of health-focused services similar to Strava, Oura, and more.
+`any-sync` enables developers to build private, decentralized alternatives to apps like Telegram, Discord, Notion, or even health-focused tools like Strava and Oura—without centralized infrastructure.
+
+Paired with [any-store](https://sync.any.org(https://github.com/anyproto/any-store), it provides a local-first foundation for intelligent apps, including those using LLMs. Developers work with a local object store, while sync, communication, and scaling are handled seamlessly by the protocol—offering privacy, offline support, and strong performance with minimal complexity.
 
 ## Key Features
 
