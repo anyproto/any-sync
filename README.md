@@ -16,7 +16,7 @@ Thanks to its local-first design, `any-sync` achieves better-than-cloud performa
 
 `any-sync` enables developers to build private, decentralized alternatives to apps like Telegram, Discord, Notion, or even health-focused tools like Strava and Oura—without centralized infrastructure.
 
-Paired with [any-store](https://sync.any.org(https://github.com/anyproto/any-store), it provides a local-first foundation for intelligent apps, including those using LLMs. Developers work with a local object store, while sync, communication, and scaling are handled seamlessly by the protocol—offering privacy, offline support, and strong performance with minimal complexity.
+Paired with [any-store](https://github.com/anyproto/any-store), it provides a local-first foundation for intelligent apps, including those using LLMs. Developers work with a local object store, while sync, communication, and scaling are handled seamlessly by the protocol—offering privacy, offline support, and strong performance with minimal complexity.
 
 ## Key Features
 
