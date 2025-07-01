@@ -9,6 +9,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/app/filelog"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
@@ -47,6 +48,12 @@ func (p *poolService) Init(a *app.App) (err error) {
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}
+	
+	fileLog, ok := a.Component(filelog.CName).(filelog.FileLogger)
+	if !ok {
+		fileLog = filelog.NewNoOp()
+	}
+	p.pool.fileLog = fileLog
 	p.pool.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			return p.dialer.Dial(ctx, id)

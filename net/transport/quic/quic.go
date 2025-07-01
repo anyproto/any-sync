@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/filelog"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
@@ -37,6 +38,7 @@ type Quic interface {
 type quicTransport struct {
 	secure        secureservice.SecureService
 	accepter      transport.Accepter
+	fileLog       filelog.FileLogger
 	conf          Config
 	quicConf      *quic.Config
 	listeners     []*quic.Listener
@@ -59,6 +61,11 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 		InitialPacketSize:    q.conf.InitialPacketSize,
 		MaxIncomingStreams:   q.conf.MaxStreams,
 		KeepAlivePeriod:      time.Duration(q.conf.KeepAlivePeriodSec) * time.Second,
+	}
+	var ok bool
+	q.fileLog, ok = a.Component(filelog.CName).(filelog.FileLogger)
+	if !ok {
+		q.fileLog = filelog.NewNoOp()
 	}
 	return
 }
@@ -107,6 +114,12 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 }
 
 func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
+	tm := time.Now()
+	defer func() {
+		q.fileLog.DoLog(func(logger *zap.Logger) {
+			logger.Error("quic dial", zap.Duration("duration", time.Since(tm)))
+		})
+	}()
 	tlsConf, keyCh, err := q.secure.TlsConfig()
 	if err != nil {
 		return nil, err

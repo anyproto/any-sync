@@ -7,13 +7,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/yamux"
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/filelog"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
-	"github.com/hashicorp/yamux"
-	"go.uber.org/zap"
 )
 
 const CName = "net.transport.yamux"
@@ -34,6 +36,7 @@ type Yamux interface {
 type yamuxTransport struct {
 	secure   secureservice.SecureService
 	accepter transport.Accepter
+	fileLog  filelog.FileLogger
 	conf     Config
 
 	listeners     []net.Listener
@@ -65,6 +68,11 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
 	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
+	var ok bool
+	y.fileLog, ok = a.Component(filelog.CName).(filelog.FileLogger)
+	if !ok {
+		y.fileLog = filelog.NewNoOp()
+	}
 	return
 }
 
@@ -103,6 +111,12 @@ func (y *yamuxTransport) AddListener(lis net.Listener) {
 }
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
+	tm := time.Now()
+	defer func() {
+		y.fileLog.DoLog(func(logger *zap.Logger) {
+			logger.Error("quic dial", zap.Duration("duration", time.Since(tm)))
+		})
+	}()
 	dialTimeout := time.Duration(y.conf.DialTimeoutSec) * time.Second
 	dialer := &net.Dialer{Timeout: dialTimeout}
 	conn, err := dialer.DialContext(ctx, "tcp", addr)

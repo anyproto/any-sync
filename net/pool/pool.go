@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/app/filelog"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
@@ -38,6 +39,7 @@ type pool struct {
 	outgoing    ocache.OCache
 	incoming    ocache.OCache
 	statService debugstat.StatService
+	fileLog     filelog.FileLogger
 	flushMx     sync.RWMutex
 }
 
@@ -82,6 +84,13 @@ func (p *pool) Flush(ctx context.Context) error {
 		_, _ = p.outgoing.Remove(ctx, pr.Id())
 		return true
 	})
+	
+	p.fileLog.DoLog(func(logger *zap.Logger) {
+		logger.Info("pool flush", 
+			zap.Int("outgoing.Len", p.outgoing.Len()),
+			zap.Int("incoming.Len", p.incoming.Len()))
+	})
+	
 	return nil
 }
 
