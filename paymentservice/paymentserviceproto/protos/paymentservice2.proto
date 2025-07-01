@@ -75,6 +75,9 @@ message Membership2 {
     string spaceID = 2;
     // some additional context (extra)
     string context = 3;
+    // set to true if you want to remove this item from the customer
+    // it's like setting -1 to some product
+    bool remove = 4;
   }
 
   message StoreProduct {
