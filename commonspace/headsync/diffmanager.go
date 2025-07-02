@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 )
 
@@ -131,4 +132,16 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
 	if err != nil {
 		dm.log.Warn("can't write space hash", zap.Error(err))
 	}
+}
+
+func (dm *DiffManager) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	if req.DiffType == spacesyncproto.DiffType_V2 {
+		return HandleRangeRequest(ctx, dm.diffContainer.NewDiff(), req)
+	} else {
+		return HandleRangeRequest(ctx, dm.diffContainer.OldDiff(), req)
+	}
+}
+
+func (dm *DiffManager) AllIds() []string {
+	return dm.diffContainer.NewDiff().Ids()
 }

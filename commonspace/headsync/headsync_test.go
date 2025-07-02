@@ -161,7 +161,6 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.headStorage.EXPECT().AddObserver(gomock.Any())
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
-	fx.headSync.diffContainer = fx.diffContainerMock
 	fx.headSync.diffManager = NewDiffManager(fx.diffContainerMock, fx.storageMock, fx.aclMock, fx.headSync.log, context.Background(), fx.deletionStateMock, fx.kvMock)
 }
 

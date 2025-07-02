@@ -13,7 +13,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
@@ -36,7 +35,6 @@ const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diffContainer:      hs.diffContainer,
 		diffManager:        hs.diffManager,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
@@ -53,7 +51,6 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diffContainer      ldiff.DiffContainer
 	diffManager        *DiffManager
 	peerManager        peermanager.PeerManager
 	headUpdater        *headUpdater

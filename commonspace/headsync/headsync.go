@@ -49,7 +49,6 @@ type headSync struct {
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
-	diffContainer      ldiff.DiffContainer
 	diffManager        *DiffManager
 	log                logger.CtxLogger
 	syncer             DiffSyncer
@@ -77,13 +76,13 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	h.diffContainer = ldiff.NewDiffContainer(ldiff.New(32, 256), olddiff.New(32, 256))
+	diffContainer := ldiff.NewDiffContainer(ldiff.New(32, 256), olddiff.New(32, 256))
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
-	h.diffManager = NewDiffManager(h.diffContainer, h.storage, h.syncAcl, h.log, context.Background(), h.deletionState, h.keyValue)
+	h.diffManager = NewDiffManager(diffContainer, h.storage, h.syncAcl, h.log, context.Background(), h.deletionState, h.keyValue)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		return h.syncer.Sync(ctx)
@@ -107,15 +106,11 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if req.DiffType == spacesyncproto.DiffType_V2 {
-		return HandleRangeRequest(ctx, h.diffContainer.NewDiff(), req)
-	} else {
-		return HandleRangeRequest(ctx, h.diffContainer.OldDiff(), req)
-	}
+	return h.diffManager.HandleRangeRequest(ctx, req)
 }
 
 func (h *headSync) AllIds() []string {
-	return h.diffContainer.NewDiff().Ids()
+	return h.diffManager.AllIds()
 }
 
 func (h *headSync) ExternalIds() []string {

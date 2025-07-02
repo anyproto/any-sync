@@ -64,7 +64,6 @@ func (fx *headSyncFixture) initDiffSyncer(t *testing.T) {
 	fx.diffSyncer.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return fx.clientMock
 	})
-	fx.diffSyncer.diffManager = NewDiffManager(fx.diffContainerMock, fx.storageMock, fx.aclMock, fx.headSync.log, context.Background(), fx.deletionStateMock, fx.kvMock)
 	fx.diffSyncer.Init()
 }
 

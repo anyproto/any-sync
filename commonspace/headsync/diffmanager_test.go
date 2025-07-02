@@ -19,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/mock_keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces/mock_kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 type diffManagerFixture struct {
@@ -323,3 +324,54 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx.diffManager.UpdateHeads(update)
 	})
 }
+
+func TestDiffManager_HandleRangeRequest(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("handle range request with V2 diff type", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		req := &spacesyncproto.HeadSyncRequest{
+			DiffType: spacesyncproto.DiffType_V2,
+		}
+
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().DiffType().Return(spacesyncproto.DiffType_V2)
+		fx.diffMock.EXPECT().Ranges(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+		_, err := fx.diffManager.HandleRangeRequest(ctx, req)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle range request with old diff type", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		req := &spacesyncproto.HeadSyncRequest{
+			DiffType: spacesyncproto.DiffType_V1,
+		}
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().DiffType().Return(spacesyncproto.DiffType_V1)
+		fx.diffMock.EXPECT().Ranges(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+		_, err := fx.diffManager.HandleRangeRequest(ctx, req)
+		require.NoError(t, err)
+	})
+}
+
+func TestDiffManager_AllIds(t *testing.T) {
+	t.Run("get all ids", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		expectedIds := []string{"id1", "id2", "id3"}
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Ids().Return(expectedIds)
+
+		ids := fx.diffManager.AllIds()
+		require.Equal(t, expectedIds, ids)
+	})
+}
+
