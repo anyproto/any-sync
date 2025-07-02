@@ -117,7 +117,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	tm := time.Now()
 	defer func() {
 		q.fileLog.DoLog(func(logger *zap.Logger) {
-			logger.Error("quic dial", zap.Duration("duration", time.Since(tm)))
+			logger.Error("quic dial", zap.Duration("duration", time.Since(tm)), zap.Error(err))
 		})
 	}()
 	tlsConf, keyCh, err := q.secure.TlsConfig()

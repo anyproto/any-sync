@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/filelog"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
@@ -36,6 +38,7 @@ type objectSync struct {
 	manager  objectmanager.ObjectManager
 	status   syncstatus.StatusUpdater
 	keyValue kvinterfaces.KeyValueService
+	fileLog  filelog.FileLogger
 }
 
 func New() syncdeps.SyncHandler {
@@ -48,6 +51,13 @@ func (o *objectSync) Init(a *app.App) (err error) {
 	o.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	o.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
+
+	fileLog, ok := a.Component(filelog.CName).(filelog.FileLogger)
+	if !ok {
+		fileLog = filelog.NewNoOp()
+	}
+	o.fileLog = fileLog
+
 	return
 }
 
@@ -121,10 +131,12 @@ func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requ
 }
 
 func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request, receive func(stream drpc.Stream) error) (err error) {
+	tm := time.Now()
 	pr, err := o.pool.GetOneOf(ctx, []string{rq.PeerId()})
 	if err != nil {
 		return err
 	}
+	getOneOfDuration := time.Since(tm)
 	err = pr.DoDrpc(ctx, func(conn drpc.Conn) error {
 		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
 		res, err := rq.Proto()
@@ -136,11 +148,22 @@ func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request,
 			return fmt.Errorf("unexpected message type %T", res)
 		}
 		stream, err := cl.ObjectSyncRequestStream(ctx, msg)
+		streamGetDuration := time.Since(tm)
+		o.fileLog.DoLog(func(logger *zap.Logger) {
+			logger.Info("SendStreamRequest",
+				zap.Duration("getOneOfDuration", getOneOfDuration),
+				zap.Duration("streamGetDuration", streamGetDuration),
+				zap.String("peerId", rq.PeerId()),
+				zap.String("objectId", rq.ObjectId()),
+				zap.String("spaceId", o.spaceId),
+				zap.Error(rpcerr.Unwrap(err)))
+		})
 		if err != nil {
 			return err
 		}
 		return receive(stream)
 	})
+
 	if err != nil {
 		err = rpcerr.Unwrap(err)
 		return

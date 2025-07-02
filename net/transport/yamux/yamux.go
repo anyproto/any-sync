@@ -114,7 +114,7 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 	tm := time.Now()
 	defer func() {
 		y.fileLog.DoLog(func(logger *zap.Logger) {
-			logger.Error("quic dial", zap.Duration("duration", time.Since(tm)))
+			logger.Error("yamux dial", zap.Duration("duration ms", time.Since(tm)), zap.Error(err))
 		})
 	}()
 	dialTimeout := time.Duration(y.conf.DialTimeoutSec) * time.Second
