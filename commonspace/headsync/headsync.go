@@ -14,7 +14,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
-	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -51,6 +50,7 @@ type headSync struct {
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
 	diffContainer      ldiff.DiffContainer
+	diffManager        *DiffManager
 	log                logger.CtxLogger
 	syncer             DiffSyncer
 	configuration      nodeconf.NodeConf
@@ -83,6 +83,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
+	h.diffManager = NewDiffManager(h.diffContainer, h.storage, h.syncAcl, h.log, context.Background(), h.deletionState, h.keyValue)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		return h.syncer.Sync(ctx)
@@ -98,7 +99,7 @@ func (h *headSync) Name() (name string) {
 }
 
 func (h *headSync) Run(ctx context.Context) (err error) {
-	if err := h.fillDiff(ctx); err != nil {
+	if err := h.diffManager.FillDiff(ctx); err != nil {
 		return err
 	}
 	h.periodicSync.Run()
@@ -132,43 +133,3 @@ func (h *headSync) Close(ctx context.Context) (err error) {
 	return
 }
 
-func (h *headSync) fillDiff(ctx context.Context) error {
-	var els = make([]ldiff.Element, 0, 100)
-	var aclOrStorage []ldiff.Element
-	err := h.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
-		if entry.IsDerived && entry.Heads[0] == entry.Id {
-			return true, nil
-		}
-		if entry.CommonSnapshot != "" {
-			els = append(els, ldiff.Element{
-				Id:   entry.Id,
-				Head: concatStrings(entry.Heads),
-			})
-		} else {
-			// this whole stuff is done to prevent storage hash from being set to old diff
-			aclOrStorage = append(aclOrStorage, ldiff.Element{
-				Id:   entry.Id,
-				Head: concatStrings(entry.Heads),
-			})
-		}
-		return true, nil
-	})
-	if err != nil {
-		return err
-	}
-	els = append(els, ldiff.Element{
-		Id:   h.syncAcl.Id(),
-		Head: h.syncAcl.Head().Id,
-	})
-	log.Debug("setting acl", zap.String("aclId", h.syncAcl.Id()), zap.String("headId", h.syncAcl.Head().Id))
-	h.diffContainer.Set(els...)
-	// acl will be set twice to the diff but it doesn't matter
-	h.diffContainer.NewDiff().Set(aclOrStorage...)
-	oldHash := h.diffContainer.OldDiff().Hash()
-	newHash := h.diffContainer.NewDiff().Hash()
-	if err := h.storage.StateStorage().SetHash(ctx, oldHash, newHash); err != nil {
-		h.log.Error("can't write space hash", zap.Error(err))
-		return err
-	}
-	return nil
-}
