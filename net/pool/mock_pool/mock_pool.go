@@ -57,17 +57,17 @@ func (mr *MockPoolMockRecorder) AddPeer(ctx, p any) *gomock.Call {
 }
 
 // Flush mocks base method.
-func (m *MockPool) Flush(arg0 context.Context) error {
+func (m *MockPool) Flush(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Flush", arg0)
+	ret := m.ctrl.Call(m, "Flush", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Flush indicates an expected call of Flush.
-func (mr *MockPoolMockRecorder) Flush(arg0 any) *gomock.Call {
+func (mr *MockPoolMockRecorder) Flush(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockPool)(nil).Flush), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockPool)(nil).Flush), ctx)
 }
 
 // Get mocks base method.
@@ -168,17 +168,17 @@ func (mr *MockServiceMockRecorder) Close(ctx any) *gomock.Call {
 }
 
 // Flush mocks base method.
-func (m *MockService) Flush(arg0 context.Context) error {
+func (m *MockService) Flush(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Flush", arg0)
+	ret := m.ctrl.Call(m, "Flush", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Flush indicates an expected call of Flush.
-func (mr *MockServiceMockRecorder) Flush(arg0 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Flush(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockService)(nil).Flush), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockService)(nil).Flush), ctx)
 }
 
 // Get mocks base method.

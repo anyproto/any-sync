@@ -177,31 +177,31 @@ func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePush(ctx, in any) *gomock.Ca
 }
 
 // StoreDiff mocks base method.
-func (m *MockDRPCSpaceSyncClient) StoreDiff(arg0 context.Context, arg1 *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
+func (m *MockDRPCSpaceSyncClient) StoreDiff(ctx context.Context, in *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoreDiff", arg0, arg1)
+	ret := m.ctrl.Call(m, "StoreDiff", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.StoreDiffResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StoreDiff indicates an expected call of StoreDiff.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreDiff(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreDiff(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreDiff", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreDiff), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreDiff", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreDiff), ctx, in)
 }
 
 // StoreElements mocks base method.
-func (m *MockDRPCSpaceSyncClient) StoreElements(arg0 context.Context) (spacesyncproto.DRPCSpaceSync_StoreElementsClient, error) {
+func (m *MockDRPCSpaceSyncClient) StoreElements(ctx context.Context) (spacesyncproto.DRPCSpaceSync_StoreElementsClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoreElements", arg0)
+	ret := m.ctrl.Call(m, "StoreElements", ctx)
 	ret0, _ := ret[0].(spacesyncproto.DRPCSpaceSync_StoreElementsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StoreElements indicates an expected call of StoreElements.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreElements(arg0 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreElements(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreElements", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreElements), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreElements", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreElements), ctx)
 }

@@ -154,7 +154,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	if err != nil {
 		return
 	}
-	defer p.ReleaseDrpcConn(conn)
+	defer p.ReleaseDrpcConn(ctx, conn)
 
 	var (
 		cl                             = d.clientFactory.Client(conn)

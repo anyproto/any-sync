@@ -21,8 +21,8 @@ type ProtoMessageSettable interface {
 }
 
 // WrapConnEncoding wraps the drpc connection and replace an encoding
-func WrapConnEncoding(conn drpc.Conn, useSnappy bool) drpc.Conn {
-	encConn := &connWrap{Conn: conn}
+func WrapConnEncoding(conn ConnUnblocked, useSnappy bool) ConnUnblocked {
+	encConn := &connWrap{ConnUnblocked: conn}
 	if useSnappy {
 		encConn.snappyEnc = snappyPool.Get().(*snappyEncoding)
 	}
@@ -30,8 +30,17 @@ func WrapConnEncoding(conn drpc.Conn, useSnappy bool) drpc.Conn {
 }
 
 type connWrap struct {
-	drpc.Conn
+	ConnUnblocked
 	snappyEnc *snappyEncoding
+}
+
+type ConnUnblocked interface {
+	drpc.Conn
+	Unblocked() <-chan struct{}
+}
+
+func (c *connWrap) Unblocked() <-chan struct{} {
+	return c.ConnUnblocked.Unblocked()
 }
 
 func (c *connWrap) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
@@ -40,7 +49,7 @@ func (c *connWrap) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in
 	} else {
 		enc = defaultProtoEncoding
 	}
-	return c.Conn.Invoke(ctx, rpc, enc, in, out)
+	return c.ConnUnblocked.Invoke(ctx, rpc, enc, in, out)
 }
 
 func (c *connWrap) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
@@ -49,7 +58,7 @@ func (c *connWrap) NewStream(ctx context.Context, rpc string, enc drpc.Encoding)
 	} else {
 		enc = defaultProtoEncoding
 	}
-	stream, err := c.Conn.NewStream(ctx, rpc, enc)
+	stream, err := c.ConnUnblocked.NewStream(ctx, rpc, enc)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +66,7 @@ func (c *connWrap) NewStream(ctx context.Context, rpc string, enc drpc.Encoding)
 }
 
 func (c *connWrap) Close() (err error) {
-	err = c.Conn.Close()
+	err = c.ConnUnblocked.Close()
 	if c.snappyEnc != nil {
 		snappyPool.Put(c.snappyEnc)
 	}

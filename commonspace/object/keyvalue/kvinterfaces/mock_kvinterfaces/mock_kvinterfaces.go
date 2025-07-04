@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_kvinterfaces/mock_kvinterfaces.go github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces KeyValueService
 //
+
 // Package mock_kvinterfaces is a generated GoMock package.
 package mock_kvinterfaces
 
@@ -24,6 +25,7 @@ import (
 type MockKeyValueService struct {
 	ctrl     *gomock.Controller
 	recorder *MockKeyValueServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockKeyValueServiceMockRecorder is the mock recorder for MockKeyValueService.
@@ -44,17 +46,17 @@ func (m *MockKeyValueService) EXPECT() *MockKeyValueServiceMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockKeyValueService) Close(arg0 context.Context) error {
+func (m *MockKeyValueService) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockKeyValueServiceMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockKeyValueService)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockKeyValueService)(nil).Close), ctx)
 }
 
 // DefaultStore mocks base method.
@@ -72,60 +74,60 @@ func (mr *MockKeyValueServiceMockRecorder) DefaultStore() *gomock.Call {
 }
 
 // HandleMessage mocks base method.
-func (m *MockKeyValueService) HandleMessage(arg0 context.Context, arg1 drpc.Message) error {
+func (m *MockKeyValueService) HandleMessage(ctx context.Context, msg drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleMessage", arg0, arg1)
+	ret := m.ctrl.Call(m, "HandleMessage", ctx, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleMessage indicates an expected call of HandleMessage.
-func (mr *MockKeyValueServiceMockRecorder) HandleMessage(arg0, arg1 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) HandleMessage(ctx, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockKeyValueService)(nil).HandleMessage), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockKeyValueService)(nil).HandleMessage), ctx, msg)
 }
 
 // HandleStoreDiffRequest mocks base method.
-func (m *MockKeyValueService) HandleStoreDiffRequest(arg0 context.Context, arg1 *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
+func (m *MockKeyValueService) HandleStoreDiffRequest(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStoreDiffRequest", arg0, arg1)
+	ret := m.ctrl.Call(m, "HandleStoreDiffRequest", ctx, req)
 	ret0, _ := ret[0].(*spacesyncproto.StoreDiffResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleStoreDiffRequest indicates an expected call of HandleStoreDiffRequest.
-func (mr *MockKeyValueServiceMockRecorder) HandleStoreDiffRequest(arg0, arg1 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) HandleStoreDiffRequest(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStoreDiffRequest", reflect.TypeOf((*MockKeyValueService)(nil).HandleStoreDiffRequest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStoreDiffRequest", reflect.TypeOf((*MockKeyValueService)(nil).HandleStoreDiffRequest), ctx, req)
 }
 
 // HandleStoreElementsRequest mocks base method.
-func (m *MockKeyValueService) HandleStoreElementsRequest(arg0 context.Context, arg1 spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
+func (m *MockKeyValueService) HandleStoreElementsRequest(ctx context.Context, stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStoreElementsRequest", arg0, arg1)
+	ret := m.ctrl.Call(m, "HandleStoreElementsRequest", ctx, stream)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleStoreElementsRequest indicates an expected call of HandleStoreElementsRequest.
-func (mr *MockKeyValueServiceMockRecorder) HandleStoreElementsRequest(arg0, arg1 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) HandleStoreElementsRequest(ctx, stream any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStoreElementsRequest", reflect.TypeOf((*MockKeyValueService)(nil).HandleStoreElementsRequest), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStoreElementsRequest", reflect.TypeOf((*MockKeyValueService)(nil).HandleStoreElementsRequest), ctx, stream)
 }
 
 // Init mocks base method.
-func (m *MockKeyValueService) Init(arg0 *app.App) error {
+func (m *MockKeyValueService) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockKeyValueServiceMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockKeyValueService)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockKeyValueService)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -143,29 +145,29 @@ func (mr *MockKeyValueServiceMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockKeyValueService) Run(arg0 context.Context) error {
+func (m *MockKeyValueService) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockKeyValueServiceMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockKeyValueService)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockKeyValueService)(nil).Run), ctx)
 }
 
 // SyncWithPeer mocks base method.
-func (m *MockKeyValueService) SyncWithPeer(arg0 peer.Peer) error {
+func (m *MockKeyValueService) SyncWithPeer(p peer.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SyncWithPeer", arg0)
+	ret := m.ctrl.Call(m, "SyncWithPeer", p)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SyncWithPeer indicates an expected call of SyncWithPeer.
-func (mr *MockKeyValueServiceMockRecorder) SyncWithPeer(arg0 any) *gomock.Call {
+func (mr *MockKeyValueServiceMockRecorder) SyncWithPeer(p any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockKeyValueService)(nil).SyncWithPeer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockKeyValueService)(nil).SyncWithPeer), p)
 }

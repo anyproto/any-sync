@@ -142,15 +142,15 @@ func (mr *MockPeerMockRecorder) IsClosed() *gomock.Call {
 }
 
 // ReleaseDrpcConn mocks base method.
-func (m *MockPeer) ReleaseDrpcConn(conn drpc.Conn) {
+func (m *MockPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ReleaseDrpcConn", conn)
+	m.ctrl.Call(m, "ReleaseDrpcConn", ctx, conn)
 }
 
 // ReleaseDrpcConn indicates an expected call of ReleaseDrpcConn.
-func (mr *MockPeerMockRecorder) ReleaseDrpcConn(conn any) *gomock.Call {
+func (mr *MockPeerMockRecorder) ReleaseDrpcConn(ctx, conn any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseDrpcConn", reflect.TypeOf((*MockPeer)(nil).ReleaseDrpcConn), conn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseDrpcConn", reflect.TypeOf((*MockPeer)(nil).ReleaseDrpcConn), ctx, conn)
 }
 
 // SetTTL mocks base method.
