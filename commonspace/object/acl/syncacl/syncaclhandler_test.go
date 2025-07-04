@@ -1,10 +1,10 @@
 package syncacl
 
 import (
+	"google.golang.org/protobuf/proto"
 	"sync"
 	"testing"
 
-	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -35,7 +35,7 @@ func TestSyncAclHandler_HandleHeadUpdate(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		objectHeadUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -64,7 +64,7 @@ func TestSyncAclHandler_HandleHeadUpdate(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		objectHeadUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -88,7 +88,7 @@ func TestSyncAclHandler_HandleHeadUpdate(t *testing.T) {
 			Head: "h1",
 		}
 		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		objectHeadUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -116,7 +116,7 @@ func TestSyncAclHandler_HandleHeadUpdate(t *testing.T) {
 			Head: "h1",
 		}
 		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		objectHeadUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -144,7 +144,7 @@ func TestSyncAclHandler_HandleStreamRequest(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		returnReq := &objectmessages.Request{Bytes: []byte("bytes")}
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
@@ -165,7 +165,7 @@ func TestSyncAclHandler_HandleStreamRequest(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		marshaled, err := logMessage.Marshal()
+		marshaled, err := logMessage.MarshalVT()
 		require.NoError(t, err)
 		returnResp := &response.Response{Head: "h2"}
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)

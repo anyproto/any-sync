@@ -478,7 +478,7 @@ func (s *streamOpener) HandleMessage(peerCtx context.Context, peerId string, msg
 	}
 	if syncMsg.SpaceId() == "" {
 		var msg = &spacesyncproto.SpaceSubscription{}
-		if err = msg.Unmarshal(syncMsg.Bytes); err != nil {
+		if err = msg.UnmarshalVT(syncMsg.Bytes); err != nil {
 			return
 		}
 		log.InfoCtx(peerCtx, "got subscription message", zap.Strings("spaceIds", msg.SpaceIds))
@@ -525,7 +525,7 @@ func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 		SpaceIds: []string{s.spaceId},
 		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
 	}
-	payload, err := msg.Marshal()
+	payload, err := msg.MarshalVT()
 	if err != nil {
 		return
 	}

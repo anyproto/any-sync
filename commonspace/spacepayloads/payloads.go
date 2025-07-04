@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
@@ -75,7 +73,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
 	}
-	marshalled, err := header.Marshal()
+	marshalled, err := header.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -84,7 +82,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		return
 	}
 	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
-	marshalled, err = rawHeader.Marshal()
+	marshalled, err = rawHeader.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -166,7 +164,7 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     repKey,
 	}
-	marshalled, err := header.Marshal()
+	marshalled, err := header.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -175,7 +173,7 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		return
 	}
 	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
-	marshalled, err = rawHeader.Marshal()
+	marshalled, err = rawHeader.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -255,12 +253,12 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		return objecttree.ErrIncorrectCid
 	}
 	var rawSpaceHeader spacesyncproto.RawSpaceHeader
-	err = proto.Unmarshal(rawHeaderWithId.RawHeader, &rawSpaceHeader)
+	err = rawSpaceHeader.UnmarshalVT(rawHeaderWithId.RawHeader)
 	if err != nil {
 		return
 	}
 	var header spacesyncproto.SpaceHeader
-	err = proto.Unmarshal(rawSpaceHeader.SpaceHeader, &header)
+	err = header.UnmarshalVT(rawSpaceHeader.SpaceHeader)
 	if err != nil {
 		return
 	}
@@ -290,12 +288,12 @@ func validateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (s
 		return
 	}
 	var rawAcl consensusproto.RawRecord
-	err = proto.Unmarshal(rawWithId.Payload, &rawAcl)
+	err = rawAcl.UnmarshalVT(rawWithId.Payload)
 	if err != nil {
 		return
 	}
 	var aclRoot aclrecordproto.AclRoot
-	err = proto.Unmarshal(rawAcl.Payload, &aclRoot)
+	err = aclRoot.UnmarshalVT(rawAcl.Payload)
 	if err != nil {
 		return
 	}
@@ -332,12 +330,12 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 		return
 	}
 	var raw treechangeproto.RawTreeChange
-	err = proto.Unmarshal(rawWithId.RawChange, &raw)
+	err = raw.UnmarshalVT(rawWithId.RawChange)
 	if err != nil {
 		return
 	}
 	var rootChange treechangeproto.RootChange
-	err = proto.Unmarshal(raw.Payload, &rootChange)
+	err = rootChange.UnmarshalVT(raw.Payload)
 	if err != nil {
 		return
 	}

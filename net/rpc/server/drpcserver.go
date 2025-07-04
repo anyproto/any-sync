@@ -8,6 +8,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/encoding"
 	"github.com/anyproto/any-sync/net/rpc/limiter"
 
 	"go.uber.org/zap"
@@ -62,6 +63,8 @@ func (s *drpcServer) Init(a *app.App) (err error) {
 	if s.metric != nil {
 		handler = s.metric.WrapDRPCHandler(handler)
 	}
+	handler = encoding.WrapHandler(handler)
+
 	bufSize := s.config.Stream.MaxMsgSizeMb * (1 << 20)
 	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
 		Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},

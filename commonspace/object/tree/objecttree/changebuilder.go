@@ -3,8 +3,6 @@ package objecttree
 import (
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -93,7 +91,7 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 
 	raw := c.rawTreeCh
 	// Use UnmarshalMerge, because proto.Unmarshal calls Reset and delete buffers before unmarshalling
-	err = proto.UnmarshalMerge(rawIdChange.GetRawChange(), raw)
+	err = raw.UnmarshalVT(rawIdChange.GetRawChange())
 	if err != nil {
 		return
 	}
@@ -129,7 +127,7 @@ func (c *changeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeCh
 
 	raw := c.rawTreeCh
 	// Use UnmarshalMerge, because proto.Unmarshal calls Reset and delete buffers before unmarshalling
-	err = proto.UnmarshalMerge(rawIdChange.GetRawChange(), raw)
+	err = raw.UnmarshalVT(rawIdChange.GetRawChange())
 	if err != nil {
 		return
 	}
@@ -154,7 +152,7 @@ func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChan
 		SpaceId:       payload.SpaceId,
 		Seed:          payload.Seed,
 	}
-	marshalledChange, err := proto.Marshal(change)
+	marshalledChange, err := change.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -166,7 +164,7 @@ func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChan
 		Payload:   marshalledChange,
 		Signature: signature,
 	}
-	marshalledRawChange, err := proto.Marshal(raw)
+	marshalledRawChange, err := raw.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -189,14 +187,14 @@ func (c *changeBuilder) BuildDerivedRoot(payload InitialDerivedContent) (ch *Cha
 		SpaceId:       payload.SpaceId,
 		IsDerived:     true,
 	}
-	marshalledChange, err := proto.Marshal(change)
+	marshalledChange, err := change.MarshalVT()
 	if err != nil {
 		return
 	}
 	raw := &treechangeproto.RawTreeChange{
 		Payload: marshalledChange,
 	}
-	marshalledRawChange, err := proto.Marshal(raw)
+	marshalledRawChange, err := raw.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -237,7 +235,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 	} else {
 		change.ChangesData = payload.Content
 	}
-	marshalledChange, err := proto.Marshal(change)
+	marshalledChange, err := change.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -249,7 +247,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 		Payload:   marshalledChange,
 		Signature: signature,
 	}
-	marshalledRawChange, err := proto.Marshal(raw)
+	marshalledRawChange, err := raw.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -297,15 +295,18 @@ func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChange
 		DataType:       ch.DataType,
 	}
 	var marshalled []byte
-	marshalled, err = treeChange.Marshal()
+	marshalled, err = treeChange.MarshalVT()
 	if err != nil {
 		return
 	}
 
-	marshalledRawChange, err := proto.Marshal(&treechangeproto.RawTreeChange{
+	change := treechangeproto.RawTreeChange{
 		Payload:   marshalled,
 		Signature: ch.Signature,
-	})
+	}
+
+	marshalledRawChange, err := change.MarshalVT()
+
 	if err != nil {
 		return
 	}
@@ -321,7 +322,7 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 	var key crypto.PubKey
 	if c.isRoot(id) {
 		unmarshalled := &treechangeproto.RootChange{}
-		err = proto.Unmarshal(raw.Payload, unmarshalled)
+		err = unmarshalled.UnmarshalVT(raw.Payload)
 		if err != nil {
 			return
 		}
@@ -338,7 +339,7 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 	}
 	if !c.hasData {
 		change := &treechangeproto.NoDataTreeChange{}
-		err = proto.Unmarshal(raw.Payload, change)
+		err = change.UnmarshalVT(raw.Payload)
 		if err != nil {
 			return
 		}
@@ -360,7 +361,7 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		}
 	} else {
 		change := &treechangeproto.TreeChange{}
-		err = proto.Unmarshal(raw.Payload, change)
+		err = change.UnmarshalVT(raw.Payload)
 		if err != nil {
 			return
 		}
@@ -388,7 +389,7 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 func (c *changeBuilder) unmarshallReducedRawChange(raw *treechangeproto.RawTreeChange, id string) (ch *Change, err error) {
 	if c.isRoot(id) {
 		unmarshalled := &treechangeproto.RootChange{}
-		err = proto.Unmarshal(raw.Payload, unmarshalled)
+		err = unmarshalled.UnmarshalVT(raw.Payload)
 		if err != nil {
 			return
 		}
@@ -404,7 +405,7 @@ func (c *changeBuilder) unmarshallReducedRawChange(raw *treechangeproto.RawTreeC
 		return
 	}
 	unmarshalled := &treechangeproto.ReducedTreeChange{}
-	err = proto.Unmarshal(raw.Payload, unmarshalled)
+	err = unmarshalled.UnmarshalVT(raw.Payload)
 	if err != nil {
 		return
 	}
@@ -424,13 +425,13 @@ func (c *changeBuilder) isRoot(id string) bool {
 
 func UnmarshallRoot(rawRoot *treechangeproto.RawTreeChangeWithId) (root *treechangeproto.RootChange, err error) {
 	raw := &treechangeproto.RawTreeChange{}
-	err = proto.Unmarshal(rawRoot.GetRawChange(), raw)
+	err = raw.UnmarshalVT(rawRoot.GetRawChange())
 	if err != nil {
 		return
 	}
 
 	root = &treechangeproto.RootChange{}
-	err = proto.Unmarshal(raw.Payload, root)
+	err = root.UnmarshalVT(raw.Payload)
 	if err != nil {
 		return
 	}
