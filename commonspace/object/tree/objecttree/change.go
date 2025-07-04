@@ -34,6 +34,9 @@ type Change struct {
 	OrderId         string
 	SnapshotCounter int
 
+	// using this on build stage
+	rawChange *treechangeproto.RawTreeChangeWithId
+
 	// iterator helpers
 	visited          bool
 	branchesFinished bool

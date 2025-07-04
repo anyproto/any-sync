@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
@@ -58,7 +59,7 @@ func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
 			return
 		}
-		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, list.NoOpAcceptorVerifier{}); a.consErr != nil {
+		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.New()); a.consErr != nil {
 			return
 		}
 	} else {

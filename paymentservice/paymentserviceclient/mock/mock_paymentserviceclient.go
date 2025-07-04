@@ -57,6 +57,36 @@ func (mr *MockAnyPpClientServiceMockRecorder) BuySubscription(ctx, in any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuySubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).BuySubscription), ctx, in)
 }
 
+// CodeGetInfo mocks base method.
+func (m *MockAnyPpClientService) CodeGetInfo(ctx context.Context, in *paymentserviceproto.CodeGetInfoRequestSigned) (*paymentserviceproto.CodeGetInfoResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CodeGetInfo", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.CodeGetInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CodeGetInfo indicates an expected call of CodeGetInfo.
+func (mr *MockAnyPpClientServiceMockRecorder) CodeGetInfo(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeGetInfo", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeGetInfo), ctx, in)
+}
+
+// CodeRedeem mocks base method.
+func (m *MockAnyPpClientService) CodeRedeem(ctx context.Context, in *paymentserviceproto.CodeRedeemRequestSigned) (*paymentserviceproto.CodeRedeemResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CodeRedeem", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.CodeRedeemResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CodeRedeem indicates an expected call of CodeRedeem.
+func (mr *MockAnyPpClientServiceMockRecorder) CodeRedeem(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeRedeem", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeRedeem), ctx, in)
+}
+
 // FinalizeSubscription mocks base method.
 func (m *MockAnyPpClientService) FinalizeSubscription(ctx context.Context, in *paymentserviceproto.FinalizeSubscriptionRequestSigned) (*paymentserviceproto.FinalizeSubscriptionResponse, error) {
 	m.ctrl.T.Helper()

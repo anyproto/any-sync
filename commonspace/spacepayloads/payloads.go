@@ -10,6 +10,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -94,7 +95,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, list.NoOpAcceptorVerifier{})
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:   payload.SigningKey,
 		MasterKey: payload.MasterKey,
@@ -185,7 +186,7 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, list.NoOpAcceptorVerifier{})
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:   payload.SigningKey,
 		MasterKey: payload.MasterKey,

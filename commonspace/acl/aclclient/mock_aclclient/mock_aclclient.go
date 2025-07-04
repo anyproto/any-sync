@@ -101,6 +101,21 @@ func (mr *MockAclJoiningClientMockRecorder) Init(a any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockAclJoiningClient)(nil).Init), a)
 }
 
+// InviteJoin mocks base method.
+func (m *MockAclJoiningClient) InviteJoin(arg0 context.Context, arg1 string, arg2 list.InviteJoinPayload) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InviteJoin", arg0, arg1, arg2)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InviteJoin indicates an expected call of InviteJoin.
+func (mr *MockAclJoiningClientMockRecorder) InviteJoin(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InviteJoin", reflect.TypeOf((*MockAclJoiningClient)(nil).InviteJoin), arg0, arg1, arg2)
+}
+
 // Name mocks base method.
 func (m *MockAclJoiningClient) Name() string {
 	m.ctrl.T.Helper()
@@ -210,6 +225,20 @@ func (mr *MockAclSpaceClientMockRecorder) CancelRequest(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelRequest", reflect.TypeOf((*MockAclSpaceClient)(nil).CancelRequest), ctx)
 }
 
+// ChangeInvite mocks base method.
+func (m *MockAclSpaceClient) ChangeInvite(arg0 context.Context, arg1 string, arg2 list.AclPermissions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeInvite", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ChangeInvite indicates an expected call of ChangeInvite.
+func (mr *MockAclSpaceClientMockRecorder) ChangeInvite(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).ChangeInvite), arg0, arg1, arg2)
+}
+
 // ChangePermissions mocks base method.
 func (m *MockAclSpaceClient) ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) error {
 	m.ctrl.T.Helper()
@@ -239,18 +268,18 @@ func (mr *MockAclSpaceClientMockRecorder) DeclineRequest(ctx, identity any) *gom
 }
 
 // GenerateInvite mocks base method.
-func (m *MockAclSpaceClient) GenerateInvite() (list.InviteResult, error) {
+func (m *MockAclSpaceClient) GenerateInvite(arg0, arg1 bool, arg2 list.AclPermissions) (list.InviteResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateInvite")
+	ret := m.ctrl.Call(m, "GenerateInvite", arg0, arg1, arg2)
 	ret0, _ := ret[0].(list.InviteResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GenerateInvite indicates an expected call of GenerateInvite.
-func (mr *MockAclSpaceClientMockRecorder) GenerateInvite() *gomock.Call {
+func (mr *MockAclSpaceClientMockRecorder) GenerateInvite(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).GenerateInvite))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).GenerateInvite), arg0, arg1, arg2)
 }
 
 // Init mocks base method.

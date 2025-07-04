@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
@@ -31,7 +32,7 @@ func migrateAclList(ctx context.Context, oldStorage oldstorage.ListStorage, head
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to generate keys: %w", err)
 	}
-	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, &list.NoOpAcceptorVerifier{})
+	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.New())
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to build acl list: %w", err)
 	}
