@@ -23,7 +23,8 @@ message Membership2 {
     string currency = 1;
     // $0.01 = 1
     // $1.00 = 100
-    uint32 amountCents = 2;
+    // negative amounts 
+    int64 amountCents = 2;
   }
 
   message Product {
