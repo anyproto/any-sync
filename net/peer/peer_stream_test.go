@@ -10,15 +10,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anyproto/any-sync/net/rpc"
-	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	pb "github.com/anyproto/any-sync/net/streampool/testservice"
-	"github.com/anyproto/any-sync/net/transport"
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
+
+	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
+	pb "github.com/anyproto/any-sync/net/streampool/testservice"
+	"github.com/anyproto/any-sync/net/transport"
 )
+
+var noSnappyProtoChecker = handshake.ProtoChecker{
+	AllowedProtoTypes: []handshakeproto.ProtoType{
+		handshakeproto.ProtoType_DRPC,
+	},
+}
 
 func init() {
 	serverConns = make(chan net.Conn, 1000)
@@ -33,7 +41,7 @@ func init() {
 		for c := range serverConns {
 			go func(c net.Conn) {
 				// 1) do the libp2p/TLS handshake
-				_, err := handshake.IncomingProtoHandshake(ctx, c, defaultProtoChecker)
+				_, err := handshake.IncomingProtoHandshake(ctx, c, noSnappyProtoChecker)
 
 				if err != nil {
 					fmt.Printf("handshake failed: %v\n", err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"storj.io/drpc"
+	"storj.io/drpc/drpcwire"
 
 	"github.com/anyproto/any-sync/protobuf"
 )
@@ -79,12 +80,20 @@ type streamWrap struct {
 	returnToPool bool
 }
 
+type streamRawWrite interface {
+	RawWrite(kind drpcwire.Kind, data []byte) (err error)
+}
+
 func (s streamWrap) MsgSend(msg drpc.Message, _ drpc.Encoding) error {
 	return s.Stream.MsgSend(msg, s.encoding)
 }
 
 func (s streamWrap) MsgRecv(msg drpc.Message, _ drpc.Encoding) error {
 	return s.Stream.MsgRecv(msg, s.encoding)
+}
+
+func (s streamWrap) RawWrite(kind drpcwire.Kind, data []byte) (err error) {
+	return s.Stream.(streamRawWrite).RawWrite(kind, data)
 }
 
 func (s streamWrap) CloseSend() (err error) {
