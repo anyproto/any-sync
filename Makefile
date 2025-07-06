@@ -1,14 +1,15 @@
 .PHONY: proto test deps mocks
 export GOPRIVATE=github.com/anyproto
+export PATH:=deps:$(PATH)
 
 all:
 	@set -e;
 	@git config core.hooksPath .githooks;
 
 PROTOC=protoc
-PROTOC_GEN_GO=$(shell which protoc-gen-go)
-PROTOC_GEN_DRPC=$(shell which protoc-gen-go-drpc)
-PROTOC_GEN_VTPROTO=$(shell which protoc-gen-go-vtproto)
+PROTOC_GEN_GO=deps/protoc-gen-go
+PROTOC_GEN_DRPC=deps/protoc-gen-go-drpc
+PROTOC_GEN_VTPROTO=deps/protoc-gen-go-vtproto
 
 define generate_proto
 	@echo "Generating Protobuf for directory: $(1)"
@@ -55,6 +56,12 @@ proto:
 	$(call generate_drpc,,nameservice/nameserviceproto/protos)
 	$(call generate_drpc,,paymentservice/paymentserviceproto/protos)
 
+
+deps:
+	go mod download
+	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
+	go build -o deps google.golang.org/protobuf/cmd/protoc-gen-go
+	go build -o deps github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto
 
 mocks:
 	echo 'Generating mocks...'
