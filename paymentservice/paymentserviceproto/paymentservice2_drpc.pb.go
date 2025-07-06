@@ -40,16 +40,14 @@ func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice
 type DRPCAnyPaymentProcessing2Client interface {
 	DRPCConn() drpc.Conn
 
+	ProductsEnumerate(ctx context.Context, in *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
+	ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
+	GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
 	StoreCartGet(ctx context.Context, in *Membership2_StoreCartGetRequest) (*Membership2_StoreCartResponse, error)
-	StoreCartProductAdd(ctx context.Context, in *Membership2_StoreCartProductAddRequest) (*Membership2_StoreCartResponse, error)
-	StoreCartProductRemove(ctx context.Context, in *Membership2_StoreCartProductRemoveRequest) (*Membership2_StoreCartResponse, error)
+	StoreCartUpdate(ctx context.Context, in *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error)
+	StoreCartClear(ctx context.Context, in *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartPromocodeApply(ctx context.Context, in *Membership2_StoreCartPromocodeApplyRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartCheckout(ctx context.Context, in *Membership2_StoreCartCheckoutRequest) (*Membership2_StoreCartCheckoutResponse, error)
-	StoreCartUpdate(ctx context.Context, in *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error)
-	GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
-	ProductsEnumerate(ctx context.Context, in *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
-	ProductAllocateToSpace(ctx context.Context, in *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error)
-	ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
 }
 
 type drpcAnyPaymentProcessing2Client struct {
@@ -62,6 +60,33 @@ func NewDRPCAnyPaymentProcessing2Client(cc drpc.Conn) DRPCAnyPaymentProcessing2C
 
 func (c *drpcAnyPaymentProcessing2Client) DRPCConn() drpc.Conn { return c.cc }
 
+func (c *drpcAnyPaymentProcessing2Client) ProductsEnumerate(ctx context.Context, in *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error) {
+	out := new(Membership2_StoreProductsEnumerateResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductsEnumerate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessing2Client) ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
+	out := new(Membership2_ProductSetSettingsResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductSetSettings", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessing2Client) GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
+	out := new(Membership2_GetStatusResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcAnyPaymentProcessing2Client) StoreCartGet(ctx context.Context, in *Membership2_StoreCartGetRequest) (*Membership2_StoreCartResponse, error) {
 	out := new(Membership2_StoreCartResponse)
 	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartGet", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
@@ -71,18 +96,18 @@ func (c *drpcAnyPaymentProcessing2Client) StoreCartGet(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *drpcAnyPaymentProcessing2Client) StoreCartProductAdd(ctx context.Context, in *Membership2_StoreCartProductAddRequest) (*Membership2_StoreCartResponse, error) {
-	out := new(Membership2_StoreCartResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartProductAdd", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+func (c *drpcAnyPaymentProcessing2Client) StoreCartUpdate(ctx context.Context, in *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error) {
+	out := new(Membership2_StoreCartUpdateResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartUpdate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcAnyPaymentProcessing2Client) StoreCartProductRemove(ctx context.Context, in *Membership2_StoreCartProductRemoveRequest) (*Membership2_StoreCartResponse, error) {
+func (c *drpcAnyPaymentProcessing2Client) StoreCartClear(ctx context.Context, in *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error) {
 	out := new(Membership2_StoreCartResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartProductRemove", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartClear", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -107,75 +132,40 @@ func (c *drpcAnyPaymentProcessing2Client) StoreCartCheckout(ctx context.Context,
 	return out, nil
 }
 
-func (c *drpcAnyPaymentProcessing2Client) StoreCartUpdate(ctx context.Context, in *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error) {
-	out := new(Membership2_StoreCartUpdateResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/StoreCartUpdate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *drpcAnyPaymentProcessing2Client) GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
-	out := new(Membership2_GetStatusResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *drpcAnyPaymentProcessing2Client) ProductsEnumerate(ctx context.Context, in *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error) {
-	out := new(Membership2_StoreProductsEnumerateResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductsEnumerate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *drpcAnyPaymentProcessing2Client) ProductAllocateToSpace(ctx context.Context, in *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error) {
-	out := new(Membership2_ProductAllocateToSpaceResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductAllocateToSpace", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *drpcAnyPaymentProcessing2Client) ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
-	out := new(Membership2_ProductSetSettingsResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductSetSettings", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 type DRPCAnyPaymentProcessing2Server interface {
+	ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
+	ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
+	GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
 	StoreCartGet(context.Context, *Membership2_StoreCartGetRequest) (*Membership2_StoreCartResponse, error)
-	StoreCartProductAdd(context.Context, *Membership2_StoreCartProductAddRequest) (*Membership2_StoreCartResponse, error)
-	StoreCartProductRemove(context.Context, *Membership2_StoreCartProductRemoveRequest) (*Membership2_StoreCartResponse, error)
+	StoreCartUpdate(context.Context, *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error)
+	StoreCartClear(context.Context, *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartPromocodeApply(context.Context, *Membership2_StoreCartPromocodeApplyRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartCheckout(context.Context, *Membership2_StoreCartCheckoutRequest) (*Membership2_StoreCartCheckoutResponse, error)
-	StoreCartUpdate(context.Context, *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error)
-	GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
-	ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
-	ProductAllocateToSpace(context.Context, *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error)
-	ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
 }
 
 type DRPCAnyPaymentProcessing2UnimplementedServer struct{}
+
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
 
 func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartGet(context.Context, *Membership2_StoreCartGetRequest) (*Membership2_StoreCartResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartProductAdd(context.Context, *Membership2_StoreCartProductAddRequest) (*Membership2_StoreCartResponse, error) {
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartUpdate(context.Context, *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartProductRemove(context.Context, *Membership2_StoreCartProductRemoveRequest) (*Membership2_StoreCartResponse, error) {
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartClear(context.Context, *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -187,96 +177,13 @@ func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartCheckout(context
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartUpdate(context.Context, *Membership2_StoreCartUpdateRequest) (*Membership2_StoreCartUpdateResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductAllocateToSpace(context.Context, *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
 type DRPCAnyPaymentProcessing2Description struct{}
 
-func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 10 }
+func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 8 }
 
 func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/AnyPaymentProcessing2/StoreCartGet", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartGet(
-						ctx,
-						in1.(*Membership2_StoreCartGetRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartGet, true
-	case 1:
-		return "/AnyPaymentProcessing2/StoreCartProductAdd", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartProductAdd(
-						ctx,
-						in1.(*Membership2_StoreCartProductAddRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartProductAdd, true
-	case 2:
-		return "/AnyPaymentProcessing2/StoreCartProductRemove", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartProductRemove(
-						ctx,
-						in1.(*Membership2_StoreCartProductRemoveRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartProductRemove, true
-	case 3:
-		return "/AnyPaymentProcessing2/StoreCartPromocodeApply", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartPromocodeApply(
-						ctx,
-						in1.(*Membership2_StoreCartPromocodeApplyRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartPromocodeApply, true
-	case 4:
-		return "/AnyPaymentProcessing2/StoreCartCheckout", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartCheckout(
-						ctx,
-						in1.(*Membership2_StoreCartCheckoutRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartCheckout, true
-	case 5:
-		return "/AnyPaymentProcessing2/StoreCartUpdate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					StoreCartUpdate(
-						ctx,
-						in1.(*Membership2_StoreCartUpdateRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.StoreCartUpdate, true
-	case 6:
-		return "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					GetStatus(
-						ctx,
-						in1.(*Membership2_GetStatusRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.GetStatus, true
-	case 7:
 		return "/AnyPaymentProcessing2/ProductsEnumerate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessing2Server).
@@ -285,16 +192,7 @@ func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding
 						in1.(*Membership2_StoreProductsEnumerateRequest),
 					)
 			}, DRPCAnyPaymentProcessing2Server.ProductsEnumerate, true
-	case 8:
-		return "/AnyPaymentProcessing2/ProductAllocateToSpace", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
-					ProductAllocateToSpace(
-						ctx,
-						in1.(*Membership2_ProductAllocateToSpaceRequest),
-					)
-			}, DRPCAnyPaymentProcessing2Server.ProductAllocateToSpace, true
-	case 9:
+	case 1:
 		return "/AnyPaymentProcessing2/ProductSetSettings", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessing2Server).
@@ -303,6 +201,60 @@ func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding
 						in1.(*Membership2_ProductSetSettingsRequest),
 					)
 			}, DRPCAnyPaymentProcessing2Server.ProductSetSettings, true
+	case 2:
+		return "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					GetStatus(
+						ctx,
+						in1.(*Membership2_GetStatusRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.GetStatus, true
+	case 3:
+		return "/AnyPaymentProcessing2/StoreCartGet", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					StoreCartGet(
+						ctx,
+						in1.(*Membership2_StoreCartGetRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.StoreCartGet, true
+	case 4:
+		return "/AnyPaymentProcessing2/StoreCartUpdate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					StoreCartUpdate(
+						ctx,
+						in1.(*Membership2_StoreCartUpdateRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.StoreCartUpdate, true
+	case 5:
+		return "/AnyPaymentProcessing2/StoreCartClear", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					StoreCartClear(
+						ctx,
+						in1.(*Membership2_StoreCartClearRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.StoreCartClear, true
+	case 6:
+		return "/AnyPaymentProcessing2/StoreCartPromocodeApply", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					StoreCartPromocodeApply(
+						ctx,
+						in1.(*Membership2_StoreCartPromocodeApplyRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.StoreCartPromocodeApply, true
+	case 7:
+		return "/AnyPaymentProcessing2/StoreCartCheckout", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					StoreCartCheckout(
+						ctx,
+						in1.(*Membership2_StoreCartCheckoutRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.StoreCartCheckout, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -310,6 +262,54 @@ func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding
 
 func DRPCRegisterAnyPaymentProcessing2(mux drpc.Mux, impl DRPCAnyPaymentProcessing2Server) error {
 	return mux.Register(impl, DRPCAnyPaymentProcessing2Description{})
+}
+
+type DRPCAnyPaymentProcessing2_ProductsEnumerateStream interface {
+	drpc.Stream
+	SendAndClose(*Membership2_StoreProductsEnumerateResponse) error
+}
+
+type drpcAnyPaymentProcessing2_ProductsEnumerateStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing2_ProductsEnumerateStream) SendAndClose(m *Membership2_StoreProductsEnumerateResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing2_ProductSetSettingsStream interface {
+	drpc.Stream
+	SendAndClose(*Membership2_ProductSetSettingsResponse) error
+}
+
+type drpcAnyPaymentProcessing2_ProductSetSettingsStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing2_ProductSetSettingsStream) SendAndClose(m *Membership2_ProductSetSettingsResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing2_GetStatusStream interface {
+	drpc.Stream
+	SendAndClose(*Membership2_GetStatusResponse) error
+}
+
+type drpcAnyPaymentProcessing2_GetStatusStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing2_GetStatusStream) SendAndClose(m *Membership2_GetStatusResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
 }
 
 type DRPCAnyPaymentProcessing2_StoreCartGetStream interface {
@@ -328,32 +328,32 @@ func (x *drpcAnyPaymentProcessing2_StoreCartGetStream) SendAndClose(m *Membershi
 	return x.CloseSend()
 }
 
-type DRPCAnyPaymentProcessing2_StoreCartProductAddStream interface {
+type DRPCAnyPaymentProcessing2_StoreCartUpdateStream interface {
 	drpc.Stream
-	SendAndClose(*Membership2_StoreCartResponse) error
+	SendAndClose(*Membership2_StoreCartUpdateResponse) error
 }
 
-type drpcAnyPaymentProcessing2_StoreCartProductAddStream struct {
+type drpcAnyPaymentProcessing2_StoreCartUpdateStream struct {
 	drpc.Stream
 }
 
-func (x *drpcAnyPaymentProcessing2_StoreCartProductAddStream) SendAndClose(m *Membership2_StoreCartResponse) error {
+func (x *drpcAnyPaymentProcessing2_StoreCartUpdateStream) SendAndClose(m *Membership2_StoreCartUpdateResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCAnyPaymentProcessing2_StoreCartProductRemoveStream interface {
+type DRPCAnyPaymentProcessing2_StoreCartClearStream interface {
 	drpc.Stream
 	SendAndClose(*Membership2_StoreCartResponse) error
 }
 
-type drpcAnyPaymentProcessing2_StoreCartProductRemoveStream struct {
+type drpcAnyPaymentProcessing2_StoreCartClearStream struct {
 	drpc.Stream
 }
 
-func (x *drpcAnyPaymentProcessing2_StoreCartProductRemoveStream) SendAndClose(m *Membership2_StoreCartResponse) error {
+func (x *drpcAnyPaymentProcessing2_StoreCartClearStream) SendAndClose(m *Membership2_StoreCartResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
@@ -386,86 +386,6 @@ type drpcAnyPaymentProcessing2_StoreCartCheckoutStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing2_StoreCartCheckoutStream) SendAndClose(m *Membership2_StoreCartCheckoutResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCAnyPaymentProcessing2_StoreCartUpdateStream interface {
-	drpc.Stream
-	SendAndClose(*Membership2_StoreCartUpdateResponse) error
-}
-
-type drpcAnyPaymentProcessing2_StoreCartUpdateStream struct {
-	drpc.Stream
-}
-
-func (x *drpcAnyPaymentProcessing2_StoreCartUpdateStream) SendAndClose(m *Membership2_StoreCartUpdateResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCAnyPaymentProcessing2_GetStatusStream interface {
-	drpc.Stream
-	SendAndClose(*Membership2_GetStatusResponse) error
-}
-
-type drpcAnyPaymentProcessing2_GetStatusStream struct {
-	drpc.Stream
-}
-
-func (x *drpcAnyPaymentProcessing2_GetStatusStream) SendAndClose(m *Membership2_GetStatusResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCAnyPaymentProcessing2_ProductsEnumerateStream interface {
-	drpc.Stream
-	SendAndClose(*Membership2_StoreProductsEnumerateResponse) error
-}
-
-type drpcAnyPaymentProcessing2_ProductsEnumerateStream struct {
-	drpc.Stream
-}
-
-func (x *drpcAnyPaymentProcessing2_ProductsEnumerateStream) SendAndClose(m *Membership2_StoreProductsEnumerateResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCAnyPaymentProcessing2_ProductAllocateToSpaceStream interface {
-	drpc.Stream
-	SendAndClose(*Membership2_ProductAllocateToSpaceResponse) error
-}
-
-type drpcAnyPaymentProcessing2_ProductAllocateToSpaceStream struct {
-	drpc.Stream
-}
-
-func (x *drpcAnyPaymentProcessing2_ProductAllocateToSpaceStream) SendAndClose(m *Membership2_ProductAllocateToSpaceResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCAnyPaymentProcessing2_ProductSetSettingsStream interface {
-	drpc.Stream
-	SendAndClose(*Membership2_ProductSetSettingsResponse) error
-}
-
-type drpcAnyPaymentProcessing2_ProductSetSettingsStream struct {
-	drpc.Stream
-}
-
-func (x *drpcAnyPaymentProcessing2_ProductSetSettingsStream) SendAndClose(m *Membership2_ProductSetSettingsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}

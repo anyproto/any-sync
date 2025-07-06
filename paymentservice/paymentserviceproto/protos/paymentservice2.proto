@@ -123,18 +123,6 @@ message Membership2 {
     Membership2.Invoice nextInvoice = 2;
   }
 
-  // Some products require extra allocation step
-  message ProductAllocateToSpaceRequest {
-    string spaceId = 1;
-    string productId = 2;
-    // some additional data
-    string context = 3;
-  }
-
-  message ProductAllocateToSpaceResponse {
-    
-  }
-
   message StoreProductsEnumerateRequest {
     
   }
@@ -147,24 +135,8 @@ message Membership2 {
 
   }
 
-  message StoreCartProductAddRequest {
-    string productId = 1;
-    // if "isAttachedToSpace" was true for that product
-    string spaceID = 2;
-    // some additional context (extra) 
-    string context = 3;
-
-    string ownerEthAddress = 4;
-  }
-
   message StoreCartResponse {
     Membership2.Cart cart = 1;
-  }
-
-  message StoreCartProductRemoveRequest {
-    // each product instance has a unique index
-    // each product instance can have a different "context" attached (like spaceId)
-    uint32 index = 1;
   }
 
   message StoreCartPromocodeApplyRequest {
@@ -202,18 +174,22 @@ message Membership2 {
   message StoreCartUpdateResponse {
     Membership2.Cart cart = 1;
   }
+
+  message StoreCartClearRequest {
+
+  }
 }
 
 service AnyPaymentProcessing2 {
-  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartProductAdd (Membership2.StoreCartProductAddRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
-  rpc StoreCartUpdate(Membership2.StoreCartUpdateRequest) returns (Membership2.StoreCartUpdateResponse);
+  rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
+  rpc ProductSetSettings (Membership2.ProductSetSettingsRequest) returns (Membership2.ProductSetSettingsResponse);
 
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
-  rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
-  rpc ProductAllocateToSpace (Membership2.ProductAllocateToSpaceRequest) returns (Membership2.ProductAllocateToSpaceResponse);
-  rpc ProductSetSettings (Membership2.ProductSetSettingsRequest) returns (Membership2.ProductSetSettingsResponse);
+
+  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartResponse);
+  rpc StoreCartUpdate(Membership2.StoreCartUpdateRequest) returns (Membership2.StoreCartUpdateResponse);
+  rpc StoreCartClear (Membership2.StoreCartClearRequest) returns (Membership2.StoreCartResponse);
+     
+  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
+  rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
 }

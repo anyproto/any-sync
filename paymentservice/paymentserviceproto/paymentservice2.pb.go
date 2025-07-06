@@ -986,128 +986,6 @@ func (m *Membership2_GetStatusResponse) GetNextInvoice() *Membership2_Invoice {
 	return nil
 }
 
-// Some products require extra allocation step
-type Membership2_ProductAllocateToSpaceRequest struct {
-	SpaceId   string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	ProductId string `protobuf:"bytes,2,opt,name=productId,proto3" json:"productId,omitempty"`
-	// some additional data
-	Context string `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
-}
-
-func (m *Membership2_ProductAllocateToSpaceRequest) Reset() {
-	*m = Membership2_ProductAllocateToSpaceRequest{}
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) String() string {
-	return proto.CompactTextString(m)
-}
-func (*Membership2_ProductAllocateToSpaceRequest) ProtoMessage() {}
-func (*Membership2_ProductAllocateToSpaceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 11}
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Membership2_ProductAllocateToSpaceRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
-	b = b[:newLen]
-	_, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Membership2_ProductAllocateToSpaceRequest.Merge(m, src)
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *Membership2_ProductAllocateToSpaceRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_Membership2_ProductAllocateToSpaceRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Membership2_ProductAllocateToSpaceRequest proto.InternalMessageInfo
-
-func (m *Membership2_ProductAllocateToSpaceRequest) GetSpaceId() string {
-	if m != nil {
-		return m.SpaceId
-	}
-	return ""
-}
-
-func (m *Membership2_ProductAllocateToSpaceRequest) GetProductId() string {
-	if m != nil {
-		return m.ProductId
-	}
-	return ""
-}
-
-func (m *Membership2_ProductAllocateToSpaceRequest) GetContext() string {
-	if m != nil {
-		return m.Context
-	}
-	return ""
-}
-
-type Membership2_ProductAllocateToSpaceResponse struct {
-}
-
-func (m *Membership2_ProductAllocateToSpaceResponse) Reset() {
-	*m = Membership2_ProductAllocateToSpaceResponse{}
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) String() string {
-	return proto.CompactTextString(m)
-}
-func (*Membership2_ProductAllocateToSpaceResponse) ProtoMessage() {}
-func (*Membership2_ProductAllocateToSpaceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 12}
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Membership2_ProductAllocateToSpaceResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
-	b = b[:newLen]
-	_, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Membership2_ProductAllocateToSpaceResponse.Merge(m, src)
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_Membership2_ProductAllocateToSpaceResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Membership2_ProductAllocateToSpaceResponse proto.InternalMessageInfo
-
 type Membership2_StoreProductsEnumerateRequest struct {
 }
 
@@ -1119,7 +997,7 @@ func (m *Membership2_StoreProductsEnumerateRequest) String() string {
 }
 func (*Membership2_StoreProductsEnumerateRequest) ProtoMessage() {}
 func (*Membership2_StoreProductsEnumerateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 13}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 11}
 }
 func (m *Membership2_StoreProductsEnumerateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1168,7 +1046,7 @@ func (m *Membership2_StoreProductsEnumerateResponse) String() string {
 }
 func (*Membership2_StoreProductsEnumerateResponse) ProtoMessage() {}
 func (*Membership2_StoreProductsEnumerateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 14}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 12}
 }
 func (m *Membership2_StoreProductsEnumerateResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1219,7 +1097,7 @@ func (m *Membership2_StoreCartGetRequest) Reset()         { *m = Membership2_Sto
 func (m *Membership2_StoreCartGetRequest) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartGetRequest) ProtoMessage()    {}
 func (*Membership2_StoreCartGetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 15}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 13}
 }
 func (m *Membership2_StoreCartGetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1256,86 +1134,6 @@ func (m *Membership2_StoreCartGetRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Membership2_StoreCartGetRequest proto.InternalMessageInfo
 
-type Membership2_StoreCartProductAddRequest struct {
-	ProductId string `protobuf:"bytes,1,opt,name=productId,proto3" json:"productId,omitempty"`
-	// if "isAttachedToSpace" was true for that product
-	SpaceID string `protobuf:"bytes,2,opt,name=spaceID,proto3" json:"spaceID,omitempty"`
-	// some additional context (extra)
-	Context         string `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
-	OwnerEthAddress string `protobuf:"bytes,4,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
-}
-
-func (m *Membership2_StoreCartProductAddRequest) Reset() {
-	*m = Membership2_StoreCartProductAddRequest{}
-}
-func (m *Membership2_StoreCartProductAddRequest) String() string { return proto.CompactTextString(m) }
-func (*Membership2_StoreCartProductAddRequest) ProtoMessage()    {}
-func (*Membership2_StoreCartProductAddRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 16}
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Membership2_StoreCartProductAddRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
-	b = b[:newLen]
-	_, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Membership2_StoreCartProductAddRequest.Merge(m, src)
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *Membership2_StoreCartProductAddRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_Membership2_StoreCartProductAddRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Membership2_StoreCartProductAddRequest proto.InternalMessageInfo
-
-func (m *Membership2_StoreCartProductAddRequest) GetProductId() string {
-	if m != nil {
-		return m.ProductId
-	}
-	return ""
-}
-
-func (m *Membership2_StoreCartProductAddRequest) GetSpaceID() string {
-	if m != nil {
-		return m.SpaceID
-	}
-	return ""
-}
-
-func (m *Membership2_StoreCartProductAddRequest) GetContext() string {
-	if m != nil {
-		return m.Context
-	}
-	return ""
-}
-
-func (m *Membership2_StoreCartProductAddRequest) GetOwnerEthAddress() string {
-	if m != nil {
-		return m.OwnerEthAddress
-	}
-	return ""
-}
-
 type Membership2_StoreCartResponse struct {
 	Cart *Membership2_Cart `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
 }
@@ -1344,7 +1142,7 @@ func (m *Membership2_StoreCartResponse) Reset()         { *m = Membership2_Store
 func (m *Membership2_StoreCartResponse) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartResponse) ProtoMessage()    {}
 func (*Membership2_StoreCartResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 17}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 14}
 }
 func (m *Membership2_StoreCartResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1388,64 +1186,6 @@ func (m *Membership2_StoreCartResponse) GetCart() *Membership2_Cart {
 	return nil
 }
 
-type Membership2_StoreCartProductRemoveRequest struct {
-	// each product instance has a unique index
-	// each product instance can have a different "context" attached (like spaceId)
-	Index uint32 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-}
-
-func (m *Membership2_StoreCartProductRemoveRequest) Reset() {
-	*m = Membership2_StoreCartProductRemoveRequest{}
-}
-func (m *Membership2_StoreCartProductRemoveRequest) String() string {
-	return proto.CompactTextString(m)
-}
-func (*Membership2_StoreCartProductRemoveRequest) ProtoMessage() {}
-func (*Membership2_StoreCartProductRemoveRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 18}
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Membership2_StoreCartProductRemoveRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
-	b = b[:newLen]
-	_, err := m.MarshalToSizedBuffer(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Membership2_StoreCartProductRemoveRequest.Merge(m, src)
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *Membership2_StoreCartProductRemoveRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_Membership2_StoreCartProductRemoveRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Membership2_StoreCartProductRemoveRequest proto.InternalMessageInfo
-
-func (m *Membership2_StoreCartProductRemoveRequest) GetIndex() uint32 {
-	if m != nil {
-		return m.Index
-	}
-	return 0
-}
-
 type Membership2_StoreCartPromocodeApplyRequest struct {
 	Promocode string `protobuf:"bytes,1,opt,name=promocode,proto3" json:"promocode,omitempty"`
 }
@@ -1458,7 +1198,7 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) String() string {
 }
 func (*Membership2_StoreCartPromocodeApplyRequest) ProtoMessage() {}
 func (*Membership2_StoreCartPromocodeApplyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 19}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 15}
 }
 func (m *Membership2_StoreCartPromocodeApplyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1509,7 +1249,7 @@ func (m *Membership2_StoreCartCheckoutRequest) Reset()         { *m = Membership
 func (m *Membership2_StoreCartCheckoutRequest) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartCheckoutRequest) ProtoMessage()    {}
 func (*Membership2_StoreCartCheckoutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 20}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 16}
 }
 func (m *Membership2_StoreCartCheckoutRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1559,7 +1299,7 @@ func (m *Membership2_StoreCartCheckoutResponse) Reset()         { *m = Membershi
 func (m *Membership2_StoreCartCheckoutResponse) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartCheckoutResponse) ProtoMessage()    {}
 func (*Membership2_StoreCartCheckoutResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 21}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 17}
 }
 func (m *Membership2_StoreCartCheckoutResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1613,7 +1353,7 @@ func (m *Membership2_ProductSetSettingsRequest) Reset()         { *m = Membershi
 func (m *Membership2_ProductSetSettingsRequest) String() string { return proto.CompactTextString(m) }
 func (*Membership2_ProductSetSettingsRequest) ProtoMessage()    {}
 func (*Membership2_ProductSetSettingsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 22}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 18}
 }
 func (m *Membership2_ProductSetSettingsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1673,7 +1413,7 @@ func (m *Membership2_ProductSetSettingsResponse) Reset() {
 func (m *Membership2_ProductSetSettingsResponse) String() string { return proto.CompactTextString(m) }
 func (*Membership2_ProductSetSettingsResponse) ProtoMessage()    {}
 func (*Membership2_ProductSetSettingsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 23}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 19}
 }
 func (m *Membership2_ProductSetSettingsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1719,7 +1459,7 @@ func (m *Membership2_StoreCartUpdateRequest) Reset()         { *m = Membership2_
 func (m *Membership2_StoreCartUpdateRequest) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartUpdateRequest) ProtoMessage()    {}
 func (*Membership2_StoreCartUpdateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 24}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 20}
 }
 func (m *Membership2_StoreCartUpdateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1778,7 +1518,7 @@ func (m *Membership2_StoreCartUpdateResponse) Reset()         { *m = Membership2
 func (m *Membership2_StoreCartUpdateResponse) String() string { return proto.CompactTextString(m) }
 func (*Membership2_StoreCartUpdateResponse) ProtoMessage()    {}
 func (*Membership2_StoreCartUpdateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a221ba4bec2579, []int{0, 25}
+	return fileDescriptor_37a221ba4bec2579, []int{0, 21}
 }
 func (m *Membership2_StoreCartUpdateResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1822,6 +1562,50 @@ func (m *Membership2_StoreCartUpdateResponse) GetCart() *Membership2_Cart {
 	return nil
 }
 
+type Membership2_StoreCartClearRequest struct {
+}
+
+func (m *Membership2_StoreCartClearRequest) Reset()         { *m = Membership2_StoreCartClearRequest{} }
+func (m *Membership2_StoreCartClearRequest) String() string { return proto.CompactTextString(m) }
+func (*Membership2_StoreCartClearRequest) ProtoMessage()    {}
+func (*Membership2_StoreCartClearRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a221ba4bec2579, []int{0, 22}
+}
+func (m *Membership2_StoreCartClearRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Membership2_StoreCartClearRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Membership2_StoreCartClearRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Membership2_StoreCartClearRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+func (m *Membership2_StoreCartClearRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Membership2_StoreCartClearRequest.Merge(m, src)
+}
+func (m *Membership2_StoreCartClearRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *Membership2_StoreCartClearRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_Membership2_StoreCartClearRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Membership2_StoreCartClearRequest proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("Membership2_PeriodType", Membership2_PeriodType_name, Membership2_PeriodType_value)
 	proto.RegisterEnum("Membership2_PaymentMethod", Membership2_PaymentMethod_name, Membership2_PaymentMethod_value)
@@ -1839,14 +1623,10 @@ func init() {
 	proto.RegisterType((*Membership2_Cart)(nil), "Membership2.Cart")
 	proto.RegisterType((*Membership2_GetStatusRequest)(nil), "Membership2.GetStatusRequest")
 	proto.RegisterType((*Membership2_GetStatusResponse)(nil), "Membership2.GetStatusResponse")
-	proto.RegisterType((*Membership2_ProductAllocateToSpaceRequest)(nil), "Membership2.ProductAllocateToSpaceRequest")
-	proto.RegisterType((*Membership2_ProductAllocateToSpaceResponse)(nil), "Membership2.ProductAllocateToSpaceResponse")
 	proto.RegisterType((*Membership2_StoreProductsEnumerateRequest)(nil), "Membership2.StoreProductsEnumerateRequest")
 	proto.RegisterType((*Membership2_StoreProductsEnumerateResponse)(nil), "Membership2.StoreProductsEnumerateResponse")
 	proto.RegisterType((*Membership2_StoreCartGetRequest)(nil), "Membership2.StoreCartGetRequest")
-	proto.RegisterType((*Membership2_StoreCartProductAddRequest)(nil), "Membership2.StoreCartProductAddRequest")
 	proto.RegisterType((*Membership2_StoreCartResponse)(nil), "Membership2.StoreCartResponse")
-	proto.RegisterType((*Membership2_StoreCartProductRemoveRequest)(nil), "Membership2.StoreCartProductRemoveRequest")
 	proto.RegisterType((*Membership2_StoreCartPromocodeApplyRequest)(nil), "Membership2.StoreCartPromocodeApplyRequest")
 	proto.RegisterType((*Membership2_StoreCartCheckoutRequest)(nil), "Membership2.StoreCartCheckoutRequest")
 	proto.RegisterType((*Membership2_StoreCartCheckoutResponse)(nil), "Membership2.StoreCartCheckoutResponse")
@@ -1854,6 +1634,7 @@ func init() {
 	proto.RegisterType((*Membership2_ProductSetSettingsResponse)(nil), "Membership2.ProductSetSettingsResponse")
 	proto.RegisterType((*Membership2_StoreCartUpdateRequest)(nil), "Membership2.StoreCartUpdateRequest")
 	proto.RegisterType((*Membership2_StoreCartUpdateResponse)(nil), "Membership2.StoreCartUpdateResponse")
+	proto.RegisterType((*Membership2_StoreCartClearRequest)(nil), "Membership2.StoreCartClearRequest")
 }
 
 func init() {
@@ -1861,96 +1642,90 @@ func init() {
 }
 
 var fileDescriptor_37a221ba4bec2579 = []byte{
-	// 1423 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x58, 0xdd, 0x6e, 0xd4, 0x46,
-	0x14, 0x8e, 0x37, 0x9b, 0xbf, 0xb3, 0xf9, 0x71, 0x26, 0x01, 0x96, 0x29, 0x6c, 0x43, 0x5a, 0x20,
-	0x05, 0x29, 0x48, 0x4b, 0x69, 0x05, 0xfd, 0x81, 0x6d, 0x08, 0x28, 0x95, 0x40, 0x2b, 0x87, 0x14,
-	0xb5, 0xaa, 0x2a, 0x39, 0xf6, 0x21, 0x6b, 0x65, 0x77, 0xc6, 0xb1, 0x67, 0x43, 0xb6, 0x0f, 0x50,
-	0xa9, 0x77, 0x5c, 0xf6, 0x25, 0x2a, 0xf5, 0x05, 0x7a, 0x55, 0x55, 0xea, 0x25, 0xea, 0x55, 0x2f,
-	0x2b, 0xb8, 0xee, 0x4d, 0x9f, 0xa0, 0xf2, 0x78, 0x6c, 0x8f, 0xd7, 0xde, 0x6c, 0x41, 0x8a, 0xe2,
-	0x39, 0xdf, 0x9c, 0x39, 0xff, 0xe7, 0xcc, 0x68, 0xe1, 0xae, 0x6f, 0x0f, 0x7a, 0xc8, 0x44, 0x88,
-	0xc1, 0xb1, 0xe7, 0xe0, 0x8d, 0x3c, 0xe9, 0x07, 0x5c, 0xf0, 0x1b, 0xf2, 0x7f, 0x38, 0xb4, 0xd5,
-	0xdc, 0x94, 0xf0, 0xfa, 0xaf, 0x75, 0xa8, 0x3d, 0xc2, 0xde, 0x3e, 0x06, 0x61, 0xc7, 0xf3, 0x9b,
-	0xf4, 0x01, 0x4c, 0xb7, 0x7a, 0xbc, 0xcf, 0x04, 0xa1, 0x30, 0xeb, 0xf4, 0x83, 0x00, 0x99, 0x33,
-	0xa8, 0x1b, 0x6b, 0xc6, 0xc6, 0x9c, 0x95, 0xd2, 0x64, 0x0d, 0x6a, 0xb6, 0xe4, 0xda, 0x8a, 0x24,
-	0xd6, 0x2b, 0x6b, 0xc6, 0xc6, 0xa4, 0xa5, 0x43, 0xf4, 0x5f, 0x03, 0x66, 0xda, 0x01, 0x77, 0xfb,
-	0x8e, 0x20, 0x8b, 0x50, 0xf1, 0x5c, 0x25, 0xa3, 0xe2, 0xb9, 0x64, 0x03, 0x96, 0xbc, 0xb0, 0x25,
-	0x84, 0xed, 0x74, 0x9e, 0xf0, 0x5d, 0xdf, 0x76, 0x50, 0x4a, 0x98, 0xb5, 0x86, 0x61, 0x72, 0x01,
-	0xe6, 0xbc, 0xb0, 0x6d, 0x3b, 0x87, 0xf6, 0x01, 0xd6, 0x27, 0x25, 0x4f, 0x06, 0x10, 0x02, 0x55,
-	0x66, 0xf7, 0xb0, 0x5e, 0x95, 0x92, 0xe5, 0x3a, 0xb2, 0xcc, 0xc5, 0xd0, 0x09, 0x3c, 0x5f, 0x78,
-	0x9c, 0xd5, 0xa7, 0xe4, 0x96, 0x0e, 0x91, 0x8f, 0x01, 0x7c, 0x0c, 0x3c, 0xee, 0x3e, 0x19, 0xf8,
-	0x58, 0x9f, 0x5e, 0x33, 0x36, 0x16, 0x9b, 0xe7, 0x36, 0xb5, 0x18, 0x6c, 0xb6, 0xd3, 0x6d, 0x4b,
-	0x63, 0x8d, 0x44, 0xc7, 0xd4, 0x57, 0x76, 0xb7, 0x8f, 0xf5, 0x99, 0x35, 0x63, 0x63, 0xc1, 0xd2,
-	0x21, 0xfa, 0x8b, 0x01, 0xf3, 0xed, 0x7e, 0xe0, 0x74, 0xec, 0x10, 0x77, 0xd8, 0x33, 0x2e, 0xad,
-	0xb1, 0x05, 0xee, 0x0a, 0x3b, 0x10, 0x18, 0x87, 0xa0, 0x6a, 0xe9, 0x50, 0x14, 0xe5, 0x88, 0xdc,
-	0x66, 0x6e, 0x1c, 0xc6, 0xaa, 0x95, 0xd2, 0xd1, 0x69, 0x2f, 0x6c, 0xf5, 0x05, 0xb7, 0x90, 0xe1,
-	0x73, 0xe5, 0xbf, 0x0e, 0x91, 0x7b, 0xb0, 0xa0, 0xd2, 0xfa, 0x08, 0x45, 0x87, 0xbb, 0x32, 0x14,
-	0x8b, 0x4d, 0x9a, 0x77, 0x47, 0xe7, 0xb0, 0xf2, 0x07, 0xe8, 0xef, 0x15, 0x58, 0x50, 0x79, 0xda,
-	0x15, 0xb6, 0xe8, 0x87, 0xe4, 0x36, 0x4c, 0x87, 0x72, 0x25, 0xcd, 0x5d, 0x6c, 0x5e, 0xca, 0x0b,
-	0xd3, 0x79, 0x37, 0xe3, 0x8f, 0xa5, 0x0e, 0x44, 0x89, 0x0d, 0xa3, 0xbc, 0xc5, 0x49, 0x44, 0xf7,
-	0x09, 0x97, 0x3e, 0xcd, 0x59, 0xc3, 0x30, 0xb9, 0x03, 0x75, 0x2f, 0x7c, 0x8c, 0xe8, 0xaa, 0x84,
-	0x47, 0x16, 0x25, 0xb5, 0x10, 0xfb, 0x39, 0x72, 0x9f, 0x5c, 0x03, 0xd3, 0x0b, 0xa5, 0xff, 0x76,
-	0x77, 0x9b, 0xd9, 0xfb, 0x5d, 0x8c, 0xfd, 0x9e, 0xb5, 0x0a, 0xf8, 0xfa, 0x01, 0x4c, 0x2b, 0xb7,
-	0x96, 0x61, 0x21, 0x5e, 0xed, 0xb1, 0x43, 0xc6, 0x9f, 0x33, 0x73, 0x22, 0x83, 0xda, 0xc8, 0x5c,
-	0x8f, 0x1d, 0x98, 0x06, 0x31, 0x61, 0x3e, 0x86, 0x5a, 0x8e, 0xf0, 0x8e, 0xd1, 0xac, 0x90, 0xcb,
-	0x70, 0x29, 0xc7, 0x64, 0xe1, 0x51, 0xdf, 0x0b, 0x30, 0x7c, 0xe0, 0x31, 0xbb, 0xeb, 0x7d, 0x6f,
-	0x47, 0x35, 0x65, 0x4e, 0xd2, 0xdf, 0x0c, 0x30, 0x93, 0xd4, 0xbb, 0x49, 0xe1, 0x6f, 0xc2, 0x8c,
-	0x1f, 0x2f, 0x65, 0x2c, 0x6b, 0xcd, 0xd5, 0xb2, 0x58, 0x5a, 0x09, 0x13, 0xf9, 0x0c, 0xe6, 0x7d,
-	0xad, 0x7c, 0x64, 0xf0, 0x6a, 0xcd, 0xf3, 0xf9, 0x43, 0x1a, 0x83, 0x95, 0x63, 0x97, 0xd5, 0xa0,
-	0xa7, 0x47, 0x46, 0xb2, 0x36, 0x5c, 0x0d, 0x3a, 0x87, 0x95, 0x3f, 0x40, 0x7f, 0x34, 0xa0, 0xb6,
-	0x65, 0x07, 0xe2, 0x6d, 0x1d, 0xa8, 0xc3, 0x8c, 0xcc, 0xf4, 0xce, 0x7d, 0x95, 0xf8, 0x84, 0x8c,
-	0x76, 0x1c, 0xce, 0x04, 0x9e, 0x08, 0x69, 0xd5, 0x9c, 0x95, 0x90, 0xe4, 0x2c, 0x4c, 0x07, 0xd8,
-	0xe3, 0xc7, 0xa8, 0x92, 0xa8, 0x28, 0xea, 0x45, 0xa9, 0xe0, 0x01, 0xbe, 0xad, 0x2d, 0x1f, 0xc0,
-	0x94, 0x1f, 0x78, 0x6a, 0xb6, 0xd4, 0x9a, 0x2b, 0x39, 0xee, 0x78, 0xc6, 0x59, 0x31, 0x07, 0xfd,
-	0xd9, 0x80, 0x99, 0x1d, 0x76, 0xcc, 0x3d, 0x07, 0x0b, 0xc3, 0x8a, 0x40, 0x35, 0x6a, 0x48, 0xd5,
-	0x9c, 0x72, 0x1d, 0x89, 0x16, 0x5c, 0xd8, 0x5d, 0x15, 0xe0, 0x72, 0xd1, 0x92, 0x83, 0xdc, 0x4c,
-	0xbb, 0x29, 0x6e, 0xcd, 0x77, 0x72, 0xbc, 0x4a, 0xe9, 0x50, 0x1f, 0xad, 0x37, 0xd2, 0xaa, 0x05,
-	0x98, 0xde, 0x63, 0xbe, 0xed, 0xb9, 0xe6, 0x04, 0x99, 0x85, 0x6a, 0x3b, 0x5a, 0x19, 0xf4, 0x4f,
-	0x03, 0xaa, 0x51, 0x9a, 0xc8, 0x87, 0x30, 0xab, 0xdc, 0x8d, 0xba, 0x75, 0x72, 0xa3, 0xd6, 0xac,
-	0xe7, 0xe4, 0x6b, 0xb9, 0xb4, 0x52, 0xce, 0xcc, 0xfc, 0xca, 0x58, 0xf3, 0xef, 0x82, 0x29, 0x17,
-	0x8f, 0xf1, 0x44, 0x28, 0x63, 0x4f, 0x73, 0xba, 0xc0, 0x1c, 0x8d, 0x04, 0x96, 0x91, 0xf7, 0xa3,
-	0x48, 0x56, 0x65, 0x24, 0x87, 0x61, 0x4a, 0xc0, 0x7c, 0x88, 0x49, 0x5d, 0xe2, 0x51, 0x1f, 0x43,
-	0x41, 0x7f, 0x30, 0x60, 0x59, 0x03, 0x43, 0x9f, 0xb3, 0x10, 0xc9, 0xed, 0x82, 0xd7, 0x17, 0x4b,
-	0x5b, 0xc4, 0x2d, 0xba, 0xfe, 0x11, 0xd4, 0x34, 0xbd, 0x2a, 0x00, 0xab, 0x65, 0x39, 0xb1, 0x74,
-	0x46, 0x7a, 0x04, 0x17, 0x95, 0xb0, 0x56, 0xb7, 0xcb, 0x1d, 0x5b, 0xa0, 0x9a, 0x46, 0xca, 0xd2,
-	0xac, 0xf2, 0x93, 0xda, 0x49, 0xc8, 0xe8, 0x0e, 0x53, 0xea, 0x77, 0x5c, 0xd5, 0x15, 0x19, 0x30,
-	0xba, 0x2f, 0xe8, 0x1a, 0x34, 0x46, 0xa9, 0x8c, 0xe3, 0x40, 0xdf, 0x85, 0x8b, 0x7a, 0x87, 0x84,
-	0xdb, 0xac, 0xdf, 0xc3, 0xc0, 0x16, 0x89, 0x51, 0xf4, 0x29, 0x34, 0x46, 0x31, 0xa8, 0x50, 0xde,
-	0x2a, 0x84, 0x32, 0x3f, 0x6d, 0xf4, 0xe3, 0x59, 0x18, 0xe9, 0x19, 0x58, 0x91, 0x3b, 0x51, 0x7d,
-	0x3d, 0x44, 0x91, 0xe8, 0xfb, 0xc9, 0x00, 0x9a, 0xe2, 0x89, 0xf1, 0xae, 0x9b, 0xc4, 0x28, 0x17,
-	0x09, 0xa3, 0x24, 0x12, 0x6f, 0x3c, 0x3b, 0x36, 0x60, 0x89, 0x3f, 0x67, 0x18, 0x6c, 0x8b, 0x4e,
-	0xcb, 0x75, 0x03, 0x0c, 0x43, 0xf5, 0x18, 0x18, 0x86, 0xe9, 0x1d, 0x58, 0x4e, 0x2d, 0x4b, 0xbd,
-	0xbf, 0x0c, 0x55, 0xc7, 0x0e, 0x92, 0x79, 0xb2, 0x5c, 0x68, 0x1d, 0x4b, 0x6e, 0xd3, 0x5b, 0x2a,
-	0xce, 0x7a, 0x37, 0xc9, 0x19, 0x95, 0x38, 0xb6, 0x0a, 0x53, 0x1e, 0x73, 0xf1, 0x44, 0x0a, 0x5a,
-	0xb0, 0x62, 0x82, 0x7e, 0xae, 0xa2, 0xaf, 0x8e, 0xf5, 0xb8, 0xc3, 0x5d, 0x6c, 0xf9, 0x7e, 0x77,
-	0x90, 0x0f, 0x48, 0xbc, 0xa1, 0x05, 0x24, 0x06, 0x28, 0x85, 0x7a, 0x7a, 0x7e, 0xab, 0x83, 0xce,
-	0x21, 0xef, 0xa7, 0x91, 0xfe, 0x04, 0xce, 0x97, 0xec, 0x29, 0xb7, 0x1a, 0x00, 0xea, 0x92, 0xdf,
-	0x0b, 0xba, 0x4a, 0xae, 0x86, 0xd0, 0x43, 0x38, 0x9f, 0xdc, 0x02, 0x18, 0xfd, 0x09, 0x8f, 0x1d,
-	0x24, 0x2d, 0x47, 0xd6, 0x61, 0x3e, 0xc9, 0x89, 0xe6, 0x52, 0x0e, 0x2b, 0xbd, 0x81, 0x2b, 0xe5,
-	0x37, 0x30, 0xbd, 0x00, 0xb4, 0x4c, 0x99, 0x2a, 0xe1, 0x13, 0x38, 0x9b, 0xfa, 0xb1, 0xe7, 0xbb,
-	0x59, 0xed, 0xbe, 0xe5, 0x68, 0x2b, 0x29, 0x88, 0x4a, 0x79, 0x41, 0xdc, 0x83, 0x73, 0x05, 0xcd,
-	0x6f, 0x54, 0x16, 0xeb, 0x2f, 0x0c, 0x80, 0xec, 0xa9, 0x48, 0xce, 0xc0, 0x72, 0x46, 0x65, 0x8f,
-	0x8c, 0x73, 0xb0, 0xa2, 0xc3, 0x5d, 0xaf, 0xe7, 0x09, 0x74, 0x4d, 0x83, 0x10, 0x58, 0xcc, 0x36,
-	0xee, 0xdb, 0x83, 0xd0, 0xac, 0x90, 0x15, 0x58, 0xca, 0xb0, 0xa7, 0x88, 0x87, 0xa1, 0x39, 0x49,
-	0x56, 0xc1, 0xcc, 0xc0, 0x47, 0x9c, 0x89, 0x4e, 0x68, 0x56, 0xf3, 0xac, 0x5f, 0xa3, 0x1d, 0x84,
-	0xe6, 0xd4, 0xba, 0x0f, 0x0b, 0xb9, 0xd7, 0x1e, 0x59, 0x04, 0x88, 0x57, 0x8f, 0x39, 0x43, 0x73,
-	0x22, 0x7a, 0xdf, 0xc4, 0xf4, 0xae, 0x08, 0x3c, 0x1f, 0xe3, 0x17, 0x4f, 0x8c, 0x6c, 0x05, 0x03,
-	0x5f, 0x70, 0xb3, 0x12, 0xe9, 0x8b, 0x91, 0x1d, 0x66, 0xfb, 0x7e, 0x54, 0xb0, 0x68, 0x4e, 0x46,
-	0xee, 0x69, 0xe8, 0x43, 0xce, 0x0f, 0xba, 0x68, 0x56, 0x9b, 0xff, 0xcc, 0xc0, 0x99, 0x16, 0x1b,
-	0x28, 0xad, 0xed, 0x80, 0x3b, 0x18, 0x86, 0x1e, 0x3b, 0x68, 0x92, 0xb6, 0xba, 0xbf, 0xd5, 0x8c,
-	0x20, 0x6b, 0xc5, 0xc1, 0x32, 0x34, 0x3e, 0x1a, 0xe5, 0x1c, 0x69, 0x5e, 0xbe, 0xd3, 0xa6, 0x4e,
-	0x36, 0x5d, 0xc8, 0xd5, 0xf2, 0x63, 0x85, 0xf9, 0x33, 0x56, 0xbe, 0xab, 0x15, 0x63, 0xae, 0xcf,
-	0xc9, 0xb5, 0x53, 0x55, 0xe4, 0x86, 0xc1, 0x58, 0x2d, 0xcf, 0xb4, 0xc2, 0xcb, 0x8f, 0x05, 0x72,
-	0x7d, 0xa4, 0x9a, 0xe2, 0xf0, 0x18, 0xab, 0x67, 0x5f, 0x9b, 0x78, 0xc9, 0x88, 0x20, 0x97, 0xcb,
-	0x0f, 0x0d, 0x8f, 0x97, 0x2b, 0xe3, 0xd8, 0x94, 0x8e, 0x6f, 0x61, 0x69, 0xa8, 0x89, 0xc8, 0x7b,
-	0xe5, 0x47, 0x73, 0xcd, 0x4d, 0xdf, 0x3f, 0x9d, 0x49, 0x49, 0xff, 0x12, 0xe6, 0xd2, 0xcb, 0x9f,
-	0xe4, 0xaf, 0xf8, 0xc2, 0x4b, 0xa1, 0x31, 0x6a, 0x5b, 0xc9, 0xea, 0xc2, 0x72, 0xe1, 0x16, 0x2c,
-	0x4b, 0xeb, 0xc8, 0xbb, 0xf4, 0xfa, 0xff, 0xe2, 0x55, 0xda, 0x8e, 0xe0, 0x6c, 0xf9, 0xdd, 0x3d,
-	0xa4, 0xf2, 0xd4, 0x37, 0xc5, 0x90, 0xca, 0xd3, 0x1f, 0x03, 0x04, 0x81, 0x14, 0xe7, 0x2c, 0xb9,
-	0x52, 0xfa, 0xf6, 0x2f, 0x4c, 0x7d, 0x7a, 0x75, 0x2c, 0x5f, 0xac, 0xe6, 0x8b, 0x4f, 0xff, 0x78,
-	0xd5, 0x30, 0x5e, 0xbe, 0x6a, 0x18, 0x7f, 0xbf, 0x6a, 0x18, 0x2f, 0x5e, 0x37, 0x26, 0x5e, 0xbe,
-	0x6e, 0x4c, 0xfc, 0xf5, 0xba, 0x31, 0xf1, 0xcd, 0xfa, 0xf8, 0x9f, 0x22, 0xf6, 0xa7, 0xe5, 0xe7,
-	0xe6, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x06, 0xab, 0x6d, 0x04, 0xb7, 0x10, 0x00, 0x00,
+	// 1315 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x57, 0xdd, 0x6e, 0x13, 0xc7,
+	0x17, 0xcf, 0x3a, 0xc6, 0x49, 0x8e, 0x13, 0x67, 0x33, 0x21, 0xc4, 0xec, 0x1f, 0xfc, 0x0f, 0x6e,
+	0xa1, 0x2e, 0x48, 0x41, 0x32, 0xfd, 0x10, 0xf4, 0x03, 0xdc, 0x10, 0x50, 0x2a, 0x81, 0xac, 0x4d,
+	0x52, 0xd4, 0xaa, 0x37, 0x9b, 0xdd, 0x43, 0xbc, 0x8a, 0x3d, 0xb3, 0xec, 0x8c, 0x43, 0xdc, 0x07,
+	0xa8, 0xd4, 0x5e, 0xf1, 0x22, 0x95, 0xfa, 0x0e, 0x55, 0xa5, 0x5e, 0xa2, 0x5e, 0xf5, 0xb2, 0x82,
+	0x07, 0xa8, 0xd4, 0x27, 0xa8, 0x66, 0x76, 0xf6, 0xcb, 0xbb, 0x21, 0x2d, 0x52, 0x14, 0xcf, 0xfc,
+	0xe6, 0x37, 0xe7, 0xfb, 0x9c, 0xb1, 0xe1, 0x6e, 0xe0, 0x4c, 0x46, 0x48, 0x05, 0xc7, 0xf0, 0xd8,
+	0x77, 0xf1, 0x66, 0x7e, 0x1b, 0x84, 0x4c, 0xb0, 0x9b, 0xea, 0x3f, 0x9f, 0x3a, 0xea, 0x6e, 0x2a,
+	0xb8, 0xfd, 0xd7, 0x1a, 0xd4, 0x1f, 0xe1, 0xe8, 0x00, 0x43, 0x3e, 0xf0, 0x83, 0xae, 0xf5, 0x00,
+	0x6a, 0xbd, 0x11, 0x1b, 0x53, 0x41, 0x2c, 0x98, 0x77, 0xc7, 0x61, 0x88, 0xd4, 0x9d, 0x34, 0x8d,
+	0x0d, 0xa3, 0xb3, 0x60, 0x27, 0x7b, 0xb2, 0x01, 0x75, 0x47, 0xb1, 0xb6, 0xa4, 0xc4, 0x66, 0x65,
+	0xc3, 0xe8, 0xcc, 0xda, 0x59, 0xc8, 0xfa, 0xdb, 0x80, 0xb9, 0x7e, 0xc8, 0xbc, 0xb1, 0x2b, 0x48,
+	0x03, 0x2a, 0xbe, 0xa7, 0x65, 0x54, 0x7c, 0x8f, 0x74, 0x60, 0xd9, 0xe7, 0x3d, 0x21, 0x1c, 0x77,
+	0xb0, 0xc7, 0x76, 0x03, 0xc7, 0x45, 0x25, 0x61, 0xde, 0x9e, 0x86, 0xc9, 0x25, 0x58, 0xf0, 0x79,
+	0xdf, 0x71, 0x8f, 0x9c, 0x43, 0x6c, 0xce, 0x2a, 0x4e, 0x0a, 0x10, 0x02, 0x55, 0xea, 0x8c, 0xb0,
+	0x59, 0x55, 0x92, 0xd5, 0x5a, 0x5a, 0xe6, 0x21, 0x77, 0x43, 0x3f, 0x10, 0x3e, 0xa3, 0xcd, 0x73,
+	0xea, 0x28, 0x0b, 0x91, 0x8f, 0x01, 0x02, 0x0c, 0x7d, 0xe6, 0xed, 0x4d, 0x02, 0x6c, 0xd6, 0x36,
+	0x8c, 0x4e, 0xa3, 0xbb, 0xbe, 0x99, 0x89, 0xc1, 0x66, 0x3f, 0x39, 0xb6, 0x33, 0x54, 0x29, 0x3a,
+	0xda, 0x7d, 0xe5, 0x0c, 0xc7, 0xd8, 0x9c, 0xdb, 0x30, 0x3a, 0x4b, 0x76, 0x16, 0xb2, 0x7e, 0x36,
+	0x60, 0xb1, 0x3f, 0x0e, 0xdd, 0x81, 0xc3, 0x71, 0x87, 0x3e, 0x65, 0xca, 0x1a, 0x47, 0xe0, 0xae,
+	0x70, 0x42, 0x81, 0x51, 0x08, 0xaa, 0x76, 0x16, 0x92, 0x51, 0x96, 0xdb, 0x6d, 0xea, 0x45, 0x61,
+	0xac, 0xda, 0xc9, 0x5e, 0xde, 0xf6, 0x79, 0x6f, 0x2c, 0x98, 0x8d, 0x14, 0x9f, 0x6b, 0xff, 0xb3,
+	0x10, 0xb9, 0x07, 0x4b, 0x3a, 0xad, 0x8f, 0x50, 0x0c, 0x98, 0xa7, 0x42, 0xd1, 0xe8, 0x5a, 0x79,
+	0x77, 0xb2, 0x0c, 0x3b, 0x7f, 0xc1, 0xfa, 0xb5, 0x02, 0x4b, 0x3a, 0x4f, 0xbb, 0xc2, 0x11, 0x63,
+	0x4e, 0x6e, 0x43, 0x8d, 0xab, 0x95, 0x32, 0xb7, 0xd1, 0xbd, 0x92, 0x17, 0x96, 0xe5, 0x6e, 0x46,
+	0x1f, 0xb6, 0xbe, 0x20, 0x13, 0xcb, 0x65, 0xde, 0xa2, 0x24, 0xa2, 0xb7, 0xc7, 0x94, 0x4f, 0x0b,
+	0xf6, 0x34, 0x4c, 0xee, 0x40, 0xd3, 0xe7, 0x8f, 0x11, 0x3d, 0x9d, 0x70, 0x69, 0x51, 0x5c, 0x0b,
+	0x91, 0x9f, 0xa7, 0x9e, 0x93, 0xeb, 0x60, 0xfa, 0x5c, 0xf9, 0xef, 0x0c, 0xb7, 0xa9, 0x73, 0x30,
+	0xc4, 0xc8, 0xef, 0x79, 0xbb, 0x80, 0xb7, 0x0f, 0xa1, 0xa6, 0xdd, 0x5a, 0x81, 0xa5, 0x68, 0xb5,
+	0x4f, 0x8f, 0x28, 0x7b, 0x4e, 0xcd, 0x99, 0x14, 0xea, 0x23, 0xf5, 0x7c, 0x7a, 0x68, 0x1a, 0xc4,
+	0x84, 0xc5, 0x08, 0xea, 0xb9, 0xc2, 0x3f, 0x46, 0xb3, 0x42, 0xae, 0xc2, 0x95, 0x1c, 0xc9, 0xc6,
+	0x67, 0x63, 0x3f, 0x44, 0xfe, 0xc0, 0xa7, 0xce, 0xd0, 0xff, 0xce, 0x91, 0x35, 0x65, 0xce, 0x5a,
+	0xbf, 0x18, 0x60, 0xc6, 0xa9, 0xf7, 0xe2, 0xc2, 0xdf, 0x84, 0xb9, 0x20, 0x5a, 0xaa, 0x58, 0xd6,
+	0xbb, 0xe7, 0xcb, 0x62, 0x69, 0xc7, 0x24, 0xf2, 0x19, 0x2c, 0x06, 0x99, 0xf2, 0x51, 0xc1, 0xab,
+	0x77, 0x2f, 0xe6, 0x2f, 0x65, 0x08, 0x76, 0x8e, 0xae, 0xaa, 0x21, 0x9b, 0x1e, 0x15, 0xc9, 0xfa,
+	0x74, 0x35, 0x64, 0x19, 0x76, 0xfe, 0x82, 0xf5, 0x83, 0x01, 0xf5, 0x2d, 0x27, 0x14, 0x6f, 0xeb,
+	0x40, 0x13, 0xe6, 0x54, 0xa6, 0x77, 0xee, 0xeb, 0xc4, 0xc7, 0x5b, 0x79, 0xe2, 0x32, 0x2a, 0xf0,
+	0x44, 0x28, 0xab, 0x16, 0xec, 0x78, 0x4b, 0x2e, 0x40, 0x2d, 0xc4, 0x11, 0x3b, 0x46, 0x9d, 0x44,
+	0xbd, 0xb3, 0x7c, 0x99, 0x0a, 0x16, 0xe2, 0xdb, 0xda, 0xf2, 0x3e, 0x9c, 0x0b, 0x42, 0x5f, 0xcf,
+	0x96, 0x7a, 0x77, 0x35, 0xc7, 0x8e, 0x66, 0x9c, 0x1d, 0x31, 0xac, 0x9f, 0x0c, 0x98, 0xdb, 0xa1,
+	0xc7, 0xcc, 0x77, 0xb1, 0x30, 0xac, 0x08, 0x54, 0x65, 0x43, 0xea, 0xe6, 0x54, 0x6b, 0x29, 0x5a,
+	0x30, 0xe1, 0x0c, 0x75, 0x80, 0xcb, 0x45, 0x2b, 0x06, 0xb9, 0x95, 0x74, 0x53, 0xd4, 0x9a, 0xff,
+	0xcb, 0x71, 0xb5, 0xd2, 0xa9, 0x3e, 0x6a, 0xb7, 0x92, 0xaa, 0x05, 0xa8, 0xed, 0xd3, 0xc0, 0xf1,
+	0x3d, 0x73, 0x86, 0xcc, 0x43, 0xb5, 0x2f, 0x57, 0x86, 0xf5, 0xbb, 0x01, 0x55, 0x99, 0x26, 0xf2,
+	0x01, 0xcc, 0x6b, 0x77, 0x65, 0xb7, 0xce, 0x76, 0xea, 0xdd, 0x66, 0x4e, 0x7e, 0x26, 0x97, 0x76,
+	0xc2, 0x4c, 0xcd, 0xaf, 0x9c, 0x69, 0xfe, 0x5d, 0x30, 0xd5, 0xe2, 0x31, 0x9e, 0x08, 0x6d, 0xec,
+	0x9b, 0x9c, 0x2e, 0x90, 0xe5, 0x48, 0xa0, 0xe9, 0xf6, 0xbe, 0x8c, 0x64, 0x55, 0x45, 0x72, 0x1a,
+	0xb6, 0x08, 0x98, 0x0f, 0x31, 0xae, 0x4b, 0x7c, 0x36, 0x46, 0x2e, 0xac, 0xef, 0x0d, 0x58, 0xc9,
+	0x80, 0x3c, 0x60, 0x94, 0x23, 0xb9, 0x5d, 0xf0, 0xfa, 0x72, 0x69, 0x8b, 0x78, 0x45, 0xd7, 0x3f,
+	0x82, 0x7a, 0x46, 0xaf, 0x0e, 0xc0, 0xf9, 0xb2, 0x9c, 0xd8, 0x59, 0xa2, 0xf5, 0x7f, 0xb8, 0x9c,
+	0x2d, 0x46, 0xbe, 0x4d, 0xc7, 0x23, 0x0c, 0x1d, 0x81, 0xb1, 0xa5, 0x4f, 0xa0, 0x75, 0x1a, 0x41,
+	0x5b, 0xfd, 0x61, 0xc1, 0xea, 0x7c, 0x63, 0x67, 0xaf, 0xa7, 0x16, 0x5b, 0x6b, 0xb0, 0xaa, 0x4e,
+	0x64, 0x2a, 0x1f, 0xa2, 0x88, 0xf5, 0xdd, 0x81, 0x95, 0x04, 0x4e, 0x54, 0x5c, 0x85, 0xaa, 0xeb,
+	0x84, 0x71, 0x7f, 0xac, 0x14, 0x4a, 0xc1, 0x56, 0xc7, 0xd6, 0xe7, 0xda, 0x56, 0x5d, 0x1d, 0x23,
+	0xe6, 0x32, 0x0f, 0x7b, 0x41, 0x30, 0x9c, 0x68, 0xe9, 0xf2, 0xdd, 0x0d, 0xe2, 0x03, 0xdd, 0x0b,
+	0x29, 0x60, 0x59, 0xd0, 0x4c, 0xee, 0x6f, 0x0d, 0xd0, 0x3d, 0x62, 0xe3, 0xc4, 0xae, 0x4f, 0xe0,
+	0x62, 0xc9, 0x99, 0xb6, 0xaf, 0x05, 0xa0, 0x5f, 0x9f, 0xfd, 0x70, 0xa8, 0xe5, 0x66, 0x10, 0xeb,
+	0x08, 0x2e, 0xc6, 0xe3, 0x09, 0xe5, 0x9f, 0xf0, 0xe9, 0x61, 0x5c, 0x0b, 0xa4, 0x0d, 0x8b, 0x3a,
+	0x28, 0x3b, 0xd4, 0xc3, 0x13, 0x75, 0x7d, 0xc9, 0xce, 0x61, 0xa5, 0x4f, 0x43, 0xa5, 0xfc, 0x69,
+	0xb0, 0x2e, 0x81, 0x55, 0xa6, 0x2c, 0x32, 0xd5, 0x3a, 0x81, 0x0b, 0x89, 0x1f, 0xfb, 0x81, 0x97,
+	0x66, 0xfa, 0x2d, 0x7b, 0xae, 0x03, 0xcb, 0xec, 0x39, 0xc5, 0x70, 0x5b, 0x0c, 0x7a, 0x9e, 0x17,
+	0x22, 0xe7, 0xf1, 0xd3, 0x38, 0x05, 0x5b, 0xf7, 0x60, 0xbd, 0xa0, 0xf9, 0xbf, 0xe5, 0x77, 0x1d,
+	0xd6, 0xd2, 0x1c, 0x0c, 0xd1, 0x09, 0xb5, 0xe9, 0xed, 0x17, 0x06, 0x40, 0xfa, 0xe5, 0x86, 0xac,
+	0xc1, 0x4a, 0xba, 0x4b, 0x9f, 0xc5, 0x75, 0x58, 0xcd, 0xc2, 0x43, 0x7f, 0xe4, 0x0b, 0xf4, 0x4c,
+	0x83, 0x10, 0x68, 0xa4, 0x07, 0xf7, 0x9d, 0x09, 0x37, 0x2b, 0x64, 0x15, 0x96, 0x53, 0xec, 0x09,
+	0xe2, 0x11, 0x37, 0x67, 0xc9, 0x79, 0x30, 0x53, 0xf0, 0x11, 0xa3, 0x62, 0xc0, 0xcd, 0x6a, 0x9e,
+	0xfa, 0x35, 0x3a, 0x21, 0x37, 0xcf, 0xb5, 0x03, 0x58, 0xca, 0x7d, 0x3f, 0x21, 0x0d, 0x80, 0x68,
+	0xf5, 0x98, 0x51, 0x34, 0x67, 0xe4, 0x8b, 0x1c, 0xed, 0x77, 0x45, 0xe8, 0x07, 0x18, 0xbd, 0xd1,
+	0x11, 0xb2, 0x15, 0x4e, 0x02, 0xc1, 0xcc, 0x8a, 0xd4, 0x17, 0x21, 0x3b, 0xd4, 0x09, 0x02, 0x59,
+	0xc9, 0x68, 0xce, 0x4a, 0xf7, 0x32, 0xe8, 0x43, 0xc6, 0x0e, 0x87, 0x68, 0x56, 0xbb, 0x3f, 0xd6,
+	0x60, 0xad, 0x47, 0x27, 0x5a, 0x6b, 0x3f, 0x64, 0x2e, 0x72, 0xee, 0xd3, 0xc3, 0x2e, 0x19, 0xc2,
+	0x4a, 0xa1, 0x7d, 0xc9, 0xf5, 0x53, 0x9b, 0xb4, 0x38, 0x04, 0x6e, 0xfc, 0x2b, 0xae, 0x4e, 0x26,
+	0x02, 0x29, 0xd6, 0x1f, 0xb9, 0x56, 0xfa, 0x58, 0x17, 0xba, 0xc1, 0x7a, 0xef, 0x4c, 0x9e, 0x56,
+	0xf3, 0x25, 0x2c, 0x24, 0x13, 0x94, 0xe4, 0xe7, 0x64, 0x61, 0xdc, 0xb6, 0x4e, 0x3b, 0xd6, 0xb2,
+	0xfa, 0xfa, 0x49, 0xd6, 0xb3, 0x88, 0x6c, 0x14, 0xfd, 0x9d, 0x1a, 0x53, 0xad, 0x72, 0x46, 0x22,
+	0xf1, 0x5b, 0x58, 0x9e, 0x2a, 0x76, 0xf2, 0x4e, 0xf9, 0x95, 0x5c, 0x13, 0x5a, 0xef, 0xbe, 0x99,
+	0xa4, 0xa5, 0xef, 0x41, 0x23, 0xdf, 0x08, 0xa4, 0x5d, 0x7e, 0x2f, 0xdb, 0x25, 0x67, 0xda, 0xfc,
+	0x34, 0xd3, 0xa0, 0xf9, 0xf1, 0x49, 0x6e, 0x94, 0x5f, 0x2d, 0x1d, 0xb2, 0x67, 0xea, 0x39, 0xc8,
+	0x8c, 0xf8, 0x78, 0x94, 0x92, 0xab, 0xa7, 0x38, 0x30, 0x35, 0x86, 0xaf, 0x9d, 0x45, 0x8b, 0x74,
+	0x7c, 0xf1, 0xe9, 0x6f, 0xaf, 0x5a, 0xc6, 0xcb, 0x57, 0x2d, 0xe3, 0xcf, 0x57, 0x2d, 0xe3, 0xc5,
+	0xeb, 0xd6, 0xcc, 0xcb, 0xd7, 0xad, 0x99, 0x3f, 0x5e, 0xb7, 0x66, 0xbe, 0x69, 0x9f, 0xfd, 0xcb,
+	0xf2, 0xa0, 0xa6, 0x3e, 0x6e, 0xfd, 0x13, 0x00, 0x00, 0xff, 0xff, 0xd6, 0x67, 0xc1, 0xdf, 0x86,
+	0x0e, 0x00, 0x00,
 }
 
 func (m *Membership2) Marshal() (dAtA []byte, err error) {
@@ -2543,73 +2318,6 @@ func (m *Membership2_GetStatusResponse) MarshalToSizedBuffer(dAtA []byte) (int, 
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_ProductAllocateToSpaceRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Membership2_ProductAllocateToSpaceRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Membership2_ProductAllocateToSpaceRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Context) > 0 {
-		i -= len(m.Context)
-		copy(dAtA[i:], m.Context)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.Context)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.ProductId) > 0 {
-		i -= len(m.ProductId)
-		copy(dAtA[i:], m.ProductId)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.ProductId)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.SpaceId) > 0 {
-		i -= len(m.SpaceId)
-		copy(dAtA[i:], m.SpaceId)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.SpaceId)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Membership2_ProductAllocateToSpaceResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Membership2_ProductAllocateToSpaceResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Membership2_ProductAllocateToSpaceResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
-}
-
 func (m *Membership2_StoreProductsEnumerateRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2693,57 +2401,6 @@ func (m *Membership2_StoreCartGetRequest) MarshalToSizedBuffer(dAtA []byte) (int
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartProductAddRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Membership2_StoreCartProductAddRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Membership2_StoreCartProductAddRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.OwnerEthAddress) > 0 {
-		i -= len(m.OwnerEthAddress)
-		copy(dAtA[i:], m.OwnerEthAddress)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.OwnerEthAddress)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.Context) > 0 {
-		i -= len(m.Context)
-		copy(dAtA[i:], m.Context)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.Context)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.SpaceID) > 0 {
-		i -= len(m.SpaceID)
-		copy(dAtA[i:], m.SpaceID)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.SpaceID)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.ProductId) > 0 {
-		i -= len(m.ProductId)
-		copy(dAtA[i:], m.ProductId)
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(len(m.ProductId)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *Membership2_StoreCartResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2775,34 +2432,6 @@ func (m *Membership2_StoreCartResponse) MarshalToSizedBuffer(dAtA []byte) (int, 
 		}
 		i--
 		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Membership2_StoreCartProductRemoveRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Membership2_StoreCartProductRemoveRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Membership2_StoreCartProductRemoveRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Index != 0 {
-		i = encodeVarintPaymentservice2(dAtA, i, uint64(m.Index))
-		i--
-		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -3027,6 +2656,29 @@ func (m *Membership2_StoreCartUpdateResponse) MarshalToSizedBuffer(dAtA []byte) 
 		i--
 		dAtA[i] = 0xa
 	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Membership2_StoreCartClearRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Membership2_StoreCartClearRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Membership2_StoreCartClearRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -3281,36 +2933,6 @@ func (m *Membership2_GetStatusResponse) Size() (n int) {
 	return n
 }
 
-func (m *Membership2_ProductAllocateToSpaceRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.SpaceId)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	l = len(m.ProductId)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	l = len(m.Context)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	return n
-}
-
-func (m *Membership2_ProductAllocateToSpaceResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
 func (m *Membership2_StoreProductsEnumerateRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3344,31 +2966,6 @@ func (m *Membership2_StoreCartGetRequest) Size() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartProductAddRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.ProductId)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	l = len(m.SpaceID)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	l = len(m.Context)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	l = len(m.OwnerEthAddress)
-	if l > 0 {
-		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	return n
-}
-
 func (m *Membership2_StoreCartResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3378,18 +2975,6 @@ func (m *Membership2_StoreCartResponse) Size() (n int) {
 	if m.Cart != nil {
 		l = m.Cart.Size()
 		n += 1 + l + sovPaymentservice2(uint64(l))
-	}
-	return n
-}
-
-func (m *Membership2_StoreCartProductRemoveRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Index != 0 {
-		n += 1 + sovPaymentservice2(uint64(m.Index))
 	}
 	return n
 }
@@ -3482,6 +3067,15 @@ func (m *Membership2_StoreCartUpdateResponse) Size() (n int) {
 		l = m.Cart.Size()
 		n += 1 + l + sovPaymentservice2(uint64(l))
 	}
+	return n
+}
+
+func (m *Membership2_StoreCartClearRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	return n
 }
 
@@ -5085,202 +4679,6 @@ func (m *Membership2_GetStatusResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_ProductAllocateToSpaceRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPaymentservice2
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ProductAllocateToSpaceRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ProductAllocateToSpaceRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SpaceId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProductId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ProductId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Context", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Context = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Membership2_ProductAllocateToSpaceResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPaymentservice2
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ProductAllocateToSpaceResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ProductAllocateToSpaceResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *Membership2_StoreProductsEnumerateRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -5465,184 +4863,6 @@ func (m *Membership2_StoreCartGetRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartProductAddRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPaymentservice2
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: StoreCartProductAddRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StoreCartProductAddRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProductId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ProductId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SpaceID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Context", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Context = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *Membership2_StoreCartResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -5708,75 +4928,6 @@ func (m *Membership2_StoreCartResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthPaymentservice2
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Membership2_StoreCartProductRemoveRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPaymentservice2
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: StoreCartProductRemoveRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StoreCartProductRemoveRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
-			}
-			m.Index = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice2
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Index |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
@@ -6332,6 +5483,56 @@ func (m *Membership2_StoreCartUpdateResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice2
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Membership2_StoreCartClearRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice2
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: StoreCartClearRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: StoreCartClearRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice2(dAtA[iNdEx:])
