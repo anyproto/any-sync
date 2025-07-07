@@ -47,6 +47,8 @@ proto:
 	$(call generate_drpc,$(PKGMAP),commonspace/spacesyncproto/protos)
 	$(call generate_drpc,$(PKGMAP),commonfile/fileproto/protos)
 	$(call generate_drpc,$(PKGMAP),net/streampool/testservice/protos)
+	$(call generate_drpc,$(PKGMAP),net/endtoendtest/testpeer/testproto/protos)
+
 
 	$(call generate_drpc,,net/secureservice/handshake/handshakeproto/protos)
 	$(call generate_drpc,,net/rpc/limiter/limiterproto/protos)

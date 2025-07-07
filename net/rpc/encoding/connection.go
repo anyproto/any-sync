@@ -21,11 +21,13 @@ type ProtoMessageSettable interface {
 	SetProtoMessage(protobuf.Message) error
 }
 
-// WrapConnEncoding wraps the drpc connection and replace an encoding
+var defaultSnappyEncoding = &snappyEncoding{}
+
+// WrapConnEncoding wraps the drpc connection and replaces an encoding
 func WrapConnEncoding(conn ConnUnblocked, useSnappy bool) ConnUnblocked {
 	encConn := &connWrap{ConnUnblocked: conn}
 	if useSnappy {
-		encConn.snappyEnc = snappyPool.Get().(*snappyEncoding)
+		encConn.snappyEnc = defaultSnappyEncoding
 	}
 	return encConn
 }
@@ -66,18 +68,9 @@ func (c *connWrap) NewStream(ctx context.Context, rpc string, enc drpc.Encoding)
 	return streamWrap{Stream: stream, encoding: enc}, nil
 }
 
-func (c *connWrap) Close() (err error) {
-	err = c.ConnUnblocked.Close()
-	if c.snappyEnc != nil {
-		snappyPool.Put(c.snappyEnc)
-	}
-	return
-}
-
 type streamWrap struct {
 	drpc.Stream
-	encoding     drpc.Encoding
-	returnToPool bool
+	encoding drpc.Encoding
 }
 
 type streamRawWrite interface {
@@ -94,20 +87,4 @@ func (s streamWrap) MsgRecv(msg drpc.Message, _ drpc.Encoding) error {
 
 func (s streamWrap) RawWrite(kind drpcwire.Kind, data []byte) (err error) {
 	return s.Stream.(streamRawWrite).RawWrite(kind, data)
-}
-
-func (s streamWrap) CloseSend() (err error) {
-	err = s.Stream.CloseSend()
-	if s.returnToPool {
-		snappyPool.Put(s.encoding.(*snappyEncoding))
-	}
-	return
-}
-
-func (s streamWrap) Close() (err error) {
-	err = s.Stream.Close()
-	if s.returnToPool {
-		snappyPool.Put(s.encoding.(*snappyEncoding))
-	}
-	return
 }

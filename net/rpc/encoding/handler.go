@@ -15,9 +15,8 @@ type handleWrap struct {
 func (s *handleWrap) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	if CtxIsSnappy(stream.Context()) {
 		stream = streamWrap{
-			Stream:       stream,
-			encoding:     snappyPool.Get().(*snappyEncoding),
-			returnToPool: true,
+			Stream:   stream,
+			encoding: defaultSnappyEncoding,
 		}
 	} else {
 		stream = streamWrap{

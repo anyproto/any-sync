@@ -47,6 +47,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		},
 		subConnRelease: make(chan drpc.Conn),
 		created:        time.Now(),
+		useSnappy:      ctrl.DrpcConfig().Snappy,
 	}
 	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
@@ -117,8 +118,10 @@ type peer struct {
 
 	limiter limiter
 
-	mu      sync.Mutex
-	created time.Time
+	mu        sync.Mutex
+	created   time.Time
+	useSnappy bool
+
 	transport.MultiConn
 }
 
@@ -316,12 +319,22 @@ var defaultProtoChecker = handshake.ProtoChecker{
 	SupportedEncodings: []handshakeproto.Encoding{handshakeproto.Encoding_Snappy, handshakeproto.Encoding_None},
 }
 
+var noSnappyProtoChecker = handshake.ProtoChecker{
+	AllowedProtoTypes: []handshakeproto.ProtoType{
+		handshakeproto.ProtoType_DRPC,
+	},
+}
+
 func (p *peer) serve(conn net.Conn) (err error) {
 	defer func() {
 		_ = conn.Close()
 	}()
 	hsCtx, cancel := context.WithTimeout(p.Context(), time.Second*20)
-	proto, err := handshake.IncomingProtoHandshake(hsCtx, conn, defaultProtoChecker)
+	protoChecker := defaultProtoChecker
+	if !p.useSnappy {
+		protoChecker = noSnappyProtoChecker
+	}
+	proto, err := handshake.IncomingProtoHandshake(hsCtx, conn, protoChecker)
 	if err != nil {
 		cancel()
 		return

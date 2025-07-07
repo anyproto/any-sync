@@ -16,17 +16,11 @@ import (
 	"storj.io/drpc/drpcserver"
 
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/encoding"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	pb "github.com/anyproto/any-sync/net/streampool/testservice"
 	"github.com/anyproto/any-sync/net/transport"
 )
-
-var noSnappyProtoChecker = handshake.ProtoChecker{
-	AllowedProtoTypes: []handshakeproto.ProtoType{
-		handshakeproto.ProtoType_DRPC,
-	},
-}
 
 func init() {
 	serverConns = make(chan net.Conn, 1000)
@@ -34,7 +28,7 @@ func init() {
 	// build the real dRPC server with your generated mux
 	mux := drpcmux.New()
 	pb.DRPCRegisterTest(mux, &testServer{}) // reuse your testServer from above
-	srv := drpcserver.New(mux)
+	srv := drpcserver.New(encoding.WrapHandler(mux))
 
 	// server loop
 	go func() {
@@ -59,6 +53,7 @@ func TestPeer_Stream_NotCanceled_NoRead(t *testing.T) {
 
 	var someErr = errors.New("some error")
 	for i := 0; i < 100; i++ {
+		t.Log("iter", i)
 		// start a streaming RPC and cancel mid-send
 		//ctxA, _ := context.WithCancel(context.Background())
 		err := fx.DoDrpc(context.Background(), func(c drpc.Conn) error {

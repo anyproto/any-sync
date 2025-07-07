@@ -27,22 +27,23 @@ func init() {
 	}()
 }
 
-var snappyPool = sync.Pool{
+type snappyBuf struct {
+	buf []byte
+}
+
+var snappyBytesPool = sync.Pool{
 	New: func() any {
-		return &snappyEncoding{}
+		return &snappyBuf{}
 	},
 }
 
-type snappyEncoding struct {
-	marshalBuf   []byte
-	unmarshalBuf []byte
-}
+type snappyEncoding struct{}
 
-func (se *snappyEncoding) Marshal(msg drpc.Message) ([]byte, error) {
+func (se snappyEncoding) Marshal(msg drpc.Message) ([]byte, error) {
 	return se.MarshalAppend(nil, msg)
 }
 
-func (se *snappyEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
+func (se snappyEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
 	protoMessage, ok := msg.(protobuf.Message)
 	if !ok {
 		if protoMessageGettable, ok := msg.(ProtoMessageGettable); ok {
@@ -54,31 +55,51 @@ func (se *snappyEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byt
 			return nil, ErrNotAProtoMessage
 		}
 	}
-	if se.marshalBuf, err = protobuf.MarshalAppend(se.marshalBuf[:0], protoMessage); err != nil {
-		return nil, err
+
+	var marshalBuf *snappyBuf
+	mBufPool := snappyBytesPool.Get()
+	if mBufPool != nil {
+		marshalBuf = mBufPool.(*snappyBuf)
+	} else {
+		marshalBuf = &snappyBuf{}
 	}
 
-	maxEncodedLen := snappy.MaxEncodedLen(len(se.marshalBuf))
-	buf = slices.Grow(buf, maxEncodedLen)[:maxEncodedLen]
-	res = snappy.Encode(buf, se.marshalBuf)
-
-	rawBytes.Add(uint64(len(se.marshalBuf)))
+	var prevLen = len(buf)
+	if marshalBuf.buf, err = protobuf.MarshalAppend(marshalBuf.buf[:0], protoMessage); err != nil {
+		return nil, err
+	}
+	msgData := marshalBuf.buf
+	maxEncodedLen := snappy.MaxEncodedLen(len(msgData))
+	bufSize := maxEncodedLen + prevLen
+	buf = slices.Grow(buf, bufSize)[:bufSize]
+	res = snappy.Encode(buf[prevLen:], msgData)
+	rawBytes.Add(uint64(len(msgData)))
 	compressedBytes.Add(uint64(len(res)))
-	return res, nil
+	snappyBytesPool.Put(marshalBuf)
+	return buf[:prevLen+len(res)], nil
 }
 
-func (se *snappyEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
+func (se snappyEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 	decodedLen, err := snappy.DecodedLen(buf)
 	if err != nil {
 		return
 	}
-	se.unmarshalBuf = slices.Grow(se.unmarshalBuf, decodedLen)[:decodedLen]
-	if se.unmarshalBuf, err = snappy.Decode(se.unmarshalBuf, buf); err != nil {
+
+	var unmarshalBuf *snappyBuf
+	mBufPool := snappyBytesPool.Get()
+	if mBufPool != nil {
+		unmarshalBuf = mBufPool.(*snappyBuf)
+	} else {
+		unmarshalBuf = &snappyBuf{}
+	}
+
+	unmarshalBuf.buf = slices.Grow(unmarshalBuf.buf, decodedLen)[:decodedLen]
+	if unmarshalBuf.buf, err = snappy.Decode(unmarshalBuf.buf, buf); err != nil {
 		return
 	}
 
 	compressedBytes.Add(uint64(len(buf)))
-	rawBytes.Add(uint64(len(se.unmarshalBuf)))
+	rawBytes.Add(uint64(len(unmarshalBuf.buf)))
 
 	var protoMessageSettable ProtoMessageSettable
 	protoMessage, ok := msg.(protobuf.Message)
@@ -92,12 +113,13 @@ func (se *snappyEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 			return ErrNotAProtoMessage
 		}
 	}
-	err = protoMessage.UnmarshalVT(se.unmarshalBuf)
+	err = protoMessage.UnmarshalVT(unmarshalBuf.buf)
 	if err != nil {
 		return err
 	}
 	if protoMessageSettable != nil {
 		err = protoMessageSettable.SetProtoMessage(protoMessage)
 	}
+	snappyBytesPool.Put(unmarshalBuf)
 	return
 }
