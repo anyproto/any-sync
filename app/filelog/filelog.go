@@ -17,26 +17,29 @@ import (
 const CName = "common.filelog"
 
 type LogFile struct {
-	Log string `json:"log"`
+	Log  string `json:"log"`
+	Qlog string `json:"qlog"`
 }
 
 type FileLogger interface {
 	app.ComponentRunnable
 	debugstat.StatProvider
 	DoLog(fn func(logger *zap.Logger))
+	GetQlogFile() *os.File
 }
 
 type fileLogger struct {
-	filePath    string
+	folderPath  string
 	statService debugstat.StatService
 	logger      *zap.Logger
-	file        *os.File
+	logFile     *os.File
+	qlogFile    *os.File
 	mu          sync.RWMutex
 }
 
-func New(filePath string) FileLogger {
+func New(folderPath string) FileLogger {
 	return &fileLogger{
-		filePath: filePath,
+		folderPath: folderPath,
 	}
 }
 
@@ -45,15 +48,30 @@ func NewNoOp() FileLogger {
 }
 
 func (fl *fileLogger) Init(a *app.App) error {
-	if fl.filePath == "" {
-		return fmt.Errorf("filePath cannot be empty")
+	if fl.folderPath == "" {
+		return fmt.Errorf("folderPath cannot be empty")
 	}
 
-	file, err := os.OpenFile(fl.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	// Create folder if it doesn't exist
+	if err := os.MkdirAll(fl.folderPath, 0755); err != nil {
+		return fmt.Errorf("failed to create log folder: %w", err)
+	}
+
+	// Open log file
+	logFilePath := fl.folderPath + "/app.log"
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-	fl.file = file
+	fl.logFile = logFile
+
+	// Open qlog file
+	qlogFilePath := fl.folderPath + "/quic.qlog"
+	qlogFile, err := os.OpenFile(qlogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open qlog file: %w", err)
+	}
+	fl.qlogFile = qlogFile
 
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -71,7 +89,7 @@ func (fl *fileLogger) Init(a *app.App) error {
 
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig),
-		zapcore.AddSync(file),
+		zapcore.AddSync(logFile),
 		zapcore.DebugLevel,
 	)
 
@@ -101,8 +119,17 @@ func (fl *fileLogger) Close(ctx context.Context) error {
 	if fl.logger != nil {
 		_ = fl.logger.Sync()
 	}
-	if fl.file != nil {
-		return fl.file.Close()
+	var err error
+	if fl.logFile != nil {
+		err = fl.logFile.Close()
+	}
+	if fl.qlogFile != nil {
+		if qErr := fl.qlogFile.Close(); qErr != nil && err == nil {
+			err = qErr
+		}
+	}
+	if err != nil {
+		return err
 	}
 	if fl.statService != nil {
 		fl.statService.RemoveProvider(fl)
@@ -119,26 +146,40 @@ func (fl *fileLogger) DoLog(fn func(logger *zap.Logger)) {
 	}
 }
 
+func (fl *fileLogger) GetQlogFile() *os.File {
+	fl.mu.RLock()
+	defer fl.mu.RUnlock()
+	return fl.qlogFile
+}
+
 func (fl *fileLogger) ProvideStat() any {
 	fl.mu.RLock()
 	defer fl.mu.RUnlock()
 
-	content, err := os.ReadFile(fl.filePath)
+	// Read log file
+	logFilePath := fl.folderPath + "/app.log"
+	logContent, err := os.ReadFile(logFilePath)
 	if err != nil {
-		return LogFile{
-			Log: fmt.Sprintf("error: failed to read log file: %v", err),
-		}
+		logContent = []byte(fmt.Sprintf("error: failed to read log file: %v", err))
 	}
+	encodedLog := base64.StdEncoding.EncodeToString(logContent)
 
-	encoded := base64.StdEncoding.EncodeToString(content)
+	// Read qlog file
+	qlogFilePath := fl.folderPath + "/quic.qlog"
+	qlogContent, err := os.ReadFile(qlogFilePath)
+	if err != nil {
+		qlogContent = []byte(fmt.Sprintf("error: failed to read qlog file: %v", err))
+	}
+	encodedQlog := base64.StdEncoding.EncodeToString(qlogContent)
 
 	return LogFile{
-		Log: encoded,
+		Log:  encodedLog,
+		Qlog: encodedQlog,
 	}
 }
 
 func (fl *fileLogger) StatId() string {
-	return fl.filePath
+	return fl.folderPath
 }
 
 func (fl *fileLogger) StatType() string {
@@ -165,9 +206,14 @@ func (n *noOpFileLogger) Close(ctx context.Context) error {
 
 func (n *noOpFileLogger) DoLog(fn func(logger *zap.Logger)) {}
 
+func (n *noOpFileLogger) GetQlogFile() *os.File {
+	return nil
+}
+
 func (n *noOpFileLogger) ProvideStat() any {
 	return LogFile{
-		Log: "",
+		Log:  "",
+		Qlog: "",
 	}
 }
 

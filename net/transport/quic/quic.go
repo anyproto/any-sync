@@ -12,6 +12,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/logging"
+	"github.com/quic-go/quic-go/qlog"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -66,6 +68,13 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 	q.fileLog, ok = a.Component(filelog.CName).(filelog.FileLogger)
 	if !ok {
 		q.fileLog = filelog.NewNoOp()
+	}
+
+	// Set up qlog tracer if we have a file logger with qlog file
+	if qlogFile := q.fileLog.GetQlogFile(); qlogFile != nil {
+		q.quicConf.Tracer = func(ctx context.Context, perspective logging.Perspective, id quic.ConnectionID) *logging.ConnectionTracer {
+			return qlog.NewConnectionTracer(qlogFile, perspective, id)
+		}
 	}
 	return
 }

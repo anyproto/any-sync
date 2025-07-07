@@ -17,9 +17,8 @@ import (
 func TestFileLogger(t *testing.T) {
 	t.Run("New and Init", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		logPath := filepath.Join(tmpDir, "test.log")
 		
-		fl := New(logPath)
+		fl := New(tmpDir)
 		require.NotNil(t, fl)
 		
 		a := &app.App{}
@@ -37,14 +36,13 @@ func TestFileLogger(t *testing.T) {
 		a := &app.App{}
 		err := fl.Init(a)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "filePath cannot be empty")
+		assert.Contains(t, err.Error(), "folderPath cannot be empty")
 	})
 	
 	t.Run("DoLog", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		logPath := filepath.Join(tmpDir, "test.log")
 		
-		fl := New(logPath)
+		fl := New(tmpDir)
 		a := &app.App{}
 		err := fl.Init(a)
 		require.NoError(t, err)
@@ -56,6 +54,7 @@ func TestFileLogger(t *testing.T) {
 		err = fl.Close(context.Background())
 		require.NoError(t, err)
 		
+		logPath := filepath.Join(tmpDir, "app.log")
 		content, err := os.ReadFile(logPath)
 		require.NoError(t, err)
 		assert.Contains(t, string(content), "test message")
@@ -65,9 +64,8 @@ func TestFileLogger(t *testing.T) {
 	
 	t.Run("ProvideStat", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		logPath := filepath.Join(tmpDir, "test.log")
 		
-		fl := New(logPath)
+		fl := New(tmpDir)
 		a := &app.App{}
 		err := fl.Init(a)
 		require.NoError(t, err)
@@ -80,7 +78,7 @@ func TestFileLogger(t *testing.T) {
 		err = fl.Close(context.Background())
 		require.NoError(t, err)
 		
-		fl = New(logPath)
+		fl = New(tmpDir)
 		err = fl.Init(a)
 		require.NoError(t, err)
 		
@@ -92,7 +90,7 @@ func TestFileLogger(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, string(decoded), testContent)
 		
-		assert.Equal(t, logPath, fl.StatId())
+		assert.Equal(t, tmpDir, fl.StatId())
 		assert.Equal(t, "filelog", fl.StatType())
 		
 		err = fl.Close(context.Background())
@@ -101,9 +99,8 @@ func TestFileLogger(t *testing.T) {
 	
 	t.Run("Run", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		logPath := filepath.Join(tmpDir, "test.log")
 		
-		fl := New(logPath)
+		fl := New(tmpDir)
 		a := &app.App{}
 		err := fl.Init(a)
 		require.NoError(t, err)
@@ -145,6 +142,7 @@ func TestNoOpFileLogger(t *testing.T) {
 		logFile, ok := stat.(LogFile)
 		require.True(t, ok)
 		assert.Equal(t, "", logFile.Log)
+		assert.Equal(t, "", logFile.Qlog)
 		
 		assert.Equal(t, "noop", fl.StatId())
 		assert.Equal(t, "filelog", fl.StatType())
