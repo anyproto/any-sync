@@ -1,3 +1,5 @@
+//go:generate mockgen -package=mock_quic -destination=mock_quic/mock_packet_conn.go net PacketConn
+//go:generate mockgen -package=mock_quic -source=$GOFILE -destination=mock_quic/mock_quic_conn.go Connection
 package quic
 
 import (
@@ -14,7 +16,16 @@ import (
 	"github.com/anyproto/any-sync/net/transport"
 )
 
-func newConn(cctx context.Context, udpConn *net.UDPConn, qconn quic.Connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
+type Connection interface {
+	OpenStreamSync(context.Context) (quic.Stream, error)
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	CloseWithError(quic.ApplicationErrorCode, string) error
+	Context() context.Context
+	AcceptStream(context.Context) (quic.Stream, error)
+}
+
+func newConn(cctx context.Context, udpConn net.PacketConn, qconn Connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Quic+"://"+qconn.RemoteAddr().String())
 	return &quicMultiConn{
 		cctx:         cctx,
@@ -26,11 +37,11 @@ func newConn(cctx context.Context, udpConn *net.UDPConn, qconn quic.Connection, 
 }
 
 type quicMultiConn struct {
-	udpConn      *net.UDPConn
+	udpConn      net.PacketConn
 	cctx         context.Context
 	writeTimeout time.Duration
 	closeTimeout time.Duration
-	quic.Connection
+	Connection
 }
 
 func (q *quicMultiConn) Context() context.Context {

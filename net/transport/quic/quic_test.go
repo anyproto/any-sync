@@ -3,21 +3,26 @@ package quic
 import (
 	"bytes"
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/secureservice"
-	"github.com/anyproto/any-sync/net/transport"
-	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
-	"github.com/anyproto/any-sync/testutil/accounttest"
-	"github.com/anyproto/any-sync/testutil/testnodeconf"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
+	"errors"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/quic-go/quic-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/transport"
+	"github.com/anyproto/any-sync/net/transport/quic/mock_quic"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"github.com/anyproto/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/testutil/testnodeconf"
 )
 
 var ctx = context.Background()
@@ -253,3 +258,177 @@ func (t *testAccepter) Init(a *app.App) (err error) {
 }
 
 func (t *testAccepter) Name() (name string) { return "testAccepter" }
+
+func TestQuicMultiConn_Close(t *testing.T) {
+	t.Run("close with udp connection", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      mockUdpConn,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 100 * time.Millisecond,
+		}
+
+		done := make(chan struct{})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			close(done)
+			return nil
+		})
+		mockUdpConn.EXPECT().Close().Return(nil)
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-done
+	})
+
+	t.Run("close with udp connection and quic error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      mockUdpConn,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 100 * time.Millisecond,
+		}
+
+		done := make(chan struct{})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			return errors.New("quic error")
+		})
+		mockUdpConn.EXPECT().Close().DoAndReturn(func() error {
+			close(done)
+			return nil
+		})
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-done
+	})
+
+	t.Run("close with udp connection and udp error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      mockUdpConn,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 100 * time.Millisecond,
+		}
+
+		done := make(chan struct{})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			close(done)
+			return nil
+		})
+		mockUdpConn.EXPECT().Close().Return(errors.New("udp error"))
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-done
+	})
+
+	t.Run("close without udp connection", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      nil,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 100 * time.Millisecond,
+		}
+
+		done := make(chan struct{})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			close(done)
+			return nil
+		})
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-done
+	})
+
+	t.Run("close timeout triggers udp close", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      mockUdpConn,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 10 * time.Millisecond,
+		}
+
+		timeoutDone := make(chan struct{})
+		closeDone := make(chan struct{})
+
+		mockUdpConn.EXPECT().Close().DoAndReturn(func() error {
+			close(timeoutDone)
+			return nil
+		})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			<-timeoutDone
+			close(closeDone)
+			return nil
+		})
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-closeDone
+	})
+
+	t.Run("close timeout without udp connection", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockConn := mock_quic.NewMockConnection(ctrl)
+		ctx := context.Background()
+
+		q := &quicMultiConn{
+			cctx:         ctx,
+			udpConn:      nil,
+			Connection:   mockConn,
+			writeTimeout: time.Second,
+			closeTimeout: 10 * time.Millisecond,
+		}
+
+		done := make(chan struct{})
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+			close(done)
+			return nil
+		})
+
+		err := q.Close()
+		assert.NoError(t, err)
+		<-done
+	})
+}
