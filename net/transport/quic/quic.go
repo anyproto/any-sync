@@ -54,6 +54,9 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 	if q.conf.KeepAlivePeriodSec <= 0 {
 		q.conf.KeepAlivePeriodSec = 25
 	}
+	if q.conf.CloseTimeoutSec <= 0 {
+		q.conf.CloseTimeoutSec = 5
+	}
 	q.quicConf = &quic.Config{
 		HandshakeIdleTimeout: time.Duration(q.conf.DialTimeoutSec) * time.Second,
 		InitialPacketSize:    q.conf.InitialPacketSize,
@@ -90,10 +93,6 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 		return conf, tlsErr
 	}
 	tlsConf.NextProtos = []string{"anysync"}
-
-	if err != nil {
-		return
-	}
 	for _, listAddr := range addrs {
 		list, err := quic.ListenAddr(listAddr, &tlsConf, q.quicConf)
 		if err != nil {
@@ -111,7 +110,15 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	if err != nil {
 		return nil, err
 	}
-	qConn, err := quic.DialAddr(ctx, addr, tlsConf, q.quicConf)
+	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
+	if err != nil {
+		return nil, err
+	}
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+	qConn, err := quic.Dial(ctx, udpConn, udpAddr, tlsConf, q.quicConf)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +154,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		}()
 		return nil, err
 	}
-
-	return newConn(cctx, qConn, time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
+	return newConn(cctx, udpConn, qConn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
 }
 
 func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
@@ -200,7 +206,7 @@ func (q *quicTransport) accept(conn quic.Connection) (err error) {
 		}()
 		return
 	}
-	mc := newConn(cctx, conn, time.Second*time.Duration(q.conf.WriteTimeoutSec))
+	mc := newConn(cctx, nil, conn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec))
 	return q.accepter.Accept(mc)
 }
 

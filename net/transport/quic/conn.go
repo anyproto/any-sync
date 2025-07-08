@@ -7,23 +7,29 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
 )
 
-func newConn(cctx context.Context, qconn quic.Connection, writeTimeout time.Duration) transport.MultiConn {
+func newConn(cctx context.Context, udpConn *net.UDPConn, qconn quic.Connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Quic+"://"+qconn.RemoteAddr().String())
 	return &quicMultiConn{
 		cctx:         cctx,
+		udpConn:      udpConn,
 		Connection:   qconn,
 		writeTimeout: writeTimeout,
+		closeTimeout: closeTimeout,
 	}
 }
 
 type quicMultiConn struct {
+	udpConn      *net.UDPConn
 	cctx         context.Context
 	writeTimeout time.Duration
+	closeTimeout time.Duration
 	quic.Connection
 }
 
@@ -79,7 +85,37 @@ func (q *quicMultiConn) CloseChan() <-chan struct{} {
 }
 
 func (q *quicMultiConn) Close() error {
-	return q.Connection.CloseWithError(2, "")
+	// if we have the udp connection saved in quicMultiConn, then we manage it ourselves
+	// we don't manage/close the udp connections when we accept streams, otherwise we would kill the server
+	closeWait := make(chan struct{})
+	isTimeout := atomic.NewBool(false)
+	go func() {
+		select {
+		case <-closeWait:
+		case <-time.After(q.closeTimeout):
+			isTimeout.Store(true)
+			if q.udpConn != nil {
+				err := q.udpConn.Close()
+				if err != nil {
+					log.Error("udp conn closed with error", zap.Error(err))
+				}
+			}
+		}
+	}()
+	go func() {
+		err := q.Connection.CloseWithError(2, "")
+		if err != nil {
+			log.Error("quic conn closed with error", zap.Error(err))
+		}
+		if !isTimeout.Load() && q.udpConn != nil {
+			err := q.udpConn.Close()
+			if err != nil {
+				log.Error("upd conn closed with error", zap.Error(err))
+			}
+		}
+		close(closeWait)
+	}()
+	return nil
 }
 
 const (
