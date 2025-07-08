@@ -264,14 +264,14 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      mockUdpConn,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 100 * time.Millisecond,
 		}
@@ -292,14 +292,14 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      mockUdpConn,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 100 * time.Millisecond,
 		}
@@ -322,14 +322,14 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      mockUdpConn,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 100 * time.Millisecond,
 		}
@@ -350,13 +350,13 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      nil,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 100 * time.Millisecond,
 		}
@@ -376,14 +376,14 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		mockUdpConn := mock_quic.NewMockPacketConn(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      mockUdpConn,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 10 * time.Millisecond,
 		}
@@ -410,13 +410,13 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		mockConn := mock_quic.NewMockConnection(ctrl)
+		mockConn := mock_quic.NewMockconnection(ctrl)
 		ctx := context.Background()
 
 		q := &quicMultiConn{
 			cctx:         ctx,
 			udpConn:      nil,
-			Connection:   mockConn,
+			connection:   mockConn,
 			writeTimeout: time.Second,
 			closeTimeout: 10 * time.Millisecond,
 		}

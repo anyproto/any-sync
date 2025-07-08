@@ -1,5 +1,5 @@
 //go:generate mockgen -package=mock_quic -destination=mock_quic/mock_packet_conn.go net PacketConn
-//go:generate mockgen -package=mock_quic -source=$GOFILE -destination=mock_quic/mock_quic_conn.go Connection
+//go:generate mockgen -package=mock_quic -source=$GOFILE -destination=mock_quic/mock_quic_conn.go connection
 package quic
 
 import (
@@ -16,7 +16,7 @@ import (
 	"github.com/anyproto/any-sync/net/transport"
 )
 
-type Connection interface {
+type connection interface {
 	OpenStreamSync(context.Context) (quic.Stream, error)
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
@@ -25,12 +25,12 @@ type Connection interface {
 	AcceptStream(context.Context) (quic.Stream, error)
 }
 
-func newConn(cctx context.Context, udpConn net.PacketConn, qconn Connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
+func newConn(cctx context.Context, udpConn net.PacketConn, qconn connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Quic+"://"+qconn.RemoteAddr().String())
 	return &quicMultiConn{
 		cctx:         cctx,
 		udpConn:      udpConn,
-		Connection:   qconn,
+		connection:   qconn,
 		writeTimeout: writeTimeout,
 		closeTimeout: closeTimeout,
 	}
@@ -41,7 +41,7 @@ type quicMultiConn struct {
 	cctx         context.Context
 	writeTimeout time.Duration
 	closeTimeout time.Duration
-	Connection
+	connection
 }
 
 func (q *quicMultiConn) Context() context.Context {
@@ -49,7 +49,7 @@ func (q *quicMultiConn) Context() context.Context {
 }
 
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
-	stream, err := q.Connection.AcceptStream(context.Background())
+	stream, err := q.connection.AcceptStream(context.Background())
 	if err != nil {
 		if errors.Is(err, quic.ErrServerClosed) {
 			err = transport.ErrConnClosed
@@ -92,7 +92,7 @@ func (q *quicMultiConn) IsClosed() bool {
 }
 
 func (q *quicMultiConn) CloseChan() <-chan struct{} {
-	return q.Connection.Context().Done()
+	return q.connection.Context().Done()
 }
 
 func (q *quicMultiConn) Close() error {
@@ -114,7 +114,7 @@ func (q *quicMultiConn) Close() error {
 		}
 	}()
 	go func() {
-		err := q.Connection.CloseWithError(2, "")
+		err := q.connection.CloseWithError(2, "")
 		if err != nil {
 			log.Error("quic conn closed with error", zap.Error(err))
 		}
