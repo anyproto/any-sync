@@ -30,6 +30,7 @@ type AnyPpClientService2 interface {
 	ProductsEnumerate(ctx context.Context, in *pp.Membership2_StoreProductsEnumerateRequest) (out *pp.Membership2_StoreProductsEnumerateResponse, err error)
 	GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error)
 
+	WebAuth(ctx context.Context, in *pp.Membership2_WebAuthRequest) (out *pp.Membership2_WebAuthResponse, err error)
 	app.Component
 }
 
@@ -141,6 +142,16 @@ func (s *service) StoreCartUpdate(ctx context.Context, in *pp.Membership2_StoreC
 func (s *service) StoreCartClear(ctx context.Context, in *pp.Membership2_StoreCartClearRequest) (out *pp.Membership2_StoreCartResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
 		if out, err = cl.StoreCartClear(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) WebAuth(ctx context.Context, in *pp.Membership2_WebAuthRequest) (out *pp.Membership2_WebAuthResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
+		if out, err = cl.WebAuth(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

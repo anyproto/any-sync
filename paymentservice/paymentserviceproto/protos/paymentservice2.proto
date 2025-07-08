@@ -178,6 +178,17 @@ message Membership2 {
   message StoreCartClearRequest {
 
   }
+
+  message WebAuthRequest {
+    
+  }
+
+  message WebAuthResponse {
+    string jwt = 1;
+
+    // (optional) redirect here after the auth
+    string url = 2;
+  }
 }
 
 service AnyPaymentProcessing2 {
@@ -192,4 +203,6 @@ service AnyPaymentProcessing2 {
      
   rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
+
+  rpc WebAuth(Membership2.WebAuthRequest) returns (Membership2.WebAuthResponse); 
 }

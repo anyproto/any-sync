@@ -174,3 +174,18 @@ func (mr *MockAnyPpClientService2MockRecorder) StoreCartUpdate(ctx, in any) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreCartUpdate", reflect.TypeOf((*MockAnyPpClientService2)(nil).StoreCartUpdate), ctx, in)
 }
+
+// WebAuth mocks base method.
+func (m *MockAnyPpClientService2) WebAuth(ctx context.Context, in *paymentserviceproto.Membership2_WebAuthRequest) (*paymentserviceproto.Membership2_WebAuthResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WebAuth", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_WebAuthResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WebAuth indicates an expected call of WebAuth.
+func (mr *MockAnyPpClientService2MockRecorder) WebAuth(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WebAuth", reflect.TypeOf((*MockAnyPpClientService2)(nil).WebAuth), ctx, in)
+}

@@ -48,6 +48,7 @@ type DRPCAnyPaymentProcessing2Client interface {
 	StoreCartClear(ctx context.Context, in *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartPromocodeApply(ctx context.Context, in *Membership2_StoreCartPromocodeApplyRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartCheckout(ctx context.Context, in *Membership2_StoreCartCheckoutRequest) (*Membership2_StoreCartCheckoutResponse, error)
+	WebAuth(ctx context.Context, in *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error)
 }
 
 type drpcAnyPaymentProcessing2Client struct {
@@ -132,6 +133,15 @@ func (c *drpcAnyPaymentProcessing2Client) StoreCartCheckout(ctx context.Context,
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessing2Client) WebAuth(ctx context.Context, in *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error) {
+	out := new(Membership2_WebAuthResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessing2Server interface {
 	ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
 	ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
@@ -141,6 +151,7 @@ type DRPCAnyPaymentProcessing2Server interface {
 	StoreCartClear(context.Context, *Membership2_StoreCartClearRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartPromocodeApply(context.Context, *Membership2_StoreCartPromocodeApplyRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartCheckout(context.Context, *Membership2_StoreCartCheckoutRequest) (*Membership2_StoreCartCheckoutResponse, error)
+	WebAuth(context.Context, *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error)
 }
 
 type DRPCAnyPaymentProcessing2UnimplementedServer struct{}
@@ -177,9 +188,13 @@ func (s *DRPCAnyPaymentProcessing2UnimplementedServer) StoreCartCheckout(context
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) WebAuth(context.Context, *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessing2Description struct{}
 
-func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 8 }
+func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 9 }
 
 func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -255,6 +270,15 @@ func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding
 						in1.(*Membership2_StoreCartCheckoutRequest),
 					)
 			}, DRPCAnyPaymentProcessing2Server.StoreCartCheckout, true
+	case 8:
+		return "/AnyPaymentProcessing2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					WebAuth(
+						ctx,
+						in1.(*Membership2_WebAuthRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.WebAuth, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -386,6 +410,22 @@ type drpcAnyPaymentProcessing2_StoreCartCheckoutStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing2_StoreCartCheckoutStream) SendAndClose(m *Membership2_StoreCartCheckoutResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing2_WebAuthStream interface {
+	drpc.Stream
+	SendAndClose(*Membership2_WebAuthResponse) error
+}
+
+type drpcAnyPaymentProcessing2_WebAuthStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing2_WebAuthStream) SendAndClose(m *Membership2_WebAuthResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
