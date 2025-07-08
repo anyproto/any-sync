@@ -17,12 +17,12 @@ import (
 )
 
 type connection interface {
-	OpenStreamSync(context.Context) (quic.Stream, error)
+	OpenStreamSync(context.Context) (*quic.Stream, error)
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
 	CloseWithError(quic.ApplicationErrorCode, string) error
 	Context() context.Context
-	AcceptStream(context.Context) (quic.Stream, error)
+	AcceptStream(context.Context) (*quic.Stream, error)
 }
 
 func newConn(cctx context.Context, udpConn net.PacketConn, qconn connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
@@ -134,7 +134,7 @@ const (
 )
 
 type quicNetConn struct {
-	quic.Stream
+	*quic.Stream
 	writeTimeout          time.Duration
 	localAddr, remoteAddr net.Addr
 }

@@ -179,7 +179,7 @@ func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
 	}
 }
 
-func (q *quicTransport) accept(conn quic.Connection) (err error) {
+func (q *quicTransport) accept(conn *quic.Conn) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(q.conf.DialTimeoutSec))
 	defer cancel()
 	remotePubKey, err := libp2ptls.PubKeyFromCertChain(conn.ConnectionState().TLS.PeerCertificates)

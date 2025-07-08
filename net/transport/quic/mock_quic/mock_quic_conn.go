@@ -41,10 +41,10 @@ func (m *Mockconnection) EXPECT() *MockconnectionMockRecorder {
 }
 
 // AcceptStream mocks base method.
-func (m *Mockconnection) AcceptStream(arg0 context.Context) (quic.Stream, error) {
+func (m *Mockconnection) AcceptStream(arg0 context.Context) (*quic.Stream, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AcceptStream", arg0)
-	ret0, _ := ret[0].(quic.Stream)
+	ret0, _ := ret[0].(*quic.Stream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,10 +98,10 @@ func (mr *MockconnectionMockRecorder) LocalAddr() *gomock.Call {
 }
 
 // OpenStreamSync mocks base method.
-func (m *Mockconnection) OpenStreamSync(arg0 context.Context) (quic.Stream, error) {
+func (m *Mockconnection) OpenStreamSync(arg0 context.Context) (*quic.Stream, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OpenStreamSync", arg0)
-	ret0, _ := ret[0].(quic.Stream)
+	ret0, _ := ret[0].(*quic.Stream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
