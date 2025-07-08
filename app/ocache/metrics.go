@@ -1,8 +1,9 @@
 package ocache
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func WithPrometheus(reg *prometheus.Registry, namespace, subsystem string) Option {
@@ -52,6 +53,17 @@ func WithPrometheus(reg *prometheus.Registry, namespace, subsystem string) Optio
 			cache.metrics.gc,
 			cache.metrics.size,
 		)
+	}
+}
+
+func WithPrometheusMetrics(hit, miss, gc prometheus.Counter, size prometheus.GaugeFunc) Option {
+	return func(cache *oCache) {
+		cache.metrics = &metrics{
+			hit:  hit,
+			miss: miss,
+			gc:   gc,
+			size: size,
+		}
 	}
 }
 

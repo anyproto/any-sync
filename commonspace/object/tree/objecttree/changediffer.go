@@ -200,6 +200,14 @@ func (d *DiffManager) Add(change *Change) {
 	d.differ.Add(change)
 }
 
+func (d *DiffManager) GetIds() []string {
+	ids := make([]string, 0, len(d.differ.attached))
+	for id := range d.differ.attached {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (d *DiffManager) Update(objTree ObjectTree) {
 	var (
 		toAdd    = make([]*Change, 0, objTree.Len())
