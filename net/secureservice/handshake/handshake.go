@@ -192,5 +192,6 @@ func (h *handshake) release() {
 	h.remoteCred.Type = 0
 	h.remoteCred.Payload = h.remoteCred.Payload[:0]
 	h.remoteProto.Proto = 0
+	h.remoteProto.Encodings = h.remoteProto.Encodings[:0]
 	handshakePool.Put(h)
 }
