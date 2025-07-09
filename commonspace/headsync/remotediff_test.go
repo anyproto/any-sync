@@ -95,3 +95,152 @@ func (m *mockClient) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRe
 	m.totalOutSent += len(marsh)
 	return resp, nil
 }
+
+func TestRemoteDiffTypeCheck(t *testing.T) {
+	t.Run("diff type check with V3", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+		contRemote := ldiff.New(32, 256)
+
+		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
+		contRemote.Set(ldiff.Element{Id: "1", Head: "head1"})
+
+		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V3}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
+		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+
+		require.NoError(t, err)
+		require.False(t, needsSync)
+		require.Equal(t, contLocal, diff)
+	})
+
+	t.Run("diff type check with V2", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+		contRemote := ldiff.New(32, 256)
+		oldDiff := ldiff.New(32, 256)
+
+		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
+		oldDiff.Set(ldiff.Element{Id: "1", Head: "head1"})
+		contRemote.Set(ldiff.Element{Id: "1", Head: "head1"})
+
+		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V2}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, oldDiff)
+		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+
+		require.NoError(t, err)
+		require.False(t, needsSync)
+		require.Equal(t, oldDiff, diff)
+	})
+
+	t.Run("diff type check with unsupported type", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+		contRemote := ldiff.New(32, 256)
+
+		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V1}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
+		_, _, err := rd.DiffTypeCheck(ctx, container)
+
+		require.Error(t, err)
+		require.Equal(t, spacesyncproto.ErrUnexpected, err)
+	})
+
+	t.Run("diff type check with sync needed", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+		contRemote := ldiff.New(32, 256)
+
+		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
+		contRemote.Set(ldiff.Element{Id: "1", Head: "head2"})
+
+		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V3}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
+		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+
+		require.NoError(t, err)
+		require.True(t, needsSync)
+		require.Equal(t, contLocal, diff)
+	})
+
+	t.Run("head sync request fails", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+
+		mockClient := &mockClientWithError{err: fmt.Errorf("network error")}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
+		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+
+		require.Error(t, err)
+		require.False(t, needsSync)
+		require.Nil(t, diff)
+	})
+
+	t.Run("empty results from remote", func(t *testing.T) {
+		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
+		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
+
+		mockClient := &mockClientWithEmptyResults{diffType: spacesyncproto.DiffType_V3}
+		rd := NewRemoteDiff("space1", mockClient)
+
+		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
+		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+
+		require.NoError(t, err)
+		require.True(t, needsSync)
+		require.Equal(t, contLocal, diff)
+	})
+}
+
+type mockClientWithDiffType struct {
+	l            ldiff.Diff
+	totalInSent  int
+	totalOutSent int
+	t            *testing.T
+	diffType     spacesyncproto.DiffType
+}
+
+func (m *mockClientWithDiffType) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+	res, err := in.Marshal()
+	require.NoError(m.t, err)
+	m.totalInSent += len(res)
+	resp, err := HandleRangeRequest(ctx, m.l, in)
+	if err != nil {
+		return nil, err
+	}
+	resp.DiffType = m.diffType
+	marsh, err := resp.Marshal()
+	require.NoError(m.t, err)
+	m.totalOutSent += len(marsh)
+	return resp, nil
+}
+
+type mockClientWithError struct {
+	err error
+}
+
+func (m *mockClientWithError) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+	return nil, m.err
+}
+
+type mockClientWithEmptyResults struct {
+	diffType spacesyncproto.DiffType
+}
+
+func (m *mockClientWithEmptyResults) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+	return &spacesyncproto.HeadSyncResponse{
+		DiffType: m.diffType,
+		Results:  []*spacesyncproto.HeadSyncResult{}, // Empty results
+	}, nil
+}

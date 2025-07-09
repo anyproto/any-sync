@@ -2,6 +2,7 @@ package headsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,23 +116,35 @@ func TestDiffManager_FillDiff(t *testing.T) {
 				return nil
 			})
 
-		fx.aclMock.EXPECT().Id().Return("aclId").Times(2)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(2)
+		fx.aclMock.EXPECT().Id().Return("aclId").Times(1)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(1)
 
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		// Test expects hashed values now
+		hasher := ldiff.NewHasher()
+		hash1 := hasher.HashId("h1h2")
+		hash2 := hasher.HashId("h3")
+		ldiff.ReleaseHasher(hasher)
+
+		// NewDiff gets both common and no common snapshot elements
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock).Times(2)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
-			Head: "h1h2",
-		}, ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
+			Head: hash1,
+		})
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
 		})
 
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Set([]ldiff.Element{
-			{
-				Id:   "id2",
-				Head: "h3",
-			},
+		// OldDiff gets common elements with hash and no common snapshot elements without hash
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock).Times(2)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash1,
+		})
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: "h3",
 		})
 
 		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
@@ -167,16 +180,74 @@ func TestDiffManager_FillDiff(t *testing.T) {
 				return nil
 			})
 
-		fx.aclMock.EXPECT().Id().Return("aclId").Times(2)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(2)
+		fx.aclMock.EXPECT().Id().Return("aclId").Times(1)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(1)
 
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
+		// No elements should be set for derived entries
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("oldHash")
+		fx.diffMock.EXPECT().Hash().Return("newHash")
+		fx.stateStorage.EXPECT().SetHash(ctx, "oldHash", "newHash").Return(nil)
+
+		err := fx.diffManager.FillDiff(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle singular roots", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		headEntries := []headstorage.HeadsEntry{
+			{
+				Id:             "id1",
+				Heads:          []string{"id1"},  // Singular root
+				CommonSnapshot: "snapshot1",
+				IsDerived:      false,
+			},
+			{
+				Id:             "id2",
+				Heads:          []string{"h1", "h2"},
+				CommonSnapshot: "snapshot2",
+				IsDerived:      false,
+			},
+		}
+
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, entryIter headstorage.EntryIterator) error {
+				for _, entry := range headEntries {
+					if res, err := entryIter(entry); err != nil || !res {
+						return err
+					}
+				}
+				return nil
+			})
+
+		fx.aclMock.EXPECT().Id().Return("aclId").Times(1)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(1)
+
+		hasher := ldiff.NewHasher()
+		hash1 := hasher.HashId("id1")
+		hash2 := hasher.HashId("h1h2")
+		ldiff.ReleaseHasher(hasher)
+
+		// NewDiff should only get id2
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
 		})
 
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Set([]ldiff.Element{})
+		// OldDiff should get both id1 and id2
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock).Times(2)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
+		})
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash1,
+		})
 
 		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
 		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
@@ -186,6 +257,37 @@ func TestDiffManager_FillDiff(t *testing.T) {
 
 		err := fx.diffManager.FillDiff(ctx)
 		require.NoError(t, err)
+	})
+
+	t.Run("error handling - iterate entries fails", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		expectedErr := fmt.Errorf("iterate error")
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedErr)
+
+		err := fx.diffManager.FillDiff(ctx)
+		require.ErrorIs(t, err, expectedErr)
+	})
+
+	t.Run("error handling - set hash fails", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		fx.aclMock.EXPECT().Id().Return("aclId").Times(1)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).Times(1)
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("oldHash")
+		fx.diffMock.EXPECT().Hash().Return("newHash")
+		
+		expectedErr := fmt.Errorf("hash error")
+		fx.stateStorage.EXPECT().SetHash(ctx, "oldHash", "newHash").Return(expectedErr)
+
+		err := fx.diffManager.FillDiff(ctx)
+		require.ErrorIs(t, err, expectedErr)
 	})
 }
 
@@ -259,7 +361,17 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("store").Return(false)
+		
+		hasher := ldiff.NewHasher()
+		hash := hasher.HashId("head1")
+		ldiff.ReleaseHasher(hasher)
+
 		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "store",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "store",
 			Head: "head1",
@@ -282,9 +394,20 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		
+		hasher := ldiff.NewHasher()
+		hash := hasher.HashId("head1head2")
+		ldiff.ReleaseHasher(hasher)
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
-			Head: "head1head2",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
 		})
 		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
 		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
@@ -323,10 +446,120 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 
 		fx.diffManager.UpdateHeads(update)
 	})
+
+	t.Run("update singular root object", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		update := headstorage.HeadsUpdate{
+			Id:    "id1",
+			Heads: []string{"id1"},  // Singular root
+		}
+
+		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
+		
+		hasher := ldiff.NewHasher()
+		hash := hasher.HashId("id1")
+		ldiff.ReleaseHasher(hasher)
+
+		// Singular roots should only be added to OldDiff and then return early
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
+		})
+		// No hash update since the function returns early for singular roots
+
+		fx.diffManager.UpdateHeads(update)
+	})
+
+	t.Run("update head with empty heads array", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		update := headstorage.HeadsUpdate{
+			Id:    "id1",
+			Heads: []string{},  // Empty heads
+		}
+
+		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
+		
+		hasher := ldiff.NewHasher()
+		hash := hasher.HashId("")
+		ldiff.ReleaseHasher(hasher)
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
+
+		fx.diffManager.UpdateHeads(update)
+	})
+
+	t.Run("set hash fails but continues", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		update := headstorage.HeadsUpdate{
+			Id:    "id1",
+			Heads: []string{"head1"},
+		}
+
+		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
+		
+		hasher := ldiff.NewHasher()
+		hash := hasher.HashId("head1")
+		ldiff.ReleaseHasher(hasher)
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash,
+		})
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
+		// UpdateHeads logs warning but doesn't fail
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(fmt.Errorf("hash error"))
+
+		// Should not panic or fail
+		fx.diffManager.UpdateHeads(update)
+	})
 }
 
 func TestDiffManager_HandleRangeRequest(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("handle range request with V3 diff type", func(t *testing.T) {
+		fx := newDiffManagerFixture(t)
+		defer fx.stop()
+
+		req := &spacesyncproto.HeadSyncRequest{
+			DiffType: spacesyncproto.DiffType_V3,
+		}
+
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().DiffType().Return(spacesyncproto.DiffType_V3)
+		fx.diffMock.EXPECT().Ranges(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+		_, err := fx.diffManager.HandleRangeRequest(ctx, req)
+		require.NoError(t, err)
+	})
 
 	t.Run("handle range request with V2 diff type", func(t *testing.T) {
 		fx := newDiffManagerFixture(t)
@@ -344,7 +577,7 @@ func TestDiffManager_HandleRangeRequest(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("handle range request with old diff type", func(t *testing.T) {
+	t.Run("handle range request with unsupported diff type", func(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
@@ -352,12 +585,9 @@ func TestDiffManager_HandleRangeRequest(t *testing.T) {
 			DiffType: spacesyncproto.DiffType_V1,
 		}
 
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().DiffType().Return(spacesyncproto.DiffType_V1)
-		fx.diffMock.EXPECT().Ranges(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
-
 		_, err := fx.diffManager.HandleRangeRequest(ctx, req)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.Equal(t, spacesyncproto.ErrUnexpected, err)
 	})
 }
 
