@@ -158,7 +158,7 @@ func main() {
 			}
 		}
 		if *fClientStream != "" {
-			params := strings.Split(*fUnary, "-")
+			params := strings.Split(*fClientStream, "-")
 			if len(params) == 2 {
 				n, _ := strconv.Atoi(params[1])
 				proc, _ := strconv.Atoi(params[0])
