@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"io"
 	"sync"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -197,17 +198,6 @@ func newFixture(t *testing.T) *fixture {
 
 	require.NoError(t, f.a.Start(context.Background()))
 	return f
-}
-
-type mockEncoding struct {
-}
-
-func (m mockEncoding) Marshal(msg drpc.Message) ([]byte, error) {
-	return nil, nil
-}
-
-func (m mockEncoding) Unmarshal(buf []byte, msg drpc.Message) error {
-	return nil
 }
 
 type testSyncHandler struct {

@@ -53,7 +53,6 @@ func TestPeer_Stream_NotCanceled_NoRead(t *testing.T) {
 
 	var someErr = errors.New("some error")
 	for i := 0; i < 100; i++ {
-		t.Log("iter", i)
 		// start a streaming RPC and cancel mid-send
 		//ctxA, _ := context.WithCancel(context.Background())
 		err := fx.DoDrpc(context.Background(), func(c drpc.Conn) error {
