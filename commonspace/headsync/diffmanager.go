@@ -47,20 +47,31 @@ func NewDiffManager(
 }
 
 func (dm *DiffManager) FillDiff(ctx context.Context) error {
-	var els = make([]ldiff.Element, 0, 100)
-	var aclOrStorage []ldiff.Element
+	var (
+		commonEls           = make([]ldiff.Element, 0, 100)
+		onlyOldEls          = make([]ldiff.Element, 0, 100)
+		noCommonSnapshotEls = make([]ldiff.Element, 0, 100)
+	)
 	err := dm.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+		// empty derived roots shouldn't be set in all hashes
 		if entry.IsDerived && entry.Heads[0] == entry.Id {
 			return true, nil
 		}
+		// empty roots shouldn't be set in new hashe
+		if entry.Heads[0] == entry.Id {
+			onlyOldEls = append(onlyOldEls, ldiff.Element{
+				Id:   entry.Id,
+				Head: concatStrings(entry.Heads),
+			})
+			return true, nil
+		}
 		if entry.CommonSnapshot != "" {
-			els = append(els, ldiff.Element{
+			commonEls = append(commonEls, ldiff.Element{
 				Id:   entry.Id,
 				Head: concatStrings(entry.Heads),
 			})
 		} else {
-			// this whole stuff is done to prevent storage hash from being set to old diff
-			aclOrStorage = append(aclOrStorage, ldiff.Element{
+			noCommonSnapshotEls = append(noCommonSnapshotEls, ldiff.Element{
 				Id:   entry.Id,
 				Head: concatStrings(entry.Heads),
 			})
@@ -70,14 +81,11 @@ func (dm *DiffManager) FillDiff(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	els = append(els, ldiff.Element{
-		Id:   dm.syncAcl.Id(),
-		Head: dm.syncAcl.Head().Id,
-	})
 	log.Debug("setting acl", zap.String("aclId", dm.syncAcl.Id()), zap.String("headId", dm.syncAcl.Head().Id))
-	dm.diffContainer.Set(els...)
-	// acl will be set twice to the diff but it doesn't matter
-	dm.diffContainer.NewDiff().Set(aclOrStorage...)
+	hasher := ldiff.NewHasher()
+	dm.setHeadsForNewDiff(commonEls, noCommonSnapshotEls, hasher)
+	dm.setHeadsForOldDiff(commonEls, onlyOldEls, noCommonSnapshotEls, hasher)
+	ldiff.ReleaseHasher(hasher)
 	oldHash := dm.diffContainer.OldDiff().Hash()
 	newHash := dm.diffContainer.NewDiff().Hash()
 	if err := dm.storage.StateStorage().SetHash(ctx, oldHash, newHash); err != nil {
@@ -85,6 +93,29 @@ func (dm *DiffManager) FillDiff(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (dm *DiffManager) setHeadsForNewDiff(commonEls, noCommonSnapshotEls []ldiff.Element, hasher *ldiff.Hasher) {
+	for _, el := range append(commonEls, noCommonSnapshotEls...) {
+		hash := hasher.HashId(el.Head)
+		dm.diffContainer.NewDiff().Set(ldiff.Element{
+			Id:   el.Id,
+			Head: hash,
+		})
+	}
+}
+
+func (dm *DiffManager) setHeadsForOldDiff(commonEls, onlyOldEls, noCommonSnapshotEls []ldiff.Element, hasher *ldiff.Hasher) {
+	for _, el := range append(commonEls, onlyOldEls...) {
+		hash := hasher.HashId(el.Head)
+		dm.diffContainer.OldDiff().Set(ldiff.Element{
+			Id:   el.Id,
+			Head: hash,
+		})
+	}
+	for _, el := range noCommonSnapshotEls {
+		dm.diffContainer.OldDiff().Set(el)
+	}
 }
 
 func (dm *DiffManager) TryDiff(ctx context.Context, rdiff RemoteDiff) (newIds, changedIds, removedIds []string, needsSync bool, err error) {
@@ -113,19 +144,34 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
 		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}
+		hasher := ldiff.NewHasher()
+		defer ldiff.ReleaseHasher(hasher)
+		if len(update.Heads) == 1 && update.Heads[0] == update.Id {
+			dm.diffContainer.OldDiff().Set(ldiff.Element{
+				Id:   update.Id,
+				Head: hasher.HashId(update.Heads[0]),
+			})
+			return
+		}
+		concatHeads := concatStrings(update.Heads)
 		if update.Id == dm.keyValue.DefaultStore().Id() {
 			dm.diffContainer.NewDiff().Set(ldiff.Element{
 				Id:   update.Id,
-				Head: concatStrings(update.Heads),
+				Head: hasher.HashId(concatHeads),
+			})
+			dm.diffContainer.OldDiff().Set(ldiff.Element{
+				Id:   update.Id,
+				Head: concatHeads,
 			})
 		} else {
-			dm.diffContainer.Set(ldiff.Element{
-				Id:   update.Id,
-				Head: concatStrings(update.Heads),
-			})
+			for _, diff := range []ldiff.Diff{dm.diffContainer.OldDiff(), dm.diffContainer.NewDiff()} {
+				diff.Set(ldiff.Element{
+					Id:   update.Id,
+					Head: hasher.HashId(concatHeads),
+				})
+			}
 		}
 	}
-	// probably we should somehow batch the updates
 	oldHash := dm.diffContainer.OldDiff().Hash()
 	newHash := dm.diffContainer.NewDiff().Hash()
 	err := dm.storage.StateStorage().SetHash(dm.ctx, oldHash, newHash)
@@ -135,10 +181,13 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
 }
 
 func (dm *DiffManager) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if req.DiffType == spacesyncproto.DiffType_V2 {
+	switch req.DiffType {
+	case spacesyncproto.DiffType_V3:
 		return HandleRangeRequest(ctx, dm.diffContainer.NewDiff(), req)
-	} else {
-		return HandleRangeRequest(ctx, dm.diffContainer.OldDiff(), req)
+	case spacesyncproto.DiffType_V2:
+		return HandleRangeRequest(ctx, dm.diffContainer.NewDiff(), req)
+	default:
+		return nil, spacesyncproto.ErrUnexpected
 	}
 }
 
