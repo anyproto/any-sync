@@ -203,6 +203,33 @@ func TestPool_Flush(t *testing.T) {
 		require.True(t, ok)
 		assert.Len(t, poolStat.PeerStats, 0)
 	})
+	t.Run("flush does not remove peers loading during flush", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		dialStarted := make(chan struct{})
+		blockDial := make(chan struct{})
+		loadingPeer := newTestPeer("loading-peer")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			close(dialStarted)
+			<-blockDial
+			return loadingPeer, nil
+		}
+		resultChan := make(chan peer.Peer, 1)
+		go func() {
+			p, err := fx.Get(ctx, "loading-peer")
+			require.NoError(t, err)
+			resultChan <- p
+		}()
+		<-dialStarted
+		err := fx.Flush(ctx)
+		require.NoError(t, err)
+		close(blockDial)
+		p := <-resultChan
+		require.Equal(t, loadingPeer, p)
+		pickedPeer, err := fx.Pick(ctx, "loading-peer")
+		require.NoError(t, err)
+		assert.Equal(t, loadingPeer, pickedPeer)
+	})
 }
 
 func TestPool_Get(t *testing.T) {
