@@ -202,20 +202,33 @@ func TestHeadSync(t *testing.T) {
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		hasher := ldiff.NewHasher()
+		hash1 := hasher.HashId("h1h2")
+		hash2 := hasher.HashId("h3h4")
+		ldiff.ReleaseHasher(hasher)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock).Times(2)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
-			Head: "h1h2",
-		}, ldiff.Element{
-			Id:   "id2",
-			Head: "h3h4",
-		}, ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
+			Head: hash1,
 		})
-		fx.diffMock.EXPECT().Set([]ldiff.Element{})
-		fx.diffContainerMock.EXPECT().NewDiff().AnyTimes().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().OldDiff().AnyTimes().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
+		})
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock).Times(2)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: hash1,
+		})
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
+		})
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()
@@ -256,17 +269,24 @@ func TestHeadSync(t *testing.T) {
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		hasher := ldiff.NewHasher()
+		hash2 := hasher.HashId("h3h4")
+		ldiff.ReleaseHasher(hasher)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id2",
-			Head: "h3h4",
-		}, ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
+			Head: hash2,
 		})
-		fx.diffMock.EXPECT().Set([]ldiff.Element{})
-		fx.diffContainerMock.EXPECT().NewDiff().AnyTimes().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().OldDiff().AnyTimes().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: hash2,
+		})
+
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()

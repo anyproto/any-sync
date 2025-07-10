@@ -124,6 +124,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
 		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(false)
+		fx.objTree.EXPECT().Len().AnyTimes().Return(2) // Not empty tree
 		fx.listener.EXPECT().Rebuild(gomock.Any())
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: []byte("bytes"),
@@ -159,6 +160,7 @@ func Test_PutSyncTree(t *testing.T) {
 		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
 		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(false)
+		fx.objTree.EXPECT().Len().AnyTimes().Return(2) // Not empty tree
 		fx.listener.EXPECT().Rebuild(gomock.Any())
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: []byte("bytes"),
