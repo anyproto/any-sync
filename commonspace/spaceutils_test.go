@@ -600,7 +600,7 @@ func Test(t *testing.T) {
 	defer fx.app.Close(context.Background())
 }
 
-func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
+func newPeerFixture(t *testing.T, spaceId string, onlyCreate bool, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -615,7 +615,7 @@ func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys,
 		treeManager:          newMockTreeManager(spaceId),
 		pool:                 &mockPool{},
 		spaceService:         New(),
-		process:              newSpaceProcess(spaceId),
+		process:              newSpaceProcess(spaceId, onlyCreate),
 	}
 	fx.app.Register(fx.account).
 		Register(syncqueues.New()).
@@ -654,7 +654,7 @@ func (m *multiPeerFixture) Close() {
 	}
 }
 
-func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
+func newMultiPeerFixture(t *testing.T, peerNum int, onlyCreate bool) *multiPeerFixture {
 	keys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
@@ -724,14 +724,14 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	peerPool.MakePeers()
 	var peerFixtures []*spaceFixture
 	for i := 0; i < peerNum; i++ {
-		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
+		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, onlyCreate, allKeys[i], peerPool, providers[i])
 		peerFixtures = append(peerFixtures, fx)
 	}
 	return &multiPeerFixture{peerFixtures: peerFixtures}
 }
 
 func Test_Sync(t *testing.T) {
-	mpFixture := newMultiPeerFixture(t, 3)
+	mpFixture := newMultiPeerFixture(t, 3, false)
 	time.Sleep(5 * time.Second)
 	for _, fx := range mpFixture.peerFixtures {
 		err := fx.process.Close(context.Background())
