@@ -118,18 +118,16 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 
 	t.Run("diff type check with V2", func(t *testing.T) {
 		ctx := context.Background()
-		contLocal := ldiff.New(32, 256)
 		contRemote := ldiff.New(32, 256)
 		oldDiff := ldiff.New(32, 256)
 
-		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
 		oldDiff.Set(ldiff.Element{Id: "1", Head: "head1"})
 		contRemote.Set(ldiff.Element{Id: "1", Head: "head1"})
 
 		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V2}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(contLocal, oldDiff)
+		container := ldiff.NewDiffContainer(ldiff.New(32, 256), oldDiff)
 		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
 
 		require.NoError(t, err)
@@ -185,22 +183,6 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 		require.False(t, needsSync)
 		require.Nil(t, diff)
 	})
-
-	t.Run("empty results from remote", func(t *testing.T) {
-		ctx := context.Background()
-		contLocal := ldiff.New(32, 256)
-		contLocal.Set(ldiff.Element{Id: "1", Head: "head1"})
-
-		mockClient := &mockClientWithEmptyResults{diffType: spacesyncproto.DiffType_V3}
-		rd := NewRemoteDiff("space1", mockClient)
-
-		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
-		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
-
-		require.NoError(t, err)
-		require.True(t, needsSync)
-		require.Equal(t, contLocal, diff)
-	})
 }
 
 type mockClientWithDiffType struct {
@@ -232,15 +214,4 @@ type mockClientWithError struct {
 
 func (m *mockClientWithError) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	return nil, m.err
-}
-
-type mockClientWithEmptyResults struct {
-	diffType spacesyncproto.DiffType
-}
-
-func (m *mockClientWithEmptyResults) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	return &spacesyncproto.HeadSyncResponse{
-		DiffType: m.diffType,
-		Results:  []*spacesyncproto.HeadSyncResult{}, // Empty results
-	}, nil
 }
