@@ -52,7 +52,7 @@ func (c *TestPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 }
 
 func (c *TestPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
-	return c.streamPool.Send(ctx, msg, c.GetResponsiblePeers)
+	return c.streamPool.Send(context.Background(), msg, c.GetResponsiblePeers)
 }
 
 func (c *TestPeerManager) SendMessage(ctx context.Context, peerId string, msg drpc.Message) error {

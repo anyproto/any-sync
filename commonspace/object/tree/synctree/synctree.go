@@ -137,7 +137,7 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 	syncTree.afterBuild()
 	syncTree.Unlock()
 
-	if peerId != "" && !objecttree.IsEmptyDerivedTree(objTree) {
+	if peerId != "" && !objecttree.IsEmptyTree(objTree) {
 		headUpdate, err := syncTree.syncClient.CreateHeadUpdate(objTree, "", nil)
 		if err != nil {
 			return nil, err

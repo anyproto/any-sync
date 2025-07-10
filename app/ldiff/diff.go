@@ -151,7 +151,7 @@ func (d *diff) Compare(lhs, rhs interface{}) int {
 }
 
 func (d *diff) DiffType() spacesyncproto.DiffType {
-	return spacesyncproto.DiffType_V2
+	return spacesyncproto.DiffType_V3
 }
 
 // CalcScore implements skiplist interface

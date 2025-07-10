@@ -19,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -600,7 +601,7 @@ func Test(t *testing.T) {
 	defer fx.app.Close(context.Background())
 }
 
-func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
+func newPeerFixture(t *testing.T, spaceId string, onlyCreate bool, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -615,7 +616,7 @@ func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys,
 		treeManager:          newMockTreeManager(spaceId),
 		pool:                 &mockPool{},
 		spaceService:         New(),
-		process:              newSpaceProcess(spaceId),
+		process:              newSpaceProcess(spaceId, onlyCreate),
 	}
 	fx.app.Register(fx.account).
 		Register(syncqueues.New()).
@@ -654,7 +655,7 @@ func (m *multiPeerFixture) Close() {
 	}
 }
 
-func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
+func newMultiPeerFixture(t *testing.T, peerNum int, onlyCreate bool) *multiPeerFixture {
 	keys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
@@ -724,30 +725,82 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	peerPool.MakePeers()
 	var peerFixtures []*spaceFixture
 	for i := 0; i < peerNum; i++ {
-		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
+		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, onlyCreate, allKeys[i], peerPool, providers[i])
 		peerFixtures = append(peerFixtures, fx)
 	}
 	return &multiPeerFixture{peerFixtures: peerFixtures}
 }
 
 func Test_Sync(t *testing.T) {
-	mpFixture := newMultiPeerFixture(t, 3)
-	time.Sleep(5 * time.Second)
-	for _, fx := range mpFixture.peerFixtures {
-		err := fx.process.Close(context.Background())
-		require.NoError(t, err)
-	}
-	time.Sleep(5 * time.Second)
-	var hashes []string
-	for _, fx := range mpFixture.peerFixtures {
-		sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
-		require.NoError(t, err)
-		state, err := sp.Storage().StateStorage().GetState(context.Background())
-		require.NoError(t, err)
-		hashes = append(hashes, state.NewHash)
-	}
-	for i := 1; i < len(hashes); i++ {
-		require.Equal(t, hashes[0], hashes[i])
-	}
-	mpFixture.Close()
+	t.Run("sync peer both empty trees and not empty trees", func(t *testing.T) {
+		mpFixture := newMultiPeerFixture(t, 3, false)
+		time.Sleep(5 * time.Second)
+		for _, fx := range mpFixture.peerFixtures {
+			err := fx.process.Close(context.Background())
+			require.NoError(t, err)
+		}
+		time.Sleep(5 * time.Second)
+		var hashes []string
+		for _, fx := range mpFixture.peerFixtures {
+			sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
+			require.NoError(t, err)
+			state, err := sp.Storage().StateStorage().GetState(context.Background())
+			require.NoError(t, err)
+			hashes = append(hashes, state.NewHash)
+		}
+		for i := 1; i < len(hashes); i++ {
+			require.Equal(t, hashes[0], hashes[i])
+		}
+		mpFixture.Close()
+	})
+	t.Run("sync peer only empty trees", func(t *testing.T) {
+		const mandatoryObjects = 3
+		mpFixture := newMultiPeerFixture(t, 3, true)
+		time.Sleep(5 * time.Second)
+		for _, fx := range mpFixture.peerFixtures {
+			err := fx.process.Close(context.Background())
+			require.NoError(t, err)
+		}
+		time.Sleep(5 * time.Second)
+		var (
+			hashes  []string
+			treeIds = map[string][]string{}
+		)
+		for _, fx := range mpFixture.peerFixtures {
+			sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
+			require.NoError(t, err)
+			state, err := sp.Storage().StateStorage().GetState(context.Background())
+			require.NoError(t, err)
+			hashes = append(hashes, state.NewHash)
+			// empty trees should not count towards stored ids
+			require.Empty(t, sp.StoredIds())
+			sp.Storage().HeadStorage().IterateEntries(context.Background(), headstorage.IterOpts{Deleted: false}, func(entry headstorage.HeadsEntry) (bool, error) {
+				curIds := treeIds[entry.Id]
+				curIds = append(curIds, fx.process.spaceId)
+				treeIds[entry.Id] = curIds
+				return true, nil
+			})
+		}
+		for i := 1; i < len(hashes); i++ {
+			require.Equal(t, hashes[0], hashes[i])
+		}
+		var (
+			maxCount    int
+			otherCount  int
+			singleCount int
+		)
+		for _, spaceIds := range treeIds {
+			switch len(spaceIds) {
+			case len(mpFixture.peerFixtures):
+				maxCount++
+			case 1:
+				singleCount++
+			default:
+				otherCount++
+			}
+		}
+		require.Equal(t, mandatoryObjects, maxCount) // all peers should have key value store, acl and settings document
+		require.Equal(t, 0, otherCount)              // there should not be an empty tree owned by more than one peer
+		mpFixture.Close()
+	})
 }

@@ -15,13 +15,30 @@ type DiffContainer interface {
 	DiffTypeCheck(ctx context.Context, typeChecker RemoteTypeChecker) (needsSync bool, diff Diff, err error)
 	OldDiff() Diff
 	NewDiff() Diff
-	Set(elements ...Element)
 	RemoveId(id string) error
 }
 
 type diffContainer struct {
 	newDiff Diff
 	oldDiff Diff
+}
+
+type Hasher struct {
+	hasher *blake3.Hasher
+}
+
+func (h *Hasher) HashId(id string) string {
+	h.hasher.Reset()
+	h.hasher.WriteString(id)
+	return hex.EncodeToString(h.hasher.Sum(nil))
+}
+
+func NewHasher() *Hasher {
+	return &Hasher{hashersPool.Get().(*blake3.Hasher)}
+}
+
+func ReleaseHasher(hasher *Hasher) {
+	hashersPool.Put(hasher.hasher)
 }
 
 func (d *diffContainer) NewDiff() Diff {
@@ -33,17 +50,7 @@ func (d *diffContainer) OldDiff() Diff {
 }
 
 func (d *diffContainer) Set(elements ...Element) {
-	hasher := hashersPool.Get().(*blake3.Hasher)
-	defer hashersPool.Put(hasher)
-	for _, el := range elements {
-		hasher.Reset()
-		hasher.WriteString(el.Head)
-		stringHash := hex.EncodeToString(hasher.Sum(nil))
-		d.newDiff.Set(Element{
-			Id:   el.Id,
-			Head: stringHash,
-		})
-	}
+	d.newDiff.Set(elements...)
 	d.oldDiff.Set(elements...)
 }
 
