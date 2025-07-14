@@ -1,11 +1,9 @@
 package encoding
 
 import (
-	"fmt"
 	"slices"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/golang/snappy"
 	"storj.io/drpc"
@@ -18,6 +16,7 @@ var (
 	compressedBytes atomic.Uint64
 )
 
+/*
 func init() {
 	go func() {
 		for {
@@ -26,6 +25,7 @@ func init() {
 		}
 	}()
 }
+*/
 
 type snappyBuf struct {
 	buf []byte
