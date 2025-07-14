@@ -191,7 +191,7 @@ func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 				// semi-safe to reuse this connection
 				// it may be still a chance that connection will be closed in next milliseconds
 				// but this is a trade-off for performance
-			case <-time.After(time.Second):
+			case <-time.After(time.Second / 5):
 				// means the connection has some unfinished work,
 				// e.g. not fully read stream
 				// we cannot reuse this connection so let's close it
