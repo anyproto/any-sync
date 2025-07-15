@@ -72,13 +72,10 @@ message Membership2 {
 
   message CartProduct {
     Product product = 1;
-    // if "isAttachedToSpace" was true for that product
-    string spaceID = 2;
-    // some additional context (extra)
-    string context = 3;
+
     // set to true if you want to remove this item from the customer
     // it's like setting -1 to some product
-    bool remove = 4;
+    bool remove = 2;
   }
 
   message StoreProduct {
@@ -99,11 +96,8 @@ message Membership2 {
   }
 
   message Cart {
-    // 1. if you add Nx the same product - it will be Nx in the 'products' array, i.e:
+    // if you add Nx the same product - it will be Nx in the 'products' array, i.e:
     // each product instance has a unique index
-    // each product instance can have a different "context" attached (like spaceId)
-    // 2. each product may be already attached to a space + have a context
-    // (that what makes CartProduct different from Product)
     repeated CartProduct products = 1;
     // total amount of the cart (including discounts, etc)
     Amount total = 2;
