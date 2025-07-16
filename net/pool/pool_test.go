@@ -590,6 +590,8 @@ func newTestPeerWithParams(id string, created time.Time, subConnections int, ver
 	}
 }
 
+var _ peer.Peer = (*testPeer)(nil)
+
 type testPeer struct {
 	id             string
 	closed         chan struct{}
@@ -620,7 +622,7 @@ func (t *testPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (t *testPeer) ReleaseDrpcConn(conn drpc.Conn) {}
+func (t *testPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {}
 
 func (t *testPeer) Context() context.Context {
 	//TODO implement me

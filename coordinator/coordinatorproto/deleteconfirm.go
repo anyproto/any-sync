@@ -19,7 +19,7 @@ func PrepareDeleteConfirmation(privKey crypto.PrivKey, spaceId, peerId, networkI
 		NetworkId:       networkId,
 		Timestamp:       time.Now().Unix(),
 	}
-	marshalledDeleteConfirm, err := deleteConfirm.Marshal()
+	marshalledDeleteConfirm, err := deleteConfirm.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -45,7 +45,7 @@ func PrepareAccountDeleteConfirmation(privKey crypto.PrivKey, peerId, networkId 
 		NetworkId:       networkId,
 		Timestamp:       time.Now().Unix(),
 	}
-	marshalledDeleteConfirm, err := deleteConfirm.Marshal()
+	marshalledDeleteConfirm, err := deleteConfirm.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -69,7 +69,7 @@ func ValidateAccountDeleteConfirmation(pubKey crypto.PubKey, spaceId, networkId 
 		return errSignatureIncorrect
 	}
 	payload := &AccountDeletionConfirmPayload{}
-	err = payload.Unmarshal(deleteConfirm.GetDeletionPayload())
+	err = payload.UnmarshalVT(deleteConfirm.GetDeletionPayload())
 	if err != nil {
 		return
 	}
@@ -95,7 +95,7 @@ func ValidateDeleteConfirmation(pubKey crypto.PubKey, spaceId, networkId string,
 		return errSignatureIncorrect
 	}
 	payload := &DeletionConfirmPayload{}
-	err = payload.Unmarshal(deleteConfirm.GetDeletionPayload())
+	err = payload.UnmarshalVT(deleteConfirm.GetDeletionPayload())
 	if err != nil {
 		return
 	}

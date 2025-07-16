@@ -2,23 +2,71 @@ package peer
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/net/rpc"
-	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anyproto/any-sync/net/transport/mock_transport"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	_ "net/http/pprof"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcwire"
+
+	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/transport/mock_transport"
 )
 
 var ctx = context.Background()
+
+type streamRawWrite interface {
+	RawWrite(kind drpcwire.Kind, data []byte) (err error)
+}
+
+func TestPeer_ReusesConnAfterHardCancel(t *testing.T) {
+	fx := newFixture(t, "peer‑race")
+	defer fx.finish()
+
+	fx.mc.EXPECT().
+		Open(gomock.Any()).
+		DoAndReturn(func(_ context.Context) (net.Conn, error) {
+			in, out := net.Pipe()
+			go handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+			return in, nil
+		}).
+		AnyTimes()
+
+	for i := 0; i < 10; i++ {
+		fmt.Printf("%s ### Iteration %d\n", time.Now().Format(time.StampMilli), i)
+		// 2. Immediately try another RPC on the same pool.
+		ctxB, cancelB := context.WithCancel(context.Background())
+		err := fx.DoDrpc(ctxB, func(c drpc.Conn) error {
+			stream, err := c.NewStream(ctxB, "/race.Test/Ping", nil)
+			if err != nil {
+				return fmt.Errorf("failed to create stream: %w", err)
+			}
+			streamRaw := stream.(streamRawWrite)
+			err = streamRaw.RawWrite(drpcwire.KindMessage, []byte("ping"))
+			if err != nil {
+				return fmt.Errorf("failed to send message: %w", err)
+			}
+			return nil
+		})
+		cancelB()
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("iteration %d: hung waiting for semaphore (bug aggravated)", i)
+		}
+		if errors.Is(err, context.Canceled) {
+			t.Fatalf("iteration %d: got the spurious “context canceled”", i)
+		}
+	}
+}
 
 func TestPeer_AcquireDrpcConn(t *testing.T) {
 	t.Run("generic", func(t *testing.T) {
@@ -38,7 +86,7 @@ func TestPeer_AcquireDrpcConn(t *testing.T) {
 		assert.Len(t, fx.active, 1)
 		assert.Len(t, fx.inactive, 0)
 
-		fx.ReleaseDrpcConn(dc)
+		fx.ReleaseDrpcConn(ctx, dc)
 
 		assert.Len(t, fx.active, 0)
 		assert.Len(t, fx.inactive, 1)
@@ -55,7 +103,7 @@ func TestPeer_AcquireDrpcConn(t *testing.T) {
 
 		closedIn, _ := net.Pipe()
 		dc := drpcconn.New(closedIn)
-		fx.ReleaseDrpcConn(&subConn{Conn: dc})
+		fx.ReleaseDrpcConn(ctx, &subConn{ConnUnblocked: dc})
 		dc.Close()
 
 		in, out := net.Pipe()
@@ -96,7 +144,7 @@ func TestPeer_DrpcConn_OpenThrottling(t *testing.T) {
 
 	go func() {
 		time.Sleep(fx.limiter.slowDownStep)
-		fx.ReleaseDrpcConn(conns[0])
+		fx.ReleaseDrpcConn(ctx, conns[0])
 		conns = conns[1:]
 	}()
 	_, err := fx.AcquireDrpcConn(ctx)
@@ -111,7 +159,8 @@ func TestPeerAccept(t *testing.T) {
 
 	var outHandshakeCh = make(chan error)
 	go func() {
-		outHandshakeCh <- handshake.OutgoingProtoHandshake(ctx, out, handshakeproto.ProtoType_DRPC)
+		_, hErr := handshake.OutgoingProtoHandshake(ctx, out, defaultHandshakeProto)
+		outHandshakeCh <- hErr
 	}()
 	fx.acceptCh <- acceptedConn{conn: in}
 	cn := <-fx.testCtrl.serveConn
@@ -130,7 +179,8 @@ func TestPeer_DrpcConn_AcceptThrottling(t *testing.T) {
 
 		var outHandshakeCh = make(chan error)
 		go func() {
-			outHandshakeCh <- handshake.OutgoingProtoHandshake(ctx, out, handshakeproto.ProtoType_DRPC)
+			_, hErr := handshake.OutgoingProtoHandshake(ctx, out, defaultHandshakeProto)
+			outHandshakeCh <- hErr
 		}()
 		fx.acceptCh <- acceptedConn{conn: in}
 		cn := <-fx.testCtrl.serveConn
@@ -225,9 +275,9 @@ func TestPeer_TryClose(t *testing.T) {
 		require.NoError(t, err)
 		defer dc4.Close()
 
-		fx.ReleaseDrpcConn(dc3)
+		fx.ReleaseDrpcConn(ctx, dc3)
 		_ = dc3.Close()
-		fx.ReleaseDrpcConn(dc)
+		fx.ReleaseDrpcConn(ctx, dc)
 
 		time.Sleep(time.Millisecond * 100)
 

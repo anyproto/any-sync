@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
@@ -64,7 +63,7 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 	if err != nil {
 		return
 	}
-	defer p.ReleaseDrpcConn(conn)
+	defer p.ReleaseDrpcConn(ctx, conn)
 	var (
 		client = k.clientFactory.Client(conn)
 		rdiff  = NewRemoteDiff(k.spaceId, client)
@@ -175,7 +174,7 @@ func (k *keyValueService) HandleMessage(ctx context.Context, headUpdate drpc.Mes
 		return ErrUnexpectedMessageType
 	}
 	keyValueMsg := &spacesyncproto.StoreKeyValues{}
-	err = proto.Unmarshal(update.Bytes, keyValueMsg)
+	err = keyValueMsg.UnmarshalVT(update.Bytes)
 	if err != nil {
 		objectmessages.FreeHeadUpdate(update)
 		return err
@@ -234,7 +233,7 @@ func storageIdFromSpace(spaceId string) (storageId string, err error) {
 		SpaceId:     spaceId,
 		StorageName: "default",
 	}
-	data, err := proto.Marshal(header)
+	data, err := header.MarshalVT()
 	if err != nil {
 		return "", err
 	}

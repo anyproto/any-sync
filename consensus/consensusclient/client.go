@@ -86,7 +86,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl consensusproto.DRPCCo
 	if err != nil {
 		return err
 	}
-	defer peer.ReleaseDrpcConn(dc)
+	defer peer.ReleaseDrpcConn(ctx, dc)
 	return fn(consensusproto.NewDRPCConsensusClient(dc))
 }
 

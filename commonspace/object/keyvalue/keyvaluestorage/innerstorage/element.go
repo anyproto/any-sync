@@ -34,7 +34,7 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	kv.Value.PeerSignature = proto.PeerSignature
 	kv.Value.IdentitySignature = proto.IdentitySignature
 	innerValue := &spacesyncproto.StoreKeyInner{}
-	if err = innerValue.Unmarshal(proto.Value); err != nil {
+	if err = innerValue.UnmarshalVT(proto.Value); err != nil {
 		return kv, err
 	}
 	kv.TimestampMilli = int(innerValue.TimestampMicro)

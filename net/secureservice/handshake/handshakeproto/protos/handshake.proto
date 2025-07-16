@@ -83,8 +83,14 @@ PROTO HANDSHAKE
 
 message Proto {
     ProtoType proto = 1;
+    repeated Encoding encodings = 2;
 }
 
 enum ProtoType {
     DRPC = 0;
+}
+
+enum Encoding {
+    None = 0;
+    Snappy = 1;
 }

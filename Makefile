@@ -6,45 +6,68 @@ all:
 	@set -e;
 	@git config core.hooksPath .githooks;
 
-proto: proto-execute replace-gogo-strings
+PROTOC=protoc
+PROTOC_GEN_GO=deps/protoc-gen-go
+PROTOC_GEN_DRPC=deps/protoc-gen-go-drpc
+PROTOC_GEN_VTPROTO=deps/protoc-gen-go-vtproto
 
-proto-execute:
+define generate_proto
+	@echo "Generating Protobuf for directory: $(1)"
+	$(PROTOC) \
+		--go_out=. --plugin protoc-gen-go="$(PROTOC_GEN_GO)" \
+		--go-vtproto_out=. --plugin protoc-gen-go-vtproto="$(PROTOC_GEN_VTPROTO)" \
+		--go-vtproto_opt=features=marshal+unmarshal+size \
+		--proto_path=$(1) $(wildcard $(1)/*.proto)
+endef
+
+define generate_drpc
+	@echo "Generating Protobuf for directory: $(1) $(which protoc-gen-go)"
+	$(PROTOC) \
+		--go_out=. --plugin protoc-gen-go=$$(which protoc-gen-go) \
+		--plugin protoc-gen-go-drpc=$(PROTOC_GEN_DRPC) \
+		--go_opt=$(1) \
+		--go-vtproto_out=:. --plugin protoc-gen-go-vtproto=$(PROTOC_GEN_VTPROTO) \
+		--go-vtproto_opt=features=marshal+unmarshal+size \
+		--go-drpc_out=protolib=github.com/planetscale/vtprotobuf/codec/drpc:. $(wildcard $(2)/*.proto)
+endef
+
+proto:
 	@echo 'Generating protobuf packages (Go)...'
-
+	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
 	@$(eval P_CRYPTO_PATH_PB := util/crypto/cryptoproto)
 	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anyproto/any-sync/$(P_ACL_RECORDS_PATH_PB))
 	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anyproto/any-sync/$(P_TREE_CHANGES_PATH_PB))
 
-	protoc --gogofaster_out=:. $(P_ACL_RECORDS_PATH_PB)/protos/*.proto
-	protoc --gogofaster_out=:. $(P_TREE_CHANGES_PATH_PB)/protos/*.proto
-	protoc --gogofaster_out=:. $(P_CRYPTO_PATH_PB)/protos/*.proto
-	$(eval PKGMAP := $$(P_TREE_CHANGES),$$(P_ACL_RECORDS))
-	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonspace/spacesyncproto/protos/*.proto
-	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonfile/fileproto/protos/*.proto
-	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. net/streampool/testservice/protos/*.proto
-	protoc --gogofaster_out=:. net/secureservice/handshake/handshakeproto/protos/*.proto
-	protoc --gogofaster_out=:. net/rpc/limiter/limiterproto/protos/*.proto
-	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. coordinator/coordinatorproto/protos/*.proto
-	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. consensus/consensusproto/protos/*.proto
-	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. identityrepo/identityrepoproto/protos/*.proto
-	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. nameservice/nameserviceproto/protos/*.proto
-	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. paymentservice/paymentserviceproto/protos/*.proto
+	$(call generate_proto,$(P_ACL_RECORDS_PATH_PB)/protos)
+	$(call generate_proto,$(P_TREE_CHANGES_PATH_PB)/protos)
+	$(call generate_proto,$(P_CRYPTO_PATH_PB)/protos)
+	$(eval PKGMAP := $$(P_TREE_CHANGES)$(comma)$$(P_ACL_RECORDS))
+	$(call generate_drpc,$(PKGMAP),commonspace/spacesyncproto/protos)
+	$(call generate_drpc,$(PKGMAP),commonfile/fileproto/protos)
+	$(call generate_drpc,$(PKGMAP),net/streampool/testservice/protos)
+	$(call generate_drpc,$(PKGMAP),net/endtoendtest/testpeer/testproto/protos)
 
-mocks:
-	echo 'Generating mocks...'
-	go build -o deps go.uber.org/mock/mockgen
-	PATH=$(CURDIR)/deps:$(PATH) go generate ./...
+
+	$(call generate_drpc,,net/secureservice/handshake/handshakeproto/protos)
+	$(call generate_drpc,,net/rpc/limiter/limiterproto/protos)
+	$(call generate_drpc,$(PKGMAP),coordinator/coordinatorproto/protos)
+	$(call generate_drpc,,consensus/consensusproto/protos)
+	$(call generate_drpc,,identityrepo/identityrepoproto/protos)
+	$(call generate_drpc,,nameservice/nameserviceproto/protos)
+	$(call generate_drpc,,paymentservice/paymentserviceproto/protos)
+
 
 deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
-	go build -o deps github.com/anyproto/protobuf/protoc-gen-gogofaster
+	go build -o deps google.golang.org/protobuf/cmd/protoc-gen-go
+	go build -o deps github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto
+
+mocks:
+	echo 'Generating mocks...'
+	go generate ./...
 
 test:
 	go test ./... --cover
-
-replace-gogo-strings:
-	@echo "Replacing 'github.com/gogo/protobuf' with 'github.com/anyproto/protobuf' in all files recursively..."
-	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i '' "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"

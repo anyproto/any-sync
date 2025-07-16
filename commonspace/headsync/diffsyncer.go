@@ -154,7 +154,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	if err != nil {
 		return
 	}
-	defer p.ReleaseDrpcConn(conn)
+	defer p.ReleaseDrpcConn(ctx, conn)
 
 	var (
 		cl                             = d.clientFactory.Client(conn)
@@ -284,7 +284,7 @@ func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
 		SpaceIds: []string{d.spaceId},
 		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
 	}
-	payload, err := msg.Marshal()
+	payload, err := msg.MarshalVT()
 	if err != nil {
 		return
 	}

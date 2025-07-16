@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/encoding"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
@@ -45,6 +47,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		},
 		subConnRelease: make(chan drpc.Conn),
 		created:        time.Now(),
+		useSnappy:      ctrl.DrpcConfig().Snappy,
 	}
 	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
@@ -71,7 +74,7 @@ type Peer interface {
 	Context() context.Context
 
 	AcquireDrpcConn(ctx context.Context) (drpc.Conn, error)
-	ReleaseDrpcConn(conn drpc.Conn)
+	ReleaseDrpcConn(ctx context.Context, conn drpc.Conn)
 	DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error
 
 	IsClosed() bool
@@ -86,8 +89,12 @@ type Peer interface {
 }
 
 type subConn struct {
-	drpc.Conn
+	encoding.ConnUnblocked
 	*connutil.LastUsageConn
+}
+
+func (s *subConn) Unblocked() <-chan struct{} {
+	return s.ConnUnblocked.Unblocked()
 }
 
 type peer struct {
@@ -99,7 +106,7 @@ type peer struct {
 	// outgoing
 	inactive         []*subConn
 	active           map[*subConn]struct{}
-	subConnRelease   chan drpc.Conn
+	subConnRelease   chan drpc.Conn // can send nil
 	openingWaitCount atomic.Int32
 
 	incomingCount atomic.Int32
@@ -111,8 +118,10 @@ type peer struct {
 
 	limiter limiter
 
-	mu      sync.Mutex
-	created time.Time
+	mu        sync.Mutex
+	created   time.Time
+	useSnappy bool
+
 	transport.MultiConn
 }
 
@@ -133,7 +142,10 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case dconn := <-p.subConnRelease:
-				return dconn, nil
+				// nil conn means connection was closed, used to wake up AcquireDrpcConn
+				if dconn != nil {
+					return dconn, nil
+				}
 			case <-wait:
 			}
 		}
@@ -158,64 +170,113 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return res, nil
 }
 
-func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
+// ReleaseDrpcConn releases the connection back to the pool.
+// you should pass the same ctx you passed to AcquireDrpcConn
+func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 	var closed bool
 	select {
 	case <-conn.Closed():
 		closed = true
+	case <-ctx.Done():
+		// in case ctx is closed the connection may be not yet closed because of the signal logic in the drpc manager
+		// but, we want to shortcut to avoid race conditions
+		_ = conn.Close()
+		closed = true
 	default:
+		if connCasted, ok := conn.(encoding.ConnUnblocked); ok {
+			select {
+			case <-conn.Closed():
+				closed = true
+			case <-connCasted.Unblocked():
+				// semi-safe to reuse this connection
+				// it may be still a chance that connection will be closed in next milliseconds
+				// but this is a trade-off for performance
+			case <-time.After(time.Second / 5):
+				// means the connection has some unfinished work,
+				// e.g. not fully read stream
+				// we cannot reuse this connection so let's close it
+				_ = conn.Close()
+				closed = true
+			}
+		} else {
+			panic("conn does not implement Unblocked()")
+		}
 	}
 
-	// try to send this connection to acquire if anyone is waiting for it
-	select {
-	case p.subConnRelease <- conn:
-		return
-	default:
+	if !closed {
+		select {
+		case p.subConnRelease <- conn:
+			// shortcut to send a reusable connection
+			return
+		default:
+		}
 	}
 
-	// return to pool
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	sc, ok := conn.(*subConn)
 	if !ok {
 		return
 	}
+
+	p.mu.Lock()
+
 	if _, ok = p.active[sc]; ok {
 		delete(p.active, sc)
 	}
+
 	if !closed {
+		// put it back into the pool
 		p.inactive = append(p.inactive, sc)
 	}
-	return
+	p.mu.Unlock()
+
+	if closed {
+		select {
+		case p.subConnRelease <- nil:
+			// wake up the waiting AcquireDrpcConn
+			// it will take the next one from the inactive pool
+			return
+		default:
+		}
+	}
 }
 
 func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
 	conn, err := p.AcquireDrpcConn(ctx)
 	if err != nil {
+		log.Debug("DoDrpc failed to acquire connection", zap.String("peerId", p.id), zap.Error(err))
 		return err
 	}
-	defer p.ReleaseDrpcConn(conn)
-	return do(conn)
+	err = do(conn)
+	defer p.ReleaseDrpcConn(ctx, conn)
+	return err
 }
 
-func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
+var defaultHandshakeProto = &handshakeproto.Proto{
+	Proto:     handshakeproto.ProtoType_DRPC,
+	Encodings: []handshakeproto.Encoding{handshakeproto.Encoding_Snappy, handshakeproto.Encoding_None},
+}
+
+func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 	conn, err := p.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
-	tconn := connutil.NewLastUsageConn(conn)
-	if err = handshake.OutgoingProtoHandshake(ctx, tconn, handshakeproto.ProtoType_DRPC); err != nil {
+	lastUsageConn := connutil.NewLastUsageConn(conn)
+	proto, err := handshake.OutgoingProtoHandshake(ctx, lastUsageConn, defaultHandshakeProto)
+	if err != nil {
 		return nil, err
 	}
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
+	drpcConn := drpcconn.NewWithOptions(lastUsageConn, drpcconn.Options{
+		Manager: drpcmanager.Options{
+			Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+			Stream: drpcstream.Options{MaximumBufferSize: bufSize},
+		},
+	})
+	isSnappy := slices.Contains(proto.Encodings, handshakeproto.Encoding_Snappy)
 	return &subConn{
-		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
-			Manager: drpcmanager.Options{
-				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
-				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
-			},
-		}),
-		LastUsageConn: tconn,
+		ConnUnblocked: encoding.WrapConnEncoding(drpcConn, isSnappy),
+		LastUsageConn: lastUsageConn,
 	}, nil
 }
 
@@ -255,6 +316,13 @@ var defaultProtoChecker = handshake.ProtoChecker{
 	AllowedProtoTypes: []handshakeproto.ProtoType{
 		handshakeproto.ProtoType_DRPC,
 	},
+	SupportedEncodings: []handshakeproto.Encoding{handshakeproto.Encoding_Snappy, handshakeproto.Encoding_None},
+}
+
+var noSnappyProtoChecker = handshake.ProtoChecker{
+	AllowedProtoTypes: []handshakeproto.ProtoType{
+		handshakeproto.ProtoType_DRPC,
+	},
 }
 
 func (p *peer) serve(conn net.Conn) (err error) {
@@ -262,12 +330,21 @@ func (p *peer) serve(conn net.Conn) (err error) {
 		_ = conn.Close()
 	}()
 	hsCtx, cancel := context.WithTimeout(p.Context(), time.Second*20)
-	if _, err = handshake.IncomingProtoHandshake(hsCtx, conn, defaultProtoChecker); err != nil {
+	protoChecker := defaultProtoChecker
+	if !p.useSnappy {
+		protoChecker = noSnappyProtoChecker
+	}
+	proto, err := handshake.IncomingProtoHandshake(hsCtx, conn, protoChecker)
+	if err != nil {
 		cancel()
 		return
 	}
 	cancel()
-	return p.ctrl.ServeConn(p.Context(), conn)
+	ctx := p.Context()
+	if slices.Contains(proto.Encodings, handshakeproto.Encoding_Snappy) {
+		ctx = encoding.CtxWithSnappy(ctx)
+	}
+	return p.ctrl.ServeConn(ctx, conn)
 }
 
 func (p *peer) SetTTL(ttl time.Duration) {

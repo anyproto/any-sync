@@ -5,11 +5,9 @@
 package nameserviceproto
 
 import (
-	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/anyproto/protobuf/jsonpb"
-	proto "github.com/anyproto/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -17,24 +15,19 @@ import (
 type drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto struct{}
 
 func (drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	var buf bytes.Buffer
-	err := new(jsonpb.Marshaler).Marshal(&buf, msg.(proto.Message))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCAnynsAccountAbstractionClient interface {

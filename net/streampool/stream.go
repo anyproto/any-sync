@@ -50,7 +50,7 @@ func (sr *stream) readLoop() error {
 	sr.l.Debug("stream read started")
 	for {
 		msg := sr.pool.handler.NewReadMessage()
-		if err := sr.stream.MsgRecv(msg, EncodingProto); err != nil {
+		if err := sr.stream.MsgRecv(msg, nil); err != nil {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
 		}
@@ -72,7 +72,7 @@ func (sr *stream) writeLoop() {
 			}
 			return
 		}
-		if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
+		if err := sr.stream.MsgSend(msg, nil); err != nil {
 			sr.l.Warn("msg send error", zap.Error(err))
 			sr.streamClose()
 			return
