@@ -27,7 +27,6 @@ type AnyPpClientService2 interface {
 	StoreCartPromocodeApply(ctx context.Context, in *pp.Membership2_StoreCartPromocodeApplyRequest) (out *pp.Membership2_StoreCartResponse, err error)
 	StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutRequest) (out *pp.Membership2_StoreCartCheckoutResponse, err error)
 
-	ProductsEnumerate(ctx context.Context, in *pp.Membership2_StoreProductsEnumerateRequest) (out *pp.Membership2_StoreProductsEnumerateResponse, err error)
 	GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error)
 
 	WebAuth(ctx context.Context, in *pp.Membership2_WebAuthRequest) (out *pp.Membership2_WebAuthResponse, err error)
@@ -82,16 +81,6 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 func (s *service) GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
 		if out, err = cl.GetStatus(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) ProductsEnumerate(ctx context.Context, in *pp.Membership2_StoreProductsEnumerateRequest) (out *pp.Membership2_StoreProductsEnumerateResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.ProductsEnumerate(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

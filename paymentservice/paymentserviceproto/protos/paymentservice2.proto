@@ -2,15 +2,6 @@ syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
 message Membership2 {
-  enum PeriodType {
-    PeriodTypeUnknown = 0;
-    PeriodTypeUnlimited = 1;
-    PeriodTypeDays = 2;
-    PeriodTypeWeeks = 3;
-    PeriodTypeMonths = 4;
-    PeriodTypeYears = 5;
-  }
-
   enum PaymentMethod {
     MethodNone = 0;
     MethodStripe = 1;
@@ -38,9 +29,6 @@ message Membership2 {
     // localized
     string name = 4;
     string description = 5;
-    PeriodType periodType = 6;
-    // i.e. "5 days" or "3 years"
-    uint32 periodValue = 7;
   }
 
   message PurchaseInfo {
@@ -48,6 +36,8 @@ message Membership2 {
     uint64 dateEnds = 2;
     bool isAutoRenew = 3;
     PaymentMethod paymentMethod = 4;
+    // otherwise - monthly
+    bool isYearly = 5;
   }
 
   message ProductStatus {
@@ -71,16 +61,12 @@ message Membership2 {
   }
 
   message CartProduct {
-    Product product = 1;
-
+    Product product = 1;    
+    // otherwise - monthly
+    bool isYearly = 2;
     // set to true if you want to remove this item from the customer
     // it's like setting -1 to some product
-    bool remove = 2;
-  }
-
-  message StoreProduct {
-    Product product = 1;
-    Amount price = 2;
+    bool remove = 3;
   }
 
   message Invoice {
@@ -117,14 +103,6 @@ message Membership2 {
     Membership2.Invoice nextInvoice = 2;
   }
 
-  message StoreProductsEnumerateRequest {
-    
-  }
-
-  message StoreProductsEnumerateResponse {
-    repeated Membership2.StoreProduct products = 1;
-  }
-
   message StoreCartGetRequest {
 
   }
@@ -148,16 +126,6 @@ message Membership2 {
     // if this is empty - then this is existing customer
     // and we are trying to process the payment
     string paymentUrl = 1;
-  }
-
-  message ProductSetSettingsRequest {
-    // index in all products list
-    uint32 productIndex = 1;
-    bool isRenewalEnabled = 2;
-  }
-
-  message ProductSetSettingsResponse {
-    
   }
 
   message StoreCartUpdateRequest {
@@ -186,9 +154,6 @@ message Membership2 {
 }
 
 service AnyPaymentProcessing2 {
-  rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
-  rpc ProductSetSettings (Membership2.ProductSetSettingsRequest) returns (Membership2.ProductSetSettingsResponse);
-
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
 
   rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartResponse);

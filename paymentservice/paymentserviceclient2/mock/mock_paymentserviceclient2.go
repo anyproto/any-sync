@@ -85,21 +85,6 @@ func (mr *MockAnyPpClientService2MockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAnyPpClientService2)(nil).Name))
 }
 
-// ProductsEnumerate mocks base method.
-func (m *MockAnyPpClientService2) ProductsEnumerate(ctx context.Context, in *paymentserviceproto.Membership2_StoreProductsEnumerateRequest) (*paymentserviceproto.Membership2_StoreProductsEnumerateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProductsEnumerate", ctx, in)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreProductsEnumerateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ProductsEnumerate indicates an expected call of ProductsEnumerate.
-func (mr *MockAnyPpClientService2MockRecorder) ProductsEnumerate(ctx, in any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProductsEnumerate", reflect.TypeOf((*MockAnyPpClientService2)(nil).ProductsEnumerate), ctx, in)
-}
-
 // StoreCartCheckoutGenerate mocks base method.
 func (m *MockAnyPpClientService2) StoreCartCheckoutGenerate(ctx context.Context, in *paymentserviceproto.Membership2_StoreCartCheckoutRequest) (*paymentserviceproto.Membership2_StoreCartCheckoutResponse, error) {
 	m.ctrl.T.Helper()
