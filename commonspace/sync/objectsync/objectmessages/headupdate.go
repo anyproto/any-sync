@@ -27,6 +27,11 @@ func FreeHeadUpdate(update *HeadUpdate) {
 	objMsg := update.msg
 	update.Bytes = nil
 	update.msg = nil
+	objMsg.SpaceId = ""
+	objMsg.ObjectId = ""
+	objMsg.ObjectType = 0
+	objMsg.ReplyId = ""
+	objMsg.RequestId = ""
 	messagePool.Put(objMsg)
 }
 
