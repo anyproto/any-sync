@@ -17,7 +17,14 @@ var messagePool = &sync.Pool{
 }
 
 func NewMessage() *spacesyncproto.ObjectSyncMessage {
-	return messagePool.Get().(*spacesyncproto.ObjectSyncMessage)
+	objMsg := messagePool.Get().(*spacesyncproto.ObjectSyncMessage)
+	objMsg.SpaceId = ""
+	objMsg.ObjectId = ""
+	objMsg.ObjectType = 0
+	objMsg.ReplyId = ""
+	objMsg.RequestId = ""
+	objMsg.Payload = objMsg.Payload[:0]
+	return objMsg
 }
 
 func FreeHeadUpdate(update *HeadUpdate) {
@@ -27,11 +34,6 @@ func FreeHeadUpdate(update *HeadUpdate) {
 	objMsg := update.msg
 	update.Bytes = nil
 	update.msg = nil
-	objMsg.SpaceId = ""
-	objMsg.ObjectId = ""
-	objMsg.ObjectType = 0
-	objMsg.ReplyId = ""
-	objMsg.RequestId = ""
 	messagePool.Put(objMsg)
 }
 
