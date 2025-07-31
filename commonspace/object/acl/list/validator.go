@@ -93,6 +93,9 @@ func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclAccountInvit
 	if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
 		return ErrNoSuchInvite
 	}
+	if !AclPermissions(ch.Permissions).IsLessOrEqual(invite.Permissions) {
+		return ErrInsufficientPermissions
+	}
 	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
