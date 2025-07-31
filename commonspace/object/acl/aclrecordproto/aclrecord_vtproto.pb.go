@@ -305,6 +305,11 @@ func (m *AclAccountInviteJoin) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.Permissions != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Permissions))
+		i--
+		dAtA[i] = 0x30
+	}
 	if len(m.EncryptedReadKey) > 0 {
 		i -= len(m.EncryptedReadKey)
 		copy(dAtA[i:], m.EncryptedReadKey)
@@ -1416,6 +1421,9 @@ func (m *AclAccountInviteJoin) SizeVT() (n int) {
 	l = len(m.EncryptedReadKey)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.Permissions != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.Permissions))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -2822,6 +2830,25 @@ func (m *AclAccountInviteJoin) UnmarshalVT(dAtA []byte) error {
 				m.EncryptedReadKey = []byte{}
 			}
 			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			m.Permissions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Permissions |= AclUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])

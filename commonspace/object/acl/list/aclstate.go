@@ -606,32 +606,19 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
 	pKeyString := mapKeyFromPubKey(acceptIdentity)
 	state, exists := st.accountStates[pKeyString]
-	if !exists {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          acceptIdentity,
-			Permissions:     AclPermissions(ch.Permissions),
-			RequestMetadata: requestRecord.RequestMetadata,
-			KeyRecordId:     requestRecord.KeyRecordId,
-			Status:          StatusActive,
-			PermissionChanges: []PermissionChange{
-				{
-					Permission: AclPermissions(ch.Permissions),
-					RecordId:   record.Id,
-				},
-			},
-		}
-	} else {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          acceptIdentity,
-			Permissions:     AclPermissions(ch.Permissions),
-			RequestMetadata: requestRecord.RequestMetadata,
-			KeyRecordId:     requestRecord.KeyRecordId,
-			Status:          StatusActive,
-			PermissionChanges: append(state.PermissionChanges, PermissionChange{
-				Permission: AclPermissions(ch.Permissions),
-				RecordId:   record.Id,
-			}),
-		}
+	permissions := AclPermissions(ch.Permissions)
+	permissionChanges := []PermissionChange{{Permission: permissions, RecordId: record.Id}}
+	if exists {
+		permissionChanges = append(state.PermissionChanges, permissionChanges[0])
+	}
+
+	st.accountStates[pKeyString] = AccountState{
+		PubKey:            acceptIdentity,
+		Permissions:       permissions,
+		RequestMetadata:   requestRecord.RequestMetadata,
+		KeyRecordId:       requestRecord.KeyRecordId,
+		Status:            StatusActive,
+		PermissionChanges: permissionChanges,
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	delete(st.requestRecords, ch.RequestRecordId)
@@ -651,34 +638,23 @@ func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, rec
 		return err
 	}
 	inviteRecord, _ := st.invites[ch.InviteRecordId]
+	permissions := AclPermissions(ch.Permissions)
+	if permissions.NoPermissions() {
+		permissions = inviteRecord.Permissions
+	}
 	pKeyString := mapKeyFromPubKey(identity)
 	state, exists := st.accountStates[pKeyString]
-	if !exists {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          identity,
-			Permissions:     inviteRecord.Permissions,
-			RequestMetadata: ch.Metadata,
-			KeyRecordId:     st.CurrentReadKeyId(),
-			Status:          StatusActive,
-			PermissionChanges: []PermissionChange{
-				{
-					Permission: inviteRecord.Permissions,
-					RecordId:   record.Id,
-				},
-			},
-		}
-	} else {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          identity,
-			Permissions:     inviteRecord.Permissions,
-			RequestMetadata: ch.Metadata,
-			KeyRecordId:     st.CurrentReadKeyId(),
-			Status:          StatusActive,
-			PermissionChanges: append(state.PermissionChanges, PermissionChange{
-				Permission: inviteRecord.Permissions,
-				RecordId:   record.Id,
-			}),
-		}
+	permissionChanges := []PermissionChange{{Permission: permissions, RecordId: record.Id}}
+	if exists {
+		permissionChanges = append(state.PermissionChanges, permissionChanges[0])
+	}
+	st.accountStates[pKeyString] = AccountState{
+		PubKey:            identity,
+		Permissions:       permissions,
+		RequestMetadata:   ch.Metadata,
+		KeyRecordId:       st.CurrentReadKeyId(),
+		Status:            StatusActive,
+		PermissionChanges: permissionChanges,
 	}
 	for _, rec := range st.requestRecords {
 		if rec.RequestIdentity.Equals(identity) {

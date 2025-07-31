@@ -51,6 +51,7 @@ message AclAccountInviteJoin {
     // Metadata is encrypted with metadata key of the space
     bytes metadata = 4;
     bytes encryptedReadKey = 5;
+    AclUserPermissions permissions = 6;
 }
 
 // AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
