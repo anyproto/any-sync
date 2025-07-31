@@ -2,9 +2,11 @@ package pool
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -13,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
 const (
@@ -49,7 +52,12 @@ func (p *poolService) Init(a *app.App) (err error) {
 	}
 	p.pool.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return p.dialer.Dial(ctx, id)
+			if value, err = p.dialer.Dial(ctx, id); err != nil {
+				if errors.Is(err, handshake.ErrIncompatibleVersion) {
+					return &errObject{err: err, createdTime: atomic.NewTime(time.Now())}, nil
+				}
+			}
+			return
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute/2),
@@ -84,4 +92,24 @@ func (p *pool) Close(ctx context.Context) (err error) {
 		log.Warn("close incoming cache error", zap.Error(e))
 	}
 	return p.outgoing.Close()
+}
+
+type errObject struct {
+	err         error
+	createdTime *atomic.Time
+}
+
+func (e *errObject) Error() error {
+	return e.err
+}
+
+func (e *errObject) Close() (err error) {
+	return
+}
+
+func (e *errObject) TryClose(_ time.Duration) (res bool, err error) {
+	if e.createdTime.Load().Add(time.Minute * 20).Before(time.Now()) {
+		return true, nil
+	}
+	return false, nil
 }
