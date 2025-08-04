@@ -185,7 +185,7 @@ func (dm *DiffManager) HandleRangeRequest(ctx context.Context, req *spacesyncpro
 	case spacesyncproto.DiffType_V3:
 		return HandleRangeRequest(ctx, dm.diffContainer.NewDiff(), req)
 	case spacesyncproto.DiffType_V2:
-		return HandleRangeRequest(ctx, dm.diffContainer.NewDiff(), req)
+		return HandleRangeRequest(ctx, dm.diffContainer.OldDiff(), req)
 	default:
 		return nil, spacesyncproto.ErrUnexpected
 	}
