@@ -57,15 +57,15 @@ func (dm *DiffManager) FillDiff(ctx context.Context) error {
 		if entry.IsDerived && entry.Heads[0] == entry.Id {
 			return true, nil
 		}
-		// empty roots shouldn't be set in new hashe
-		if entry.Heads[0] == entry.Id {
-			onlyOldEls = append(onlyOldEls, ldiff.Element{
-				Id:   entry.Id,
-				Head: concatStrings(entry.Heads),
-			})
-			return true, nil
-		}
 		if entry.CommonSnapshot != "" {
+			// empty roots shouldn't be set in new hashe
+			if entry.Heads[0] == entry.Id {
+				onlyOldEls = append(onlyOldEls, ldiff.Element{
+					Id:   entry.Id,
+					Head: concatStrings(entry.Heads),
+				})
+				return true, nil
+			}
 			commonEls = append(commonEls, ldiff.Element{
 				Id:   entry.Id,
 				Head: concatStrings(entry.Heads),
@@ -141,12 +141,14 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
 		if dm.deletionState.Exists(update.Id) {
 			return
 		}
+		// don't update for derived in both cases
 		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}
 		hasher := ldiff.NewHasher()
 		defer ldiff.ReleaseHasher(hasher)
 		if len(update.Heads) == 1 && update.Heads[0] == update.Id {
+			// empty roots should be updated only for old
 			dm.diffContainer.OldDiff().Set(ldiff.Element{
 				Id:   update.Id,
 				Head: hasher.HashId(update.Heads[0]),
@@ -159,6 +161,7 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
 				Id:   update.Id,
 				Head: hasher.HashId(concatHeads),
 			})
+			// this happens due to old bug, so we should update only the heads as it is
 			dm.diffContainer.OldDiff().Set(ldiff.Element{
 				Id:   update.Id,
 				Head: concatHeads,
