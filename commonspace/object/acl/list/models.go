@@ -121,3 +121,18 @@ func (p AclPermissions) CanRequestRemove() bool {
 		return true
 	}
 }
+
+func (p AclPermissions) IsLessOrEqual(q AclPermissions) bool {
+	switch p {
+	case AclPermissionsNone:
+		return true
+	case AclPermissionsReader:
+		return q != AclPermissionsNone
+	case AclPermissionsWriter:
+		return q == AclPermissionsWriter || q == AclPermissionsAdmin 
+	case AclPermissionsAdmin:
+		return p == q
+	default:
+		return false
+	}
+}

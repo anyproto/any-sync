@@ -434,8 +434,9 @@ type AclAccountInviteJoin struct {
 	InviteRecordId          string                 `protobuf:"bytes,2,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
 	InviteIdentitySignature []byte                 `protobuf:"bytes,3,opt,name=inviteIdentitySignature,proto3" json:"inviteIdentitySignature,omitempty"`
 	// Metadata is encrypted with metadata key of the space
-	Metadata         []byte `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	EncryptedReadKey []byte `protobuf:"bytes,5,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
+	Metadata         []byte             `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	EncryptedReadKey []byte             `protobuf:"bytes,5,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
+	Permissions      AclUserPermissions `protobuf:"varint,6,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -503,6 +504,13 @@ func (x *AclAccountInviteJoin) GetEncryptedReadKey() []byte {
 		return x.EncryptedReadKey
 	}
 	return nil
+}
+
+func (x *AclAccountInviteJoin) GetPermissions() AclUserPermissions {
+	if x != nil {
+		return x.Permissions
+	}
+	return AclUserPermissions_None
 }
 
 // AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
@@ -1493,13 +1501,14 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x0einviteIdentity\x18\x01 \x01(\fR\x0einviteIdentity\x12&\n" +
 	"\x0einviteRecordId\x18\x02 \x01(\tR\x0einviteRecordId\x128\n" +
 	"\x17inviteIdentitySignature\x18\x03 \x01(\fR\x17inviteIdentitySignature\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\fR\bmetadata\"\xdc\x01\n" +
+	"\bmetadata\x18\x04 \x01(\fR\bmetadata\"\x9d\x02\n" +
 	"\x14AclAccountInviteJoin\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12&\n" +
 	"\x0einviteRecordId\x18\x02 \x01(\tR\x0einviteRecordId\x128\n" +
 	"\x17inviteIdentitySignature\x18\x03 \x01(\fR\x17inviteIdentitySignature\x12\x1a\n" +
 	"\bmetadata\x18\x04 \x01(\fR\bmetadata\x12*\n" +
-	"\x10encryptedReadKey\x18\x05 \x01(\fR\x10encryptedReadKey\"\xcc\x01\n" +
+	"\x10encryptedReadKey\x18\x05 \x01(\fR\x10encryptedReadKey\x12?\n" +
+	"\vpermissions\x18\x06 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\vpermissions\"\xcc\x01\n" +
 	"\x17AclAccountRequestAccept\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12(\n" +
 	"\x0frequestRecordId\x18\x02 \x01(\tR\x0frequestRecordId\x12*\n" +
@@ -1617,34 +1626,35 @@ var file_aclrecord_proto_depIdxs = []int32{
 	0,  // 0: aclrecord.AclAccountInvite.inviteType:type_name -> aclrecord.AclInviteType
 	1,  // 1: aclrecord.AclAccountInvite.permissions:type_name -> aclrecord.AclUserPermissions
 	1,  // 2: aclrecord.AclAccountInviteChange.permissions:type_name -> aclrecord.AclUserPermissions
-	1,  // 3: aclrecord.AclAccountRequestAccept.permissions:type_name -> aclrecord.AclUserPermissions
-	15, // 4: aclrecord.AclAccountPermissionChanges.changes:type_name -> aclrecord.AclAccountPermissionChange
-	13, // 5: aclrecord.AclAccountsAdd.additions:type_name -> aclrecord.AclAccountAdd
-	1,  // 6: aclrecord.AclAccountAdd.permissions:type_name -> aclrecord.AclUserPermissions
-	1,  // 7: aclrecord.AclAccountPermissionChange.permissions:type_name -> aclrecord.AclUserPermissions
-	10, // 8: aclrecord.AclReadKeyChange.accountKeys:type_name -> aclrecord.AclEncryptedReadKey
-	10, // 9: aclrecord.AclReadKeyChange.inviteKeys:type_name -> aclrecord.AclEncryptedReadKey
-	16, // 10: aclrecord.AclAccountRemove.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	3,  // 11: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
-	9,  // 12: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
-	5,  // 13: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
-	7,  // 14: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
-	15, // 15: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
-	17, // 16: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
-	16, // 17: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	8,  // 18: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
-	18, // 19: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
-	11, // 20: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
-	12, // 21: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
-	14, // 22: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
-	6,  // 23: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
-	4,  // 24: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
-	19, // 25: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
-	26, // [26:26] is the sub-list for method output_type
-	26, // [26:26] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	1,  // 3: aclrecord.AclAccountInviteJoin.permissions:type_name -> aclrecord.AclUserPermissions
+	1,  // 4: aclrecord.AclAccountRequestAccept.permissions:type_name -> aclrecord.AclUserPermissions
+	15, // 5: aclrecord.AclAccountPermissionChanges.changes:type_name -> aclrecord.AclAccountPermissionChange
+	13, // 6: aclrecord.AclAccountsAdd.additions:type_name -> aclrecord.AclAccountAdd
+	1,  // 7: aclrecord.AclAccountAdd.permissions:type_name -> aclrecord.AclUserPermissions
+	1,  // 8: aclrecord.AclAccountPermissionChange.permissions:type_name -> aclrecord.AclUserPermissions
+	10, // 9: aclrecord.AclReadKeyChange.accountKeys:type_name -> aclrecord.AclEncryptedReadKey
+	10, // 10: aclrecord.AclReadKeyChange.inviteKeys:type_name -> aclrecord.AclEncryptedReadKey
+	16, // 11: aclrecord.AclAccountRemove.readKeyChange:type_name -> aclrecord.AclReadKeyChange
+	3,  // 12: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
+	9,  // 13: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
+	5,  // 14: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
+	7,  // 15: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
+	15, // 16: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
+	17, // 17: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
+	16, // 18: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
+	8,  // 19: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
+	18, // 20: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
+	11, // 21: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
+	12, // 22: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
+	14, // 23: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
+	6,  // 24: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
+	4,  // 25: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
+	19, // 26: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
+	27, // [27:27] is the sub-list for method output_type
+	27, // [27:27] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_aclrecord_proto_init() }
