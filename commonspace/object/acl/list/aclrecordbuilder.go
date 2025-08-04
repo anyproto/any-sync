@@ -26,8 +26,9 @@ type RequestJoinPayload struct {
 }
 
 type InviteJoinPayload struct {
-	InviteKey crypto.PrivKey
-	Metadata  []byte
+	InviteKey   crypto.PrivKey
+	Permissions AclPermissions
+	Metadata    []byte
 }
 
 type ReadKeyChangePayload struct {
@@ -597,6 +598,7 @@ func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord
 		InviteIdentitySignature: signature,
 		Metadata:                encMeta,
 		EncryptedReadKey:        encReadKey,
+		Permissions:             aclrecordproto.AclUserPermissions(payload.Permissions),
 	}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_InviteJoin{InviteJoin: joinRec}}
 	return a.buildRecord(content)
