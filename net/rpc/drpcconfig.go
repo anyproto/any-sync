@@ -6,6 +6,7 @@ type ConfigGetter interface {
 
 type Config struct {
 	Stream StreamConfig `yaml:"stream"`
+	Snappy bool         `yaml:"snappy"`
 }
 
 type StreamConfig struct {

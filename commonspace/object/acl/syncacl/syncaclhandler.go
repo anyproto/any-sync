@@ -3,8 +3,8 @@ package syncacl
 import (
 	"context"
 	"errors"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -47,7 +47,7 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syn
 		return nil, err
 	}
 	objMsg := &consensusproto.LogSyncMessage{}
-	err = proto.Unmarshal(update.Bytes, objMsg)
+	err = objMsg.UnmarshalVT(update.Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 		return nil, ErrUnexpectedRequestType
 	}
 	syncMsg := &consensusproto.LogSyncMessage{}
-	err := proto.Unmarshal(req.Bytes, syncMsg)
+	err := syncMsg.UnmarshalVT(req.Bytes)
 	if err != nil {
 		return nil, err
 	}

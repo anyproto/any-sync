@@ -30,8 +30,12 @@ func (c *connCtrlWrapper) ServeConn(ctx context.Context, conn net.Conn) (err err
 }
 
 func (c *connCtrlWrapper) DrpcConfig() rpc.Config {
-	<-c.setChan
-	return c.connCtrl.DrpcConfig()
+	return rpc.Config{
+		Stream: rpc.StreamConfig{
+			MaxMsgSizeMb: 100,
+		},
+		Snappy: false,
+	}
 }
 
 type PeerGlobalPool struct {

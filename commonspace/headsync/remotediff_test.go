@@ -83,14 +83,14 @@ type mockClient struct {
 }
 
 func (m *mockClient) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	res, err := in.Marshal()
+	res, err := in.MarshalVT()
 	require.NoError(m.t, err)
 	m.totalInSent += len(res)
 	resp, err := HandleRangeRequest(ctx, m.l, in)
 	if err != nil {
 		return nil, err
 	}
-	marsh, err := resp.Marshal()
+	marsh, err := resp.MarshalVT()
 	require.NoError(m.t, err)
 	m.totalOutSent += len(marsh)
 	return resp, nil

@@ -50,7 +50,7 @@ func TestFailedHeaderPayloadForSpaceCreate_InvalidFormatSpaceId(t *testing.T) {
 		Seed:               spaceHeaderSeed,
 		SpaceHeaderPayload: spaceHeaderPayload,
 	}
-	marhalled, err := header.Marshal()
+	marhalled, err := header.MarshalVT()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marhalled)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestFailedHeaderPayloadForSpaceCreate_InvalidFormatSpaceId(t *testing.T) {
 		SpaceHeader: marhalled,
 		Signature:   signature,
 	}
-	marhalledRawHeader, err := rawHeader.Marshal()
+	marhalledRawHeader, err := rawHeader.MarshalVT()
 	require.NoError(t, err)
 	id, err := cidutil.NewCidFromBytes(marhalled)
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestFailedHeaderPayloadForSpaceCreate_CidIsWrong(t *testing.T) {
 		Seed:               spaceHeaderSeed,
 		SpaceHeaderPayload: spaceHeaderPayload,
 	}
-	marhalled, err := header.Marshal()
+	marhalled, err := header.MarshalVT()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marhalled)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestFailedHeaderPayloadForSpaceCreate_CidIsWrong(t *testing.T) {
 		SpaceHeader: marhalled,
 		Signature:   signature,
 	}
-	marhalledRawHeader, err := rawHeader.Marshal()
+	marhalledRawHeader, err := rawHeader.MarshalVT()
 	require.NoError(t, err)
 	id := "faisdfjpiocpoakopkop34"
 	spaceId := fmt.Sprintf("%s.%s", id, strconv.FormatUint(replicationKey, 36))
@@ -131,7 +131,7 @@ func TestFailedHeaderPayloadForSpaceCreate_SignedWithAnotherIdentity(t *testing.
 		Seed:               spaceHeaderSeed,
 		SpaceHeaderPayload: spaceHeaderPayload,
 	}
-	marhalled, err := header.Marshal()
+	marhalled, err := header.MarshalVT()
 	require.NoError(t, err)
 	anotherAccountKeys, err := accountdata.NewRandom()
 	signature, err := anotherAccountKeys.SignKey.Sign(marhalled)
@@ -140,7 +140,7 @@ func TestFailedHeaderPayloadForSpaceCreate_SignedWithAnotherIdentity(t *testing.
 		SpaceHeader: marhalled,
 		Signature:   signature,
 	}
-	marhalledRawHeader, err := rawHeader.Marshal()
+	marhalledRawHeader, err := rawHeader.MarshalVT()
 	require.NoError(t, err)
 	id := "faisdfjpiocpoakopkop34"
 	spaceId := fmt.Sprintf("%s.%s", id, strconv.FormatUint(replicationKey, 36))
@@ -188,14 +188,14 @@ func TestFailAclPayloadSpace_IncorrectCid(t *testing.T) {
 		Timestamp:         time.Now().Unix(),
 		IdentitySignature: identitySignature,
 	}
-	marshalled, err := aclRoot.Marshal()
+	marshalled, err := aclRoot.MarshalVT()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marshalled)
 	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: signature,
 	}
-	marshalledRaw, err := rawAclRecord.Marshal()
+	marshalledRaw, err := rawAclRecord.MarshalVT()
 	require.NoError(t, err)
 	aclHeadId := "rand"
 	rawWithId := &consensusproto.RawRecordWithId{
@@ -231,13 +231,13 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 		Timestamp:         time.Now().Unix(),
 		IdentitySignature: identitySignature,
 	}
-	marshalled, err := aclRoot.Marshal()
+	marshalled, err := aclRoot.MarshalVT()
 	require.NoError(t, err)
 	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: marshalled,
 	}
-	marshalledRaw, err := rawAclRecord.Marshal()
+	marshalledRaw, err := rawAclRecord.MarshalVT()
 	require.NoError(t, err)
 	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
 	require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		Timestamp:         time.Now().Unix(),
 		IdentitySignature: identity,
 	}
-	marshalled, err := aclRoot.Marshal()
+	marshalled, err := aclRoot.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -293,7 +293,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		Payload:   marshalled,
 		Signature: signature,
 	}
-	marshalledRaw, err := rawAclRecord.Marshal()
+	marshalledRaw, err := rawAclRecord.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -330,7 +330,7 @@ func TestSuccessSettingsPayloadSpace(t *testing.T) {
 		Identity:      identity,
 		ChangePayload: changePayload,
 	}
-	marshalledChange, err := rootChange.Marshal()
+	marshalledChange, err := rootChange.MarshalVT()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marshalledChange)
 	require.NoError(t, err)
@@ -338,7 +338,7 @@ func TestSuccessSettingsPayloadSpace(t *testing.T) {
 		Payload:   marshalledChange,
 		Signature: signature,
 	}
-	marshalledRawChange, err := raw.Marshal()
+	marshalledRawChange, err := raw.MarshalVT()
 	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
 	require.NoError(t, err)
 	rawIdChange := &treechangeproto.RawTreeChangeWithId{
@@ -370,13 +370,13 @@ func TestFailSettingsPayloadSpace_InvalidSignature(t *testing.T) {
 		Identity:      identity,
 		ChangePayload: changePayload,
 	}
-	marshalledChange, err := rootChange.Marshal()
+	marshalledChange, err := rootChange.MarshalVT()
 	require.NoError(t, err)
 	raw := &treechangeproto.RawTreeChange{
 		Payload:   marshalledChange,
 		Signature: marshalledChange,
 	}
-	marshalledRawChange, err := raw.Marshal()
+	marshalledRawChange, err := raw.MarshalVT()
 	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
 	require.NoError(t, err)
 	rawIdChange := &treechangeproto.RawTreeChangeWithId{
@@ -407,7 +407,7 @@ func TestFailSettingsPayloadSpace_InvalidCid(t *testing.T) {
 		Identity:      identity,
 		ChangePayload: changePayload,
 	}
-	marshalledChange, err := rootChange.Marshal()
+	marshalledChange, err := rootChange.MarshalVT()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marshalledChange)
 	require.NoError(t, err)
@@ -415,7 +415,7 @@ func TestFailSettingsPayloadSpace_InvalidCid(t *testing.T) {
 		Payload:   marshalledChange,
 		Signature: signature,
 	}
-	marshalledRawChange, err := raw.Marshal()
+	marshalledRawChange, err := raw.MarshalVT()
 	id := "id"
 	require.NoError(t, err)
 	rawIdChange := &treechangeproto.RawTreeChangeWithId{
@@ -518,7 +518,7 @@ func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId
 		Identity:      identity,
 		ChangePayload: changePayload,
 	}
-	marshalledChange, err := rootChange.Marshal()
+	marshalledChange, err := rootChange.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -530,7 +530,7 @@ func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId
 		Payload:   marshalledChange,
 		Signature: signature,
 	}
-	marshalledRawChange, err := raw.Marshal()
+	marshalledRawChange, err := raw.MarshalVT()
 	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
 	if err != nil {
 		return
@@ -580,7 +580,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		Timestamp:         time.Now().Unix(),
 		IdentitySignature: identitySignature,
 	}
-	marshalled, err := aclRoot.Marshal()
+	marshalled, err := aclRoot.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -589,7 +589,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		Payload:   marshalled,
 		Signature: signature,
 	}
-	marshalledRaw, err := rawAclRecord.Marshal()
+	marshalledRaw, err := rawAclRecord.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -630,7 +630,7 @@ func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawW
 		Seed:               spaceHeaderSeed,
 		SpaceHeaderPayload: spaceHeaderPayload,
 	}
-	marhalled, err := header.Marshal()
+	marhalled, err := header.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -642,7 +642,7 @@ func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawW
 		SpaceHeader: marhalled,
 		Signature:   signature,
 	}
-	marshalledRawHeader, err := rawHeader.Marshal()
+	marshalledRawHeader, err := rawHeader.MarshalVT()
 	if err != nil {
 		return
 	}

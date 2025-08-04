@@ -32,7 +32,7 @@ func (h *InnerHeadUpdate) Prepare() error {
 		SnapshotPath: h.snapshotPath,
 		Changes:      h.changes,
 	}, h.root)
-	bytes, err := treeMsg.Marshal()
+	bytes, err := treeMsg.MarshalVT()
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (h *InnerHeadUpdate) Prepare() error {
 		Heads:        h.heads,
 		SnapshotPath: h.snapshotPath,
 	}, h.root)
-	bytes, err = emptyTreeMsg.Marshal()
+	bytes, err = emptyTreeMsg.MarshalVT()
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (h *InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, erro
 		SnapshotPath: h.snapshotPath,
 		Changes:      changes,
 	}, h.root)
-	return treeMsg.Marshal()
+	return treeMsg.MarshalVT()
 }
 
 type BroadcastOptions struct {

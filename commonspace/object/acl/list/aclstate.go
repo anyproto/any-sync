@@ -3,7 +3,6 @@ package list
 import (
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 
@@ -273,7 +272,7 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	// if the model is not cached
 	if record.Model == nil {
 		aclData := &aclrecordproto.AclData{}
-		err = proto.Unmarshal(record.Data, aclData)
+		err = aclData.UnmarshalVT(record.Data)
 		if err != nil {
 			return
 		}

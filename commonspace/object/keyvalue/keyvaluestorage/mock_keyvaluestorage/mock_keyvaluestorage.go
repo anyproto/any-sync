@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_keyvaluestorage/mock_keyvaluestorage.go github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage Storage
 //
+
 // Package mock_keyvaluestorage is a generated GoMock package.
 package mock_keyvaluestorage
 
@@ -21,6 +22,7 @@ import (
 type MockStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockStorageMockRecorder
+	isgomock struct{}
 }
 
 // MockStorageMockRecorder is the mock recorder for MockStorage.
@@ -41,17 +43,17 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // GetAll mocks base method.
-func (m *MockStorage) GetAll(arg0 context.Context, arg1 string, arg2 func(func(innerstorage.KeyValue) ([]byte, error), []innerstorage.KeyValue) error) error {
+func (m *MockStorage) GetAll(ctx context.Context, key string, get func(func(innerstorage.KeyValue) ([]byte, error), []innerstorage.KeyValue) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAll", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetAll", ctx, key, get)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GetAll indicates an expected call of GetAll.
-func (mr *MockStorageMockRecorder) GetAll(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetAll(ctx, key, get any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockStorage)(nil).GetAll), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockStorage)(nil).GetAll), ctx, key, get)
 }
 
 // Id mocks base method.
@@ -83,17 +85,17 @@ func (mr *MockStorageMockRecorder) InnerStorage() *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockStorage) Iterate(arg0 context.Context, arg1 func(func(innerstorage.KeyValue) ([]byte, error), string, []innerstorage.KeyValue) (bool, error)) error {
+func (m *MockStorage) Iterate(ctx context.Context, f func(func(innerstorage.KeyValue) ([]byte, error), string, []innerstorage.KeyValue) (bool, error)) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Iterate", arg0, arg1)
+	ret := m.ctrl.Call(m, "Iterate", ctx, f)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Iterate indicates an expected call of Iterate.
-func (mr *MockStorageMockRecorder) Iterate(arg0, arg1 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Iterate(ctx, f any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockStorage)(nil).Iterate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockStorage)(nil).Iterate), ctx, f)
 }
 
 // Prepare mocks base method.
@@ -111,24 +113,24 @@ func (mr *MockStorageMockRecorder) Prepare() *gomock.Call {
 }
 
 // Set mocks base method.
-func (m *MockStorage) Set(arg0 context.Context, arg1 string, arg2 []byte) error {
+func (m *MockStorage) Set(ctx context.Context, key string, value []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Set", ctx, key, value)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockStorageMockRecorder) Set(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Set(ctx, key, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockStorage)(nil).Set), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockStorage)(nil).Set), ctx, key, value)
 }
 
 // SetRaw mocks base method.
-func (m *MockStorage) SetRaw(arg0 context.Context, arg1 ...*spacesyncproto.StoreKeyValue) error {
+func (m *MockStorage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0}
-	for _, a := range arg1 {
+	varargs := []any{ctx}
+	for _, a := range keyValue {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SetRaw", varargs...)
@@ -137,8 +139,8 @@ func (m *MockStorage) SetRaw(arg0 context.Context, arg1 ...*spacesyncproto.Store
 }
 
 // SetRaw indicates an expected call of SetRaw.
-func (mr *MockStorageMockRecorder) SetRaw(arg0 any, arg1 ...any) *gomock.Call {
+func (mr *MockStorageMockRecorder) SetRaw(ctx any, keyValue ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0}, arg1...)
+	varargs := append([]any{ctx}, keyValue...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRaw", reflect.TypeOf((*MockStorage)(nil).SetRaw), varargs...)
 }

@@ -5,9 +5,11 @@ option go_package = "net/streampool/testservice";
 
 service Test {
     rpc TestStream(stream StreamMessage) returns (stream StreamMessage);
+    rpc TestStream2(StreamMessage) returns (stream StreamMessage);
 }
 
 
 message StreamMessage {
     string reqData = 1;
+    int64 repeat = 2;
 }
