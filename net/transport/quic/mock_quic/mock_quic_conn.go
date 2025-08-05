@@ -5,6 +5,7 @@
 //
 //	mockgen -package=mock_quic -source=conn.go -destination=mock_quic/mock_quic_conn.go connection
 //
+
 // Package mock_quic is a generated GoMock package.
 package mock_quic
 
@@ -21,6 +22,7 @@ import (
 type Mockconnection struct {
 	ctrl     *gomock.Controller
 	recorder *MockconnectionMockRecorder
+	isgomock struct{}
 }
 
 // MockconnectionMockRecorder is the mock recorder for Mockconnection.

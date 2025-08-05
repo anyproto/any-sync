@@ -133,6 +133,20 @@ func (mr *MockCoordinatorClientMockRecorder) AclGetRecords(ctx, spaceId, aclHead
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockCoordinatorClient)(nil).AclGetRecords), ctx, spaceId, aclHead)
 }
 
+// AclUploadInvite mocks base method.
+func (m *MockCoordinatorClient) AclUploadInvite(ctx context.Context, data []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclUploadInvite", ctx, data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AclUploadInvite indicates an expected call of AclUploadInvite.
+func (mr *MockCoordinatorClientMockRecorder) AclUploadInvite(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclUploadInvite", reflect.TypeOf((*MockCoordinatorClient)(nil).AclUploadInvite), ctx, data)
+}
+
 // DeletionLog mocks base method.
 func (m *MockCoordinatorClient) DeletionLog(ctx context.Context, lastRecordId string, limit int) ([]*coordinatorproto.DeletionLogRecord, error) {
 	m.ctrl.T.Helper()

@@ -187,7 +187,7 @@ func (mr *MockAclListMockRecorder) IsAfter(first, second any) *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockAclList) Iterate(iterFunc func(*list.AclRecord) bool) {
+func (m *MockAclList) Iterate(iterFunc list.IterFunc) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Iterate", iterFunc)
 }
@@ -199,7 +199,7 @@ func (mr *MockAclListMockRecorder) Iterate(iterFunc any) *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockAclList) IterateFrom(startId string, iterFunc func(*list.AclRecord) bool) {
+func (m *MockAclList) IterateFrom(startId string, iterFunc list.IterFunc) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "IterateFrom", startId, iterFunc)
 }
@@ -412,7 +412,7 @@ func (mr *MockStorageMockRecorder) Get(ctx, id any) *gomock.Call {
 }
 
 // GetAfterOrder mocks base method.
-func (m *MockStorage) GetAfterOrder(ctx context.Context, order int, iter func(context.Context, list.StorageRecord) (bool, error)) error {
+func (m *MockStorage) GetAfterOrder(ctx context.Context, order int, iter list.StorageIterator) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAfterOrder", ctx, order, iter)
 	ret0, _ := ret[0].(error)
@@ -426,7 +426,7 @@ func (mr *MockStorageMockRecorder) GetAfterOrder(ctx, order, iter any) *gomock.C
 }
 
 // GetBeforeOrder mocks base method.
-func (m *MockStorage) GetBeforeOrder(ctx context.Context, order int, iter func(context.Context, list.StorageRecord) (bool, error)) error {
+func (m *MockStorage) GetBeforeOrder(ctx context.Context, order int, iter list.StorageIterator) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetBeforeOrder", ctx, order, iter)
 	ret0, _ := ret[0].(error)
