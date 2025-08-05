@@ -54,6 +54,8 @@ type CoordinatorClient interface {
 
 	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
 
+	AclUploadInvite(ctx context.Context, data []byte) (err error)
+
 	app.Component
 }
 
@@ -350,6 +352,18 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) AclUploadInvite(ctx context.Context, data []byte) error {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.AclUploadInvite(ctx, &coordinatorproto.AclUploadInviteRequest{
+			Data: data,
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
 }
 
 func (c *coordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {
