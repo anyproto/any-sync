@@ -64,6 +64,7 @@ deps:
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps google.golang.org/protobuf/cmd/protoc-gen-go
 	go build -o deps github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto
+	go build -o deps go.uber.org/mock/mockgen
 
 mocks:
 	echo 'Generating mocks...'
