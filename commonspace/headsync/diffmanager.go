@@ -50,7 +50,7 @@ func (dm *DiffManager) FillDiff(ctx context.Context) error {
 	var (
 		commonEls           = make([]ldiff.Element, 0, 100)
 		onlyOldEls          = make([]ldiff.Element, 0, 100)
-		noCommonSnapshotEls = make([]ldiff.Element, 0, 100)
+		noCommonSnapshotEls = make([]ldiff.Element, 0, 2)
 	)
 	err := dm.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
 		// empty derived roots shouldn't be set in all hashes
