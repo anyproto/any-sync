@@ -118,20 +118,20 @@ func (dm *DiffManager) setHeadsForOldDiff(commonEls, onlyOldEls, noCommonSnapsho
 	}
 }
 
-func (dm *DiffManager) TryDiff(ctx context.Context, rdiff RemoteDiff) (newIds, changedIds, removedIds []string, needsSync bool, err error) {
+func (dm *DiffManager) TryDiff(ctx context.Context, rdiff RemoteDiff) (newIds, changedIds, removedIds []string, err error) {
 	needsSync, diff, err := dm.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
-		return nil, nil, nil, false, err
+		return nil, nil, nil, err
 	}
 	if needsSync {
 		newIds, changedIds, removedIds, err = diff.Diff(ctx, rdiff)
 		err = rpcerr.Unwrap(err)
 		if err != nil {
-			return nil, nil, nil, needsSync, err
+			return nil, nil, nil, err
 		}
 	}
-	return newIds, changedIds, removedIds, needsSync, nil
+	return newIds, changedIds, removedIds, nil
 }
 
 func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {

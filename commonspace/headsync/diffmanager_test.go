@@ -306,9 +306,8 @@ func TestDiffManager_TryDiff(t *testing.T) {
 		fx.diffContainerMock.EXPECT().DiffTypeCheck(ctx, remoteDiff).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().Diff(ctx, remoteDiff).Return(expectedNewIds, expectedChangedIds, expectedRemovedIds, nil)
 
-		newIds, changedIds, removedIds, needsSync, err := fx.diffManager.TryDiff(ctx, remoteDiff)
+		newIds, changedIds, removedIds, err := fx.diffManager.TryDiff(ctx, remoteDiff)
 		require.NoError(t, err)
-		require.True(t, needsSync)
 		require.Equal(t, expectedNewIds, newIds)
 		require.Equal(t, expectedChangedIds, changedIds)
 		require.Equal(t, expectedRemovedIds, removedIds)
@@ -322,9 +321,8 @@ func TestDiffManager_TryDiff(t *testing.T) {
 
 		fx.diffContainerMock.EXPECT().DiffTypeCheck(ctx, remoteDiff).Return(false, nil, nil)
 
-		newIds, changedIds, removedIds, needsSync, err := fx.diffManager.TryDiff(ctx, remoteDiff)
+		newIds, changedIds, removedIds,  err := fx.diffManager.TryDiff(ctx, remoteDiff)
 		require.NoError(t, err)
-		require.False(t, needsSync)
 		require.Nil(t, newIds)
 		require.Nil(t, changedIds)
 		require.Nil(t, removedIds)

@@ -133,7 +133,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		syncAclId = d.syncAcl.Id()
 	)
 	storageId := d.keyValue.DefaultStore().Id()
-	newIds, changedIds, removedIds, _, err := d.diffManager.TryDiff(ctx, rdiff)
+	newIds, changedIds, removedIds, err := d.diffManager.TryDiff(ctx, rdiff)
 	if err != nil {
 		return d.onDiffError(ctx, p, cl, err)
 	}
