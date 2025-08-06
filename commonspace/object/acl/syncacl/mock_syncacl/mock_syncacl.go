@@ -350,7 +350,7 @@ func (mr *MockSyncAclMockRecorder) IsAfter(first, second any) *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockSyncAcl) Iterate(iterFunc func(*list.AclRecord) bool) {
+func (m *MockSyncAcl) Iterate(iterFunc list.IterFunc) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Iterate", iterFunc)
 }
@@ -362,7 +362,7 @@ func (mr *MockSyncAclMockRecorder) Iterate(iterFunc any) *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncAcl) IterateFrom(startId string, iterFunc func(*list.AclRecord) bool) {
+func (m *MockSyncAcl) IterateFrom(startId string, iterFunc list.IterFunc) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "IterateFrom", startId, iterFunc)
 }
