@@ -569,7 +569,7 @@ func TestDiffManager_HandleRangeRequest(t *testing.T) {
 			DiffType: spacesyncproto.DiffType_V2,
 		}
 
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().DiffType().Return(spacesyncproto.DiffType_V2)
 		fx.diffMock.EXPECT().Ranges(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 
