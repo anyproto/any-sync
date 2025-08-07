@@ -2713,7 +2713,7 @@ func (x *AclEventLogRecord) GetAclChangeId() string {
 
 type AclUploadInviteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cid           string                 `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
+	Cid           []byte                 `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
 	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2749,11 +2749,11 @@ func (*AclUploadInviteRequest) Descriptor() ([]byte, []int) {
 	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{41}
 }
 
-func (x *AclUploadInviteRequest) GetCid() string {
+func (x *AclUploadInviteRequest) GetCid() []byte {
 	if x != nil {
 		return x.Cid
 	}
-	return ""
+	return nil
 }
 
 func (x *AclUploadInviteRequest) GetData() []byte {
@@ -2941,7 +2941,7 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\x0e2\".coordinator.AclEventLogRecordTypeR\x04type\x12 \n" +
 	"\vaclChangeId\x18\x05 \x01(\tR\vaclChangeId\">\n" +
 	"\x16AclUploadInviteRequest\x12\x10\n" +
-	"\x03cid\x18\x01 \x01(\tR\x03cid\x12\x12\n" +
+	"\x03cid\x18\x01 \x01(\fR\x03cid\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\"\x19\n" +
 	"\x17AclUploadInviteResponse*\xf8\x01\n" +
 	"\n" +
