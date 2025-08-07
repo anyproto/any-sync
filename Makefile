@@ -1,6 +1,6 @@
 .PHONY: proto test deps mocks
 export GOPRIVATE=github.com/anyproto
-export PATH:=deps:$(PATH)
+export PATH:=$(CURDIR)/deps:$(PATH)
 
 all:
 	@set -e;

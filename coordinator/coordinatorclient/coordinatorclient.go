@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+	blocks "github.com/ipfs/go-block-format"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
@@ -54,7 +55,7 @@ type CoordinatorClient interface {
 
 	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
 
-	AclUploadInvite(ctx context.Context, data []byte) (err error)
+	AclUploadInvite(ctx context.Context, block blocks.Block) (err error)
 
 	app.Component
 }
@@ -354,10 +355,11 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 	return
 }
 
-func (c *coordinatorClient) AclUploadInvite(ctx context.Context, data []byte) error {
+func (c *coordinatorClient) AclUploadInvite(ctx context.Context, block blocks.Block) error {
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		_, err := cl.AclUploadInvite(ctx, &coordinatorproto.AclUploadInviteRequest{
-			Data: data,
+			Cid:  block.Cid().Bytes(),
+			Data: block.RawData(),
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
