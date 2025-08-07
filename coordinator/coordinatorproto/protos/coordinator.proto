@@ -408,7 +408,8 @@ message AclEventLogRecord {
 }
 
 message AclUploadInviteRequest {
-  bytes data = 1;
+  string cid = 1;
+  bytes data = 2;
 }
 
 message AclUploadInviteResponse {}

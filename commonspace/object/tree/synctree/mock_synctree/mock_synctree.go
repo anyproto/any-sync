@@ -82,7 +82,7 @@ func (mr *MockSyncTreeMockRecorder) AddContent(ctx, content any) *gomock.Call {
 }
 
 // AddContentWithValidator mocks base method.
-func (m *MockSyncTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate func(objecttree.StorageChange) error) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate objecttree.ChangeValidator) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddContentWithValidator", ctx, content, validate)
 	ret0, _ := ret[0].(objecttree.AddResult)
@@ -127,7 +127,7 @@ func (mr *MockSyncTreeMockRecorder) AddRawChangesFromPeer(ctx, peerId, changesPa
 }
 
 // AddRawChangesWithUpdater mocks base method.
-func (m *MockSyncTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", ctx, changes, updater)
 	ret0, _ := ret[0].(objecttree.AddResult)
@@ -347,7 +347,7 @@ func (mr *MockSyncTreeMockRecorder) IsDerived() *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncTree) IterateFrom(id string, convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateFrom", id, convert, iterate)
 	ret0, _ := ret[0].(error)
@@ -361,7 +361,7 @@ func (mr *MockSyncTreeMockRecorder) IterateFrom(id, convert, iterate any) *gomoc
 }
 
 // IterateRoot mocks base method.
-func (m *MockSyncTree) IterateRoot(convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateRoot", convert, iterate)
 	ret0, _ := ret[0].(error)
