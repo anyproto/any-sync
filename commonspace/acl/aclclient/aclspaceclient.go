@@ -19,20 +19,19 @@ type InviteResponse struct {
 	InviteKey crypto.PrivKey
 }
 
-type InviteChange struct {
-	Perms list.AclPermissions
+type InvitePayload struct {
+	InviteType  aclrecordproto.AclInviteType
+	Permissions list.AclPermissions
 }
 
 type GetRecordsResponse struct {
 	Records []*consensusproto.RawRecordWithId
 }
 
-type InviteSaveFunc func()
-
 type AclSpaceClient interface {
 	app.Component
-	GenerateInvite(shouldRevokeAll, isRequestToJoin bool, permissions list.AclPermissions) (list.InviteResult, error)
-	ChangeInvite(ctx context.Context, inviteId string, permissions list.AclPermissions) error
+	ReplaceInvite(ctx context.Context, invite InvitePayload) (list.InviteResult, error)
+	ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error
 	StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error)
 	AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) error
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
@@ -216,7 +215,7 @@ func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.Request
 	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
-func (c *aclSpaceClient) ChangeInvite(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
+func (c *aclSpaceClient) ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildInviteChange(list.InviteChangePayload{
 		IniviteRecordId: inviteId,
@@ -230,33 +229,29 @@ func (c *aclSpaceClient) ChangeInvite(ctx context.Context, inviteId string, perm
 	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
-func (c *aclSpaceClient) GenerateInvite(isRevoke, isRequestToJoin bool, permissions list.AclPermissions) (list.InviteResult, error) {
+func (c *aclSpaceClient) ReplaceInvite(ctx context.Context, payload InvitePayload) (list.InviteResult, error) {
 	c.acl.Lock()
 	defer c.acl.Unlock()
 	var inviteIds []string
-	if isRevoke {
-		for _, invite := range c.acl.AclState().Invites() {
-			if isRequestToJoin && invite.Type == aclrecordproto.AclInviteType_RequestToJoin {
-				return list.InviteResult{}, list.ErrDuplicateInvites
-			} else if invite.Permissions == permissions {
-				return list.InviteResult{}, list.ErrDuplicateInvites
-			}
+	for _, invite := range c.acl.AclState().Invites() {
+		if equalInvites(payload, invite) {
+			return list.InviteResult{}, list.ErrDuplicateInvites
 		}
-		inviteIds = c.acl.AclState().InviteIds()
 	}
-	var payload list.BatchRequestPayload
-	if isRequestToJoin {
-		payload = list.BatchRequestPayload{
+	inviteIds = c.acl.AclState().InviteIds()
+	var batch list.BatchRequestPayload
+	if payload.InviteType == aclrecordproto.AclInviteType_RequestToJoin {
+		batch = list.BatchRequestPayload{
 			InviteRevokes: inviteIds,
 			NewInvites:    []list.AclPermissions{list.AclPermissionsNone},
 		}
 	} else {
-		payload = list.BatchRequestPayload{
+		batch = list.BatchRequestPayload{
 			InviteRevokes: inviteIds,
-			NewInvites:    []list.AclPermissions{permissions},
+			NewInvites:    []list.AclPermissions{payload.Permissions},
 		}
 	}
-	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(batch)
 	if err != nil {
 		return list.InviteResult{}, err
 	}
@@ -282,4 +277,13 @@ func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string
 		err = nil
 	}
 	return
+}
+
+func equalInvites(payload InvitePayload, invite list.Invite) bool {
+	switch payload.InviteType {
+	case aclrecordproto.AclInviteType_RequestToJoin:
+		return invite.Type == aclrecordproto.AclInviteType_RequestToJoin
+	default:
+		return invite.Type == aclrecordproto.AclInviteType_AnyoneCanJoin && invite.Permissions == payload.Permissions
+	}
 }
