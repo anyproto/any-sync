@@ -350,6 +350,118 @@ func (x *BlockPushRequest) GetData() []byte {
 	return nil
 }
 
+type BlockPushManyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SpaceId       string                 `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	FileBlocks    []*FileBlock           `protobuf:"bytes,2,rep,name=fileBlocks,proto3" json:"fileBlocks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BlockPushManyRequest) Reset() {
+	*x = BlockPushManyRequest{}
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BlockPushManyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BlockPushManyRequest) ProtoMessage() {}
+
+func (x *BlockPushManyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BlockPushManyRequest.ProtoReflect.Descriptor instead.
+func (*BlockPushManyRequest) Descriptor() ([]byte, []int) {
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BlockPushManyRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *BlockPushManyRequest) GetFileBlocks() []*FileBlock {
+	if x != nil {
+		return x.FileBlocks
+	}
+	return nil
+}
+
+type FileBlock struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FileId        string                 `protobuf:"bytes,1,opt,name=fileId,proto3" json:"fileId,omitempty"`
+	Cid           []byte                 `protobuf:"bytes,2,opt,name=cid,proto3" json:"cid,omitempty"`
+	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileBlock) Reset() {
+	*x = FileBlock{}
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileBlock) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileBlock) ProtoMessage() {}
+
+func (x *FileBlock) ProtoReflect() protoreflect.Message {
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileBlock.ProtoReflect.Descriptor instead.
+func (*FileBlock) Descriptor() ([]byte, []int) {
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FileBlock) GetFileId() string {
+	if x != nil {
+		return x.FileId
+	}
+	return ""
+}
+
+func (x *FileBlock) GetCid() []byte {
+	if x != nil {
+		return x.Cid
+	}
+	return nil
+}
+
+func (x *FileBlock) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type BlocksCheckRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SpaceId       string                 `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
@@ -360,7 +472,7 @@ type BlocksCheckRequest struct {
 
 func (x *BlocksCheckRequest) Reset() {
 	*x = BlocksCheckRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[4]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -372,7 +484,7 @@ func (x *BlocksCheckRequest) String() string {
 func (*BlocksCheckRequest) ProtoMessage() {}
 
 func (x *BlocksCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[4]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -385,7 +497,7 @@ func (x *BlocksCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlocksCheckRequest.ProtoReflect.Descriptor instead.
 func (*BlocksCheckRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{4}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *BlocksCheckRequest) GetSpaceId() string {
@@ -411,7 +523,7 @@ type BlocksCheckResponse struct {
 
 func (x *BlocksCheckResponse) Reset() {
 	*x = BlocksCheckResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[5]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +535,7 @@ func (x *BlocksCheckResponse) String() string {
 func (*BlocksCheckResponse) ProtoMessage() {}
 
 func (x *BlocksCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[5]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +548,7 @@ func (x *BlocksCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlocksCheckResponse.ProtoReflect.Descriptor instead.
 func (*BlocksCheckResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{5}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BlocksCheckResponse) GetBlocksAvailability() []*BlockAvailability {
@@ -456,7 +568,7 @@ type BlockAvailability struct {
 
 func (x *BlockAvailability) Reset() {
 	*x = BlockAvailability{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[6]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -468,7 +580,7 @@ func (x *BlockAvailability) String() string {
 func (*BlockAvailability) ProtoMessage() {}
 
 func (x *BlockAvailability) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[6]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -481,7 +593,7 @@ func (x *BlockAvailability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockAvailability.ProtoReflect.Descriptor instead.
 func (*BlockAvailability) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{6}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *BlockAvailability) GetCid() []byte {
@@ -509,7 +621,7 @@ type BlocksBindRequest struct {
 
 func (x *BlocksBindRequest) Reset() {
 	*x = BlocksBindRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[7]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -521,7 +633,7 @@ func (x *BlocksBindRequest) String() string {
 func (*BlocksBindRequest) ProtoMessage() {}
 
 func (x *BlocksBindRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[7]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +646,7 @@ func (x *BlocksBindRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlocksBindRequest.ProtoReflect.Descriptor instead.
 func (*BlocksBindRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{7}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *BlocksBindRequest) GetSpaceId() string {
@@ -568,7 +680,7 @@ type FilesDeleteRequest struct {
 
 func (x *FilesDeleteRequest) Reset() {
 	*x = FilesDeleteRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[8]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -580,7 +692,7 @@ func (x *FilesDeleteRequest) String() string {
 func (*FilesDeleteRequest) ProtoMessage() {}
 
 func (x *FilesDeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[8]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -593,7 +705,7 @@ func (x *FilesDeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesDeleteRequest.ProtoReflect.Descriptor instead.
 func (*FilesDeleteRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{8}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FilesDeleteRequest) GetSpaceId() string {
@@ -618,7 +730,7 @@ type FilesDeleteResponse struct {
 
 func (x *FilesDeleteResponse) Reset() {
 	*x = FilesDeleteResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[9]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -630,7 +742,7 @@ func (x *FilesDeleteResponse) String() string {
 func (*FilesDeleteResponse) ProtoMessage() {}
 
 func (x *FilesDeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[9]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -643,7 +755,7 @@ func (x *FilesDeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesDeleteResponse.ProtoReflect.Descriptor instead.
 func (*FilesDeleteResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{9}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{11}
 }
 
 type FilesInfoRequest struct {
@@ -656,7 +768,7 @@ type FilesInfoRequest struct {
 
 func (x *FilesInfoRequest) Reset() {
 	*x = FilesInfoRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[10]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -668,7 +780,7 @@ func (x *FilesInfoRequest) String() string {
 func (*FilesInfoRequest) ProtoMessage() {}
 
 func (x *FilesInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[10]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -681,7 +793,7 @@ func (x *FilesInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesInfoRequest.ProtoReflect.Descriptor instead.
 func (*FilesInfoRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{10}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FilesInfoRequest) GetSpaceId() string {
@@ -707,7 +819,7 @@ type FilesInfoResponse struct {
 
 func (x *FilesInfoResponse) Reset() {
 	*x = FilesInfoResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[11]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +831,7 @@ func (x *FilesInfoResponse) String() string {
 func (*FilesInfoResponse) ProtoMessage() {}
 
 func (x *FilesInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[11]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +844,7 @@ func (x *FilesInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesInfoResponse.ProtoReflect.Descriptor instead.
 func (*FilesInfoResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{11}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *FilesInfoResponse) GetFilesInfo() []*FileInfo {
@@ -753,7 +865,7 @@ type FileInfo struct {
 
 func (x *FileInfo) Reset() {
 	*x = FileInfo{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[12]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -765,7 +877,7 @@ func (x *FileInfo) String() string {
 func (*FileInfo) ProtoMessage() {}
 
 func (x *FileInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[12]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -778,7 +890,7 @@ func (x *FileInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileInfo.ProtoReflect.Descriptor instead.
 func (*FileInfo) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{12}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *FileInfo) GetFileId() string {
@@ -811,7 +923,7 @@ type FilesGetRequest struct {
 
 func (x *FilesGetRequest) Reset() {
 	*x = FilesGetRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[13]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -823,7 +935,7 @@ func (x *FilesGetRequest) String() string {
 func (*FilesGetRequest) ProtoMessage() {}
 
 func (x *FilesGetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[13]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -836,7 +948,7 @@ func (x *FilesGetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesGetRequest.ProtoReflect.Descriptor instead.
 func (*FilesGetRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{13}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *FilesGetRequest) GetSpaceId() string {
@@ -855,7 +967,7 @@ type FilesGetResponse struct {
 
 func (x *FilesGetResponse) Reset() {
 	*x = FilesGetResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[14]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -867,7 +979,7 @@ func (x *FilesGetResponse) String() string {
 func (*FilesGetResponse) ProtoMessage() {}
 
 func (x *FilesGetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[14]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +992,7 @@ func (x *FilesGetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesGetResponse.ProtoReflect.Descriptor instead.
 func (*FilesGetResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{14}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *FilesGetResponse) GetFileId() string {
@@ -898,7 +1010,7 @@ type CheckRequest struct {
 
 func (x *CheckRequest) Reset() {
 	*x = CheckRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[15]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +1022,7 @@ func (x *CheckRequest) String() string {
 func (*CheckRequest) ProtoMessage() {}
 
 func (x *CheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[15]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +1035,7 @@ func (x *CheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckRequest.ProtoReflect.Descriptor instead.
 func (*CheckRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{15}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{17}
 }
 
 type CheckResponse struct {
@@ -936,7 +1048,7 @@ type CheckResponse struct {
 
 func (x *CheckResponse) Reset() {
 	*x = CheckResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[16]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -948,7 +1060,7 @@ func (x *CheckResponse) String() string {
 func (*CheckResponse) ProtoMessage() {}
 
 func (x *CheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[16]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -961,7 +1073,7 @@ func (x *CheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckResponse.ProtoReflect.Descriptor instead.
 func (*CheckResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{16}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CheckResponse) GetSpaceIds() []string {
@@ -987,7 +1099,7 @@ type SpaceInfoRequest struct {
 
 func (x *SpaceInfoRequest) Reset() {
 	*x = SpaceInfoRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[17]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -999,7 +1111,7 @@ func (x *SpaceInfoRequest) String() string {
 func (*SpaceInfoRequest) ProtoMessage() {}
 
 func (x *SpaceInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[17]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1012,7 +1124,7 @@ func (x *SpaceInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpaceInfoRequest.ProtoReflect.Descriptor instead.
 func (*SpaceInfoRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{17}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SpaceInfoRequest) GetSpaceId() string {
@@ -1036,7 +1148,7 @@ type SpaceInfoResponse struct {
 
 func (x *SpaceInfoResponse) Reset() {
 	*x = SpaceInfoResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[18]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1048,7 +1160,7 @@ func (x *SpaceInfoResponse) String() string {
 func (*SpaceInfoResponse) ProtoMessage() {}
 
 func (x *SpaceInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[18]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1061,7 +1173,7 @@ func (x *SpaceInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpaceInfoResponse.ProtoReflect.Descriptor instead.
 func (*SpaceInfoResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{18}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SpaceInfoResponse) GetLimitBytes() uint64 {
@@ -1114,7 +1226,7 @@ type AccountInfoRequest struct {
 
 func (x *AccountInfoRequest) Reset() {
 	*x = AccountInfoRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[19]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1126,7 +1238,7 @@ func (x *AccountInfoRequest) String() string {
 func (*AccountInfoRequest) ProtoMessage() {}
 
 func (x *AccountInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[19]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1139,7 +1251,7 @@ func (x *AccountInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountInfoRequest.ProtoReflect.Descriptor instead.
 func (*AccountInfoRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{19}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{21}
 }
 
 type AccountInfoResponse struct {
@@ -1157,7 +1269,7 @@ type AccountInfoResponse struct {
 
 func (x *AccountInfoResponse) Reset() {
 	*x = AccountInfoResponse{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[20]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1169,7 +1281,7 @@ func (x *AccountInfoResponse) String() string {
 func (*AccountInfoResponse) ProtoMessage() {}
 
 func (x *AccountInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[20]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1182,7 +1294,7 @@ func (x *AccountInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountInfoResponse.ProtoReflect.Descriptor instead.
 func (*AccountInfoResponse) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{20}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AccountInfoResponse) GetLimitBytes() uint64 {
@@ -1230,7 +1342,7 @@ type AccountLimitSetRequest struct {
 
 func (x *AccountLimitSetRequest) Reset() {
 	*x = AccountLimitSetRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[21]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1242,7 +1354,7 @@ func (x *AccountLimitSetRequest) String() string {
 func (*AccountLimitSetRequest) ProtoMessage() {}
 
 func (x *AccountLimitSetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[21]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1255,7 +1367,7 @@ func (x *AccountLimitSetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountLimitSetRequest.ProtoReflect.Descriptor instead.
 func (*AccountLimitSetRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{21}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AccountLimitSetRequest) GetIdentity() string {
@@ -1282,7 +1394,7 @@ type SpaceLimitSetRequest struct {
 
 func (x *SpaceLimitSetRequest) Reset() {
 	*x = SpaceLimitSetRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[22]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1294,7 +1406,7 @@ func (x *SpaceLimitSetRequest) String() string {
 func (*SpaceLimitSetRequest) ProtoMessage() {}
 
 func (x *SpaceLimitSetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[22]
+	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1307,7 +1419,7 @@ func (x *SpaceLimitSetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpaceLimitSetRequest.ProtoReflect.Descriptor instead.
 func (*SpaceLimitSetRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{22}
+	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SpaceLimitSetRequest) GetSpaceId() string {
@@ -1341,7 +1453,16 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x16\n" +
 	"\x06fileId\x18\x02 \x01(\tR\x06fileId\x12\x10\n" +
 	"\x03cid\x18\x03 \x01(\fR\x03cid\x12\x12\n" +
-	"\x04data\x18\x04 \x01(\fR\x04data\"B\n" +
+	"\x04data\x18\x04 \x01(\fR\x04data\"e\n" +
+	"\x14BlockPushManyRequest\x12\x18\n" +
+	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x123\n" +
+	"\n" +
+	"fileBlocks\x18\x02 \x03(\v2\x13.filesync.FileBlockR\n" +
+	"fileBlocks\"I\n" +
+	"\tFileBlock\x12\x16\n" +
+	"\x06fileId\x18\x01 \x01(\tR\x06fileId\x12\x10\n" +
+	"\x03cid\x18\x02 \x01(\fR\x03cid\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\"B\n" +
 	"\x12BlocksCheckRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x12\n" +
 	"\x04cids\x18\x02 \x03(\fR\x04cids\"b\n" +
@@ -1421,10 +1542,11 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\tNotExists\x10\x00\x12\n" +
 	"\n" +
 	"\x06Exists\x10\x01\x12\x11\n" +
-	"\rExistsInSpace\x10\x022\xaa\x06\n" +
+	"\rExistsInSpace\x10\x022\xe9\x06\n" +
 	"\x04File\x12A\n" +
 	"\bBlockGet\x12\x19.filesync.BlockGetRequest\x1a\x1a.filesync.BlockGetResponse\x125\n" +
-	"\tBlockPush\x12\x1a.filesync.BlockPushRequest\x1a\f.filesync.Ok\x12J\n" +
+	"\tBlockPush\x12\x1a.filesync.BlockPushRequest\x1a\f.filesync.Ok\x12=\n" +
+	"\rBlockPushMany\x12\x1e.filesync.BlockPushManyRequest\x1a\f.filesync.Ok\x12J\n" +
 	"\vBlocksCheck\x12\x1c.filesync.BlocksCheckRequest\x1a\x1d.filesync.BlocksCheckResponse\x127\n" +
 	"\n" +
 	"BlocksBind\x12\x1b.filesync.BlocksBindRequest\x1a\f.filesync.Ok\x12J\n" +
@@ -1450,7 +1572,7 @@ func file_commonfile_fileproto_protos_file_proto_rawDescGZIP() []byte {
 }
 
 var file_commonfile_fileproto_protos_file_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_commonfile_fileproto_protos_file_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_commonfile_fileproto_protos_file_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_commonfile_fileproto_protos_file_proto_goTypes = []any{
 	(ErrCodes)(0),                  // 0: filesync.ErrCodes
 	(AvailabilityStatus)(0),        // 1: filesync.AvailabilityStatus
@@ -1458,60 +1580,65 @@ var file_commonfile_fileproto_protos_file_proto_goTypes = []any{
 	(*BlockGetRequest)(nil),        // 3: filesync.BlockGetRequest
 	(*BlockGetResponse)(nil),       // 4: filesync.BlockGetResponse
 	(*BlockPushRequest)(nil),       // 5: filesync.BlockPushRequest
-	(*BlocksCheckRequest)(nil),     // 6: filesync.BlocksCheckRequest
-	(*BlocksCheckResponse)(nil),    // 7: filesync.BlocksCheckResponse
-	(*BlockAvailability)(nil),      // 8: filesync.BlockAvailability
-	(*BlocksBindRequest)(nil),      // 9: filesync.BlocksBindRequest
-	(*FilesDeleteRequest)(nil),     // 10: filesync.FilesDeleteRequest
-	(*FilesDeleteResponse)(nil),    // 11: filesync.FilesDeleteResponse
-	(*FilesInfoRequest)(nil),       // 12: filesync.FilesInfoRequest
-	(*FilesInfoResponse)(nil),      // 13: filesync.FilesInfoResponse
-	(*FileInfo)(nil),               // 14: filesync.FileInfo
-	(*FilesGetRequest)(nil),        // 15: filesync.FilesGetRequest
-	(*FilesGetResponse)(nil),       // 16: filesync.FilesGetResponse
-	(*CheckRequest)(nil),           // 17: filesync.CheckRequest
-	(*CheckResponse)(nil),          // 18: filesync.CheckResponse
-	(*SpaceInfoRequest)(nil),       // 19: filesync.SpaceInfoRequest
-	(*SpaceInfoResponse)(nil),      // 20: filesync.SpaceInfoResponse
-	(*AccountInfoRequest)(nil),     // 21: filesync.AccountInfoRequest
-	(*AccountInfoResponse)(nil),    // 22: filesync.AccountInfoResponse
-	(*AccountLimitSetRequest)(nil), // 23: filesync.AccountLimitSetRequest
-	(*SpaceLimitSetRequest)(nil),   // 24: filesync.SpaceLimitSetRequest
+	(*BlockPushManyRequest)(nil),   // 6: filesync.BlockPushManyRequest
+	(*FileBlock)(nil),              // 7: filesync.FileBlock
+	(*BlocksCheckRequest)(nil),     // 8: filesync.BlocksCheckRequest
+	(*BlocksCheckResponse)(nil),    // 9: filesync.BlocksCheckResponse
+	(*BlockAvailability)(nil),      // 10: filesync.BlockAvailability
+	(*BlocksBindRequest)(nil),      // 11: filesync.BlocksBindRequest
+	(*FilesDeleteRequest)(nil),     // 12: filesync.FilesDeleteRequest
+	(*FilesDeleteResponse)(nil),    // 13: filesync.FilesDeleteResponse
+	(*FilesInfoRequest)(nil),       // 14: filesync.FilesInfoRequest
+	(*FilesInfoResponse)(nil),      // 15: filesync.FilesInfoResponse
+	(*FileInfo)(nil),               // 16: filesync.FileInfo
+	(*FilesGetRequest)(nil),        // 17: filesync.FilesGetRequest
+	(*FilesGetResponse)(nil),       // 18: filesync.FilesGetResponse
+	(*CheckRequest)(nil),           // 19: filesync.CheckRequest
+	(*CheckResponse)(nil),          // 20: filesync.CheckResponse
+	(*SpaceInfoRequest)(nil),       // 21: filesync.SpaceInfoRequest
+	(*SpaceInfoResponse)(nil),      // 22: filesync.SpaceInfoResponse
+	(*AccountInfoRequest)(nil),     // 23: filesync.AccountInfoRequest
+	(*AccountInfoResponse)(nil),    // 24: filesync.AccountInfoResponse
+	(*AccountLimitSetRequest)(nil), // 25: filesync.AccountLimitSetRequest
+	(*SpaceLimitSetRequest)(nil),   // 26: filesync.SpaceLimitSetRequest
 }
 var file_commonfile_fileproto_protos_file_proto_depIdxs = []int32{
-	8,  // 0: filesync.BlocksCheckResponse.blocksAvailability:type_name -> filesync.BlockAvailability
-	1,  // 1: filesync.BlockAvailability.status:type_name -> filesync.AvailabilityStatus
-	14, // 2: filesync.FilesInfoResponse.filesInfo:type_name -> filesync.FileInfo
-	20, // 3: filesync.AccountInfoResponse.spaces:type_name -> filesync.SpaceInfoResponse
-	3,  // 4: filesync.File.BlockGet:input_type -> filesync.BlockGetRequest
-	5,  // 5: filesync.File.BlockPush:input_type -> filesync.BlockPushRequest
-	6,  // 6: filesync.File.BlocksCheck:input_type -> filesync.BlocksCheckRequest
-	9,  // 7: filesync.File.BlocksBind:input_type -> filesync.BlocksBindRequest
-	10, // 8: filesync.File.FilesDelete:input_type -> filesync.FilesDeleteRequest
-	12, // 9: filesync.File.FilesInfo:input_type -> filesync.FilesInfoRequest
-	15, // 10: filesync.File.FilesGet:input_type -> filesync.FilesGetRequest
-	17, // 11: filesync.File.Check:input_type -> filesync.CheckRequest
-	19, // 12: filesync.File.SpaceInfo:input_type -> filesync.SpaceInfoRequest
-	21, // 13: filesync.File.AccountInfo:input_type -> filesync.AccountInfoRequest
-	23, // 14: filesync.File.AccountLimitSet:input_type -> filesync.AccountLimitSetRequest
-	24, // 15: filesync.File.SpaceLimitSet:input_type -> filesync.SpaceLimitSetRequest
-	4,  // 16: filesync.File.BlockGet:output_type -> filesync.BlockGetResponse
-	2,  // 17: filesync.File.BlockPush:output_type -> filesync.Ok
-	7,  // 18: filesync.File.BlocksCheck:output_type -> filesync.BlocksCheckResponse
-	2,  // 19: filesync.File.BlocksBind:output_type -> filesync.Ok
-	11, // 20: filesync.File.FilesDelete:output_type -> filesync.FilesDeleteResponse
-	13, // 21: filesync.File.FilesInfo:output_type -> filesync.FilesInfoResponse
-	16, // 22: filesync.File.FilesGet:output_type -> filesync.FilesGetResponse
-	18, // 23: filesync.File.Check:output_type -> filesync.CheckResponse
-	20, // 24: filesync.File.SpaceInfo:output_type -> filesync.SpaceInfoResponse
-	22, // 25: filesync.File.AccountInfo:output_type -> filesync.AccountInfoResponse
-	2,  // 26: filesync.File.AccountLimitSet:output_type -> filesync.Ok
-	2,  // 27: filesync.File.SpaceLimitSet:output_type -> filesync.Ok
-	16, // [16:28] is the sub-list for method output_type
-	4,  // [4:16] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	7,  // 0: filesync.BlockPushManyRequest.fileBlocks:type_name -> filesync.FileBlock
+	10, // 1: filesync.BlocksCheckResponse.blocksAvailability:type_name -> filesync.BlockAvailability
+	1,  // 2: filesync.BlockAvailability.status:type_name -> filesync.AvailabilityStatus
+	16, // 3: filesync.FilesInfoResponse.filesInfo:type_name -> filesync.FileInfo
+	22, // 4: filesync.AccountInfoResponse.spaces:type_name -> filesync.SpaceInfoResponse
+	3,  // 5: filesync.File.BlockGet:input_type -> filesync.BlockGetRequest
+	5,  // 6: filesync.File.BlockPush:input_type -> filesync.BlockPushRequest
+	6,  // 7: filesync.File.BlockPushMany:input_type -> filesync.BlockPushManyRequest
+	8,  // 8: filesync.File.BlocksCheck:input_type -> filesync.BlocksCheckRequest
+	11, // 9: filesync.File.BlocksBind:input_type -> filesync.BlocksBindRequest
+	12, // 10: filesync.File.FilesDelete:input_type -> filesync.FilesDeleteRequest
+	14, // 11: filesync.File.FilesInfo:input_type -> filesync.FilesInfoRequest
+	17, // 12: filesync.File.FilesGet:input_type -> filesync.FilesGetRequest
+	19, // 13: filesync.File.Check:input_type -> filesync.CheckRequest
+	21, // 14: filesync.File.SpaceInfo:input_type -> filesync.SpaceInfoRequest
+	23, // 15: filesync.File.AccountInfo:input_type -> filesync.AccountInfoRequest
+	25, // 16: filesync.File.AccountLimitSet:input_type -> filesync.AccountLimitSetRequest
+	26, // 17: filesync.File.SpaceLimitSet:input_type -> filesync.SpaceLimitSetRequest
+	4,  // 18: filesync.File.BlockGet:output_type -> filesync.BlockGetResponse
+	2,  // 19: filesync.File.BlockPush:output_type -> filesync.Ok
+	2,  // 20: filesync.File.BlockPushMany:output_type -> filesync.Ok
+	9,  // 21: filesync.File.BlocksCheck:output_type -> filesync.BlocksCheckResponse
+	2,  // 22: filesync.File.BlocksBind:output_type -> filesync.Ok
+	13, // 23: filesync.File.FilesDelete:output_type -> filesync.FilesDeleteResponse
+	15, // 24: filesync.File.FilesInfo:output_type -> filesync.FilesInfoResponse
+	18, // 25: filesync.File.FilesGet:output_type -> filesync.FilesGetResponse
+	20, // 26: filesync.File.Check:output_type -> filesync.CheckResponse
+	22, // 27: filesync.File.SpaceInfo:output_type -> filesync.SpaceInfoResponse
+	24, // 28: filesync.File.AccountInfo:output_type -> filesync.AccountInfoResponse
+	2,  // 29: filesync.File.AccountLimitSet:output_type -> filesync.Ok
+	2,  // 30: filesync.File.SpaceLimitSet:output_type -> filesync.Ok
+	18, // [18:31] is the sub-list for method output_type
+	5,  // [5:18] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_commonfile_fileproto_protos_file_proto_init() }
@@ -1525,7 +1652,7 @@ func file_commonfile_fileproto_protos_file_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonfile_fileproto_protos_file_proto_rawDesc), len(file_commonfile_fileproto_protos_file_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   23,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
