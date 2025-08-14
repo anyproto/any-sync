@@ -1,0 +1,22 @@
+syntax = "proto3";
+package clientspace;
+
+option go_package = "commonspace/clientspaceproto";
+
+service ClientSpace {
+    rpc SpaceExchange(SpaceExchangeRequest) returns (SpaceExchangeResponse);
+}
+
+message SpaceExchangeRequest {
+    repeated string spaceIds = 1;
+    LocalServer localServer = 2;
+}
+
+message SpaceExchangeResponse {
+    repeated string spaceIds = 1;
+}
+
+message LocalServer {
+    repeated string Ips = 1;
+    int32 port = 2;
+}
