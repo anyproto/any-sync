@@ -232,14 +232,15 @@ func (c *aclSpaceClient) ChangeInvitePermissions(ctx context.Context, inviteId s
 func (c *aclSpaceClient) ReplaceInvite(ctx context.Context, payload InvitePayload) (list.InviteResult, error) {
 	c.acl.Lock()
 	defer c.acl.Unlock()
-	var inviteIds []string
 	for _, invite := range c.acl.AclState().Invites() {
 		if equalInvites(payload, invite) {
 			return list.InviteResult{}, list.ErrDuplicateInvites
 		}
 	}
-	inviteIds = c.acl.AclState().InviteIds()
-	var batch list.BatchRequestPayload
+	var (
+		inviteIds = c.acl.AclState().InviteIds()
+		batch     list.BatchRequestPayload
+	)
 	if payload.InviteType == aclrecordproto.AclInviteType_RequestToJoin {
 		batch = list.BatchRequestPayload{
 			InviteRevokes: inviteIds,
