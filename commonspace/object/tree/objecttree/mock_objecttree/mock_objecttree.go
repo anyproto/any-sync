@@ -74,7 +74,7 @@ func (mr *MockObjectTreeMockRecorder) AddContent(ctx, content any) *gomock.Call 
 }
 
 // AddContentWithValidator mocks base method.
-func (m *MockObjectTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate func(objecttree.StorageChange) error) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate objecttree.ChangeValidator) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddContentWithValidator", ctx, content, validate)
 	ret0, _ := ret[0].(objecttree.AddResult)
@@ -104,7 +104,7 @@ func (mr *MockObjectTreeMockRecorder) AddRawChanges(ctx, changes any) *gomock.Ca
 }
 
 // AddRawChangesWithUpdater mocks base method.
-func (m *MockObjectTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", ctx, changes, updater)
 	ret0, _ := ret[0].(objecttree.AddResult)
@@ -280,7 +280,7 @@ func (mr *MockObjectTreeMockRecorder) IsDerived() *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockObjectTree) IterateFrom(id string, convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockObjectTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateFrom", id, convert, iterate)
 	ret0, _ := ret[0].(error)
@@ -294,7 +294,7 @@ func (mr *MockObjectTreeMockRecorder) IterateFrom(id, convert, iterate any) *gom
 }
 
 // IterateRoot mocks base method.
-func (m *MockObjectTree) IterateRoot(convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockObjectTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateRoot", convert, iterate)
 	ret0, _ := ret[0].(error)
@@ -584,7 +584,7 @@ func (mr *MockStorageMockRecorder) Get(ctx, id any) *gomock.Call {
 }
 
 // GetAfterOrder mocks base method.
-func (m *MockStorage) GetAfterOrder(ctx context.Context, orderId string, iter func(context.Context, objecttree.StorageChange) (bool, error)) error {
+func (m *MockStorage) GetAfterOrder(ctx context.Context, orderId string, iter objecttree.StorageIterator) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAfterOrder", ctx, orderId, iter)
 	ret0, _ := ret[0].(error)

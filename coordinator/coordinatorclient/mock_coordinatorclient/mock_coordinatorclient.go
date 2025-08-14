@@ -18,6 +18,7 @@ import (
 	coordinatorclient "github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	coordinatorproto "github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	identityrepoproto "github.com/anyproto/any-sync/identityrepo/identityrepoproto"
+	blocks "github.com/ipfs/go-block-format"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -131,6 +132,20 @@ func (m *MockCoordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclH
 func (mr *MockCoordinatorClientMockRecorder) AclGetRecords(ctx, spaceId, aclHead any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockCoordinatorClient)(nil).AclGetRecords), ctx, spaceId, aclHead)
+}
+
+// AclUploadInvite mocks base method.
+func (m *MockCoordinatorClient) AclUploadInvite(ctx context.Context, block blocks.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclUploadInvite", ctx, block)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AclUploadInvite indicates an expected call of AclUploadInvite.
+func (mr *MockCoordinatorClientMockRecorder) AclUploadInvite(ctx, block any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclUploadInvite", reflect.TypeOf((*MockCoordinatorClient)(nil).AclUploadInvite), ctx, block)
 }
 
 // DeletionLog mocks base method.

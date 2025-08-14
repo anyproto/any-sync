@@ -1,6 +1,6 @@
 .PHONY: proto test deps mocks
 export GOPRIVATE=github.com/anyproto
-export PATH:=deps:$(PATH)
+export PATH:=$(CURDIR)/deps:$(PATH)
 
 all:
 	@set -e;
@@ -65,6 +65,7 @@ deps:
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps google.golang.org/protobuf/cmd/protoc-gen-go
 	go build -o deps github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto
+	go build -o deps go.uber.org/mock/mockgen
 
 mocks:
 	echo 'Generating mocks...'

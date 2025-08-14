@@ -2711,6 +2711,94 @@ func (x *AclEventLogRecord) GetAclChangeId() string {
 	return ""
 }
 
+type AclUploadInviteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cid           []byte                 `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AclUploadInviteRequest) Reset() {
+	*x = AclUploadInviteRequest{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclUploadInviteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclUploadInviteRequest) ProtoMessage() {}
+
+func (x *AclUploadInviteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclUploadInviteRequest.ProtoReflect.Descriptor instead.
+func (*AclUploadInviteRequest) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *AclUploadInviteRequest) GetCid() []byte {
+	if x != nil {
+		return x.Cid
+	}
+	return nil
+}
+
+func (x *AclUploadInviteRequest) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type AclUploadInviteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AclUploadInviteResponse) Reset() {
+	*x = AclUploadInviteResponse{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclUploadInviteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclUploadInviteResponse) ProtoMessage() {}
+
+func (x *AclUploadInviteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclUploadInviteResponse.ProtoReflect.Descriptor instead.
+func (*AclUploadInviteResponse) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{42}
+}
+
 var File_coordinator_coordinatorproto_protos_coordinator_proto protoreflect.FileDescriptor
 
 const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
@@ -2851,7 +2939,11 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\aspaceId\x18\x02 \x01(\tR\aspaceId\x12\x1c\n" +
 	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x126\n" +
 	"\x04type\x18\x04 \x01(\x0e2\".coordinator.AclEventLogRecordTypeR\x04type\x12 \n" +
-	"\vaclChangeId\x18\x05 \x01(\tR\vaclChangeId*\xf8\x01\n" +
+	"\vaclChangeId\x18\x05 \x01(\tR\vaclChangeId\">\n" +
+	"\x16AclUploadInviteRequest\x12\x10\n" +
+	"\x03cid\x18\x01 \x01(\fR\x03cid\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\"\x19\n" +
+	"\x17AclUploadInviteResponse*\xf8\x01\n" +
 	"\n" +
 	"ErrorCodes\x12\x0e\n" +
 	"\n" +
@@ -2897,7 +2989,7 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x16RecordTypeSpaceReceipt\x10\x00\x12\x19\n" +
 	"\x15RecordTypeSpaceShared\x10\x01\x12\x1b\n" +
 	"\x17RecordTypeSpaceUnshared\x10\x02\x12\x1f\n" +
-	"\x1bRecordTypeSpaceAclAddRecord\x10\x032\x98\v\n" +
+	"\x1bRecordTypeSpaceAclAddRecord\x10\x032\xf6\v\n" +
 	"\vCoordinator\x12J\n" +
 	"\tSpaceSign\x12\x1d.coordinator.SpaceSignRequest\x1a\x1e.coordinator.SpaceSignResponse\x12_\n" +
 	"\x10SpaceStatusCheck\x12$.coordinator.SpaceStatusCheckRequest\x1a%.coordinator.SpaceStatusCheckResponse\x12k\n" +
@@ -2913,7 +3005,8 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\fAclAddRecord\x12 .coordinator.AclAddRecordRequest\x1a!.coordinator.AclAddRecordResponse\x12V\n" +
 	"\rAclGetRecords\x12!.coordinator.AclGetRecordsRequest\x1a\".coordinator.AclGetRecordsResponse\x12_\n" +
 	"\x10AccountLimitsSet\x12$.coordinator.AccountLimitsSetRequest\x1a%.coordinator.AccountLimitsSetResponse\x12P\n" +
-	"\vAclEventLog\x12\x1f.coordinator.AclEventLogRequest\x1a .coordinator.AclEventLogResponseB\x1eZ\x1ccoordinator/coordinatorprotob\x06proto3"
+	"\vAclEventLog\x12\x1f.coordinator.AclEventLogRequest\x1a .coordinator.AclEventLogResponse\x12\\\n" +
+	"\x0fAclUploadInvite\x12#.coordinator.AclUploadInviteRequest\x1a$.coordinator.AclUploadInviteResponseB\x1eZ\x1ccoordinator/coordinatorprotob\x06proto3"
 
 var (
 	file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescOnce sync.Once
@@ -2928,7 +3021,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP() []
 }
 
 var file_coordinator_coordinatorproto_protos_coordinator_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(ErrorCodes)(0),                             // 0: coordinator.ErrorCodes
 	(SpaceStatus)(0),                            // 1: coordinator.SpaceStatus
@@ -2978,6 +3071,8 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(*AclEventLogRequest)(nil),                  // 45: coordinator.AclEventLogRequest
 	(*AclEventLogResponse)(nil),                 // 46: coordinator.AclEventLogResponse
 	(*AclEventLogRecord)(nil),                   // 47: coordinator.AclEventLogRecord
+	(*AclUploadInviteRequest)(nil),              // 48: coordinator.AclUploadInviteRequest
+	(*AclUploadInviteResponse)(nil),             // 49: coordinator.AclUploadInviteResponse
 }
 var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32{
 	1,  // 0: coordinator.SpaceStatusPayload.status:type_name -> coordinator.SpaceStatus
@@ -3010,23 +3105,25 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32
 	41, // 27: coordinator.Coordinator.AclGetRecords:input_type -> coordinator.AclGetRecordsRequest
 	43, // 28: coordinator.Coordinator.AccountLimitsSet:input_type -> coordinator.AccountLimitsSetRequest
 	45, // 29: coordinator.Coordinator.AclEventLog:input_type -> coordinator.AclEventLogRequest
-	10, // 30: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
-	14, // 31: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
-	16, // 32: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
-	19, // 33: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
-	21, // 34: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
-	23, // 35: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
-	25, // 36: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
-	30, // 37: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
-	33, // 38: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
-	36, // 39: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
-	38, // 40: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
-	40, // 41: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
-	42, // 42: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
-	44, // 43: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
-	46, // 44: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
-	30, // [30:45] is the sub-list for method output_type
-	15, // [15:30] is the sub-list for method input_type
+	48, // 30: coordinator.Coordinator.AclUploadInvite:input_type -> coordinator.AclUploadInviteRequest
+	10, // 31: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
+	14, // 32: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
+	16, // 33: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
+	19, // 34: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
+	21, // 35: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
+	23, // 36: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
+	25, // 37: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
+	30, // 38: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
+	33, // 39: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
+	36, // 40: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
+	38, // 41: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
+	40, // 42: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
+	42, // 43: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
+	44, // 44: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
+	46, // 45: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
+	49, // 46: coordinator.Coordinator.AclUploadInvite:output_type -> coordinator.AclUploadInviteResponse
+	31, // [31:47] is the sub-list for method output_type
+	15, // [15:31] is the sub-list for method input_type
 	15, // [15:15] is the sub-list for extension type_name
 	15, // [15:15] is the sub-list for extension extendee
 	0,  // [0:15] is the sub-list for field type_name
@@ -3043,7 +3140,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc), len(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   41,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

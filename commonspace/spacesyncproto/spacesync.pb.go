@@ -148,6 +148,7 @@ const (
 	DiffType_Initial DiffType = 0
 	DiffType_V1      DiffType = 1
 	DiffType_V2      DiffType = 2
+	DiffType_V3      DiffType = 3
 )
 
 // Enum value maps for DiffType.
@@ -156,11 +157,13 @@ var (
 		0: "Initial",
 		1: "V1",
 		2: "V2",
+		3: "V3",
 	}
 	DiffType_value = map[string]int32{
 		"Initial": 0,
 		"V1":      1,
 		"V2":      2,
+		"V3":      3,
 	}
 )
 
@@ -2215,11 +2218,12 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\vErrorOffset\x10d*9\n" +
 	"\x17SpaceSubscriptionAction\x12\r\n" +
 	"\tSubscribe\x10\x00\x12\x0f\n" +
-	"\vUnsubscribe\x10\x01*'\n" +
+	"\vUnsubscribe\x10\x01*/\n" +
 	"\bDiffType\x12\v\n" +
 	"\aInitial\x10\x00\x12\x06\n" +
 	"\x02V1\x10\x01\x12\x06\n" +
-	"\x02V2\x10\x02*-\n" +
+	"\x02V2\x10\x02\x12\x06\n" +
+	"\x02V3\x10\x03*-\n" +
 	"\n" +
 	"ObjectType\x12\b\n" +
 	"\x04Tree\x10\x00\x12\a\n" +

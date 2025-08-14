@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	keyvaluestorage "github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	innerstorage "github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/innerstorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	gomock "go.uber.org/mock/gomock"
@@ -43,7 +44,7 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // GetAll mocks base method.
-func (m *MockStorage) GetAll(ctx context.Context, key string, get func(func(innerstorage.KeyValue) ([]byte, error), []innerstorage.KeyValue) error) error {
+func (m *MockStorage) GetAll(ctx context.Context, key string, get func(keyvaluestorage.Decryptor, []innerstorage.KeyValue) error) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAll", ctx, key, get)
 	ret0, _ := ret[0].(error)
@@ -85,7 +86,7 @@ func (mr *MockStorageMockRecorder) InnerStorage() *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockStorage) Iterate(ctx context.Context, f func(func(innerstorage.KeyValue) ([]byte, error), string, []innerstorage.KeyValue) (bool, error)) error {
+func (m *MockStorage) Iterate(ctx context.Context, f func(keyvaluestorage.Decryptor, string, []innerstorage.KeyValue) (bool, error)) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Iterate", ctx, f)
 	ret0, _ := ret[0].(error)

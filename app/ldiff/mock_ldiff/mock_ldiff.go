@@ -309,19 +309,3 @@ func (mr *MockDiffContainerMockRecorder) RemoveId(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveId", reflect.TypeOf((*MockDiffContainer)(nil).RemoveId), id)
 }
-
-// Set mocks base method.
-func (m *MockDiffContainer) Set(elements ...ldiff.Element) {
-	m.ctrl.T.Helper()
-	varargs := []any{}
-	for _, a := range elements {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "Set", varargs...)
-}
-
-// Set indicates an expected call of Set.
-func (mr *MockDiffContainerMockRecorder) Set(elements ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockDiffContainer)(nil).Set), elements...)
-}

@@ -46,6 +46,9 @@ service Coordinator {
   
   // EventLog gets the latest event log records
   rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
+
+  // AclUploadInvite uploads invite binary data to the filenodes
+  rpc AclUploadInvite(AclUploadInviteRequest) returns (AclUploadInviteResponse);
 }
 
 message SpaceSignRequest {
@@ -403,3 +406,10 @@ message AclEventLogRecord {
   // only for RecordTypeSpaceAclAddRecord
   string aclChangeId = 5; 
 }
+
+message AclUploadInviteRequest {
+  bytes cid = 1;
+  bytes data = 2;
+}
+
+message AclUploadInviteResponse {}
