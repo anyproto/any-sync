@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	app "github.com/anyproto/any-sync/app"
+	aclclient "github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
@@ -145,6 +146,20 @@ func (mr *MockAclJoiningClientMockRecorder) RequestJoin(ctx, spaceId, payload an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestJoin", reflect.TypeOf((*MockAclJoiningClient)(nil).RequestJoin), ctx, spaceId, payload)
 }
 
+// RequestSelfRemove mocks base method.
+func (m *MockAclJoiningClient) RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestSelfRemove", ctx, spaceId, aclList)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestSelfRemove indicates an expected call of RequestSelfRemove.
+func (mr *MockAclJoiningClientMockRecorder) RequestSelfRemove(ctx, spaceId, aclList any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestSelfRemove", reflect.TypeOf((*MockAclJoiningClient)(nil).RequestSelfRemove), ctx, spaceId, aclList)
+}
+
 // MockAclSpaceClient is a mock of AclSpaceClient interface.
 type MockAclSpaceClient struct {
 	ctrl     *gomock.Controller
@@ -225,18 +240,18 @@ func (mr *MockAclSpaceClientMockRecorder) CancelRequest(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelRequest", reflect.TypeOf((*MockAclSpaceClient)(nil).CancelRequest), ctx)
 }
 
-// ChangeInvite mocks base method.
-func (m *MockAclSpaceClient) ChangeInvite(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
+// ChangeInvitePermissions mocks base method.
+func (m *MockAclSpaceClient) ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeInvite", ctx, inviteId, permissions)
+	ret := m.ctrl.Call(m, "ChangeInvitePermissions", ctx, inviteId, permissions)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ChangeInvite indicates an expected call of ChangeInvite.
-func (mr *MockAclSpaceClientMockRecorder) ChangeInvite(ctx, inviteId, permissions any) *gomock.Call {
+// ChangeInvitePermissions indicates an expected call of ChangeInvitePermissions.
+func (mr *MockAclSpaceClientMockRecorder) ChangeInvitePermissions(ctx, inviteId, permissions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).ChangeInvite), ctx, inviteId, permissions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInvitePermissions", reflect.TypeOf((*MockAclSpaceClient)(nil).ChangeInvitePermissions), ctx, inviteId, permissions)
 }
 
 // ChangePermissions mocks base method.
@@ -265,21 +280,6 @@ func (m *MockAclSpaceClient) DeclineRequest(ctx context.Context, identity crypto
 func (mr *MockAclSpaceClientMockRecorder) DeclineRequest(ctx, identity any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeclineRequest", reflect.TypeOf((*MockAclSpaceClient)(nil).DeclineRequest), ctx, identity)
-}
-
-// GenerateInvite mocks base method.
-func (m *MockAclSpaceClient) GenerateInvite(shouldRevokeAll, isRequestToJoin bool, permissions list.AclPermissions) (list.InviteResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateInvite", shouldRevokeAll, isRequestToJoin, permissions)
-	ret0, _ := ret[0].(list.InviteResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GenerateInvite indicates an expected call of GenerateInvite.
-func (mr *MockAclSpaceClientMockRecorder) GenerateInvite(shouldRevokeAll, isRequestToJoin, permissions any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).GenerateInvite), shouldRevokeAll, isRequestToJoin, permissions)
 }
 
 // Init mocks base method.
@@ -322,6 +322,21 @@ func (m *MockAclSpaceClient) RemoveAccounts(ctx context.Context, payload list.Ac
 func (mr *MockAclSpaceClientMockRecorder) RemoveAccounts(ctx, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAccounts", reflect.TypeOf((*MockAclSpaceClient)(nil).RemoveAccounts), ctx, payload)
+}
+
+// ReplaceInvite mocks base method.
+func (m *MockAclSpaceClient) ReplaceInvite(ctx context.Context, invite aclclient.InvitePayload) (list.InviteResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceInvite", ctx, invite)
+	ret0, _ := ret[0].(list.InviteResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReplaceInvite indicates an expected call of ReplaceInvite.
+func (mr *MockAclSpaceClientMockRecorder) ReplaceInvite(ctx, invite any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).ReplaceInvite), ctx, invite)
 }
 
 // RequestSelfRemove mocks base method.
