@@ -45,6 +45,7 @@ proto:
 	$(call generate_proto,$(P_CRYPTO_PATH_PB)/protos)
 	$(eval PKGMAP := $$(P_TREE_CHANGES)$(comma)$$(P_ACL_RECORDS))
 	$(call generate_drpc,$(PKGMAP),commonspace/spacesyncproto/protos)
+	$(call generate_drpc,$(PKGMAP),commonspace/clientspaceproto/protos)
 	$(call generate_drpc,$(PKGMAP),commonfile/fileproto/protos)
 	$(call generate_drpc,$(PKGMAP),net/streampool/testservice/protos)
 	$(call generate_drpc,$(PKGMAP),net/endtoendtest/testpeer/testproto/protos)
