@@ -19,7 +19,9 @@ service File {
     rpc BlockGet(BlockGetRequest) returns (BlockGetResponse);
     // BlockPush pushes one block to a server
     rpc BlockPush(BlockPushRequest) returns (Ok);
-    // BlocksCheck checks is CIDs exists
+    // BlockPushMany pushes many blocks to a server
+    rpc BlockPushMany(BlockPushManyRequest) returns (Ok);
+   // BlocksCheck checks is CIDs exists
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
     rpc BlocksBind(BlocksBindRequest) returns (Ok);
@@ -60,6 +62,18 @@ message BlockPushRequest {
     bytes cid = 3;
     bytes data = 4;
 }
+
+message BlockPushManyRequest {
+  string spaceId = 1;
+  repeated FileBlock fileBlocks = 2;
+}
+
+message FileBlock {
+  string fileId = 1;
+  bytes cid = 2;
+  bytes data = 3;
+}
+
 
 message BlocksCheckRequest {
     string spaceId = 1;
