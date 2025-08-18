@@ -3,8 +3,8 @@ package syncdeps
 
 import (
 	"context"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"

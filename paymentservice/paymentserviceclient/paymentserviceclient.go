@@ -95,7 +95,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 		log.Error("failed to acquire a DRPC connection to paymentnode", zap.Error(err))
 		return err
 	}
-	defer peer.ReleaseDrpcConn(dc)
+	defer peer.ReleaseDrpcConn(ctx, dc)
 
 	return fn(pp.NewDRPCAnyPaymentProcessingClient(dc))
 }

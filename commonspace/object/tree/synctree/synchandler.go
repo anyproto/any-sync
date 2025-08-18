@@ -3,8 +3,8 @@ package synctree
 import (
 	"context"
 	"errors"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
@@ -57,7 +57,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return nil, err
 	}
 	treeSyncMsg := &treechangeproto.TreeSyncMessage{}
-	err = proto.Unmarshal(update.Bytes, treeSyncMsg)
+	err = treeSyncMsg.UnmarshalVT(update.Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		return nil, ErrUnexpectedRequestType
 	}
 	treeSyncMsg := &treechangeproto.TreeSyncMessage{}
-	err := proto.Unmarshal(req.Bytes, treeSyncMsg)
+	err := treeSyncMsg.UnmarshalVT(req.Bytes)
 	if err != nil {
 		return nil, err
 	}

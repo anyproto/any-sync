@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_credentialprovider/mock_credentialprovider.go github.com/anyproto/any-sync/commonspace/credentialprovider CredentialProvider
 //
+
 // Package mock_credentialprovider is a generated GoMock package.
 package mock_credentialprovider
 
@@ -21,6 +22,7 @@ import (
 type MockCredentialProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockCredentialProviderMockRecorder
+	isgomock struct{}
 }
 
 // MockCredentialProviderMockRecorder is the mock recorder for MockCredentialProvider.
@@ -41,32 +43,32 @@ func (m *MockCredentialProvider) EXPECT() *MockCredentialProviderMockRecorder {
 }
 
 // GetCredential mocks base method.
-func (m *MockCredentialProvider) GetCredential(arg0 context.Context, arg1 *spacesyncproto.RawSpaceHeaderWithId) ([]byte, error) {
+func (m *MockCredentialProvider) GetCredential(ctx context.Context, spaceHeader *spacesyncproto.RawSpaceHeaderWithId) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCredential", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetCredential", ctx, spaceHeader)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCredential indicates an expected call of GetCredential.
-func (mr *MockCredentialProviderMockRecorder) GetCredential(arg0, arg1 any) *gomock.Call {
+func (mr *MockCredentialProviderMockRecorder) GetCredential(ctx, spaceHeader any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockCredentialProvider)(nil).GetCredential), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockCredentialProvider)(nil).GetCredential), ctx, spaceHeader)
 }
 
 // Init mocks base method.
-func (m *MockCredentialProvider) Init(arg0 *app.App) error {
+func (m *MockCredentialProvider) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockCredentialProviderMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockCredentialProviderMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCredentialProvider)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCredentialProvider)(nil).Init), a)
 }
 
 // Name mocks base method.

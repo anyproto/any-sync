@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+	blocks "github.com/ipfs/go-block-format"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
@@ -54,6 +55,8 @@ type CoordinatorClient interface {
 
 	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
 
+	AclUploadInvite(ctx context.Context, block blocks.Block) (err error)
+
 	app.Component
 }
 
@@ -81,7 +84,7 @@ func (c *coordinatorClient) Name() (name string) {
 }
 
 func (c *coordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error) {
-	confMarshalled, err := conf.Marshal()
+	confMarshalled, err := conf.MarshalVT()
 	if err != nil {
 		return err
 	}
@@ -104,7 +107,7 @@ func (c *coordinatorClient) SpaceDelete(ctx context.Context, spaceId string, con
 }
 
 func (c *coordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error) {
-	confMarshalled, err := conf.Marshal()
+	confMarshalled, err := conf.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -262,7 +265,7 @@ func (c *coordinatorClient) IdentityRepoGet(ctx context.Context, identities, kin
 }
 
 func (c *coordinatorClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error) {
-	recordData, err := rec.Marshal()
+	recordData, err := rec.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -295,7 +298,7 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 		res = make([]*consensusproto.RawRecordWithId, len(resp.Records))
 		for i, rec := range resp.Records {
 			res[i] = &consensusproto.RawRecordWithId{}
-			if err = res[i].Unmarshal(rec); err != nil {
+			if err = res[i].UnmarshalVT(rec); err != nil {
 				return err
 			}
 		}
@@ -350,6 +353,19 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) AclUploadInvite(ctx context.Context, block blocks.Block) error {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.AclUploadInvite(ctx, &coordinatorproto.AclUploadInviteRequest{
+			Cid:  block.Cid().Bytes(),
+			Data: block.RawData(),
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
 }
 
 func (c *coordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {

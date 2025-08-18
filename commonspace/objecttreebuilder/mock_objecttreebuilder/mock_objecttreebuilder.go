@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_objecttreebuilder/mock_objecttreebuilder.go github.com/anyproto/any-sync/commonspace/objecttreebuilder TreeBuilder
 //
+
 // Package mock_objecttreebuilder is a generated GoMock package.
 package mock_objecttreebuilder
 
@@ -23,6 +24,7 @@ import (
 type MockTreeBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockTreeBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockTreeBuilderMockRecorder is the mock recorder for MockTreeBuilder.
@@ -43,76 +45,76 @@ func (m *MockTreeBuilder) EXPECT() *MockTreeBuilderMockRecorder {
 }
 
 // BuildHistoryTree mocks base method.
-func (m *MockTreeBuilder) BuildHistoryTree(arg0 context.Context, arg1 string, arg2 objecttreebuilder.HistoryTreeOpts) (objecttree.HistoryTree, error) {
+func (m *MockTreeBuilder) BuildHistoryTree(ctx context.Context, id string, opts objecttreebuilder.HistoryTreeOpts) (objecttree.HistoryTree, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildHistoryTree", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "BuildHistoryTree", ctx, id, opts)
 	ret0, _ := ret[0].(objecttree.HistoryTree)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildHistoryTree indicates an expected call of BuildHistoryTree.
-func (mr *MockTreeBuilderMockRecorder) BuildHistoryTree(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockTreeBuilderMockRecorder) BuildHistoryTree(ctx, id, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildHistoryTree", reflect.TypeOf((*MockTreeBuilder)(nil).BuildHistoryTree), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildHistoryTree", reflect.TypeOf((*MockTreeBuilder)(nil).BuildHistoryTree), ctx, id, opts)
 }
 
 // BuildTree mocks base method.
-func (m *MockTreeBuilder) BuildTree(arg0 context.Context, arg1 string, arg2 objecttreebuilder.BuildTreeOpts) (objecttree.ObjectTree, error) {
+func (m *MockTreeBuilder) BuildTree(ctx context.Context, id string, opts objecttreebuilder.BuildTreeOpts) (objecttree.ObjectTree, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildTree", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "BuildTree", ctx, id, opts)
 	ret0, _ := ret[0].(objecttree.ObjectTree)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuildTree indicates an expected call of BuildTree.
-func (mr *MockTreeBuilderMockRecorder) BuildTree(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockTreeBuilderMockRecorder) BuildTree(ctx, id, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildTree", reflect.TypeOf((*MockTreeBuilder)(nil).BuildTree), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildTree", reflect.TypeOf((*MockTreeBuilder)(nil).BuildTree), ctx, id, opts)
 }
 
 // CreateTree mocks base method.
-func (m *MockTreeBuilder) CreateTree(arg0 context.Context, arg1 objecttree.ObjectTreeCreatePayload) (treestorage.TreeStorageCreatePayload, error) {
+func (m *MockTreeBuilder) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (treestorage.TreeStorageCreatePayload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateTree", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateTree", ctx, payload)
 	ret0, _ := ret[0].(treestorage.TreeStorageCreatePayload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateTree indicates an expected call of CreateTree.
-func (mr *MockTreeBuilderMockRecorder) CreateTree(arg0, arg1 any) *gomock.Call {
+func (mr *MockTreeBuilderMockRecorder) CreateTree(ctx, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTree", reflect.TypeOf((*MockTreeBuilder)(nil).CreateTree), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTree", reflect.TypeOf((*MockTreeBuilder)(nil).CreateTree), ctx, payload)
 }
 
 // DeriveTree mocks base method.
-func (m *MockTreeBuilder) DeriveTree(arg0 context.Context, arg1 objecttree.ObjectTreeDerivePayload) (treestorage.TreeStorageCreatePayload, error) {
+func (m *MockTreeBuilder) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeDerivePayload) (treestorage.TreeStorageCreatePayload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeriveTree", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeriveTree", ctx, payload)
 	ret0, _ := ret[0].(treestorage.TreeStorageCreatePayload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DeriveTree indicates an expected call of DeriveTree.
-func (mr *MockTreeBuilderMockRecorder) DeriveTree(arg0, arg1 any) *gomock.Call {
+func (mr *MockTreeBuilderMockRecorder) DeriveTree(ctx, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveTree", reflect.TypeOf((*MockTreeBuilder)(nil).DeriveTree), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveTree", reflect.TypeOf((*MockTreeBuilder)(nil).DeriveTree), ctx, payload)
 }
 
 // PutTree mocks base method.
-func (m *MockTreeBuilder) PutTree(arg0 context.Context, arg1 treestorage.TreeStorageCreatePayload, arg2 updatelistener.UpdateListener) (objecttree.ObjectTree, error) {
+func (m *MockTreeBuilder) PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PutTree", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "PutTree", ctx, payload, listener)
 	ret0, _ := ret[0].(objecttree.ObjectTree)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PutTree indicates an expected call of PutTree.
-func (mr *MockTreeBuilderMockRecorder) PutTree(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockTreeBuilderMockRecorder) PutTree(ctx, payload, listener any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutTree", reflect.TypeOf((*MockTreeBuilder)(nil).PutTree), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutTree", reflect.TypeOf((*MockTreeBuilder)(nil).PutTree), ctx, payload, listener)
 }

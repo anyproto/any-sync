@@ -271,7 +271,7 @@ func (t *testHandler) HandleMessage(ctx context.Context, peerId string, msg drpc
 }
 
 func (t *testHandler) DRPCEncoding() drpc.Encoding {
-	return EncodingProto
+	return nil
 }
 
 func (t *testHandler) NewReadMessage() drpc.Message {
@@ -298,4 +298,8 @@ func (t *testServerHandler) TestStream(st testservice.DRPCTest_TestStreamStream)
 		}
 	}
 	return nil
+}
+
+func (t *testServerHandler) TestStream2(msg *testservice.StreamMessage, st testservice.DRPCTest_TestStream2Stream) error {
+	return fmt.Errorf("not implemented")
 }

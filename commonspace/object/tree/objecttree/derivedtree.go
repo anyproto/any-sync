@@ -1,8 +1,6 @@
 package objecttree
 
 import (
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 )
 
@@ -16,7 +14,7 @@ func IsEmptyTree(tree ObjectTree) bool {
 
 func IsDerivedRoot(root *treechangeproto.RawTreeChangeWithId) (derived bool, err error) {
 	rawChange := &treechangeproto.RawTreeChange{}
-	err = proto.Unmarshal(root.RawChange, rawChange)
+	err = rawChange.UnmarshalVT(root.RawChange)
 	if err != nil {
 		return
 	}

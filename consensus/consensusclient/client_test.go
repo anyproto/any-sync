@@ -201,7 +201,7 @@ func (t *testServer) RecordAdd(ctx context.Context, req *consensusproto.RecordAd
 			return nil, err
 		}
 	}
-	data, _ := req.Record.Marshal()
+	data, _ := req.Record.MarshalVT()
 	id, _ := cidutil.NewCidFromBytes(data)
 	return &consensusproto.RawRecordWithId{Id: id, Payload: data}, nil
 }
