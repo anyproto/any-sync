@@ -8,7 +8,7 @@ require (
 	filippo.io/edwards25519 v1.1.0
 	github.com/anyproto/any-store v0.3.1
 	github.com/anyproto/go-chash v0.1.0
-	github.com/anyproto/go-slip10 v1.0.0
+	github.com/anyproto/go-slip10 v1.0.1-0.20250818123350-f910c27dd080
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/anyproto/lexid v0.0.4
 	github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5
