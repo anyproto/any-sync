@@ -64,12 +64,16 @@ message BlockPushRequest {
 }
 
 message BlockPushManyRequest {
-  string spaceId = 1;
-  repeated FileBlock fileBlocks = 2;
+  repeated FileBlocks fileBlocks = 1;
 }
 
-message FileBlock {
+message FileBlocks {
   string fileId = 1;
+  string spaceId = 2;
+  repeated Block blocks = 3;
+}
+
+message Block {
   bytes cid = 2;
   bytes data = 3;
 }
