@@ -14,10 +14,19 @@ import (
 
 type TreeStorageCreator interface {
 	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error)
+	CreateLazyTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error)
 }
 
 type tempTreeStorageCreator struct {
 	store anystore.DB
+}
+
+func (t *tempTreeStorageCreator) CreateLazyTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
+	headStorage, err := headstorage.New(ctx, t.store)
+	if err != nil {
+		return nil, err
+	}
+	return CreateLazyStorage(ctx, payload.RootRawChange, headStorage, t.store)
 }
 
 func (t *tempTreeStorageCreator) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
@@ -223,7 +232,7 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storage
 	}
 	aclList.RUnlock()
 	ctx := context.Background()
-	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
+	treeStorage, err := storageCreator.CreateLazyTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
