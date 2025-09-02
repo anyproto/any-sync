@@ -22,7 +22,6 @@ import (
 type MockAnyPpClientService struct {
 	ctrl     *gomock.Controller
 	recorder *MockAnyPpClientServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockAnyPpClientServiceMockRecorder is the mock recorder for MockAnyPpClientService.
@@ -43,152 +42,152 @@ func (m *MockAnyPpClientService) EXPECT() *MockAnyPpClientServiceMockRecorder {
 }
 
 // BuySubscription mocks base method.
-func (m *MockAnyPpClientService) BuySubscription(ctx context.Context, in *paymentserviceproto.BuySubscriptionRequestSigned) (*paymentserviceproto.BuySubscriptionResponse, error) {
+func (m *MockAnyPpClientService) BuySubscription(arg0 context.Context, arg1 *paymentserviceproto.BuySubscriptionRequestSigned) (*paymentserviceproto.BuySubscriptionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuySubscription", ctx, in)
+	ret := m.ctrl.Call(m, "BuySubscription", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.BuySubscriptionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BuySubscription indicates an expected call of BuySubscription.
-func (mr *MockAnyPpClientServiceMockRecorder) BuySubscription(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) BuySubscription(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuySubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).BuySubscription), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuySubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).BuySubscription), arg0, arg1)
 }
 
 // CodeGetInfo mocks base method.
-func (m *MockAnyPpClientService) CodeGetInfo(ctx context.Context, in *paymentserviceproto.CodeGetInfoRequestSigned) (*paymentserviceproto.CodeGetInfoResponse, error) {
+func (m *MockAnyPpClientService) CodeGetInfo(arg0 context.Context, arg1 *paymentserviceproto.CodeGetInfoRequestSigned) (*paymentserviceproto.CodeGetInfoResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CodeGetInfo", ctx, in)
+	ret := m.ctrl.Call(m, "CodeGetInfo", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.CodeGetInfoResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CodeGetInfo indicates an expected call of CodeGetInfo.
-func (mr *MockAnyPpClientServiceMockRecorder) CodeGetInfo(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) CodeGetInfo(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeGetInfo", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeGetInfo), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeGetInfo", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeGetInfo), arg0, arg1)
 }
 
 // CodeRedeem mocks base method.
-func (m *MockAnyPpClientService) CodeRedeem(ctx context.Context, in *paymentserviceproto.CodeRedeemRequestSigned) (*paymentserviceproto.CodeRedeemResponse, error) {
+func (m *MockAnyPpClientService) CodeRedeem(arg0 context.Context, arg1 *paymentserviceproto.CodeRedeemRequestSigned) (*paymentserviceproto.CodeRedeemResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CodeRedeem", ctx, in)
+	ret := m.ctrl.Call(m, "CodeRedeem", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.CodeRedeemResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CodeRedeem indicates an expected call of CodeRedeem.
-func (mr *MockAnyPpClientServiceMockRecorder) CodeRedeem(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) CodeRedeem(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeRedeem", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeRedeem), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CodeRedeem", reflect.TypeOf((*MockAnyPpClientService)(nil).CodeRedeem), arg0, arg1)
 }
 
 // FinalizeSubscription mocks base method.
-func (m *MockAnyPpClientService) FinalizeSubscription(ctx context.Context, in *paymentserviceproto.FinalizeSubscriptionRequestSigned) (*paymentserviceproto.FinalizeSubscriptionResponse, error) {
+func (m *MockAnyPpClientService) FinalizeSubscription(arg0 context.Context, arg1 *paymentserviceproto.FinalizeSubscriptionRequestSigned) (*paymentserviceproto.FinalizeSubscriptionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeSubscription", ctx, in)
+	ret := m.ctrl.Call(m, "FinalizeSubscription", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.FinalizeSubscriptionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FinalizeSubscription indicates an expected call of FinalizeSubscription.
-func (mr *MockAnyPpClientServiceMockRecorder) FinalizeSubscription(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) FinalizeSubscription(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeSubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).FinalizeSubscription), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeSubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).FinalizeSubscription), arg0, arg1)
 }
 
 // GetAllTiers mocks base method.
-func (m *MockAnyPpClientService) GetAllTiers(ctx context.Context, in *paymentserviceproto.GetTiersRequestSigned) (*paymentserviceproto.GetTiersResponse, error) {
+func (m *MockAnyPpClientService) GetAllTiers(arg0 context.Context, arg1 *paymentserviceproto.GetTiersRequestSigned) (*paymentserviceproto.GetTiersResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllTiers", ctx, in)
+	ret := m.ctrl.Call(m, "GetAllTiers", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.GetTiersResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAllTiers indicates an expected call of GetAllTiers.
-func (mr *MockAnyPpClientServiceMockRecorder) GetAllTiers(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) GetAllTiers(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTiers", reflect.TypeOf((*MockAnyPpClientService)(nil).GetAllTiers), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTiers", reflect.TypeOf((*MockAnyPpClientService)(nil).GetAllTiers), arg0, arg1)
 }
 
 // GetSubscriptionPortalLink mocks base method.
-func (m *MockAnyPpClientService) GetSubscriptionPortalLink(ctx context.Context, in *paymentserviceproto.GetSubscriptionPortalLinkRequestSigned) (*paymentserviceproto.GetSubscriptionPortalLinkResponse, error) {
+func (m *MockAnyPpClientService) GetSubscriptionPortalLink(arg0 context.Context, arg1 *paymentserviceproto.GetSubscriptionPortalLinkRequestSigned) (*paymentserviceproto.GetSubscriptionPortalLinkResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubscriptionPortalLink", ctx, in)
+	ret := m.ctrl.Call(m, "GetSubscriptionPortalLink", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.GetSubscriptionPortalLinkResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSubscriptionPortalLink indicates an expected call of GetSubscriptionPortalLink.
-func (mr *MockAnyPpClientServiceMockRecorder) GetSubscriptionPortalLink(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) GetSubscriptionPortalLink(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionPortalLink", reflect.TypeOf((*MockAnyPpClientService)(nil).GetSubscriptionPortalLink), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionPortalLink", reflect.TypeOf((*MockAnyPpClientService)(nil).GetSubscriptionPortalLink), arg0, arg1)
 }
 
 // GetSubscriptionStatus mocks base method.
-func (m *MockAnyPpClientService) GetSubscriptionStatus(ctx context.Context, in *paymentserviceproto.GetSubscriptionRequestSigned) (*paymentserviceproto.GetSubscriptionResponse, error) {
+func (m *MockAnyPpClientService) GetSubscriptionStatus(arg0 context.Context, arg1 *paymentserviceproto.GetSubscriptionRequestSigned) (*paymentserviceproto.GetSubscriptionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubscriptionStatus", ctx, in)
+	ret := m.ctrl.Call(m, "GetSubscriptionStatus", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.GetSubscriptionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSubscriptionStatus indicates an expected call of GetSubscriptionStatus.
-func (mr *MockAnyPpClientServiceMockRecorder) GetSubscriptionStatus(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) GetSubscriptionStatus(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionStatus", reflect.TypeOf((*MockAnyPpClientService)(nil).GetSubscriptionStatus), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionStatus", reflect.TypeOf((*MockAnyPpClientService)(nil).GetSubscriptionStatus), arg0, arg1)
 }
 
 // GetVerificationEmail mocks base method.
-func (m *MockAnyPpClientService) GetVerificationEmail(ctx context.Context, in *paymentserviceproto.GetVerificationEmailRequestSigned) (*paymentserviceproto.GetVerificationEmailResponse, error) {
+func (m *MockAnyPpClientService) GetVerificationEmail(arg0 context.Context, arg1 *paymentserviceproto.GetVerificationEmailRequestSigned) (*paymentserviceproto.GetVerificationEmailResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetVerificationEmail", ctx, in)
+	ret := m.ctrl.Call(m, "GetVerificationEmail", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.GetVerificationEmailResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetVerificationEmail indicates an expected call of GetVerificationEmail.
-func (mr *MockAnyPpClientServiceMockRecorder) GetVerificationEmail(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) GetVerificationEmail(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVerificationEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).GetVerificationEmail), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVerificationEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).GetVerificationEmail), arg0, arg1)
 }
 
 // Init mocks base method.
-func (m *MockAnyPpClientService) Init(a *app.App) error {
+func (m *MockAnyPpClientService) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockAnyPpClientServiceMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockAnyPpClientService)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockAnyPpClientService)(nil).Init), arg0)
 }
 
 // IsNameValid mocks base method.
-func (m *MockAnyPpClientService) IsNameValid(ctx context.Context, in *paymentserviceproto.IsNameValidRequest) (*paymentserviceproto.IsNameValidResponse, error) {
+func (m *MockAnyPpClientService) IsNameValid(arg0 context.Context, arg1 *paymentserviceproto.IsNameValidRequest) (*paymentserviceproto.IsNameValidResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNameValid", ctx, in)
+	ret := m.ctrl.Call(m, "IsNameValid", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.IsNameValidResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsNameValid indicates an expected call of IsNameValid.
-func (mr *MockAnyPpClientServiceMockRecorder) IsNameValid(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) IsNameValid(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNameValid", reflect.TypeOf((*MockAnyPpClientService)(nil).IsNameValid), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNameValid", reflect.TypeOf((*MockAnyPpClientService)(nil).IsNameValid), arg0, arg1)
 }
 
 // Name mocks base method.
@@ -206,31 +205,31 @@ func (mr *MockAnyPpClientServiceMockRecorder) Name() *gomock.Call {
 }
 
 // VerifyAppStoreReceipt mocks base method.
-func (m *MockAnyPpClientService) VerifyAppStoreReceipt(ctx context.Context, in *paymentserviceproto.VerifyAppStoreReceiptRequestSigned) (*paymentserviceproto.VerifyAppStoreReceiptResponse, error) {
+func (m *MockAnyPpClientService) VerifyAppStoreReceipt(arg0 context.Context, arg1 *paymentserviceproto.VerifyAppStoreReceiptRequestSigned) (*paymentserviceproto.VerifyAppStoreReceiptResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyAppStoreReceipt", ctx, in)
+	ret := m.ctrl.Call(m, "VerifyAppStoreReceipt", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.VerifyAppStoreReceiptResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VerifyAppStoreReceipt indicates an expected call of VerifyAppStoreReceipt.
-func (mr *MockAnyPpClientServiceMockRecorder) VerifyAppStoreReceipt(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) VerifyAppStoreReceipt(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAppStoreReceipt", reflect.TypeOf((*MockAnyPpClientService)(nil).VerifyAppStoreReceipt), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAppStoreReceipt", reflect.TypeOf((*MockAnyPpClientService)(nil).VerifyAppStoreReceipt), arg0, arg1)
 }
 
 // VerifyEmail mocks base method.
-func (m *MockAnyPpClientService) VerifyEmail(ctx context.Context, in *paymentserviceproto.VerifyEmailRequestSigned) (*paymentserviceproto.VerifyEmailResponse, error) {
+func (m *MockAnyPpClientService) VerifyEmail(arg0 context.Context, arg1 *paymentserviceproto.VerifyEmailRequestSigned) (*paymentserviceproto.VerifyEmailResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyEmail", ctx, in)
+	ret := m.ctrl.Call(m, "VerifyEmail", arg0, arg1)
 	ret0, _ := ret[0].(*paymentserviceproto.VerifyEmailResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VerifyEmail indicates an expected call of VerifyEmail.
-func (mr *MockAnyPpClientServiceMockRecorder) VerifyEmail(ctx, in any) *gomock.Call {
+func (mr *MockAnyPpClientServiceMockRecorder) VerifyEmail(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).VerifyEmail), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).VerifyEmail), arg0, arg1)
 }

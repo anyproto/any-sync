@@ -16,7 +16,7 @@ import (
 	syncdeps "github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus"
 	gomock "go.uber.org/mock/gomock"
-	proto "google.golang.org/protobuf/proto"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	drpc "storj.io/drpc"
 )
 
@@ -24,7 +24,6 @@ import (
 type MockObjectSyncHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockObjectSyncHandlerMockRecorder
-	isgomock struct{}
 }
 
 // MockObjectSyncHandlerMockRecorder is the mock recorder for MockObjectSyncHandler.
@@ -45,47 +44,47 @@ func (m *MockObjectSyncHandler) EXPECT() *MockObjectSyncHandlerMockRecorder {
 }
 
 // HandleHeadUpdate mocks base method.
-func (m *MockObjectSyncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (syncdeps.Request, error) {
+func (m *MockObjectSyncHandler) HandleHeadUpdate(arg0 context.Context, arg1 syncstatus.StatusUpdater, arg2 drpc.Message) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleHeadUpdate", ctx, statusUpdater, headUpdate)
+	ret := m.ctrl.Call(m, "HandleHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleHeadUpdate indicates an expected call of HandleHeadUpdate.
-func (mr *MockObjectSyncHandlerMockRecorder) HandleHeadUpdate(ctx, statusUpdater, headUpdate any) *gomock.Call {
+func (mr *MockObjectSyncHandlerMockRecorder) HandleHeadUpdate(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleHeadUpdate), ctx, statusUpdater, headUpdate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleHeadUpdate), arg0, arg1, arg2)
 }
 
 // HandleResponse mocks base method.
-func (m *MockObjectSyncHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+func (m *MockObjectSyncHandler) HandleResponse(arg0 context.Context, arg1, arg2 string, arg3 syncdeps.Response) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleResponse", ctx, peerId, objectId, resp)
+	ret := m.ctrl.Call(m, "HandleResponse", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleResponse indicates an expected call of HandleResponse.
-func (mr *MockObjectSyncHandlerMockRecorder) HandleResponse(ctx, peerId, objectId, resp any) *gomock.Call {
+func (mr *MockObjectSyncHandlerMockRecorder) HandleResponse(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleResponse), ctx, peerId, objectId, resp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleResponse), arg0, arg1, arg2, arg3)
 }
 
 // HandleStreamRequest mocks base method.
-func (m *MockObjectSyncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(proto.Message) error) (syncdeps.Request, error) {
+func (m *MockObjectSyncHandler) HandleStreamRequest(arg0 context.Context, arg1 syncdeps.Request, arg2 syncdeps.QueueSizeUpdater, arg3 func(protoreflect.ProtoMessage) error) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStreamRequest", ctx, rq, updater, send)
+	ret := m.ctrl.Call(m, "HandleStreamRequest", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleStreamRequest indicates an expected call of HandleStreamRequest.
-func (mr *MockObjectSyncHandlerMockRecorder) HandleStreamRequest(ctx, rq, updater, send any) *gomock.Call {
+func (mr *MockObjectSyncHandlerMockRecorder) HandleStreamRequest(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleStreamRequest), ctx, rq, updater, send)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockObjectSyncHandler)(nil).HandleStreamRequest), arg0, arg1, arg2, arg3)
 }
 
 // ResponseCollector mocks base method.
@@ -106,7 +105,6 @@ func (mr *MockObjectSyncHandlerMockRecorder) ResponseCollector() *gomock.Call {
 type MockRequestSender struct {
 	ctrl     *gomock.Controller
 	recorder *MockRequestSenderMockRecorder
-	isgomock struct{}
 }
 
 // MockRequestSenderMockRecorder is the mock recorder for MockRequestSender.
@@ -127,24 +125,23 @@ func (m *MockRequestSender) EXPECT() *MockRequestSenderMockRecorder {
 }
 
 // SendRequest mocks base method.
-func (m *MockRequestSender) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
+func (m *MockRequestSender) SendRequest(arg0 context.Context, arg1 syncdeps.Request, arg2 syncdeps.ResponseCollector) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendRequest", ctx, rq, collector)
+	ret := m.ctrl.Call(m, "SendRequest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SendRequest indicates an expected call of SendRequest.
-func (mr *MockRequestSenderMockRecorder) SendRequest(ctx, rq, collector any) *gomock.Call {
+func (mr *MockRequestSenderMockRecorder) SendRequest(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendRequest", reflect.TypeOf((*MockRequestSender)(nil).SendRequest), ctx, rq, collector)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendRequest", reflect.TypeOf((*MockRequestSender)(nil).SendRequest), arg0, arg1, arg2)
 }
 
 // MockResponseCollector is a mock of ResponseCollector interface.
 type MockResponseCollector struct {
 	ctrl     *gomock.Controller
 	recorder *MockResponseCollectorMockRecorder
-	isgomock struct{}
 }
 
 // MockResponseCollectorMockRecorder is the mock recorder for MockResponseCollector.
@@ -165,17 +162,17 @@ func (m *MockResponseCollector) EXPECT() *MockResponseCollectorMockRecorder {
 }
 
 // CollectResponse mocks base method.
-func (m *MockResponseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+func (m *MockResponseCollector) CollectResponse(arg0 context.Context, arg1, arg2 string, arg3 syncdeps.Response) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CollectResponse", ctx, peerId, objectId, resp)
+	ret := m.ctrl.Call(m, "CollectResponse", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CollectResponse indicates an expected call of CollectResponse.
-func (mr *MockResponseCollectorMockRecorder) CollectResponse(ctx, peerId, objectId, resp any) *gomock.Call {
+func (mr *MockResponseCollectorMockRecorder) CollectResponse(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CollectResponse", reflect.TypeOf((*MockResponseCollector)(nil).CollectResponse), ctx, peerId, objectId, resp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CollectResponse", reflect.TypeOf((*MockResponseCollector)(nil).CollectResponse), arg0, arg1, arg2, arg3)
 }
 
 // NewResponse mocks base method.

@@ -22,7 +22,6 @@ import (
 type MockPeer struct {
 	ctrl     *gomock.Controller
 	recorder *MockPeerMockRecorder
-	isgomock struct{}
 }
 
 // MockPeerMockRecorder is the mock recorder for MockPeer.
@@ -43,18 +42,18 @@ func (m *MockPeer) EXPECT() *MockPeerMockRecorder {
 }
 
 // AcquireDrpcConn mocks base method.
-func (m *MockPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+func (m *MockPeer) AcquireDrpcConn(arg0 context.Context) (drpc.Conn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AcquireDrpcConn", ctx)
+	ret := m.ctrl.Call(m, "AcquireDrpcConn", arg0)
 	ret0, _ := ret[0].(drpc.Conn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AcquireDrpcConn indicates an expected call of AcquireDrpcConn.
-func (mr *MockPeerMockRecorder) AcquireDrpcConn(ctx any) *gomock.Call {
+func (mr *MockPeerMockRecorder) AcquireDrpcConn(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireDrpcConn", reflect.TypeOf((*MockPeer)(nil).AcquireDrpcConn), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AcquireDrpcConn", reflect.TypeOf((*MockPeer)(nil).AcquireDrpcConn), arg0)
 }
 
 // Close mocks base method.
@@ -100,17 +99,17 @@ func (mr *MockPeerMockRecorder) Context() *gomock.Call {
 }
 
 // DoDrpc mocks base method.
-func (m *MockPeer) DoDrpc(ctx context.Context, do func(drpc.Conn) error) error {
+func (m *MockPeer) DoDrpc(arg0 context.Context, arg1 func(drpc.Conn) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DoDrpc", ctx, do)
+	ret := m.ctrl.Call(m, "DoDrpc", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DoDrpc indicates an expected call of DoDrpc.
-func (mr *MockPeerMockRecorder) DoDrpc(ctx, do any) *gomock.Call {
+func (mr *MockPeerMockRecorder) DoDrpc(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoDrpc", reflect.TypeOf((*MockPeer)(nil).DoDrpc), ctx, do)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoDrpc", reflect.TypeOf((*MockPeer)(nil).DoDrpc), arg0, arg1)
 }
 
 // Id mocks base method.
@@ -142,40 +141,40 @@ func (mr *MockPeerMockRecorder) IsClosed() *gomock.Call {
 }
 
 // ReleaseDrpcConn mocks base method.
-func (m *MockPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
+func (m *MockPeer) ReleaseDrpcConn(arg0 context.Context, arg1 drpc.Conn) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ReleaseDrpcConn", ctx, conn)
+	m.ctrl.Call(m, "ReleaseDrpcConn", arg0, arg1)
 }
 
 // ReleaseDrpcConn indicates an expected call of ReleaseDrpcConn.
-func (mr *MockPeerMockRecorder) ReleaseDrpcConn(ctx, conn any) *gomock.Call {
+func (mr *MockPeerMockRecorder) ReleaseDrpcConn(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseDrpcConn", reflect.TypeOf((*MockPeer)(nil).ReleaseDrpcConn), ctx, conn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseDrpcConn", reflect.TypeOf((*MockPeer)(nil).ReleaseDrpcConn), arg0, arg1)
 }
 
 // SetTTL mocks base method.
-func (m *MockPeer) SetTTL(ttl time.Duration) {
+func (m *MockPeer) SetTTL(arg0 time.Duration) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetTTL", ttl)
+	m.ctrl.Call(m, "SetTTL", arg0)
 }
 
 // SetTTL indicates an expected call of SetTTL.
-func (mr *MockPeerMockRecorder) SetTTL(ttl any) *gomock.Call {
+func (mr *MockPeerMockRecorder) SetTTL(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTTL", reflect.TypeOf((*MockPeer)(nil).SetTTL), ttl)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTTL", reflect.TypeOf((*MockPeer)(nil).SetTTL), arg0)
 }
 
 // TryClose mocks base method.
-func (m *MockPeer) TryClose(objectTTL time.Duration) (bool, error) {
+func (m *MockPeer) TryClose(arg0 time.Duration) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryClose", objectTTL)
+	ret := m.ctrl.Call(m, "TryClose", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TryClose indicates an expected call of TryClose.
-func (mr *MockPeerMockRecorder) TryClose(objectTTL any) *gomock.Call {
+func (mr *MockPeerMockRecorder) TryClose(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockPeer)(nil).TryClose), objectTTL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockPeer)(nil).TryClose), arg0)
 }
