@@ -194,7 +194,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 
 func ValidateRawTreeDefault(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (objTree ObjectTree, err error) {
 	ctx := context.Background()
-	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
+	treeStorage, err := storageCreator.CreateLazyTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
