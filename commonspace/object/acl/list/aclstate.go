@@ -421,6 +421,8 @@ func (st *AclState) Copy() *AclState {
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
+	case ch.GetOwnershipChange() != nil:
+		return st.applyOwnershipChange(ch.GetOwnershipChange(), record)
 	case ch.GetInviteChange() != nil:
 		return st.applyInviteChange(ch.GetInviteChange(), record)
 	case ch.GetInviteJoin() != nil:
@@ -455,6 +457,24 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 	}
 }
 
+func (st *AclState) applyOwnershipChange(ch *aclrecordproto.AclOwnershipChange, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateOwnershipChange(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	newOwnerIdentity, err := st.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
+	if err != nil {
+		return err
+	}
+	var (
+		oldOwnerKey = mapKeyFromPubKey(record.Identity)
+		newOwnerKey = mapKeyFromPubKey(newOwnerIdentity)
+	)
+	st.updatePermissions(oldOwnerKey, ch.OldOwnerPermissions, record)
+	st.updatePermissions(newOwnerKey, aclrecordproto.AclUserPermissions_Owner, record)
+	return nil
+}
+
 func (st *AclState) applyPermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, record *AclRecord) (err error) {
 	for _, ch := range ch.Changes {
 		err := st.applyPermissionChange(ch, record)
@@ -486,14 +506,18 @@ func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissio
 		return err
 	}
 	stringKey := mapKeyFromPubKey(chIdentity)
-	state, _ := st.accountStates[stringKey]
-	state.Permissions = AclPermissions(ch.Permissions)
+	st.updatePermissions(stringKey, ch.Permissions, record)
+	return nil
+}
+
+func (st *AclState) updatePermissions(identityKey string, permissions aclrecordproto.AclUserPermissions, record *AclRecord) {
+	state, _ := st.accountStates[identityKey]
+	state.Permissions = AclPermissions(permissions)
 	state.PermissionChanges = append(state.PermissionChanges, PermissionChange{
 		RecordId:   record.Id,
 		Permission: state.Permissions,
 	})
-	st.accountStates[stringKey] = state
-	return nil
+	st.accountStates[identityKey] = state
 }
 
 func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *AclRecord) error {
