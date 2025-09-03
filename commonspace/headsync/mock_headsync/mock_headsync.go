@@ -20,6 +20,7 @@ import (
 type MockDiffSyncer struct {
 	ctrl     *gomock.Controller
 	recorder *MockDiffSyncerMockRecorder
+	isgomock struct{}
 }
 
 // MockDiffSyncerMockRecorder is the mock recorder for MockDiffSyncer.
@@ -64,15 +65,15 @@ func (mr *MockDiffSyncerMockRecorder) Init() *gomock.Call {
 }
 
 // Sync mocks base method.
-func (m *MockDiffSyncer) Sync(arg0 context.Context) error {
+func (m *MockDiffSyncer) Sync(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0)
+	ret := m.ctrl.Call(m, "Sync", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Sync indicates an expected call of Sync.
-func (mr *MockDiffSyncerMockRecorder) Sync(arg0 any) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) Sync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), ctx)
 }

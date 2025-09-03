@@ -22,6 +22,7 @@ import (
 type Mockconnection struct {
 	ctrl     *gomock.Controller
 	recorder *MockconnectionMockRecorder
+	isgomock struct{}
 }
 
 // MockconnectionMockRecorder is the mock recorder for Mockconnection.
