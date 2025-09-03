@@ -137,3 +137,186 @@ func TestMnemonic_ethereumKeyFromMnemonic(t *testing.T) {
 	pkStr = Encode(bytes)[2:]
 	require.Equal(t, "b31048b0aa87649bdb9016c0ee28c788ddfc45e52cd71cc0da08c47cb4390ae7", pkStr)
 }
+
+func TestDeriveMasterNode(t *testing.T) {
+	phrase, err := NewMnemonicGenerator().WithWordCount(12)
+	require.NoError(t, err)
+
+	// Test deriving master node for index 0
+	masterNode0, err := phrase.DeriveMasterNode(0)
+	require.NoError(t, err)
+	require.NotNil(t, masterNode0)
+
+	// Test deriving master node for index 1
+	masterNode1, err := phrase.DeriveMasterNode(1)
+	require.NoError(t, err)
+	require.NotNil(t, masterNode1)
+
+	// Verify that different indices produce different nodes
+	raw0, err := masterNode0.RawSeed(), nil
+	require.NoError(t, err)
+	raw1, err := masterNode1.RawSeed(), nil
+	require.NoError(t, err)
+	require.NotEqual(t, raw0, raw1)
+}
+
+func TestDeriveKeysFromMasterNode(t *testing.T) {
+	phrase, err := NewMnemonicGenerator().WithWordCount(12)
+	require.NoError(t, err)
+
+	// Get master node
+	masterNode, err := phrase.DeriveMasterNode(0)
+	require.NoError(t, err)
+
+	// Derive keys from master node
+	result, err := DeriveKeysFromMasterNode(masterNode)
+	require.NoError(t, err)
+	require.NotNil(t, result.MasterKey)
+	require.NotNil(t, result.Identity)
+
+	// Verify the keys can sign and verify
+	testData := []byte("test data for signing")
+	
+	// Test master key
+	masterSig, err := result.MasterKey.Sign(testData)
+	require.NoError(t, err)
+	verified, err := result.MasterKey.GetPublic().Verify(testData, masterSig)
+	require.NoError(t, err)
+	require.True(t, verified)
+
+	// Test identity key
+	identitySig, err := result.Identity.Sign(testData)
+	require.NoError(t, err)
+	verified, err = result.Identity.GetPublic().Verify(testData, identitySig)
+	require.NoError(t, err)
+	require.True(t, verified)
+}
+
+func TestMasterNodeDerivationConsistency(t *testing.T) {
+	// Use a fixed mnemonic for consistency test
+	var phrase Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
+
+	// Derive using the traditional method
+	traditionalResult, err := phrase.DeriveKeys(0)
+	require.NoError(t, err)
+
+	// Derive using the new master node method
+	masterNode, err := phrase.DeriveMasterNode(0)
+	require.NoError(t, err)
+	newMethodResult, err := DeriveKeysFromMasterNode(masterNode)
+	require.NoError(t, err)
+
+	// Verify that both methods produce the same master key
+	require.True(t, traditionalResult.MasterKey.Equals(newMethodResult.MasterKey))
+	
+	// Verify that both methods produce the same identity
+	require.True(t, traditionalResult.Identity.Equals(newMethodResult.Identity))
+}
+
+func TestBackwardCompatibility(t *testing.T) {
+	// Test that existing functionality still works
+	phrase, err := NewMnemonicGenerator().WithWordCount(12)
+	require.NoError(t, err)
+	
+	// Test traditional DeriveKeys method
+	result, err := phrase.DeriveKeys(0)
+	require.NoError(t, err)
+	require.NotNil(t, result.MasterKey)
+	require.NotNil(t, result.Identity)
+	require.NotNil(t, result.OldAccountKey)
+	require.NotNil(t, result.MasterNode)
+	
+	// Verify Ethereum identity is still derived
+	publicKey := result.EthereumIdentity.Public()
+	_, ok := publicKey.(*ecdsa.PublicKey)
+	require.True(t, ok)
+}
+
+func TestMasterNodeSerialization(t *testing.T) {
+	// Generate a test mnemonic
+	phrase, err := NewMnemonicGenerator().WithWordCount(12)
+	require.NoError(t, err)
+	
+	// Derive a master node
+	originalNode, err := phrase.DeriveMasterNode(0)
+	require.NoError(t, err)
+	
+	// Serialize the node using slip10's MarshalBinary
+	serialized, err := originalNode.MarshalBinary()
+	require.NoError(t, err)
+	require.Len(t, serialized, 64) // Should be exactly 64 bytes
+	
+	// Deserialize the node using slip10's UnmarshalNode
+	deserializedNode, err := slip10.UnmarshalNode(serialized)
+	require.NoError(t, err)
+	
+	// Verify the deserialized node produces the same keys
+	originalResult, err := DeriveKeysFromMasterNode(originalNode)
+	require.NoError(t, err)
+	
+	deserializedResult, err := DeriveKeysFromMasterNode(deserializedNode)
+	require.NoError(t, err)
+	
+	// Compare master keys
+	require.True(t, originalResult.MasterKey.Equals(deserializedResult.MasterKey))
+	
+	// Compare identity keys
+	require.True(t, originalResult.Identity.Equals(deserializedResult.Identity))
+	
+	// Verify the deserialized node can still derive child keys
+	childNode, err := deserializedNode.Derive(slip10.FirstHardenedIndex + 1)
+	require.NoError(t, err)
+	require.NotNil(t, childNode)
+}
+
+func TestMasterNodeSerializationConsistency(t *testing.T) {
+	// Use a fixed mnemonic for consistency
+	var phrase Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
+	
+	// Derive master node at index 0
+	node0, err := phrase.DeriveMasterNode(0)
+	require.NoError(t, err)
+	
+	// Serialize and deserialize using slip10 methods
+	serialized0, err := node0.MarshalBinary()
+	require.NoError(t, err)
+	
+	deserialized0, err := slip10.UnmarshalNode(serialized0)
+	require.NoError(t, err)
+	
+	// Derive a child from both original and deserialized
+	originalChild, err := node0.Derive(slip10.FirstHardenedIndex)
+	require.NoError(t, err)
+	
+	deserializedChild, err := deserialized0.Derive(slip10.FirstHardenedIndex)
+	require.NoError(t, err)
+	
+	// Verify both children produce the same key
+	originalKey, err := genKey(originalChild)
+	require.NoError(t, err)
+	
+	deserializedKey, err := genKey(deserializedChild)
+	require.NoError(t, err)
+	
+	require.True(t, originalKey.Equals(deserializedKey))
+}
+
+func TestInvalidSerialization(t *testing.T) {
+	// Test with invalid data lengths
+	testCases := []struct {
+		name string
+		data []byte
+	}{
+		{"empty", []byte{}},
+		{"too short", make([]byte, 32)},
+		{"too long", make([]byte, 128)},
+		{"almost correct", make([]byte, 63)},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := slip10.UnmarshalNode(tc.data)
+			require.Error(t, err)
+		})
+	}
+}
