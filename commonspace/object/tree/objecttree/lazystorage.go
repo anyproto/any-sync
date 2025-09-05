@@ -2,11 +2,13 @@ package objecttree
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
 
 type lazyStorage struct {
@@ -23,6 +25,7 @@ type lazyStorage struct {
 }
 
 func CreateLazyStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
+
 	firstOrder := lexId.Next("")
 	stChange := StorageChange{
 		RawChange:       root.RawChange,
@@ -41,74 +44,98 @@ func CreateLazyStorage(ctx context.Context, root *treechangeproto.RawTreeChangeW
 		root:        stChange,
 		heads:       []string{root.Id},
 	}
-
+	ok, err := st.isRootChangeStored(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check if storage exists: %w", err)
+	}
+	if ok {
+		return nil, treestorage.ErrTreeExists
+	}
 	return st, nil
 }
 
-func (l *lazyStorage) createStorage(ctx context.Context) error {
-	store, err := CreateStorageTx(ctx, l.root.RawTreeChangeWithId(), l.headStorage, l.store)
+func (s *lazyStorage) isRootChangeStored(ctx context.Context) (bool, error) {
+	changesColl, err := s.store.OpenCollection(ctx, CollName)
+	if errors.Is(err, anystore.ErrCollectionNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	_, err = changesColl.FindId(ctx, s.root.Id)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, anystore.ErrDocNotFound) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (s *lazyStorage) createStorage(ctx context.Context) error {
+	store, err := CreateStorageTx(ctx, s.root.RawTreeChangeWithId(), s.headStorage, s.store)
 	if err != nil {
 		return fmt.Errorf("create storage: %w", err)
 	}
-	l.storage = store
+	s.storage = store
 	return nil
 }
 
-func (l *lazyStorage) Id() string {
-	return l.id
+func (s *lazyStorage) Id() string {
+	return s.id
 }
 
-func (l *lazyStorage) Root(ctx context.Context) (StorageChange, error) {
-	return l.root, nil
+func (s *lazyStorage) Root(ctx context.Context) (StorageChange, error) {
+	return s.root, nil
 }
 
-func (l *lazyStorage) Heads(ctx context.Context) ([]string, error) {
-	if l.storage != nil {
-		return l.storage.Heads(ctx)
+func (s *lazyStorage) Heads(ctx context.Context) ([]string, error) {
+	if s.storage != nil {
+		return s.storage.Heads(ctx)
 	}
-	return l.heads, nil
+	return s.heads, nil
 }
 
-func (l *lazyStorage) CommonSnapshot(ctx context.Context) (string, error) {
-	if l.storage != nil {
-		return l.storage.CommonSnapshot(ctx)
+func (s *lazyStorage) CommonSnapshot(ctx context.Context) (string, error) {
+	if s.storage != nil {
+		return s.storage.CommonSnapshot(ctx)
 	}
-	return l.id, nil
+	return s.id, nil
 }
 
-func (l *lazyStorage) Has(ctx context.Context, id string) (bool, error) {
-	if l.storage != nil {
-		return l.storage.Has(ctx, id)
+func (s *lazyStorage) Has(ctx context.Context, id string) (bool, error) {
+	if s.storage != nil {
+		return s.storage.Has(ctx, id)
 	}
-	return id == l.id, nil
+	return id == s.id, nil
 }
 
-func (l *lazyStorage) Get(ctx context.Context, id string) (StorageChange, error) {
-	if l.storage != nil {
-		return l.storage.Get(ctx, id)
+func (s *lazyStorage) Get(ctx context.Context, id string) (StorageChange, error) {
+	if s.storage != nil {
+		return s.storage.Get(ctx, id)
 	}
-	return l.root, nil
+	return s.root, nil
 }
 
-func (l *lazyStorage) GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error {
-	if l.storage != nil {
-		return l.storage.GetAfterOrder(ctx, orderId, iter)
+func (s *lazyStorage) GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error {
+	if s.storage != nil {
+		return s.storage.GetAfterOrder(ctx, orderId, iter)
 	}
-	if orderId <= l.root.OrderId {
-		_, err := iter(ctx, l.root)
+	if orderId <= s.root.OrderId {
+		_, err := iter(ctx, s.root)
 		return err
 	}
 	return nil
 }
 
-func (l *lazyStorage) createStorageAndDoInTx(ctx context.Context, proc func(ctx context.Context) error) error {
-	tx, err := l.store.WriteTx(ctx)
+func (s *lazyStorage) createStorageAndDoInTx(ctx context.Context, proc func(ctx context.Context) error) error {
+	tx, err := s.store.WriteTx(ctx)
 	if err != nil {
 		return fmt.Errorf("write tx: %w", err)
 	}
 	defer tx.Rollback()
 
-	err = l.createStorage(tx.Context())
+	err = s.createStorage(tx.Context())
 	if err != nil {
 		return fmt.Errorf("init storage: %w", err)
 	}
@@ -120,36 +147,36 @@ func (l *lazyStorage) createStorageAndDoInTx(ctx context.Context, proc func(ctx 
 	return tx.Commit()
 }
 
-func (l *lazyStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
-	if l.storage == nil {
-		return l.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
-			return l.storage.AddAll(ctx, changes, heads, commonSnapshot)
+func (s *lazyStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+	if s.storage == nil {
+		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
+			return s.storage.AddAll(ctx, changes, heads, commonSnapshot)
 		})
 	}
-	return l.storage.AddAll(ctx, changes, heads, commonSnapshot)
+	return s.storage.AddAll(ctx, changes, heads, commonSnapshot)
 }
 
-func (l *lazyStorage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
-	if l.storage == nil {
-		return l.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
-			return l.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
+func (s *lazyStorage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+	if s.storage == nil {
+		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
+			return s.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
 		})
 	}
-	return l.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
+	return s.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
 }
 
-func (l *lazyStorage) Delete(ctx context.Context) error {
-	if l.storage == nil {
-		return l.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
-			return l.storage.Delete(ctx)
+func (s *lazyStorage) Delete(ctx context.Context) error {
+	if s.storage == nil {
+		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
+			return s.storage.Delete(ctx)
 		})
 	}
-	return l.storage.Delete(ctx)
+	return s.storage.Delete(ctx)
 }
 
-func (l *lazyStorage) Close() error {
-	if l.storage != nil {
-		return l.storage.Close()
+func (s *lazyStorage) Close() error {
+	if s.storage != nil {
+		return s.storage.Close()
 	}
 	return nil
 }
