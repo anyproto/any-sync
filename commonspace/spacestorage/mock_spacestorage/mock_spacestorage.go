@@ -90,19 +90,19 @@ func (mr *MockSpaceStorageMockRecorder) Close(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSpaceStorage)(nil).Close), ctx)
 }
 
-// CreateLazyTreeStorage mocks base method.
-func (m *MockSpaceStorage) CreateLazyTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
+// CreateStorageWithDeferredCreation mocks base method.
+func (m *MockSpaceStorage) CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateLazyTreeStorage", ctx, payload)
+	ret := m.ctrl.Call(m, "CreateStorageWithDeferredCreation", ctx, payload)
 	ret0, _ := ret[0].(objecttree.Storage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateLazyTreeStorage indicates an expected call of CreateLazyTreeStorage.
-func (mr *MockSpaceStorageMockRecorder) CreateLazyTreeStorage(ctx, payload any) *gomock.Call {
+// CreateStorageWithDeferredCreation indicates an expected call of CreateStorageWithDeferredCreation.
+func (mr *MockSpaceStorageMockRecorder) CreateStorageWithDeferredCreation(ctx, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLazyTreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).CreateLazyTreeStorage), ctx, payload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStorageWithDeferredCreation", reflect.TypeOf((*MockSpaceStorage)(nil).CreateStorageWithDeferredCreation), ctx, payload)
 }
 
 // CreateTreeStorage mocks base method.

@@ -36,7 +36,7 @@ type SpaceStorage interface {
 	AclStorage() (list.Storage, error)
 	TreeStorage(ctx context.Context, id string) (objecttree.Storage, error)
 	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error)
-	CreateLazyTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error)
+	CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error)
 	AnyStore() anystore.DB
 }
 
@@ -200,8 +200,8 @@ func (s *spaceStorage) CreateTreeStorage(ctx context.Context, payload treestorag
 	return objecttree.CreateStorage(ctx, payload.RootRawChange, s.headStorage, s.store)
 }
 
-func (s *spaceStorage) CreateLazyTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
-	return objecttree.CreateLazyStorage(ctx, payload.RootRawChange, s.headStorage, s.store)
+func (s *spaceStorage) CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
+	return objecttree.CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, s.headStorage, s.store)
 }
 
 func (s *spaceStorage) Init(a *app.App) (err error) {

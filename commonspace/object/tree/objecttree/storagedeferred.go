@@ -11,7 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
 
-type lazyStorage struct {
+type storageDeferredCreation struct {
 	id string
 
 	store       anystore.DB
@@ -24,8 +24,10 @@ type lazyStorage struct {
 	unmarshalledRoot *Change
 }
 
-func CreateLazyStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
-
+// CreateStorageWithDeferredCreation defers actual creation of a storage until any call to updating methods (AddAll, Delete, etc.)
+// The point is to create storage and add all changes in one transaction. We can't afford long transactions because of the single write connection.
+// It returns ErrTreeExists if storage already exists.
+func CreateStorageWithDeferredCreation(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	firstOrder := lexId.Next("")
 	stChange := StorageChange{
 		RawChange:       root.RawChange,
@@ -37,7 +39,7 @@ func CreateLazyStorage(ctx context.Context, root *treechangeproto.RawTreeChangeW
 		ChangeSize:      len(root.RawChange),
 	}
 
-	st := &lazyStorage{
+	st := &storageDeferredCreation{
 		id:          root.Id,
 		store:       store,
 		headStorage: headStorage,
@@ -54,7 +56,7 @@ func CreateLazyStorage(ctx context.Context, root *treechangeproto.RawTreeChangeW
 	return st, nil
 }
 
-func (s *lazyStorage) isRootChangeStored(ctx context.Context) (bool, error) {
+func (s *storageDeferredCreation) isRootChangeStored(ctx context.Context) (bool, error) {
 	changesColl, err := s.store.OpenCollection(ctx, CollName)
 	if errors.Is(err, anystore.ErrCollectionNotFound) {
 		return false, nil
@@ -72,7 +74,7 @@ func (s *lazyStorage) isRootChangeStored(ctx context.Context) (bool, error) {
 	return false, err
 }
 
-func (s *lazyStorage) createStorage(ctx context.Context) error {
+func (s *storageDeferredCreation) createStorage(ctx context.Context) error {
 	store, err := CreateStorageTx(ctx, s.root.RawTreeChangeWithId(), s.headStorage, s.store)
 	if err != nil {
 		return fmt.Errorf("create storage: %w", err)
@@ -81,43 +83,43 @@ func (s *lazyStorage) createStorage(ctx context.Context) error {
 	return nil
 }
 
-func (s *lazyStorage) Id() string {
+func (s *storageDeferredCreation) Id() string {
 	return s.id
 }
 
-func (s *lazyStorage) Root(ctx context.Context) (StorageChange, error) {
+func (s *storageDeferredCreation) Root(ctx context.Context) (StorageChange, error) {
 	return s.root, nil
 }
 
-func (s *lazyStorage) Heads(ctx context.Context) ([]string, error) {
+func (s *storageDeferredCreation) Heads(ctx context.Context) ([]string, error) {
 	if s.storage != nil {
 		return s.storage.Heads(ctx)
 	}
 	return s.heads, nil
 }
 
-func (s *lazyStorage) CommonSnapshot(ctx context.Context) (string, error) {
+func (s *storageDeferredCreation) CommonSnapshot(ctx context.Context) (string, error) {
 	if s.storage != nil {
 		return s.storage.CommonSnapshot(ctx)
 	}
 	return s.id, nil
 }
 
-func (s *lazyStorage) Has(ctx context.Context, id string) (bool, error) {
+func (s *storageDeferredCreation) Has(ctx context.Context, id string) (bool, error) {
 	if s.storage != nil {
 		return s.storage.Has(ctx, id)
 	}
 	return id == s.id, nil
 }
 
-func (s *lazyStorage) Get(ctx context.Context, id string) (StorageChange, error) {
+func (s *storageDeferredCreation) Get(ctx context.Context, id string) (StorageChange, error) {
 	if s.storage != nil {
 		return s.storage.Get(ctx, id)
 	}
 	return s.root, nil
 }
 
-func (s *lazyStorage) GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error {
+func (s *storageDeferredCreation) GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error {
 	if s.storage != nil {
 		return s.storage.GetAfterOrder(ctx, orderId, iter)
 	}
@@ -128,7 +130,7 @@ func (s *lazyStorage) GetAfterOrder(ctx context.Context, orderId string, iter St
 	return nil
 }
 
-func (s *lazyStorage) createStorageAndDoInTx(ctx context.Context, proc func(ctx context.Context) error) error {
+func (s *storageDeferredCreation) createStorageAndDoInTx(ctx context.Context, proc func(ctx context.Context) error) error {
 	tx, err := s.store.WriteTx(ctx)
 	if err != nil {
 		return fmt.Errorf("write tx: %w", err)
@@ -147,7 +149,7 @@ func (s *lazyStorage) createStorageAndDoInTx(ctx context.Context, proc func(ctx 
 	return tx.Commit()
 }
 
-func (s *lazyStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (s *storageDeferredCreation) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	if s.storage == nil {
 		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
 			return s.storage.AddAll(ctx, changes, heads, commonSnapshot)
@@ -156,7 +158,7 @@ func (s *lazyStorage) AddAll(ctx context.Context, changes []StorageChange, heads
 	return s.storage.AddAll(ctx, changes, heads, commonSnapshot)
 }
 
-func (s *lazyStorage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (s *storageDeferredCreation) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	if s.storage == nil {
 		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
 			return s.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
@@ -165,7 +167,7 @@ func (s *lazyStorage) AddAllNoError(ctx context.Context, changes []StorageChange
 	return s.storage.AddAllNoError(ctx, changes, heads, commonSnapshot)
 }
 
-func (s *lazyStorage) Delete(ctx context.Context) error {
+func (s *storageDeferredCreation) Delete(ctx context.Context) error {
 	if s.storage == nil {
 		return s.createStorageAndDoInTx(ctx, func(ctx context.Context) error {
 			return s.storage.Delete(ctx)
@@ -174,7 +176,7 @@ func (s *lazyStorage) Delete(ctx context.Context) error {
 	return s.storage.Delete(ctx)
 }
 
-func (s *lazyStorage) Close() error {
+func (s *storageDeferredCreation) Close() error {
 	if s.storage != nil {
 		return s.storage.Close()
 	}
