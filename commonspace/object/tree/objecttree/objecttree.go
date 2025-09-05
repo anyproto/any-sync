@@ -350,7 +350,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		return
 	}
 
-	if content.IsEncrypted {
+	if content.ShouldBeEncrypted {
 		err = ot.readKeysFromAclState(state)
 		if err != nil {
 			return

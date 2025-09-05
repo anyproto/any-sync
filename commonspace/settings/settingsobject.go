@@ -205,10 +205,10 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
 	res, err := s.AddContent(context.Background(), objecttree.SignableChangeContent{
-		Data:        data,
-		Key:         accountData.SignKey,
-		IsSnapshot:  isSnapshot,
-		IsEncrypted: false,
+		Data:              data,
+		Key:               accountData.SignKey,
+		IsSnapshot:        isSnapshot,
+		ShouldBeEncrypted: false,
 	})
 	if err != nil {
 		return

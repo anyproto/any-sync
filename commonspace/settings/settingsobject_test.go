@@ -166,10 +166,10 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	fx.account.EXPECT().Account().Return(accountData)
 	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
-		Data:        res,
-		Key:         accountData.SignKey,
-		IsSnapshot:  false,
-		IsEncrypted: false,
+		Data:              res,
+		Key:               accountData.SignKey,
+		IsSnapshot:        false,
+		ShouldBeEncrypted: false,
 	}).Return(objecttree.AddResult{}, nil)
 
 	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
@@ -199,10 +199,10 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	fx.account.EXPECT().Account().Return(accountData)
 	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
-		Data:        res,
-		Key:         accountData.SignKey,
-		IsSnapshot:  true,
-		IsEncrypted: false,
+		Data:              res,
+		Key:               accountData.SignKey,
+		IsSnapshot:        true,
+		ShouldBeEncrypted: false,
 	}).Return(objecttree.AddResult{}, nil)
 
 	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
