@@ -271,12 +271,12 @@ func (s *spaceProcess) update(ctx context.Context) error {
 	bytes := make([]byte, 1024)
 	_, _ = rand.Read(bytes)
 	_, err = tr.AddContent(ctx, objecttree.SignableChangeContent{
-		Data:        bytes,
-		Key:         s.accountService.Account().SignKey,
-		IsSnapshot:  snapshot,
-		IsEncrypted: true,
-		Timestamp:   0,
-		DataType:    "",
+		Data:              bytes,
+		Key:               s.accountService.Account().SignKey,
+		IsSnapshot:        snapshot,
+		ShouldBeEncrypted: true,
+		Timestamp:         0,
+		DataType:          "",
 	})
 	return err
 }

@@ -215,6 +215,20 @@ func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.Request
 	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
+func (c *aclSpaceClient) OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) (err error) {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildOwnershipChange(list.OwnershipChangePayload{
+		NewOwner:            identity,
+		OldOwnerPermissions: oldOwnerPermissions,
+	})
+	if err != nil {
+		c.acl.Unlock()
+		return err
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
 func (c *aclSpaceClient) ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildInviteChange(list.InviteChangePayload{

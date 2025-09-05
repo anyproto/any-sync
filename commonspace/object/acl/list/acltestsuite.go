@@ -477,6 +477,26 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		a.expectedAccounts[argParts[0]].status = StatusActive
 		a.expectedAccounts[argParts[0]].perms = perms
+	case "ownership_change":
+		argParts := strings.Split(args[0], ",")
+		newOwner := a.actualAccounts[argParts[0]].Keys.SignKey.GetPublic()
+		perms := getPerm(argParts[1])
+		ownershipChange := OwnershipChangePayload{
+			NewOwner:            newOwner,
+			OldOwnerPermissions: perms,
+		}
+		afterAll = append(afterAll, func() {
+			a.expectedAccounts[argParts[0]].perms = AclPermissionsOwner
+			a.expectedAccounts[account].perms = perms
+		})
+		res, err := acl.RecordBuilder().BuildOwnershipChange(ownershipChange)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
 	case "changes":
 		var payloads []PermissionChangePayload
 		for _, arg := range args {

@@ -301,11 +301,11 @@ func TestObjectTree(t *testing.T) {
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
-			Data:        []byte("some"),
-			Key:         aAccount.Keys.SignKey,
-			IsSnapshot:  false,
-			IsEncrypted: true,
-			DataType:    mockDataType,
+			Data:              []byte("some"),
+			Key:               aAccount.Keys.SignKey,
+			IsSnapshot:        false,
+			ShouldBeEncrypted: true,
+			DataType:          mockDataType,
 		})
 		require.NoError(t, err)
 		storeB := CopyStore(ctx, t, storeA.(TestStore), "b")
@@ -318,11 +318,11 @@ func TestObjectTree(t *testing.T) {
 		err = exec.Execute("a.remove::b")
 		require.NoError(t, err)
 		res, err := aTree.AddContent(ctx, SignableChangeContent{
-			Data:        []byte("some"),
-			Key:         aAccount.Keys.SignKey,
-			IsSnapshot:  false,
-			IsEncrypted: true,
-			DataType:    mockDataType,
+			Data:              []byte("some"),
+			Key:               aAccount.Keys.SignKey,
+			IsSnapshot:        false,
+			ShouldBeEncrypted: true,
+			DataType:          mockDataType,
 		})
 		require.NoError(t, err)
 		var rawAdded []*treechangeproto.RawTreeChangeWithId
@@ -446,11 +446,11 @@ func TestObjectTree(t *testing.T) {
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
-			Data:        []byte("some"),
-			Key:         aAccount.Keys.SignKey,
-			IsSnapshot:  false,
-			IsEncrypted: true,
-			DataType:    mockDataType,
+			Data:              []byte("some"),
+			Key:               aAccount.Keys.SignKey,
+			IsSnapshot:        false,
+			ShouldBeEncrypted: true,
+			DataType:          mockDataType,
 		})
 		require.NoError(t, err)
 		storeB := CopyStore(ctx, t, storeA.(TestStore), "b")
@@ -471,11 +471,11 @@ func TestObjectTree(t *testing.T) {
 		err = exec.Execute("a.invite::inv1Id")
 		require.NoError(t, err)
 		res, err := aTree.AddContent(ctx, SignableChangeContent{
-			Data:        []byte("some"),
-			Key:         aAccount.Keys.SignKey,
-			IsSnapshot:  false,
-			IsEncrypted: true,
-			DataType:    mockDataType,
+			Data:              []byte("some"),
+			Key:               aAccount.Keys.SignKey,
+			IsSnapshot:        false,
+			ShouldBeEncrypted: true,
+			DataType:          mockDataType,
 		})
 		unexpectedId := res.Added[0].Id
 		require.NoError(t, err)
@@ -515,12 +515,12 @@ func TestObjectTree(t *testing.T) {
 
 		t.Run("add content validate failed", func(t *testing.T) {
 			_, err := oTree.AddContentWithValidator(ctx, SignableChangeContent{
-				Data:        []byte("some"),
-				Key:         keys.SignKey,
-				IsSnapshot:  false,
-				IsEncrypted: true,
-				Timestamp:   0,
-				DataType:    mockDataType,
+				Data:              []byte("some"),
+				Key:               keys.SignKey,
+				IsSnapshot:        false,
+				ShouldBeEncrypted: true,
+				Timestamp:         0,
+				DataType:          mockDataType,
 			}, func(change StorageChange) error {
 				return errors.New("validation failed")
 			})
@@ -531,12 +531,12 @@ func TestObjectTree(t *testing.T) {
 		t.Run("0 timestamp is changed to current, data type is correct", func(t *testing.T) {
 			start := time.Now()
 			res, err := oTree.AddContent(ctx, SignableChangeContent{
-				Data:        []byte("some"),
-				Key:         keys.SignKey,
-				IsSnapshot:  false,
-				IsEncrypted: true,
-				Timestamp:   0,
-				DataType:    mockDataType,
+				Data:              []byte("some"),
+				Key:               keys.SignKey,
+				IsSnapshot:        false,
+				ShouldBeEncrypted: true,
+				Timestamp:         0,
+				DataType:          mockDataType,
 			})
 			end := time.Now()
 			require.NoError(t, err)
@@ -552,11 +552,11 @@ func TestObjectTree(t *testing.T) {
 		t.Run("timestamp is set correctly", func(t *testing.T) {
 			someTs := time.Now().Add(time.Hour).Unix()
 			res, err := oTree.AddContent(ctx, SignableChangeContent{
-				Data:        []byte("some"),
-				Key:         keys.SignKey,
-				IsSnapshot:  false,
-				IsEncrypted: true,
-				Timestamp:   someTs,
+				Data:              []byte("some"),
+				Key:               keys.SignKey,
+				IsSnapshot:        false,
+				ShouldBeEncrypted: true,
+				Timestamp:         someTs,
 			})
 			require.NoError(t, err)
 			require.Len(t, oTree.Heads(), 1)
@@ -648,12 +648,12 @@ func TestObjectTree(t *testing.T) {
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
-				Data:        []byte("some"),
-				Key:         keys.SignKey,
-				IsSnapshot:  false,
-				IsEncrypted: true,
-				Timestamp:   time.Now().Unix(),
-				DataType:    mockDataType,
+				Data:              []byte("some"),
+				Key:               keys.SignKey,
+				IsSnapshot:        false,
+				ShouldBeEncrypted: true,
+				Timestamp:         time.Now().Unix(),
+				DataType:          mockDataType,
 			})
 			require.NoError(t, err)
 			chs := allChanges(ctx, t, storage)
@@ -698,12 +698,12 @@ func TestObjectTree(t *testing.T) {
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
-				Data:        []byte("some"),
-				Key:         keys.SignKey,
-				IsSnapshot:  true,
-				IsEncrypted: true,
-				Timestamp:   time.Now().Unix(),
-				DataType:    mockDataType,
+				Data:              []byte("some"),
+				Key:               keys.SignKey,
+				IsSnapshot:        true,
+				ShouldBeEncrypted: true,
+				Timestamp:         time.Now().Unix(),
+				DataType:          mockDataType,
 			})
 			require.NoError(t, err)
 			chs := allChanges(ctx, t, storage)
