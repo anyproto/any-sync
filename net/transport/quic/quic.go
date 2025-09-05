@@ -116,12 +116,15 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
+		_ = udpConn.Close()
 		return nil, err
 	}
 	qConn, err := quic.Dial(ctx, udpConn, udpAddr, tlsConf, q.quicConf)
 	if err != nil {
+		_ = udpConn.Close()
 		return nil, err
 	}
+	
 	var remotePubKey libp2crypto.PubKey
 	select {
 	case remotePubKey = <-keyCh:
@@ -129,18 +132,21 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	}
 	if remotePubKey == nil {
 		_ = qConn.CloseWithError(1, "")
+		_ = udpConn.Close()
 		return nil, fmt.Errorf("libp2p tls handshake bug: no key")
 	}
 
 	remotePeerId, err := peer.IDFromPublicKey(remotePubKey)
 	if err != nil {
 		_ = qConn.CloseWithError(1, "")
+		_ = udpConn.Close()
 		return nil, err
 	}
 
 	stream, err := qConn.OpenStreamSync(ctx)
 	if err != nil {
 		_ = qConn.CloseWithError(1, err.Error())
+		_ = udpConn.Close()
 		return nil, err
 	}
 	defer func() {
@@ -151,6 +157,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	if err != nil {
 		defer func() {
 			_ = qConn.CloseWithError(3, "outbound handshake failed")
+			_ = udpConn.Close()
 		}()
 		return nil, err
 	}

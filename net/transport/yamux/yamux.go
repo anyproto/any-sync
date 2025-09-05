@@ -104,11 +104,24 @@ func (y *yamuxTransport) AddListener(lis net.Listener) {
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
 	dialTimeout := time.Duration(y.conf.DialTimeoutSec) * time.Second
-	dialer := &net.Dialer{Timeout: dialTimeout}
+	
+	// Setup abort mechanism for context cancellation
+	done := make(chan struct{})
+	
+	dialer := &net.Dialer{
+		Timeout: dialTimeout,
+		Control: controlFunc(ctx, done),
+	}
+	
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	
+	// Signal the abortor goroutine to exit
+	close(done)
+	
 	if err != nil {
 		return nil, err
 	}
+	
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 	cctx, err := y.secure.SecureOutbound(ctx, conn)

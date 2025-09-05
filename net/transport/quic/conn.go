@@ -72,9 +72,10 @@ func (q *quicMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 		return nil, err
 	}
 	return quicNetConn{
-		Stream:     stream,
-		localAddr:  q.LocalAddr(),
-		remoteAddr: q.RemoteAddr(),
+		Stream:       stream,
+		localAddr:    q.LocalAddr(),
+		remoteAddr:   q.RemoteAddr(),
+		writeTimeout: q.writeTimeout,
 	}, nil
 }
 
@@ -166,3 +167,4 @@ func (q quicNetConn) LocalAddr() net.Addr {
 func (q quicNetConn) RemoteAddr() net.Addr {
 	return q.remoteAddr
 }
+
