@@ -1,13 +1,18 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"io"
+
 	"filippo.io/edwards25519"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -85,4 +90,37 @@ func DecryptX25519(privKey, pubKey *[32]byte, encrypted []byte) ([]byte, error) 
 		return nil, ErrX25519DecryptionFailed
 	}
 	return decrypted, nil
+}
+
+//
+
+func buildSymmetricContext(a, b ed25519.PublicKey) []byte {
+	// add label here so that we can distinguish from other potential implementations
+	label := []byte("joined-identity-v1")
+	if bytes.Compare(a, b) <= 0 {
+		return append(append([]byte{}, label...), append(a, b...)...)
+	}
+	return append(append([]byte{}, label...), append(b, a...)...)
+}
+
+func GenerateSharedKey(aSk ed25519.PrivateKey, aPk, bPk ed25519.PublicKey) (ed25519.PrivateKey, ed25519.PublicKey, error) {
+	skCurve := Ed25519PrivateKeyToCurve25519(aSk)
+	pkCurvePtr := Ed25519PublicKeyToCurve25519(bPk)
+	pkCurve := pkCurvePtr[:]
+
+	shared, err := curve25519.X25519(skCurve, pkCurve)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := buildSymmetricContext(aPk, bPk)
+	h := hkdf.New(sha256.New, shared, nil, ctx)
+	var seed [32]byte
+	if _, err := io.ReadFull(h, seed[:]); err != nil {
+		return nil, nil, err
+	}
+
+	jointPriv := ed25519.NewKeyFromSeed(seed[:])
+	jointPub := jointPriv.Public().(ed25519.PublicKey)
+	return jointPriv, jointPub, nil
 }
