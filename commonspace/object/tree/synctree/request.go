@@ -35,5 +35,5 @@ func (r *InnerRequest) Marshall() ([]byte, error) {
 		SnapshotPath: r.snapshotPath,
 	}
 	req := treechangeproto.WrapFullRequest(msg, r.root)
-	return req.Marshal()
+	return req.MarshalVT()
 }

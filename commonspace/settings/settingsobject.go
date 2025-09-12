@@ -8,7 +8,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/util/crypto"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -206,10 +205,10 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
 	res, err := s.AddContent(context.Background(), objecttree.SignableChangeContent{
-		Data:        data,
-		Key:         accountData.SignKey,
-		IsSnapshot:  isSnapshot,
-		IsEncrypted: false,
+		Data:              data,
+		Key:               accountData.SignKey,
+		IsSnapshot:        isSnapshot,
+		ShouldBeEncrypted: false,
 	})
 	if err != nil {
 		return
@@ -236,7 +235,7 @@ func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity crypt
 
 func verifyDeleteContent(data []byte, peerId string) (err error) {
 	content := &spacesyncproto.SettingsData{}
-	err = proto.Unmarshal(data, content)
+	err = content.UnmarshalVT(data)
 	if err != nil {
 		return
 	}

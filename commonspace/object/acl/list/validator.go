@@ -12,6 +12,7 @@ type ContentValidator interface {
 	ValidateAclRecordContents(ch *AclRecord) (err error)
 	ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error)
 	ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error)
+	ValidateOwnershipChange(ch *aclrecordproto.AclOwnershipChange, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error)
 	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, authorIdentity crypto.PubKey) (err error)
@@ -49,6 +50,34 @@ func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccou
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnershipChange, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).IsOwner() {
+		return ErrInsufficientPermissions
+	}
+	identity, err := c.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
+	if err != nil {
+		return err
+	}
+	var (
+		oldOwnerPerms = AclPermissions(ch.OldOwnerPermissions)
+		newOwnerPerms = c.aclState.Permissions(identity)
+	)
+	if newOwnerPerms.NoPermissions() {
+		return ErrNoSuchAccount
+	}
+	newOwnerStatus := c.aclState.accountStates[mapKeyFromPubKey(identity)]
+	if newOwnerStatus.Status != StatusActive ||
+		newOwnerPerms.IsOwner() ||
+		oldOwnerPerms.IsOwner() ||
+		oldOwnerPerms.NoPermissions() {
+		return ErrInsufficientPermissions
 	}
 	return nil
 }
@@ -92,6 +121,9 @@ func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclAccountInvit
 	}
 	if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
 		return ErrNoSuchInvite
+	}
+	if !AclPermissions(ch.Permissions).IsLessOrEqual(invite.Permissions) {
+		return ErrInsufficientPermissions
 	}
 	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions

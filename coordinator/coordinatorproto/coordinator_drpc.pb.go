@@ -5,11 +5,9 @@
 package coordinatorproto
 
 import (
-	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/anyproto/protobuf/jsonpb"
-	proto "github.com/anyproto/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -17,24 +15,19 @@ import (
 type drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto struct{}
 
 func (drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	var buf bytes.Buffer
-	err := new(jsonpb.Marshaler).Marshal(&buf, msg.(proto.Message))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCCoordinatorClient interface {
@@ -55,6 +48,7 @@ type DRPCCoordinatorClient interface {
 	AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(ctx context.Context, in *AclEventLogRequest) (*AclEventLogResponse, error)
+	AclUploadInvite(ctx context.Context, in *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -202,6 +196,15 @@ func (c *drpcCoordinatorClient) AclEventLog(ctx context.Context, in *AclEventLog
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) AclUploadInvite(ctx context.Context, in *AclUploadInviteRequest) (*AclUploadInviteResponse, error) {
+	out := new(AclUploadInviteResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/AclUploadInvite", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
@@ -218,6 +221,7 @@ type DRPCCoordinatorServer interface {
 	AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(context.Context, *AclEventLogRequest) (*AclEventLogResponse, error)
+	AclUploadInvite(context.Context, *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -282,9 +286,13 @@ func (s *DRPCCoordinatorUnimplementedServer) AclEventLog(context.Context, *AclEv
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) AclUploadInvite(context.Context, *AclUploadInviteRequest) (*AclUploadInviteResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 15 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 16 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -423,6 +431,15 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclEventLogRequest),
 					)
 			}, DRPCCoordinatorServer.AclEventLog, true
+	case 15:
+		return "/coordinator.Coordinator/AclUploadInvite", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					AclUploadInvite(
+						ctx,
+						in1.(*AclUploadInviteRequest),
+					)
+			}, DRPCCoordinatorServer.AclUploadInvite, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -666,6 +683,22 @@ type drpcCoordinator_AclEventLogStream struct {
 }
 
 func (x *drpcCoordinator_AclEventLogStream) SendAndClose(m *AclEventLogResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_AclUploadInviteStream interface {
+	drpc.Stream
+	SendAndClose(*AclUploadInviteResponse) error
+}
+
+type drpcCoordinator_AclUploadInviteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_AclUploadInviteStream) SendAndClose(m *AclUploadInviteResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}

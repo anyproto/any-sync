@@ -477,6 +477,26 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		a.expectedAccounts[argParts[0]].status = StatusActive
 		a.expectedAccounts[argParts[0]].perms = perms
+	case "ownership_change":
+		argParts := strings.Split(args[0], ",")
+		newOwner := a.actualAccounts[argParts[0]].Keys.SignKey.GetPublic()
+		perms := getPerm(argParts[1])
+		ownershipChange := OwnershipChangePayload{
+			NewOwner:            newOwner,
+			OldOwnerPermissions: perms,
+		}
+		afterAll = append(afterAll, func() {
+			a.expectedAccounts[argParts[0]].perms = AclPermissionsOwner
+			a.expectedAccounts[account].perms = perms
+		})
+		res, err := acl.RecordBuilder().BuildOwnershipChange(ownershipChange)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
 	case "changes":
 		var payloads []PermissionChangePayload
 		for _, arg := range args {
@@ -556,10 +576,22 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return err
 		}
 	case "invite_join":
-		invite := a.invites[args[0]]
+		var permissions AclPermissions
+		inviteParts := strings.Split(args[0], ",")
+		if len(inviteParts) > 1 {
+			if inviteParts[1] == "r" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+			} else if inviteParts[1] == "rw" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+			} else {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+			}
+		}
+		invite := a.invites[inviteParts[0]]
 		inviteJoin, err := acl.RecordBuilder().BuildInviteJoin(InviteJoinPayload{
-			InviteKey: invite,
-			Metadata:  []byte(account),
+			InviteKey:   invite,
+			Metadata:    []byte(account),
+			Permissions: permissions,
 		})
 		if err != nil {
 			return err
@@ -573,7 +605,11 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return err
 		}
 		a.expectedAccounts[account].status = StatusActive
-		a.expectedAccounts[account].perms = acl.AclState().invites[invId].Permissions
+		if permissions == AclPermissionsNone {
+			a.expectedAccounts[account].perms = acl.AclState().invites[invId].Permissions
+		} else {
+			a.expectedAccounts[account].perms = permissions
+		}
 	case "remove":
 		identities := strings.Split(args[0], ",")
 		var pubKeys []crypto.PubKey

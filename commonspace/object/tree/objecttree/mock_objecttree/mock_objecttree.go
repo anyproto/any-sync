@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_objecttree/mock_objecttree.go github.com/anyproto/any-sync/commonspace/object/tree/objecttree ObjectTree,Storage
 //
+
 // Package mock_objecttree is a generated GoMock package.
 package mock_objecttree
 
@@ -23,6 +24,7 @@ import (
 type MockObjectTree struct {
 	ctrl     *gomock.Controller
 	recorder *MockObjectTreeMockRecorder
+	isgomock struct{}
 }
 
 // MockObjectTreeMockRecorder is the mock recorder for MockObjectTree.
@@ -57,63 +59,63 @@ func (mr *MockObjectTreeMockRecorder) AclList() *gomock.Call {
 }
 
 // AddContent mocks base method.
-func (m *MockObjectTree) AddContent(arg0 context.Context, arg1 objecttree.SignableChangeContent) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddContent", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddContent", ctx, content)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddContent indicates an expected call of AddContent.
-func (mr *MockObjectTreeMockRecorder) AddContent(arg0, arg1 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) AddContent(ctx, content any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContent", reflect.TypeOf((*MockObjectTree)(nil).AddContent), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContent", reflect.TypeOf((*MockObjectTree)(nil).AddContent), ctx, content)
 }
 
 // AddContentWithValidator mocks base method.
-func (m *MockObjectTree) AddContentWithValidator(arg0 context.Context, arg1 objecttree.SignableChangeContent, arg2 func(objecttree.StorageChange) error) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate objecttree.ChangeValidator) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddContentWithValidator", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AddContentWithValidator", ctx, content, validate)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddContentWithValidator indicates an expected call of AddContentWithValidator.
-func (mr *MockObjectTreeMockRecorder) AddContentWithValidator(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) AddContentWithValidator(ctx, content, validate any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContentWithValidator", reflect.TypeOf((*MockObjectTree)(nil).AddContentWithValidator), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContentWithValidator", reflect.TypeOf((*MockObjectTree)(nil).AddContentWithValidator), ctx, content, validate)
 }
 
 // AddRawChanges mocks base method.
-func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 objecttree.RawChangesPayload) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChanges", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddRawChanges", ctx, changes)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChanges indicates an expected call of AddRawChanges.
-func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0, arg1 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) AddRawChanges(ctx, changes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), ctx, changes)
 }
 
 // AddRawChangesWithUpdater mocks base method.
-func (m *MockObjectTree) AddRawChangesWithUpdater(arg0 context.Context, arg1 objecttree.RawChangesPayload, arg2 func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", ctx, changes, updater)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChangesWithUpdater indicates an expected call of AddRawChangesWithUpdater.
-func (mr *MockObjectTreeMockRecorder) AddRawChangesWithUpdater(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) AddRawChangesWithUpdater(ctx, changes, updater any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesWithUpdater", reflect.TypeOf((*MockObjectTree)(nil).AddRawChangesWithUpdater), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesWithUpdater", reflect.TypeOf((*MockObjectTree)(nil).AddRawChangesWithUpdater), ctx, changes, updater)
 }
 
 // ChangeInfo mocks base method.
@@ -131,18 +133,18 @@ func (mr *MockObjectTreeMockRecorder) ChangeInfo() *gomock.Call {
 }
 
 // ChangesAfterCommonSnapshotLoader mocks base method.
-func (m *MockObjectTree) ChangesAfterCommonSnapshotLoader(arg0, arg1 []string) (objecttree.LoadIterator, error) {
+func (m *MockObjectTree) ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (objecttree.LoadIterator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshotLoader", arg0, arg1)
+	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshotLoader", snapshotPath, heads)
 	ret0, _ := ret[0].(objecttree.LoadIterator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ChangesAfterCommonSnapshotLoader indicates an expected call of ChangesAfterCommonSnapshotLoader.
-func (mr *MockObjectTreeMockRecorder) ChangesAfterCommonSnapshotLoader(arg0, arg1 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) ChangesAfterCommonSnapshotLoader(snapshotPath, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshotLoader", reflect.TypeOf((*MockObjectTree)(nil).ChangesAfterCommonSnapshotLoader), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshotLoader", reflect.TypeOf((*MockObjectTree)(nil).ChangesAfterCommonSnapshotLoader), snapshotPath, heads)
 }
 
 // Close mocks base method.
@@ -160,18 +162,18 @@ func (mr *MockObjectTreeMockRecorder) Close() *gomock.Call {
 }
 
 // Debug mocks base method.
-func (m *MockObjectTree) Debug(arg0 objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
+func (m *MockObjectTree) Debug(parser objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Debug", arg0)
+	ret := m.ctrl.Call(m, "Debug", parser)
 	ret0, _ := ret[0].(objecttree.DebugInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Debug indicates an expected call of Debug.
-func (mr *MockObjectTreeMockRecorder) Debug(arg0 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) Debug(parser any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockObjectTree)(nil).Debug), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockObjectTree)(nil).Debug), parser)
 }
 
 // Delete mocks base method.
@@ -278,31 +280,31 @@ func (mr *MockObjectTreeMockRecorder) IsDerived() *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockObjectTree) IterateFrom(arg0 string, arg1 func(*objecttree.Change, []byte) (any, error), arg2 func(*objecttree.Change) bool) error {
+func (m *MockObjectTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IterateFrom", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IterateFrom", id, convert, iterate)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IterateFrom indicates an expected call of IterateFrom.
-func (mr *MockObjectTreeMockRecorder) IterateFrom(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) IterateFrom(id, convert, iterate any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockObjectTree)(nil).IterateFrom), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockObjectTree)(nil).IterateFrom), id, convert, iterate)
 }
 
 // IterateRoot mocks base method.
-func (m *MockObjectTree) IterateRoot(arg0 func(*objecttree.Change, []byte) (any, error), arg1 func(*objecttree.Change) bool) error {
+func (m *MockObjectTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IterateRoot", arg0, arg1)
+	ret := m.ctrl.Call(m, "IterateRoot", convert, iterate)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IterateRoot indicates an expected call of IterateRoot.
-func (mr *MockObjectTreeMockRecorder) IterateRoot(arg0, arg1 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) IterateRoot(convert, iterate any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockObjectTree)(nil).IterateRoot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockObjectTree)(nil).IterateRoot), convert, iterate)
 }
 
 // Len mocks base method.
@@ -332,18 +334,18 @@ func (mr *MockObjectTreeMockRecorder) Lock() *gomock.Call {
 }
 
 // PrepareChange mocks base method.
-func (m *MockObjectTree) PrepareChange(arg0 objecttree.SignableChangeContent) (*treechangeproto.RawTreeChangeWithId, error) {
+func (m *MockObjectTree) PrepareChange(content objecttree.SignableChangeContent) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareChange", arg0)
+	ret := m.ctrl.Call(m, "PrepareChange", content)
 	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PrepareChange indicates an expected call of PrepareChange.
-func (mr *MockObjectTreeMockRecorder) PrepareChange(arg0 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) PrepareChange(content any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockObjectTree)(nil).PrepareChange), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockObjectTree)(nil).PrepareChange), content)
 }
 
 // Root mocks base method.
@@ -361,15 +363,15 @@ func (mr *MockObjectTreeMockRecorder) Root() *gomock.Call {
 }
 
 // SetFlusher mocks base method.
-func (m *MockObjectTree) SetFlusher(arg0 objecttree.Flusher) {
+func (m *MockObjectTree) SetFlusher(flusher objecttree.Flusher) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetFlusher", arg0)
+	m.ctrl.Call(m, "SetFlusher", flusher)
 }
 
 // SetFlusher indicates an expected call of SetFlusher.
-func (mr *MockObjectTreeMockRecorder) SetFlusher(arg0 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) SetFlusher(flusher any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFlusher", reflect.TypeOf((*MockObjectTree)(nil).SetFlusher), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFlusher", reflect.TypeOf((*MockObjectTree)(nil).SetFlusher), flusher)
 }
 
 // SnapshotPath mocks base method.
@@ -402,18 +404,18 @@ func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 }
 
 // TryClose mocks base method.
-func (m *MockObjectTree) TryClose(arg0 time.Duration) (bool, error) {
+func (m *MockObjectTree) TryClose(objectTTL time.Duration) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryClose", arg0)
+	ret := m.ctrl.Call(m, "TryClose", objectTTL)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TryClose indicates an expected call of TryClose.
-func (mr *MockObjectTreeMockRecorder) TryClose(arg0 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) TryClose(objectTTL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockObjectTree)(nil).TryClose), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockObjectTree)(nil).TryClose), objectTTL)
 }
 
 // TryLock mocks base method.
@@ -457,24 +459,25 @@ func (mr *MockObjectTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
 }
 
 // UnpackChange mocks base method.
-func (m *MockObjectTree) UnpackChange(arg0 *treechangeproto.RawTreeChangeWithId) ([]byte, error) {
+func (m *MockObjectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnpackChange", arg0)
+	ret := m.ctrl.Call(m, "UnpackChange", raw)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UnpackChange indicates an expected call of UnpackChange.
-func (mr *MockObjectTreeMockRecorder) UnpackChange(arg0 any) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) UnpackChange(raw any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackChange", reflect.TypeOf((*MockObjectTree)(nil).UnpackChange), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackChange", reflect.TypeOf((*MockObjectTree)(nil).UnpackChange), raw)
 }
 
 // MockStorage is a mock of Storage interface.
 type MockStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockStorageMockRecorder
+	isgomock struct{}
 }
 
 // MockStorageMockRecorder is the mock recorder for MockStorage.
@@ -495,31 +498,31 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 }
 
 // AddAll mocks base method.
-func (m *MockStorage) AddAll(arg0 context.Context, arg1 []objecttree.StorageChange, arg2 []string, arg3 string) error {
+func (m *MockStorage) AddAll(ctx context.Context, changes []objecttree.StorageChange, heads []string, commonSnapshot string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddAll", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "AddAll", ctx, changes, heads, commonSnapshot)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddAll indicates an expected call of AddAll.
-func (mr *MockStorageMockRecorder) AddAll(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) AddAll(ctx, changes, heads, commonSnapshot any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAll", reflect.TypeOf((*MockStorage)(nil).AddAll), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAll", reflect.TypeOf((*MockStorage)(nil).AddAll), ctx, changes, heads, commonSnapshot)
 }
 
 // AddAllNoError mocks base method.
-func (m *MockStorage) AddAllNoError(arg0 context.Context, arg1 []objecttree.StorageChange, arg2 []string, arg3 string) error {
+func (m *MockStorage) AddAllNoError(ctx context.Context, changes []objecttree.StorageChange, heads []string, commonSnapshot string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddAllNoError", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "AddAllNoError", ctx, changes, heads, commonSnapshot)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddAllNoError indicates an expected call of AddAllNoError.
-func (mr *MockStorageMockRecorder) AddAllNoError(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) AddAllNoError(ctx, changes, heads, commonSnapshot any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAllNoError", reflect.TypeOf((*MockStorage)(nil).AddAllNoError), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAllNoError", reflect.TypeOf((*MockStorage)(nil).AddAllNoError), ctx, changes, heads, commonSnapshot)
 }
 
 // Close mocks base method.
@@ -537,91 +540,91 @@ func (mr *MockStorageMockRecorder) Close() *gomock.Call {
 }
 
 // CommonSnapshot mocks base method.
-func (m *MockStorage) CommonSnapshot(arg0 context.Context) (string, error) {
+func (m *MockStorage) CommonSnapshot(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CommonSnapshot", arg0)
+	ret := m.ctrl.Call(m, "CommonSnapshot", ctx)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CommonSnapshot indicates an expected call of CommonSnapshot.
-func (mr *MockStorageMockRecorder) CommonSnapshot(arg0 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) CommonSnapshot(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommonSnapshot", reflect.TypeOf((*MockStorage)(nil).CommonSnapshot), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommonSnapshot", reflect.TypeOf((*MockStorage)(nil).CommonSnapshot), ctx)
 }
 
 // Delete mocks base method.
-func (m *MockStorage) Delete(arg0 context.Context) error {
+func (m *MockStorage) Delete(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret := m.ctrl.Call(m, "Delete", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockStorageMockRecorder) Delete(arg0 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Delete(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStorage)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStorage)(nil).Delete), ctx)
 }
 
 // Get mocks base method.
-func (m *MockStorage) Get(arg0 context.Context, arg1 string) (objecttree.StorageChange, error) {
+func (m *MockStorage) Get(ctx context.Context, id string) (objecttree.StorageChange, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(objecttree.StorageChange)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockStorageMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStorage)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStorage)(nil).Get), ctx, id)
 }
 
 // GetAfterOrder mocks base method.
-func (m *MockStorage) GetAfterOrder(arg0 context.Context, arg1 string, arg2 func(context.Context, objecttree.StorageChange) (bool, error)) error {
+func (m *MockStorage) GetAfterOrder(ctx context.Context, orderId string, iter objecttree.StorageIterator) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAfterOrder", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetAfterOrder", ctx, orderId, iter)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GetAfterOrder indicates an expected call of GetAfterOrder.
-func (mr *MockStorageMockRecorder) GetAfterOrder(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) GetAfterOrder(ctx, orderId, iter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAfterOrder", reflect.TypeOf((*MockStorage)(nil).GetAfterOrder), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAfterOrder", reflect.TypeOf((*MockStorage)(nil).GetAfterOrder), ctx, orderId, iter)
 }
 
 // Has mocks base method.
-func (m *MockStorage) Has(arg0 context.Context, arg1 string) (bool, error) {
+func (m *MockStorage) Has(ctx context.Context, id string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Has", arg0, arg1)
+	ret := m.ctrl.Call(m, "Has", ctx, id)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Has indicates an expected call of Has.
-func (mr *MockStorageMockRecorder) Has(arg0, arg1 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Has(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Has", reflect.TypeOf((*MockStorage)(nil).Has), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Has", reflect.TypeOf((*MockStorage)(nil).Has), ctx, id)
 }
 
 // Heads mocks base method.
-func (m *MockStorage) Heads(arg0 context.Context) ([]string, error) {
+func (m *MockStorage) Heads(ctx context.Context) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Heads", arg0)
+	ret := m.ctrl.Call(m, "Heads", ctx)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Heads indicates an expected call of Heads.
-func (mr *MockStorageMockRecorder) Heads(arg0 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Heads(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Heads", reflect.TypeOf((*MockStorage)(nil).Heads), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Heads", reflect.TypeOf((*MockStorage)(nil).Heads), ctx)
 }
 
 // Id mocks base method.
@@ -639,16 +642,16 @@ func (mr *MockStorageMockRecorder) Id() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockStorage) Root(arg0 context.Context) (objecttree.StorageChange, error) {
+func (m *MockStorage) Root(ctx context.Context) (objecttree.StorageChange, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Root", arg0)
+	ret := m.ctrl.Call(m, "Root", ctx)
 	ret0, _ := ret[0].(objecttree.StorageChange)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Root indicates an expected call of Root.
-func (mr *MockStorageMockRecorder) Root(arg0 any) *gomock.Call {
+func (mr *MockStorageMockRecorder) Root(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockStorage)(nil).Root), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockStorage)(nil).Root), ctx)
 }

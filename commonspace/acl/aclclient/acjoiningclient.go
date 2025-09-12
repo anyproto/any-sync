@@ -23,6 +23,7 @@ type AclJoiningClient interface {
 	CancelJoin(ctx context.Context, spaceId string) (err error)
 	InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error)
 	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
+	RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) (err error)
 }
 
 type aclJoiningClient struct {
@@ -146,4 +147,21 @@ func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string)
 	}
 	_, err = c.nodeClient.AclAddRecord(ctx, spaceId, newRec)
 	return
+}
+
+func (c *aclJoiningClient) RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) (err error) {
+	aclList.Lock()
+	res, err := aclList.RecordBuilder().BuildRequestRemove()
+	if err != nil {
+		aclList.Unlock()
+		return
+	}
+	aclList.Unlock()
+	rec, err := c.nodeClient.AclAddRecord(ctx, spaceId, res)
+	if err != nil {
+		return
+	}
+	aclList.Lock()
+	defer aclList.Unlock()
+	return aclList.AddRawRecord(rec)
 }

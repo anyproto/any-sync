@@ -253,6 +253,7 @@ enum DiffType {
     Initial = 0;
     V1 = 1;
     V2 = 2;
+    V3 = 3;
 }
 
 // ObjectType is a type of object

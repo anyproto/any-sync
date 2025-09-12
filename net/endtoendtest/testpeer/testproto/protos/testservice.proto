@@ -1,0 +1,18 @@
+syntax = "proto3";
+package testService;
+
+option go_package = "net/endtoendtest/testpeer/testproto";
+
+service Test {
+    rpc BiDirectionalStream(stream StreamMessage) returns (stream StreamMessage);
+    rpc ServerStream(StreamMessage) returns (stream StreamMessage);
+    rpc ClientStream(stream StreamMessage) returns (StreamMessage);
+    rpc Unary(StreamMessage) returns (StreamMessage);
+}
+
+
+message StreamMessage {
+    string reqData = 1;
+    int64 repeat = 2;
+    int64 n = 3;
+}

@@ -213,10 +213,11 @@ type spaceProcess struct {
 	accountService accountservice.Service
 	manager        *testTreeManager
 	periodicCall   periodicsync.PeriodicSync
+	onlyCreate     bool
 }
 
-func newSpaceProcess(spaceId string) *spaceProcess {
-	return &spaceProcess{spaceId: spaceId}
+func newSpaceProcess(spaceId string, onlyCreate bool) *spaceProcess {
+	return &spaceProcess{spaceId: spaceId, onlyCreate: onlyCreate}
 }
 
 func (s *spaceProcess) Init(a *app.App) (err error) {
@@ -247,7 +248,7 @@ func (s *spaceProcess) update(ctx context.Context) error {
 		return err
 	}
 	var tr objecttree.ObjectTree
-	newDoc := rand.Int()%20 == 0
+	newDoc := rand.Int()%20 == 0 || s.onlyCreate
 	snapshot := rand.Int()%10 == 0
 	allTrees := sp.StoredIds()
 	if newDoc || len(allTrees) == 0 {
@@ -262,17 +263,20 @@ func (s *spaceProcess) update(ctx context.Context) error {
 			return err
 		}
 	}
+	if s.onlyCreate {
+		return nil
+	}
 	tr.Lock()
 	defer tr.Unlock()
 	bytes := make([]byte, 1024)
 	_, _ = rand.Read(bytes)
 	_, err = tr.AddContent(ctx, objecttree.SignableChangeContent{
-		Data:        bytes,
-		Key:         s.accountService.Account().SignKey,
-		IsSnapshot:  snapshot,
-		IsEncrypted: true,
-		Timestamp:   0,
-		DataType:    "",
+		Data:              bytes,
+		Key:               s.accountService.Account().SignKey,
+		IsSnapshot:        snapshot,
+		ShouldBeEncrypted: true,
+		Timestamp:         0,
+		DataType:          "",
 	})
 	return err
 }

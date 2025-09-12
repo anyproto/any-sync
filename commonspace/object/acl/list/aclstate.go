@@ -3,7 +3,6 @@ package list
 import (
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 
@@ -273,7 +272,7 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	// if the model is not cached
 	if record.Model == nil {
 		aclData := &aclrecordproto.AclData{}
-		err = proto.Unmarshal(record.Data, aclData)
+		err = aclData.UnmarshalVT(record.Data)
 		if err != nil {
 			return
 		}
@@ -422,6 +421,8 @@ func (st *AclState) Copy() *AclState {
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
+	case ch.GetOwnershipChange() != nil:
+		return st.applyOwnershipChange(ch.GetOwnershipChange(), record)
 	case ch.GetInviteChange() != nil:
 		return st.applyInviteChange(ch.GetInviteChange(), record)
 	case ch.GetInviteJoin() != nil:
@@ -456,6 +457,24 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 	}
 }
 
+func (st *AclState) applyOwnershipChange(ch *aclrecordproto.AclOwnershipChange, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateOwnershipChange(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	newOwnerIdentity, err := st.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
+	if err != nil {
+		return err
+	}
+	var (
+		oldOwnerKey = mapKeyFromPubKey(record.Identity)
+		newOwnerKey = mapKeyFromPubKey(newOwnerIdentity)
+	)
+	st.updatePermissions(oldOwnerKey, ch.OldOwnerPermissions, record)
+	st.updatePermissions(newOwnerKey, aclrecordproto.AclUserPermissions_Owner, record)
+	return nil
+}
+
 func (st *AclState) applyPermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, record *AclRecord) (err error) {
 	for _, ch := range ch.Changes {
 		err := st.applyPermissionChange(ch, record)
@@ -487,14 +506,18 @@ func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissio
 		return err
 	}
 	stringKey := mapKeyFromPubKey(chIdentity)
-	state, _ := st.accountStates[stringKey]
-	state.Permissions = AclPermissions(ch.Permissions)
+	st.updatePermissions(stringKey, ch.Permissions, record)
+	return nil
+}
+
+func (st *AclState) updatePermissions(identityKey string, permissions aclrecordproto.AclUserPermissions, record *AclRecord) {
+	state, _ := st.accountStates[identityKey]
+	state.Permissions = AclPermissions(permissions)
 	state.PermissionChanges = append(state.PermissionChanges, PermissionChange{
 		RecordId:   record.Id,
 		Permission: state.Permissions,
 	})
-	st.accountStates[stringKey] = state
-	return nil
+	st.accountStates[identityKey] = state
 }
 
 func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *AclRecord) error {
@@ -607,32 +630,19 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
 	pKeyString := mapKeyFromPubKey(acceptIdentity)
 	state, exists := st.accountStates[pKeyString]
-	if !exists {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          acceptIdentity,
-			Permissions:     AclPermissions(ch.Permissions),
-			RequestMetadata: requestRecord.RequestMetadata,
-			KeyRecordId:     requestRecord.KeyRecordId,
-			Status:          StatusActive,
-			PermissionChanges: []PermissionChange{
-				{
-					Permission: AclPermissions(ch.Permissions),
-					RecordId:   record.Id,
-				},
-			},
-		}
-	} else {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          acceptIdentity,
-			Permissions:     AclPermissions(ch.Permissions),
-			RequestMetadata: requestRecord.RequestMetadata,
-			KeyRecordId:     requestRecord.KeyRecordId,
-			Status:          StatusActive,
-			PermissionChanges: append(state.PermissionChanges, PermissionChange{
-				Permission: AclPermissions(ch.Permissions),
-				RecordId:   record.Id,
-			}),
-		}
+	permissions := AclPermissions(ch.Permissions)
+	permissionChanges := []PermissionChange{{Permission: permissions, RecordId: record.Id}}
+	if exists {
+		permissionChanges = append(state.PermissionChanges, permissionChanges[0])
+	}
+
+	st.accountStates[pKeyString] = AccountState{
+		PubKey:            acceptIdentity,
+		Permissions:       permissions,
+		RequestMetadata:   requestRecord.RequestMetadata,
+		KeyRecordId:       requestRecord.KeyRecordId,
+		Status:            StatusActive,
+		PermissionChanges: permissionChanges,
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	delete(st.requestRecords, ch.RequestRecordId)
@@ -652,34 +662,23 @@ func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, rec
 		return err
 	}
 	inviteRecord, _ := st.invites[ch.InviteRecordId]
+	permissions := AclPermissions(ch.Permissions)
+	if permissions.NoPermissions() {
+		permissions = inviteRecord.Permissions
+	}
 	pKeyString := mapKeyFromPubKey(identity)
 	state, exists := st.accountStates[pKeyString]
-	if !exists {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          identity,
-			Permissions:     inviteRecord.Permissions,
-			RequestMetadata: ch.Metadata,
-			KeyRecordId:     st.CurrentReadKeyId(),
-			Status:          StatusActive,
-			PermissionChanges: []PermissionChange{
-				{
-					Permission: inviteRecord.Permissions,
-					RecordId:   record.Id,
-				},
-			},
-		}
-	} else {
-		st.accountStates[pKeyString] = AccountState{
-			PubKey:          identity,
-			Permissions:     inviteRecord.Permissions,
-			RequestMetadata: ch.Metadata,
-			KeyRecordId:     st.CurrentReadKeyId(),
-			Status:          StatusActive,
-			PermissionChanges: append(state.PermissionChanges, PermissionChange{
-				Permission: inviteRecord.Permissions,
-				RecordId:   record.Id,
-			}),
-		}
+	permissionChanges := []PermissionChange{{Permission: permissions, RecordId: record.Id}}
+	if exists {
+		permissionChanges = append(state.PermissionChanges, permissionChanges[0])
+	}
+	st.accountStates[pKeyString] = AccountState{
+		PubKey:            identity,
+		Permissions:       permissions,
+		RequestMetadata:   ch.Metadata,
+		KeyRecordId:       st.CurrentReadKeyId(),
+		Status:            StatusActive,
+		PermissionChanges: permissionChanges,
 	}
 	for _, rec := range st.requestRecords {
 		if rec.RequestIdentity.Equals(identity) {

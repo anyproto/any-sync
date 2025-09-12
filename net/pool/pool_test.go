@@ -338,12 +338,46 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("handshake error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
+		var calls int
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			calls++
 			return nil, handshake.ErrIncompatibleVersion
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
 		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 3, calls)
 		assert.Nil(t, p)
+
+		// second call - expect dialed not called more
+		p, err = fx.GetOneOf(ctx, []string{"3", "2", "1"})
+		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 3, calls)
+		assert.Nil(t, p)
+	})
+	t.Run("handshake error gc", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		var calls int
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			calls++
+			return nil, handshake.ErrIncompatibleVersion
+		}
+		p, err := fx.Get(ctx, "1")
+		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 1, calls)
+		assert.Nil(t, p)
+
+		val, err := fx.Service.(*poolService).outgoing.Pick(ctx, "1")
+		require.NoError(t, err)
+		errObj := val.(*errObject)
+		closed, err := errObj.TryClose(time.Minute)
+		require.NoError(t, err)
+		assert.False(t, closed)
+
+		errObj.createdTime.Store(time.Now().Add(-time.Hour))
+		closed, err = errObj.TryClose(time.Minute)
+		require.NoError(t, err)
+		assert.True(t, closed)
 	})
 }
 
@@ -590,6 +624,8 @@ func newTestPeerWithParams(id string, created time.Time, subConnections int, ver
 	}
 }
 
+var _ peer.Peer = (*testPeer)(nil)
+
 type testPeer struct {
 	id             string
 	closed         chan struct{}
@@ -620,7 +656,7 @@ func (t *testPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (t *testPeer) ReleaseDrpcConn(conn drpc.Conn) {}
+func (t *testPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {}
 
 func (t *testPeer) Context() context.Context {
 	//TODO implement me

@@ -5,11 +5,9 @@
 package testservice
 
 import (
-	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/anyproto/protobuf/jsonpb"
-	proto "github.com/anyproto/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -17,30 +15,26 @@ import (
 type drpcEncoding_File_net_streampool_testservice_protos_testservice_proto struct{}
 
 func (drpcEncoding_File_net_streampool_testservice_protos_testservice_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_net_streampool_testservice_protos_testservice_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_net_streampool_testservice_protos_testservice_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	var buf bytes.Buffer
-	err := new(jsonpb.Marshaler).Marshal(&buf, msg.(proto.Message))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_net_streampool_testservice_protos_testservice_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCTestClient interface {
 	DRPCConn() drpc.Conn
 
 	TestStream(ctx context.Context) (DRPCTest_TestStreamClient, error)
+	TestStream2(ctx context.Context, in *StreamMessage) (DRPCTest_TestStream2Client, error)
 }
 
 type drpcTestClient struct {
@@ -92,8 +86,49 @@ func (x *drpcTest_TestStreamClient) RecvMsg(m *StreamMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{})
 }
 
+func (c *drpcTestClient) TestStream2(ctx context.Context, in *StreamMessage) (DRPCTest_TestStream2Client, error) {
+	stream, err := c.cc.NewStream(ctx, "/testService.Test/TestStream2", drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{})
+	if err != nil {
+		return nil, err
+	}
+	x := &drpcTest_TestStream2Client{stream}
+	if err := x.MsgSend(in, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{}); err != nil {
+		return nil, err
+	}
+	if err := x.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type DRPCTest_TestStream2Client interface {
+	drpc.Stream
+	Recv() (*StreamMessage, error)
+}
+
+type drpcTest_TestStream2Client struct {
+	drpc.Stream
+}
+
+func (x *drpcTest_TestStream2Client) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcTest_TestStream2Client) Recv() (*StreamMessage, error) {
+	m := new(StreamMessage)
+	if err := x.MsgRecv(m, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{}); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (x *drpcTest_TestStream2Client) RecvMsg(m *StreamMessage) error {
+	return x.MsgRecv(m, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{})
+}
+
 type DRPCTestServer interface {
 	TestStream(DRPCTest_TestStreamStream) error
+	TestStream2(*StreamMessage, DRPCTest_TestStream2Stream) error
 }
 
 type DRPCTestUnimplementedServer struct{}
@@ -102,9 +137,13 @@ func (s *DRPCTestUnimplementedServer) TestStream(DRPCTest_TestStreamStream) erro
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCTestUnimplementedServer) TestStream2(*StreamMessage, DRPCTest_TestStream2Stream) error {
+	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCTestDescription struct{}
 
-func (DRPCTestDescription) NumMethods() int { return 1 }
+func (DRPCTestDescription) NumMethods() int { return 2 }
 
 func (DRPCTestDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -116,6 +155,15 @@ func (DRPCTestDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						&drpcTest_TestStreamStream{in1.(drpc.Stream)},
 					)
 			}, DRPCTestServer.TestStream, true
+	case 1:
+		return "/testService.Test/TestStream2", drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return nil, srv.(DRPCTestServer).
+					TestStream2(
+						in1.(*StreamMessage),
+						&drpcTest_TestStream2Stream{in2.(drpc.Stream)},
+					)
+			}, DRPCTestServer.TestStream2, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -149,4 +197,17 @@ func (x *drpcTest_TestStreamStream) Recv() (*StreamMessage, error) {
 
 func (x *drpcTest_TestStreamStream) RecvMsg(m *StreamMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{})
+}
+
+type DRPCTest_TestStream2Stream interface {
+	drpc.Stream
+	Send(*StreamMessage) error
+}
+
+type drpcTest_TestStream2Stream struct {
+	drpc.Stream
+}
+
+func (x *drpcTest_TestStream2Stream) Send(m *StreamMessage) error {
+	return x.MsgSend(m, drpcEncoding_File_net_streampool_testservice_protos_testservice_proto{})
 }

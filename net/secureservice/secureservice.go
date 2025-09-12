@@ -32,13 +32,13 @@ var (
 	// ProtoVersion 5 - sync with no entry space
 	// ProtoVersion 6 - sync with key value messages
 	// ProtoVersion 7 - sync with new invites
-	CompatibleVersion = uint32(5)
-	ProtoVersion      = uint32(6)
-	NewInvitesVersion = uint32(7)
+	// ProtoVersion 8 - acl: transfer ownership feature
+	CompatibleVersion = uint32(7)
+	ProtoVersion      = uint32(8)
 )
 
 var (
-	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion, NewInvitesVersion}
+	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion}
 )
 
 func New() SecureService {

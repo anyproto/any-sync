@@ -9,7 +9,6 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -149,7 +148,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 		AclHeadId:      headId,
 		Key:            key,
 	}
-	innerBytes, err := inner.Marshal()
+	innerBytes, err := inner.MarshalVT()
 	if err != nil {
 		return err
 	}
@@ -348,7 +347,7 @@ func (s *storage) decrypt(kv innerstorage.KeyValue) (value []byte, err error) {
 		return nil, fmt.Errorf("no read key for %s", kv.ReadKeyId)
 	}
 	msg := &spacesyncproto.StoreKeyInner{}
-	err = proto.Unmarshal(kv.Value.Value, msg)
+	err = msg.UnmarshalVT(kv.Value.Value)
 	if err != nil {
 		return nil, err
 	}
