@@ -94,7 +94,7 @@ func DecryptX25519(privKey, pubKey *[32]byte, encrypted []byte) ([]byte, error) 
 
 //
 
-func buildSymmetricContext(a, b ed25519.PublicKey) []byte {
+func buildSymmetricContext(a, b []byte) []byte {
 	// add label here so that we can distinguish from other potential implementations
 	label := []byte("joined-identity-v1")
 	if bytes.Compare(a, b) <= 0 {
@@ -103,24 +103,43 @@ func buildSymmetricContext(a, b ed25519.PublicKey) []byte {
 	return append(append([]byte{}, label...), append(b, a...)...)
 }
 
-func GenerateSharedKey(aSk ed25519.PrivateKey, aPk, bPk ed25519.PublicKey) (ed25519.PrivateKey, ed25519.PublicKey, error) {
-	skCurve := Ed25519PrivateKeyToCurve25519(aSk)
-	pkCurvePtr := Ed25519PublicKeyToCurve25519(bPk)
-	pkCurve := pkCurvePtr[:]
-
-	shared, err := curve25519.X25519(skCurve, pkCurve)
+func GenerateSharedKey(aSk PrivKey, bPk PubKey) (PrivKey, error) {
+	skRaw, err := aSk.Raw()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	skCurve := Ed25519PrivateKeyToCurve25519(ed25519.PrivateKey(skRaw))
+
+	pkRaw, err := bPk.Raw()
+	if err != nil {
+		return nil, err
 	}
 
-	ctx := buildSymmetricContext(aPk, bPk)
+	pkCurve := Ed25519PublicKeyToCurve25519(pkRaw)
+
+	shared, err := curve25519.X25519(skCurve, pkCurve[:])
+	if err != nil {
+		return nil, err
+	}
+
+	aPkRaw, err := aSk.GetPublic().Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	bPkRaw, err := bPk.Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := buildSymmetricContext(aPkRaw, bPkRaw)
 	h := hkdf.New(sha256.New, shared, nil, ctx)
 	var seed [32]byte
 	if _, err := io.ReadFull(h, seed[:]); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	jointPriv := ed25519.NewKeyFromSeed(seed[:])
-	jointPub := jointPriv.Public().(ed25519.PublicKey)
-	return jointPriv, jointPub, nil
+
+	return NewEd25519PrivKey(jointPriv), nil
 }
