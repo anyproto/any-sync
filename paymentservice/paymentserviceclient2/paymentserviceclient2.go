@@ -20,12 +20,7 @@ const CName = "any-pp.drpcclient2"
 var log = logger.NewNamed(CName)
 
 type AnyPpClientService2 interface {
-	StoreCartGet(ctx context.Context, in *pp.Membership2_StoreCartGetRequest) (out *pp.Membership2_StoreCartResponse, err error)
-	StoreCartUpdate(ctx context.Context, in *pp.Membership2_StoreCartUpdateRequest) (out *pp.Membership2_StoreCartUpdateResponse, err error)
-	StoreCartClear(ctx context.Context, in *pp.Membership2_StoreCartClearRequest) (out *pp.Membership2_StoreCartResponse, err error)
-
-	StoreCartPromocodeApply(ctx context.Context, in *pp.Membership2_StoreCartPromocodeApplyRequest) (out *pp.Membership2_StoreCartResponse, err error)
-	StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutRequest) (out *pp.Membership2_StoreCartCheckoutResponse, err error)
+	GetProducts(ctx context.Context, in *pp.Membership2_GetProductsRequest) (out *pp.Membership2_GetProductsResponse, err error)
 
 	GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error)
 
@@ -78,59 +73,19 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 	return fn(pp.NewDRPCAnyPaymentProcessing2Client(dc))
 }
 
+func (s *service) GetProducts(ctx context.Context, in *pp.Membership2_GetProductsRequest) (out *pp.Membership2_GetProductsResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
+		if out, err = cl.GetProducts(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
 func (s *service) GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
 		if out, err = cl.GetStatus(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) StoreCartGet(ctx context.Context, in *pp.Membership2_StoreCartGetRequest) (out *pp.Membership2_StoreCartResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartGet(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) StoreCartPromocodeApply(ctx context.Context, in *pp.Membership2_StoreCartPromocodeApplyRequest) (out *pp.Membership2_StoreCartResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartPromocodeApply(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutRequest) (out *pp.Membership2_StoreCartCheckoutResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartCheckout(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) StoreCartUpdate(ctx context.Context, in *pp.Membership2_StoreCartUpdateRequest) (out *pp.Membership2_StoreCartUpdateResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartUpdate(ctx, in); err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
-func (s *service) StoreCartClear(ctx context.Context, in *pp.Membership2_StoreCartClearRequest) (out *pp.Membership2_StoreCartResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartClear(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

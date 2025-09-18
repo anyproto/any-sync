@@ -102,6 +102,14 @@ message Membership2 {
     uint64 nextInvoiceDate = 4;
   }
 
+  message GetProductsRequest {
+
+  }
+
+  message GetProductsResponse {
+    repeated Product products = 1;
+  }
+
   message GetStatusRequest {
 
   }
@@ -162,14 +170,7 @@ message Membership2 {
 }
 
 service AnyPaymentProcessing2 {
+  rpc GetProducts (Membership2.GetProductsRequest) returns (Membership2.GetProductsResponse);
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
-
-  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartUpdate(Membership2.StoreCartUpdateRequest) returns (Membership2.StoreCartUpdateResponse);
-  rpc StoreCartClear (Membership2.StoreCartClearRequest) returns (Membership2.StoreCartResponse);
-     
-  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
-
   rpc WebAuth(Membership2.WebAuthRequest) returns (Membership2.WebAuthResponse); 
 }
