@@ -93,6 +93,53 @@ func (m *Membership2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.Offer) > 0 {
+		i -= len(m.Offer)
+		copy(dAtA[i:], m.Offer)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Offer)))
+		i--
+		dAtA[i] = 0x52
+	}
+	if len(m.ColorStr) > 0 {
+		i -= len(m.ColorStr)
+		copy(dAtA[i:], m.ColorStr)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.ColorStr)))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if len(m.Features) > 0 {
+		for iNdEx := len(m.Features) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Features[iNdEx])
+			copy(dAtA[i:], m.Features[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Features[iNdEx])))
+			i--
+			dAtA[i] = 0x42
+		}
+	}
+	if len(m.PricesMonthly) > 0 {
+		for iNdEx := len(m.PricesMonthly) - 1; iNdEx >= 0; iNdEx-- {
+			size, err := m.PricesMonthly[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+			i--
+			dAtA[i] = 0x3a
+		}
+	}
+	if len(m.PricesYearly) > 0 {
+		for iNdEx := len(m.PricesYearly) - 1; iNdEx >= 0; iNdEx-- {
+			size, err := m.PricesYearly[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
 	if len(m.Description) > 0 {
 		i -= len(m.Description)
 		copy(dAtA[i:], m.Description)
@@ -174,11 +221,6 @@ func (m *Membership2_PurchaseInfo) MarshalToSizedBufferVT(dAtA []byte) (int, err
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.PaymentMethod != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PaymentMethod))
 		i--
 		dAtA[i] = 0x20
 	}
@@ -1085,6 +1127,32 @@ func (m *Membership2_Product) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
+	if len(m.PricesYearly) > 0 {
+		for _, e := range m.PricesYearly {
+			l = e.SizeVT()
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
+	}
+	if len(m.PricesMonthly) > 0 {
+		for _, e := range m.PricesMonthly {
+			l = e.SizeVT()
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
+	}
+	if len(m.Features) > 0 {
+		for _, s := range m.Features {
+			l = len(s)
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
+	}
+	l = len(m.ColorStr)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.Offer)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
 	n += len(m.unknownFields)
 	return n
 }
@@ -1103,9 +1171,6 @@ func (m *Membership2_PurchaseInfo) SizeVT() (n int) {
 	}
 	if m.IsAutoRenew {
 		n += 2
-	}
-	if m.PaymentMethod != 0 {
-		n += 1 + protohelpers.SizeOfVarint(uint64(m.PaymentMethod))
 	}
 	if m.IsYearly {
 		n += 2
@@ -1671,6 +1736,170 @@ func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Description = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PricesYearly", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PricesYearly = append(m.PricesYearly, &Membership2_Amount{})
+			if err := m.PricesYearly[len(m.PricesYearly)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PricesMonthly", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PricesMonthly = append(m.PricesMonthly, &Membership2_Amount{})
+			if err := m.PricesMonthly[len(m.PricesMonthly)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Features", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Features = append(m.Features, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ColorStr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ColorStr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Offer", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Offer = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -1781,25 +2010,6 @@ func (m *Membership2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 			}
 			m.IsAutoRenew = bool(v != 0)
 		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PaymentMethod", wireType)
-			}
-			m.PaymentMethod = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PaymentMethod |= Membership2_PaymentMethod(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field IsYearly", wireType)
 			}

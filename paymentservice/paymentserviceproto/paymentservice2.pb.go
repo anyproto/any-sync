@@ -275,8 +275,16 @@ type Membership2_Product struct {
 	// the price of a Package may not be equal to the sum of all underlying products
 	IsPackage bool `protobuf:"varint,3,opt,name=isPackage,proto3" json:"isPackage,omitempty"`
 	// localized
-	Name          string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	Name          string                `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	PricesYearly  []*Membership2_Amount `protobuf:"bytes,6,rep,name=pricesYearly,proto3" json:"pricesYearly,omitempty"`
+	PricesMonthly []*Membership2_Amount `protobuf:"bytes,7,rep,name=pricesMonthly,proto3" json:"pricesMonthly,omitempty"`
+	// localized strings for the features
+	Features []string `protobuf:"bytes,8,rep,name=features,proto3" json:"features,omitempty"`
+	// green, blue, red, purple, custom
+	ColorStr string `protobuf:"bytes,9,opt,name=colorStr,proto3" json:"colorStr,omitempty"`
+	// "limited offer"
+	Offer         string `protobuf:"bytes,10,opt,name=offer,proto3" json:"offer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -346,14 +354,48 @@ func (x *Membership2_Product) GetDescription() string {
 	return ""
 }
 
+func (x *Membership2_Product) GetPricesYearly() []*Membership2_Amount {
+	if x != nil {
+		return x.PricesYearly
+	}
+	return nil
+}
+
+func (x *Membership2_Product) GetPricesMonthly() []*Membership2_Amount {
+	if x != nil {
+		return x.PricesMonthly
+	}
+	return nil
+}
+
+func (x *Membership2_Product) GetFeatures() []string {
+	if x != nil {
+		return x.Features
+	}
+	return nil
+}
+
+func (x *Membership2_Product) GetColorStr() string {
+	if x != nil {
+		return x.ColorStr
+	}
+	return ""
+}
+
+func (x *Membership2_Product) GetOffer() string {
+	if x != nil {
+		return x.Offer
+	}
+	return ""
+}
+
 type Membership2_PurchaseInfo struct {
-	state         protoimpl.MessageState    `protogen:"open.v1"`
-	DateStarted   uint64                    `protobuf:"varint,1,opt,name=dateStarted,proto3" json:"dateStarted,omitempty"`
-	DateEnds      uint64                    `protobuf:"varint,2,opt,name=dateEnds,proto3" json:"dateEnds,omitempty"`
-	IsAutoRenew   bool                      `protobuf:"varint,3,opt,name=isAutoRenew,proto3" json:"isAutoRenew,omitempty"`
-	PaymentMethod Membership2_PaymentMethod `protobuf:"varint,4,opt,name=paymentMethod,proto3,enum=Membership2_PaymentMethod" json:"paymentMethod,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	DateStarted uint64                 `protobuf:"varint,1,opt,name=dateStarted,proto3" json:"dateStarted,omitempty"`
+	DateEnds    uint64                 `protobuf:"varint,2,opt,name=dateEnds,proto3" json:"dateEnds,omitempty"`
+	IsAutoRenew bool                   `protobuf:"varint,3,opt,name=isAutoRenew,proto3" json:"isAutoRenew,omitempty"`
 	// otherwise - monthly
-	IsYearly      bool `protobuf:"varint,5,opt,name=isYearly,proto3" json:"isYearly,omitempty"`
+	IsYearly      bool `protobuf:"varint,4,opt,name=isYearly,proto3" json:"isYearly,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,13 +449,6 @@ func (x *Membership2_PurchaseInfo) GetIsAutoRenew() bool {
 		return x.IsAutoRenew
 	}
 	return false
-}
-
-func (x *Membership2_PurchaseInfo) GetPaymentMethod() Membership2_PaymentMethod {
-	if x != nil {
-		return x.PaymentMethod
-	}
-	return Membership2_MethodNone
 }
 
 func (x *Membership2_PurchaseInfo) GetIsYearly() bool {
@@ -1277,23 +1312,28 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xdd\x11\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xdd\x12\n" +
 	"\vMembership2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
-	"\vamountCents\x18\x02 \x01(\x03R\vamountCents\x1a\x97\x01\n" +
+	"\vamountCents\x18\x02 \x01(\x03R\vamountCents\x1a\xd9\x02\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x0fisAttachToSpace\x18\x02 \x01(\bR\x0fisAttachToSpace\x12\x1c\n" +
 	"\tisPackage\x18\x03 \x01(\bR\tisPackage\x12\x12\n" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x1a\xcc\x01\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x127\n" +
+	"\fpricesYearly\x18\x06 \x03(\v2\x13.Membership2.AmountR\fpricesYearly\x129\n" +
+	"\rpricesMonthly\x18\a \x03(\v2\x13.Membership2.AmountR\rpricesMonthly\x12\x1a\n" +
+	"\bfeatures\x18\b \x03(\tR\bfeatures\x12\x1a\n" +
+	"\bcolorStr\x18\t \x01(\tR\bcolorStr\x12\x14\n" +
+	"\x05offer\x18\n" +
+	" \x01(\tR\x05offer\x1a\x8a\x01\n" +
 	"\fPurchaseInfo\x12 \n" +
 	"\vdateStarted\x18\x01 \x01(\x04R\vdateStarted\x12\x1a\n" +
 	"\bdateEnds\x18\x02 \x01(\x04R\bdateEnds\x12 \n" +
-	"\visAutoRenew\x18\x03 \x01(\bR\visAutoRenew\x12@\n" +
-	"\rpaymentMethod\x18\x04 \x01(\x0e2\x1a.Membership2.PaymentMethodR\rpaymentMethod\x12\x1a\n" +
-	"\bisYearly\x18\x05 \x01(\bR\bisYearly\x1a\xc5\x02\n" +
+	"\visAutoRenew\x18\x03 \x01(\bR\visAutoRenew\x12\x1a\n" +
+	"\bisYearly\x18\x04 \x01(\bR\bisYearly\x1a\xc5\x02\n" +
 	"\rProductStatus\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.Membership2.ProductStatus.StatusR\x06status\x12(\n" +
 	"\x0fspaceAttachedTo\x18\x02 \x01(\tR\x0fspaceAttachedTo\x12:\n" +
@@ -1407,41 +1447,42 @@ var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_goTypes
 	(*Membership2_WebAuthResponse)(nil),                // 23: Membership2.WebAuthResponse
 }
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_depIdxs = []int32{
-	0,  // 0: Membership2.PurchaseInfo.paymentMethod:type_name -> Membership2.PaymentMethod
-	1,  // 1: Membership2.ProductStatus.status:type_name -> Membership2.ProductStatus.Status
-	5,  // 2: Membership2.PurchasedProduct.product:type_name -> Membership2.Product
-	6,  // 3: Membership2.PurchasedProduct.purchaseInfo:type_name -> Membership2.PurchaseInfo
-	7,  // 4: Membership2.PurchasedProduct.productStatus:type_name -> Membership2.ProductStatus
-	5,  // 5: Membership2.CartProduct.product:type_name -> Membership2.Product
-	4,  // 6: Membership2.Invoice.total:type_name -> Membership2.Amount
-	2,  // 7: Membership2.Invoice.status:type_name -> Membership2.Invoice.Status
-	9,  // 8: Membership2.Cart.products:type_name -> Membership2.CartProduct
-	4,  // 9: Membership2.Cart.total:type_name -> Membership2.Amount
-	4,  // 10: Membership2.Cart.totalNextInvoice:type_name -> Membership2.Amount
-	8,  // 11: Membership2.GetStatusResponse.products:type_name -> Membership2.PurchasedProduct
-	10, // 12: Membership2.GetStatusResponse.nextInvoice:type_name -> Membership2.Invoice
-	11, // 13: Membership2.StoreCartResponse.cart:type_name -> Membership2.Cart
-	9,  // 14: Membership2.StoreCartUpdateRequest.products:type_name -> Membership2.CartProduct
-	11, // 15: Membership2.StoreCartUpdateResponse.cart:type_name -> Membership2.Cart
-	12, // 16: AnyPaymentProcessing2.GetStatus:input_type -> Membership2.GetStatusRequest
-	14, // 17: AnyPaymentProcessing2.StoreCartGet:input_type -> Membership2.StoreCartGetRequest
-	19, // 18: AnyPaymentProcessing2.StoreCartUpdate:input_type -> Membership2.StoreCartUpdateRequest
-	21, // 19: AnyPaymentProcessing2.StoreCartClear:input_type -> Membership2.StoreCartClearRequest
-	16, // 20: AnyPaymentProcessing2.StoreCartPromocodeApply:input_type -> Membership2.StoreCartPromocodeApplyRequest
-	17, // 21: AnyPaymentProcessing2.StoreCartCheckout:input_type -> Membership2.StoreCartCheckoutRequest
-	22, // 22: AnyPaymentProcessing2.WebAuth:input_type -> Membership2.WebAuthRequest
-	13, // 23: AnyPaymentProcessing2.GetStatus:output_type -> Membership2.GetStatusResponse
-	15, // 24: AnyPaymentProcessing2.StoreCartGet:output_type -> Membership2.StoreCartResponse
-	20, // 25: AnyPaymentProcessing2.StoreCartUpdate:output_type -> Membership2.StoreCartUpdateResponse
-	15, // 26: AnyPaymentProcessing2.StoreCartClear:output_type -> Membership2.StoreCartResponse
-	15, // 27: AnyPaymentProcessing2.StoreCartPromocodeApply:output_type -> Membership2.StoreCartResponse
-	18, // 28: AnyPaymentProcessing2.StoreCartCheckout:output_type -> Membership2.StoreCartCheckoutResponse
-	23, // 29: AnyPaymentProcessing2.WebAuth:output_type -> Membership2.WebAuthResponse
-	23, // [23:30] is the sub-list for method output_type
-	16, // [16:23] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	4,  // 0: Membership2.Product.pricesYearly:type_name -> Membership2.Amount
+	4,  // 1: Membership2.Product.pricesMonthly:type_name -> Membership2.Amount
+	1,  // 2: Membership2.ProductStatus.status:type_name -> Membership2.ProductStatus.Status
+	5,  // 3: Membership2.PurchasedProduct.product:type_name -> Membership2.Product
+	6,  // 4: Membership2.PurchasedProduct.purchaseInfo:type_name -> Membership2.PurchaseInfo
+	7,  // 5: Membership2.PurchasedProduct.productStatus:type_name -> Membership2.ProductStatus
+	5,  // 6: Membership2.CartProduct.product:type_name -> Membership2.Product
+	4,  // 7: Membership2.Invoice.total:type_name -> Membership2.Amount
+	2,  // 8: Membership2.Invoice.status:type_name -> Membership2.Invoice.Status
+	9,  // 9: Membership2.Cart.products:type_name -> Membership2.CartProduct
+	4,  // 10: Membership2.Cart.total:type_name -> Membership2.Amount
+	4,  // 11: Membership2.Cart.totalNextInvoice:type_name -> Membership2.Amount
+	8,  // 12: Membership2.GetStatusResponse.products:type_name -> Membership2.PurchasedProduct
+	10, // 13: Membership2.GetStatusResponse.nextInvoice:type_name -> Membership2.Invoice
+	11, // 14: Membership2.StoreCartResponse.cart:type_name -> Membership2.Cart
+	9,  // 15: Membership2.StoreCartUpdateRequest.products:type_name -> Membership2.CartProduct
+	11, // 16: Membership2.StoreCartUpdateResponse.cart:type_name -> Membership2.Cart
+	12, // 17: AnyPaymentProcessing2.GetStatus:input_type -> Membership2.GetStatusRequest
+	14, // 18: AnyPaymentProcessing2.StoreCartGet:input_type -> Membership2.StoreCartGetRequest
+	19, // 19: AnyPaymentProcessing2.StoreCartUpdate:input_type -> Membership2.StoreCartUpdateRequest
+	21, // 20: AnyPaymentProcessing2.StoreCartClear:input_type -> Membership2.StoreCartClearRequest
+	16, // 21: AnyPaymentProcessing2.StoreCartPromocodeApply:input_type -> Membership2.StoreCartPromocodeApplyRequest
+	17, // 22: AnyPaymentProcessing2.StoreCartCheckout:input_type -> Membership2.StoreCartCheckoutRequest
+	22, // 23: AnyPaymentProcessing2.WebAuth:input_type -> Membership2.WebAuthRequest
+	13, // 24: AnyPaymentProcessing2.GetStatus:output_type -> Membership2.GetStatusResponse
+	15, // 25: AnyPaymentProcessing2.StoreCartGet:output_type -> Membership2.StoreCartResponse
+	20, // 26: AnyPaymentProcessing2.StoreCartUpdate:output_type -> Membership2.StoreCartUpdateResponse
+	15, // 27: AnyPaymentProcessing2.StoreCartClear:output_type -> Membership2.StoreCartResponse
+	15, // 28: AnyPaymentProcessing2.StoreCartPromocodeApply:output_type -> Membership2.StoreCartResponse
+	18, // 29: AnyPaymentProcessing2.StoreCartCheckout:output_type -> Membership2.StoreCartCheckoutResponse
+	23, // 30: AnyPaymentProcessing2.WebAuth:output_type -> Membership2.WebAuthResponse
+	24, // [24:31] is the sub-list for method output_type
+	17, // [17:24] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_init() }

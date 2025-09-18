@@ -29,15 +29,23 @@ message Membership2 {
     // localized
     string name = 4;
     string description = 5;
+
+    repeated Amount pricesYearly = 6;
+    repeated Amount pricesMonthly = 7;
+    // localized strings for the features
+    repeated string features = 8;
+    // green, blue, red, purple, custom
+    string colorStr = 9;
+    // "limited offer"
+    string offer = 10;
   }
 
   message PurchaseInfo {
     uint64 dateStarted = 1;
     uint64 dateEnds = 2;
     bool isAutoRenew = 3;
-    PaymentMethod paymentMethod = 4;
     // otherwise - monthly
-    bool isYearly = 5;
+    bool isYearly = 4;
   }
 
   message ProductStatus {
