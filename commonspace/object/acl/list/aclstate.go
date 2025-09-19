@@ -422,16 +422,26 @@ func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRo
 	if err != nil {
 		return err
 	}
+
+	//
 	readKey, err := crypto.DeriveSymmetricKey(sharedKeyBytes, crypto.AnysyncOneToOneSpacePath)
+	if err != nil {
+		return
+	}
+
+	// todo: what should be here? crypto.DeriveASymmetricKey(sharedKeyBytes, crypto.AnysyncMetadataOneToOnePath),
+	metadataPrivKey, metadataPubKey, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return
 	}
 
 	st.keys[rootId] = AclKeys{
 		ReadKey:         readKey,
-		MetadataPrivKey: sharedKey, // todo: what should be here? crypto.DeriveASymmetricKey(sharedKeyBytes, crypto.AnysyncMetadataOneToOnePath),
+		MetadataPrivKey: metadataPrivKey,
+		MetadataPubKey:  metadataPubKey,
 	}
 
+	// looking at
 	return
 }
 
