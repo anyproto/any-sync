@@ -29,6 +29,7 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 		return nil, ErrIncorrectRecordSequence
 	}
 	if sb.privKey != nil {
+		// here it builds acl state
 		state, err = newAclStateWithKeys(records[0], sb.privKey, list.verifier)
 		if err != nil {
 			return

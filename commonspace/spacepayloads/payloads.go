@@ -138,6 +138,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	return
 }
 
+// but forSpaceDerive doesn't add read key change to acl root
 func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()

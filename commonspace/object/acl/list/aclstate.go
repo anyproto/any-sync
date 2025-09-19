@@ -1,7 +1,9 @@
 package list
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -320,6 +322,13 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		// this should be a derived acl
 		st.keys[record.Id] = AclKeys{}
 	}
+
+	if root.OneToOneInfo != nil {
+		st.deriveOneToOneKeys(record.Id, root)
+		st.accountStates[user1] = writer
+		st.accountStates[user2] = writer
+	}
+
 	if st.key != nil && st.pubKey.Equals(record.Identity) {
 		err = st.saveKeysFromRoot(record.Id, root)
 		if err != nil {
@@ -355,9 +364,11 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 		}
 		aclKeys.ReadKey = readKey
 	} else {
+		// here, it uses st.key to dercypt read key and read key to decrypt metadata key
 		readKey, err := st.unmarshallDecryptReadKey(root.EncryptedReadKey, st.key.Decrypt)
 		if err != nil {
 			return err
+
 		}
 		metadataKey, err := st.unmarshallDecryptPrivKey(root.EncryptedMetadataPrivKey, readKey.Decrypt)
 		if err != nil {
@@ -367,6 +378,60 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 		aclKeys.MetadataPrivKey = metadataKey
 	}
 	st.keys[id] = aclKeys
+	return
+}
+
+func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRoot) (err error) {
+	// derive shared priv key
+
+	// find me in pubkeys
+	// if not found, return error
+	// when found, derive with other
+	if len(root.OneToOneInfo.Writers) != 2 {
+		return fmt.Errorf("deriveOneToOneKeys: AclRoot should have exactly two Writers, but got %d", len(root.OneToOneInfo.Writers))
+	}
+	foundMe := false
+	var bobPubKeyBytes []byte
+	myPubKeyBytes, err := st.key.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+
+	for _, writerBytes := range root.OneToOneInfo.Writers {
+		if bytes.Equal(myPubKeyBytes, writerBytes) {
+			foundMe = true
+		} else {
+			bobPubKeyBytes = writerBytes
+		}
+	}
+
+	if !foundMe {
+		return fmt.Errorf("deriveOneToOneKeys: AclRoot doesn't contain current account identity")
+	}
+	bobPubKey, err := crypto.UnmarshalEd25519PublicKey(bobPubKeyBytes)
+	if err != nil {
+		return
+	}
+
+	sharedKey, err := crypto.GenerateSharedKey(st.key, bobPubKey)
+	if err != nil {
+		return
+	}
+
+	sharedKeyBytes, err := sharedKey.Raw()
+	if err != nil {
+		return err
+	}
+	readKey, err := crypto.DeriveSymmetricKey(sharedKeyBytes, crypto.AnysyncOneToOneSpacePath)
+	if err != nil {
+		return
+	}
+
+	st.keys[rootId] = AclKeys{
+		ReadKey:         readKey,
+		MetadataPrivKey: sharedKey, // todo: what should be here? crypto.DeriveASymmetricKey(sharedKeyBytes, crypto.AnysyncMetadataOneToOnePath),
+	}
+
 	return
 }
 
@@ -885,8 +950,10 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !decrypt {
 		return state.RequestMetadata, nil
 	}
+
 	aclKeys := st.keys[state.KeyRecordId]
 	if aclKeys.MetadataPrivKey == nil {
+		fmt.Printf("getMetadataErr. %#v\n", aclKeys)
 		return nil, ErrFailedToDecrypt
 	}
 	return aclKeys.MetadataPrivKey.Decrypt(state.RequestMetadata)
@@ -963,6 +1030,7 @@ func (st *AclState) LastRecordId() string {
 	return st.lastRecordId
 }
 
+// should it work for 1-1 spaces?
 func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 	for _, aState := range st.accountStates {
 		if aState.Permissions.IsOwner() {
@@ -970,6 +1038,10 @@ func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 		}
 	}
 	return nil, ErrOwnerNotFound
+}
+
+func (st *AclState) IsOneToOne() bool {
+	return false
 }
 
 func (st *AclState) deriveKey() (crypto.SymKey, error) {

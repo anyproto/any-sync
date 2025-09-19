@@ -983,6 +983,9 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 		MasterKey:         masterKey,
 		IdentitySignature: identitySignature,
 	}
+	// here it checks readkey
+	// and doesnt set meta if absent
+	// but readkey is set only in non derived payload?
 	if content.Change.ReadKey != nil {
 		aclRoot.Timestamp = time.Now().Unix()
 		metadataPrivProto, err := content.Change.MetadataKey.Marshall()

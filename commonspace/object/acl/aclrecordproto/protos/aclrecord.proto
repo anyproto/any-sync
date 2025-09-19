@@ -13,8 +13,13 @@ message AclRoot {
     bytes metadataPubKey = 7;
     bytes encryptedMetadataPrivKey = 8;
     bytes encryptedOwnerMetadata = 9;
+    AclOneToOneInfo oneToOneInfo = 10;
 }
 
+// AclOneToOneInfo exists if its one-to-one space acl record
+message AclOneToOneInfo {
+    repeated bytes writers = 1;
+}
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 message AclAccountInvite {
     bytes inviteKey = 1;
