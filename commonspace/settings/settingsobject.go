@@ -186,13 +186,13 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 	if s.state.Exists(id) {
 		return ErrAlreadyDeleted
 	}
-	entry, err := s.store.HeadStorage().GetEntry(ctx, id)
-	if err != nil {
-		return err
-	}
-	if entry.IsDerived {
-		return ErrCantDeleteDerivedObject
-	}
+	//entry, err := s.store.HeadStorage().GetEntry(ctx, id)
+	//if err != nil {
+	//	return err
+	//}
+	//if entry.IsDerived {
+	//	return ErrCantDeleteDerivedObject
+	//}
 	isSnapshot := DoSnapshot(s.Len())
 	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, isSnapshot)
 	if err != nil {
