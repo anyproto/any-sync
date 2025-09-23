@@ -61,14 +61,17 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	}
 
 	// preparing header and space id
+
 	spaceHeaderSeed := make([]byte, 32)
-	_, err = rand.Read(spaceHeaderSeed)
-	if err != nil {
-		return
-	}
+
+	// onetoone: rand breaks idempotent spaceid here
+	// _, err = rand.Read(spaceHeaderSeed)
+	// if err != nil {
+	// 	return
+	// }
 	header := &spacesyncproto.SpaceHeader{
 		Identity:  identity,
-		Timestamp: time.Now().Unix(),
+		Timestamp: 1758626857, // time.Now().Unix(), todo, onetoone idempotent spaceid
 		SpaceType: payload.SpaceType,
 		// TODO: spacepayload, which has onetooneinfo, should be sorted --
 		// spaceheader must be the same for both parties
