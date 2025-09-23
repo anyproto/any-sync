@@ -86,6 +86,8 @@ type AclState struct {
 	lastRecordId     string
 	contentValidator ContentValidator
 	list             *aclList
+
+	isOneToOne bool
 }
 
 func newAclStateWithKeys(
@@ -190,11 +192,17 @@ func (st *AclState) PermissionsAtRecord(id string, pubKey crypto.PubKey) (AclPer
 	if !st.list.HasHead(id) {
 		return AclPermissionsNone, ErrNoSuchRecord
 	}
+	// TODO: when adding to state, pubkey.Storage should be used, not just Account
 	accountState, ok := st.accountStates[mapKeyFromPubKey(pubKey)]
 	if !ok {
+		fmt.Printf("-- st.accountStates: %#v\n", st.accountStates)
+		fmt.Printf("-- no such account: %s\n", pubKey.Account())
 		return AclPermissionsNone, ErrNoSuchAccount
 	}
+	fmt.Printf("-- 2st.accountStates: %#v\n", st.accountStates)
+
 	perms := closestPermissions(accountState, id, st.list.isAfterNoCheck)
+	fmt.Printf("-- perms: %#v\n", perms)
 	return perms, nil
 }
 
@@ -305,10 +313,13 @@ func (st *AclState) IsEmpty() bool {
 }
 
 func (st *AclState) applyRoot(record *AclRecord) (err error) {
+
+	// panic("apply root")
 	root, ok := record.Model.(*aclrecordproto.AclRoot)
 	if !ok {
 		return ErrIncorrectRoot
 	}
+	fmt.Printf("-- apply root: %#v\n", root)
 	if root.EncryptedReadKey != nil {
 		mkPubKey, err := st.keyStore.PubKeyFromProto(root.MetadataPubKey)
 		if err != nil {
@@ -324,9 +335,80 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	}
 
 	if root.OneToOneInfo != nil {
-		st.deriveOneToOneKeys(record.Id, root)
-		st.accountStates[user1] = writer
-		st.accountStates[user2] = writer
+		fmt.Printf("-- apply root OneToOneInfo: %#v\n", root.OneToOneInfo)
+		sharedSk, err := st.deriveOneToOneKeys(record.Id, root)
+		if err != nil {
+			fmt.Printf("-- deriveOneToOneKeys err: %s\n", err.Error())
+			return err
+		}
+		st.accountStates[string(sharedSk.GetPublic().Storage())] = AccountState{
+			PubKey:      sharedSk.GetPublic(),
+			Permissions: AclPermissionsWriter,
+			Status:      StatusActive,
+			// todo: what to put here?
+			// see Metdata Payload
+			RequestMetadata: []byte{},
+			KeyRecordId:     record.Id,
+			// todo: should be empty?
+			//PermissionChanges []PermissionChange
+			PermissionChanges: []PermissionChange{
+				PermissionChange{
+					RecordId:   record.Id,
+					Permission: AclPermissionsOwner,
+				},
+			},
+		}
+
+		for _, writer := range root.OneToOneInfo.Writers {
+			var writerPk crypto.PubKey
+			writerPk, err = crypto.UnmarshalEd25519PublicKeyProto(writer)
+			if err != nil {
+				fmt.Printf("!--  writerPk UnmarshalEd25519PublicKeyProto err: %s\n", err.Error())
+				return err
+			}
+			// we can't use this model, it is from heart
+			// requestMetadata := &model.Metadata{
+			// 	Payload: &model.MetadataPayloadOfIdentity{
+			// 		Identity: &model.MetadataPayloadIdentityPayload{
+			// 			ProfileSymKey: []byte{},
+			// 		},
+			// 	},
+			// }
+
+			st.accountStates[string(writerPk.Storage())] = AccountState{
+				PubKey:      writerPk,
+				Permissions: AclPermissionsWriter,
+				Status:      StatusActive,
+				// todo: what to put here?
+				// see Metdata Payload
+				RequestMetadata: []byte{},
+				KeyRecordId:     record.Id,
+				// todo: should be empty?
+				// no, it checks validateChange => CanWrite() on changes for some reason
+				// it maybe shouldn't, according to the comment on objectree.go
+				// but now it checks!
+				// "
+				// // it is a good question whether we need to validate everything
+				// // because maybe we can trust the stuff that is already in the storage
+				// // return added, ot.validateTree(nil)
+				// "
+
+				PermissionChanges: []PermissionChange{
+					PermissionChange{
+						RecordId:   record.Id,
+						Permission: AclPermissionsWriter,
+					},
+				},
+			}
+		}
+
+		st.readKeyChanges = []string{record.Id}
+		st.lastRecordId = record.Id
+		st.isOneToOne = true
+		return nil
+
+	} else {
+		fmt.Printf("-- aclRoot OneToOne is nil, %s\n", record.Id)
 	}
 
 	if st.key != nil && st.pubKey.Equals(record.Identity) {
@@ -381,19 +463,20 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 	return
 }
 
-func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRoot) (err error) {
+func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRoot) (sharedKey crypto.PrivKey, err error) {
 	// derive shared priv key
 
 	// find me in pubkeys
 	// if not found, return error
 	// when found, derive with other
 	if len(root.OneToOneInfo.Writers) != 2 {
-		return fmt.Errorf("deriveOneToOneKeys: AclRoot should have exactly two Writers, but got %d", len(root.OneToOneInfo.Writers))
+		return nil, fmt.Errorf("deriveOneToOneKeys: AclRoot should have exactly two Writers, but got %d", len(root.OneToOneInfo.Writers))
 	}
 	foundMe := false
 	var bobPubKeyBytes []byte
 	myPubKeyBytes, err := st.key.GetPublic().Marshall()
 	if err != nil {
+		err = fmt.Errorf("deriveOneToOneKeys: error Marshal() st.key: %w", err)
 		return
 	}
 
@@ -406,42 +489,60 @@ func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRo
 	}
 
 	if !foundMe {
-		return fmt.Errorf("deriveOneToOneKeys: AclRoot doesn't contain current account identity")
+		err = fmt.Errorf("deriveOneToOneKeys: AclRoot doesn't contain current account identity")
+		return
 	}
-	bobPubKey, err := crypto.UnmarshalEd25519PublicKey(bobPubKeyBytes)
+	bobPubKey, err := crypto.UnmarshalEd25519PublicKeyProto(bobPubKeyBytes)
 	if err != nil {
+		err = fmt.Errorf("deriveOneToOneKeys: error Unmarshal(bobPubKeyBytes): %w", err)
 		return
 	}
 
-	sharedKey, err := crypto.GenerateSharedKey(st.key, bobPubKey)
+	// todo: using st.key here, since we foundMe already
+	sharedKey, err = crypto.GenerateSharedKey(st.key, bobPubKey, crypto.AnysyncOneToOneSpacePath)
 	if err != nil {
+		err = fmt.Errorf("deriveOneToOneKeys: error GenerateSharedKey: %w", err)
 		return
 	}
 
 	sharedKeyBytes, err := sharedKey.Raw()
 	if err != nil {
-		return err
+		err = fmt.Errorf("deriveOneToOneKeys: error getting sharedKey.Raw(): %w", err)
+		return
 	}
 
-	//
-	readKey, err := crypto.DeriveSymmetricKey(sharedKeyBytes, crypto.AnysyncOneToOneSpacePath)
+	readKey, err := crypto.DeriveSymmetricKey(sharedKeyBytes, crypto.AnysyncReadOneToOneSpacePath)
+	if err != nil {
+		err = fmt.Errorf("deriveOneToOneKeys: error DeriveSymmetricKey: %w", err)
+		return
+	}
+
+	metadataSharedKey, err := crypto.GenerateSharedKey(st.key, bobPubKey, crypto.AnysyncMetadataOneToOnePath)
+	if err != nil {
+		err = fmt.Errorf("deriveOneToOneKeys: metadataSharedKey: %w", err)
+		return
+	}
+
+	// todo: check that we encrypt
+	// 1) .Raw() and
+	// 2) with readKey
+	metadataSharedKeyBytes, err := metadataSharedKey.Raw()
 	if err != nil {
 		return
 	}
 
-	// todo: what should be here? crypto.DeriveASymmetricKey(sharedKeyBytes, crypto.AnysyncMetadataOneToOnePath),
-	metadataPrivKey, metadataPubKey, err := crypto.GenerateRandomEd25519KeyPair()
+	encMetadatKey, err := readKey.Encrypt(metadataSharedKeyBytes)
 	if err != nil {
 		return
 	}
 
 	st.keys[rootId] = AclKeys{
 		ReadKey:         readKey,
-		MetadataPrivKey: metadataPrivKey,
-		MetadataPubKey:  metadataPubKey,
+		MetadataPrivKey: metadataSharedKey,
+		MetadataPubKey:  metadataSharedKey.GetPublic(),
+		encMetadatKey:   encMetadatKey,
 	}
 
-	// looking at
 	return
 }
 
@@ -957,11 +1058,12 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !exists {
 		return nil, ErrNoSuchAccount
 	}
-	if !decrypt {
+	if !decrypt || st.IsOneToOne() {
 		return state.RequestMetadata, nil
 	}
 
 	aclKeys := st.keys[state.KeyRecordId]
+
 	if aclKeys.MetadataPrivKey == nil {
 		fmt.Printf("getMetadataErr. %#v\n", aclKeys)
 		return nil, ErrFailedToDecrypt
@@ -1051,7 +1153,7 @@ func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 }
 
 func (st *AclState) IsOneToOne() bool {
-	return false
+	return st.isOneToOne
 }
 
 func (st *AclState) deriveKey() (crypto.SymKey, error) {

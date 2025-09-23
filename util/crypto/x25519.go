@@ -7,9 +7,11 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"fmt"
 	"io"
 
 	"filippo.io/edwards25519"
+	"github.com/anyproto/go-slip21"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
@@ -94,7 +96,7 @@ func DecryptX25519(privKey, pubKey *[32]byte, encrypted []byte) ([]byte, error) 
 
 //
 
-func buildSymmetricContext(a, b []byte) []byte {
+func buildSortedContext(a, b []byte) []byte {
 	// add label here so that we can distinguish from other potential implementations
 	label := []byte("joined-identity-v1")
 	if bytes.Compare(a, b) <= 0 {
@@ -103,7 +105,13 @@ func buildSymmetricContext(a, b []byte) []byte {
 	return append(append([]byte{}, label...), append(b, a...)...)
 }
 
-func GenerateSharedKey(aSk PrivKey, bPk PubKey) (PrivKey, error) {
+func GenerateSharedKey(aSk PrivKey, bPk PubKey, derivePath string) (PrivKey, error) {
+	if derivePath == "" {
+		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be not empty")
+	} else if !slip21.IsValidPath(derivePath) {
+		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be valid slip21 path, but got: %s", derivePath)
+	}
+
 	skRaw, err := aSk.Raw()
 	if err != nil {
 		return nil, err
@@ -132,12 +140,19 @@ func GenerateSharedKey(aSk PrivKey, bPk PubKey) (PrivKey, error) {
 		return nil, err
 	}
 
-	ctx := buildSymmetricContext(aPkRaw, bPkRaw)
+	ctx := buildSortedContext(aPkRaw, bPkRaw)
 	h := hkdf.New(sha256.New, shared, nil, ctx)
 	var seed [32]byte
 	if _, err := io.ReadFull(h, seed[:]); err != nil {
 		return nil, err
 	}
+
+	node, err := slip21.DeriveForPath(derivePath, seed[:])
+	if err != nil {
+		return nil, err
+	}
+	child := node.SymmetricKey()
+	copy(seed[:], child)
 
 	jointPriv := ed25519.NewKeyFromSeed(seed[:])
 

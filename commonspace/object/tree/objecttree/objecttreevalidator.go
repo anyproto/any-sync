@@ -148,6 +148,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		return
 	}
 	if !perms.CanWrite() {
+		fmt.Printf("-- !CanWrite: %#v\n", perms)
 		err = list.ErrInsufficientPermissions
 		return
 	}

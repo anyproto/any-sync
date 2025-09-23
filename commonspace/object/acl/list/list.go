@@ -99,6 +99,7 @@ func build(deps internalDeps) (list AclList, err error) {
 		stateBuilder = deps.stateBuilder
 	)
 	head, err := storage.Head(ctx)
+	fmt.Printf("-- acl list build head:: %s\n", head)
 	if err != nil {
 		return
 	}
@@ -110,6 +111,7 @@ func build(deps internalDeps) (list AclList, err error) {
 
 	record, err := recBuilder.UnmarshallWithId(rec.RawRecordWithId())
 	if err != nil {
+		fmt.Printf("-- record UnmarshallWithId err %s\n", err.Error())
 		return
 	}
 	records := []*AclRecord{record}
@@ -156,6 +158,7 @@ func build(deps internalDeps) (list AclList, err error) {
 	stateBuilder.Init(id)
 	state, err := stateBuilder.Build(records, list.(*aclList))
 	if err != nil {
+		fmt.Printf("-- stateBuilder.Build err %s\n", err.Error())
 		return
 	}
 	list.(*aclList).aclState = state

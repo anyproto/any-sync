@@ -2,6 +2,7 @@ package list
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
@@ -13,11 +14,12 @@ import (
 )
 
 type RootContent struct {
-	PrivKey   crypto.PrivKey
-	MasterKey crypto.PrivKey
-	SpaceId   string
-	Change    ReadKeyChangePayload
-	Metadata  []byte
+	OneToOneInfo *AclOneToOneInfo
+	PrivKey      crypto.PrivKey
+	MasterKey    crypto.PrivKey
+	SpaceId      string
+	Change       ReadKeyChangePayload
+	Metadata     []byte
 }
 
 type RequestJoinPayload struct {
@@ -977,7 +979,15 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	if err != nil {
 		return
 	}
+
+	var oneToOneInfo *aclrecordproto.AclOneToOneInfo
+	if content.OneToOneInfo != nil {
+		oneToOneInfo = &aclrecordproto.AclOneToOneInfo{
+			Writers: content.OneToOneInfo.Writers,
+		}
+	}
 	aclRoot := &aclrecordproto.AclRoot{
+		OneToOneInfo:      oneToOneInfo,
 		Identity:          identity,
 		SpaceId:           content.SpaceId,
 		MasterKey:         masterKey,
@@ -988,6 +998,7 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	// but readkey is set only in non derived payload?
 	if content.Change.ReadKey != nil {
 		aclRoot.Timestamp = time.Now().Unix()
+		fmt.Printf("-- change: %#v\n", content.Change)
 		metadataPrivProto, err := content.Change.MetadataKey.Marshall()
 		if err != nil {
 			return nil, err

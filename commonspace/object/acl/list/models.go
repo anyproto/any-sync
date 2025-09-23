@@ -17,6 +17,10 @@ const (
 	StatusCanceled
 )
 
+type AclOneToOneInfo struct {
+	Writers [][]byte
+}
+
 type AclRecord struct {
 	Id                string
 	PrevId            string
@@ -129,7 +133,7 @@ func (p AclPermissions) IsLessOrEqual(q AclPermissions) bool {
 	case AclPermissionsReader:
 		return q != AclPermissionsNone
 	case AclPermissionsWriter:
-		return q == AclPermissionsWriter || q == AclPermissionsAdmin 
+		return q == AclPermissionsWriter || q == AclPermissionsAdmin
 	case AclPermissionsAdmin:
 		return p == q
 	default:

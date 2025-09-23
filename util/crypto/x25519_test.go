@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
 	"testing"
 
@@ -11,40 +10,29 @@ import (
 
 func Test_SharedKeyEqual(t *testing.T) {
 	privKeyA, pubKeyA, _ := GenerateEd25519Key(rand.Reader)
-	rawSkA, _ := privKeyA.Raw()
-	rawPkA, _ := pubKeyA.Raw()
 	privKeyB, pubKeyB, _ := GenerateEd25519Key(rand.Reader)
-	rawSkB, _ := privKeyB.Raw()
-	rawPkB, _ := pubKeyB.Raw()
 
-	sharedSkA, sharedPkA, err := GenerateSharedKey(ed25519.PrivateKey(rawSkA), ed25519.PublicKey(rawPkA), rawPkB)
+	sharedSkA, err := GenerateSharedKey(privKeyA, pubKeyB, "test")
 	require.NoError(t, err)
 
-	sharedSkB, sharedPkB, err := GenerateSharedKey(ed25519.PrivateKey(rawSkB), ed25519.PublicKey(rawPkB), rawPkA)
+	sharedSkB, err := GenerateSharedKey(privKeyB, pubKeyA, "test")
 	require.NoError(t, err)
 
 	assert.Equal(t, sharedSkA, sharedSkB)
-	assert.Equal(t, sharedPkA, sharedPkB)
 }
 
 func Test_SharedKeyEncryptDecrypt(t *testing.T) {
 	privKeyA, pubKeyA, _ := GenerateEd25519Key(rand.Reader)
-	rawSkA, _ := privKeyA.Raw()
-	rawPkA, _ := pubKeyA.Raw()
 	privKeyB, pubKeyB, _ := GenerateEd25519Key(rand.Reader)
-	rawSkB, _ := privKeyB.Raw()
-	rawPkB, _ := pubKeyB.Raw()
 
-	sharedSkA, sharedPkA, err := GenerateSharedKey(ed25519.PrivateKey(rawSkA), ed25519.PublicKey(rawPkA), rawPkB)
+	sharedSkA, err := GenerateSharedKey(privKeyA, pubKeyB, "test")
 	require.NoError(t, err)
 
-	sharedSkB, sharedPkB, err := GenerateSharedKey(ed25519.PrivateKey(rawSkB), ed25519.PublicKey(rawPkB), rawPkA)
+	sharedSkB, err := GenerateSharedKey(privKeyB, pubKeyA, "test")
 	require.NoError(t, err)
 
-	pkA := NewEd25519PubKey(sharedPkA)
-	skA := NewEd25519PrivKey(sharedSkA)
-	pkB := NewEd25519PubKey(sharedPkB)
-	skB := NewEd25519PrivKey(sharedSkB)
+	pkA := sharedSkA.GetPublic()
+	pkB := sharedSkB.GetPublic()
 
 	msg := []byte{1, 0, 1, 0, 1}
 	encryptedA, err := pkA.Encrypt(msg)
@@ -54,12 +42,17 @@ func Test_SharedKeyEncryptDecrypt(t *testing.T) {
 
 	assert.NotEqual(t, encryptedA, encryptedB)
 
-	decryptedA, err := skA.Decrypt(encryptedB)
+	decryptedA, err := sharedSkA.Decrypt(encryptedB)
 	require.NoError(t, err)
-	decryptedB, err := skB.Decrypt(encryptedA)
+	decryptedB, err := sharedSkB.Decrypt(encryptedA)
 	require.NoError(t, err)
 
 	assert.Equal(t, decryptedA, decryptedB)
 	assert.Equal(t, decryptedA, msg)
+
+	sharedSkC, err := GenerateSharedKey(privKeyB, pubKeyA, "test2")
+	require.NoError(t, err)
+	_, err = sharedSkC.Decrypt(encryptedA)
+	require.Error(t, err)
 
 }

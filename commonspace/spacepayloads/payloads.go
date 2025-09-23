@@ -3,6 +3,7 @@ package spacepayloads
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ type SpaceCreatePayload struct {
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 	// SpacePayload is an arbitrary payload related to space type
-	SpacePayload []byte
+	SpacePayload []byte // we probably should put onetooneinfo here
 	// MasterKey is the master key of the owner
 	MasterKey crypto.PrivKey
 	// ReadKey is the first read key of space
@@ -66,9 +67,11 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		return
 	}
 	header := &spacesyncproto.SpaceHeader{
-		Identity:           identity,
-		Timestamp:          time.Now().Unix(),
-		SpaceType:          payload.SpaceType,
+		Identity:  identity,
+		Timestamp: time.Now().Unix(),
+		SpaceType: payload.SpaceType,
+		// TODO: spacepayload, which has onetooneinfo, should be sorted --
+		// spaceheader must be the same for both parties
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
@@ -88,6 +91,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	}
 	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, payload.ReplicationKey)
+	fmt.Printf("-- spaceId:: %s\n", spaceId)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
 		Id:        spaceId,
@@ -96,10 +100,32 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
 	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
+
+	var oneToOneInfo *list.AclOneToOneInfo
+	//todo: we pack onetooneinfo to spacepayload and then unpack here,
+	// which is dumb. But we still need spacepayload to make a spaceheader.
+	// think how to refactor
+	if payload.SpacePayload != nil {
+		var oneToOneInfoProto aclrecordproto.AclOneToOneInfo
+		err = oneToOneInfoProto.UnmarshalVT(payload.SpacePayload)
+		if err == nil {
+			fmt.Printf("-- oneToOneInfoProto Unmarshal writers len: %d\n", len(oneToOneInfoProto.Writers))
+			if len(oneToOneInfoProto.Writers) == 2 {
+				oneToOneInfo = &list.AclOneToOneInfo{
+					Writers: oneToOneInfoProto.Writers,
+				}
+			}
+		} else {
+			fmt.Printf("-- oneToOneInfoProto Unmarshal err: %s\n", err.Error())
+		}
+
+	}
+
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
-		PrivKey:   payload.SigningKey,
-		MasterKey: payload.MasterKey,
-		SpaceId:   spaceId,
+		OneToOneInfo: oneToOneInfo,
+		PrivKey:      payload.SigningKey,
+		MasterKey:    payload.MasterKey,
+		SpaceId:      spaceId,
 		Change: list.ReadKeyChangePayload{
 			MetadataKey: payload.MetadataKey,
 			ReadKey:     payload.ReadKey,
@@ -117,6 +143,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	if err != nil {
 		return
 	}
+	fmt.Printf("-- acl head id:: %s\n", aclRoot.Id)
 	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
 		AclHeadId:  aclRoot.Id,
 		PrivKey:    payload.SigningKey,
