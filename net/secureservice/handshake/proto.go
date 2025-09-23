@@ -14,19 +14,23 @@ type ProtoChecker struct {
 	SupportedEncodings []handshakeproto.Encoding
 }
 
-func OutgoingProtoHandshake(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto) (remoteProto *handshakeproto.Proto, err error) {
+func OutgoingProtoHandshake(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto) (*handshakeproto.Proto, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	h := newHandshake()
 	done := make(chan struct{})
+	var (
+		err         error
+		remoteProto *handshakeproto.Proto
+	)
 	go func() {
 		defer close(done)
 		remoteProto, err = outgoingProtoHandshake(h, conn, proto)
 	}()
 	select {
 	case <-done:
-		return
+		return remoteProto, err
 	case <-ctx.Done():
 		_ = conn.Close()
 		return nil, ctx.Err()
