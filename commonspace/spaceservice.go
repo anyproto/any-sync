@@ -66,6 +66,7 @@ type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (string, error)
+	DeriveOneToOneSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error)
 	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
 }
@@ -136,6 +137,22 @@ func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.Space
 // maybe we should use derived space for onetoone
 func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
 	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
+	if err != nil {
+		return
+	}
+	store, err := s.createSpaceStorage(ctx, storageCreate)
+	if err != nil {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
+			return storageCreate.SpaceHeaderWithId.Id, nil
+		}
+		return
+	}
+
+	return store.Id(), store.Close(ctx)
+}
+
+func (s *spaceService) DeriveOneToOneSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForOneToOneSpace(payload)
 	if err != nil {
 		return
 	}

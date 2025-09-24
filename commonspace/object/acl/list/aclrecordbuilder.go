@@ -14,12 +14,11 @@ import (
 )
 
 type RootContent struct {
-	OneToOneInfo *AclOneToOneInfo
-	PrivKey      crypto.PrivKey
-	MasterKey    crypto.PrivKey
-	SpaceId      string
-	Change       ReadKeyChangePayload
-	Metadata     []byte
+	PrivKey   crypto.PrivKey
+	MasterKey crypto.PrivKey
+	SpaceId   string
+	Change    ReadKeyChangePayload
+	Metadata  []byte
 }
 
 type RequestJoinPayload struct {
@@ -102,6 +101,7 @@ type AclRecordBuilder interface {
 	Unmarshall(rawRecord *consensusproto.RawRecord) (rec *AclRecord, err error)
 
 	BuildRoot(content RootContent) (rec *consensusproto.RawRecordWithId, err error)
+	BuildOneToOneRoot(content RootContent, oneToOneInfo *aclrecordproto.AclOneToOneInfo) (rec *consensusproto.RawRecordWithId, err error)
 	BuildBatchRequest(payload BatchRequestPayload) (batchResult BatchResult, err error)
 	BuildInvite() (res InviteResult, err error)
 	BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error)
@@ -979,26 +979,14 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	if err != nil {
 		return
 	}
-
-	var oneToOneInfo *aclrecordproto.AclOneToOneInfo
-	if content.OneToOneInfo != nil {
-		oneToOneInfo = &aclrecordproto.AclOneToOneInfo{
-			Writers: content.OneToOneInfo.Writers,
-		}
-	}
 	aclRoot := &aclrecordproto.AclRoot{
-		OneToOneInfo:      oneToOneInfo,
 		Identity:          identity,
 		SpaceId:           content.SpaceId,
 		MasterKey:         masterKey,
 		IdentitySignature: identitySignature,
 	}
-	// here it checks readkey
-	// and doesnt set meta if absent
-	// but readkey is set only in non derived payload?
 	if content.Change.ReadKey != nil {
 		aclRoot.Timestamp = time.Now().Unix()
-		fmt.Printf("-- change: %#v\n", content.Change)
 		metadataPrivProto, err := content.Change.MetadataKey.Marshall()
 		if err != nil {
 			return nil, err
@@ -1025,6 +1013,41 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 		}
 		aclRoot.EncryptedOwnerMetadata = enc
 	}
+	return marshalAclRoot(aclRoot, content.PrivKey)
+}
+
+func (a *aclRecordBuilder) BuildOneToOneRoot(content RootContent, oneToOneInfo *aclrecordproto.AclOneToOneInfo) (rec *consensusproto.RawRecordWithId, err error) {
+	rawIdentity, err := content.PrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+	identity, err := content.PrivKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	masterKey, err := content.MasterKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	identitySignature, err := content.MasterKey.Sign(rawIdentity)
+	if err != nil {
+		return
+	}
+
+	aclRoot := &aclrecordproto.AclRoot{
+		OneToOneInfo:      oneToOneInfo,
+		Identity:          identity,
+		SpaceId:           content.SpaceId,
+		MasterKey:         masterKey,
+		IdentitySignature: identitySignature,
+	}
+	// here it checks readkey
+	// and doesnt set meta if absent
+	// but readkey is set only in non derived payload?
+	// priv key is account key..?
+	// then 1-1 fails.
+	// no, we pass PrivKey from space payload, which is sharedSk
+	fmt.Printf("-- before marshal, privkey account: %s\n", content.PrivKey.GetPublic().Account())
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }
 
@@ -1074,5 +1097,6 @@ func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWit
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
+	fmt.Printf("-- marshalAclRoot aclHeadId: %s\n", aclHeadId)
 	return
 }

@@ -256,7 +256,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 
 	_, err := objTree.rebuildFromStorage(nil, nil, nil)
 	if err != nil {
-		fmt.Printf("%s\n", err.Error())
+		fmt.Printf("-- rebuildFromStorage err: %s\n", err.Error())
 		panic("rebuildFromStorage")
 		return nil, fmt.Errorf("failed to rebuild from storage: %w", err)
 	}
