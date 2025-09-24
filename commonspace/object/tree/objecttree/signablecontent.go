@@ -12,8 +12,8 @@ type SignableChangeContent struct {
 	Key crypto.PrivKey
 	// IsSnapshot tells if the change has snapshot of all previous data
 	IsSnapshot bool
-	// IsEncrypted tells if we encrypt the data with the relevant symmetric key
-	IsEncrypted bool
+	// ShouldBeEncrypted tells if we encrypt the data with the relevant symmetric key
+	ShouldBeEncrypted bool
 	// Timestamp is a timestamp of change, if it is <= 0, then we use current timestamp
 	Timestamp int64
 	// DataType contains additional info about the data in the payload

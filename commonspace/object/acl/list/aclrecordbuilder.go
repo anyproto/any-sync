@@ -69,6 +69,11 @@ type NewInvites struct {
 	Permissions AclPermissions
 }
 
+type OwnershipChangePayload struct {
+	NewOwner            crypto.PubKey
+	OldOwnerPermissions AclPermissions
+}
+
 type BatchRequestPayload struct {
 	Additions     []AccountAdd
 	Changes       []PermissionChangePayload
@@ -113,6 +118,7 @@ type AclRecordBuilder interface {
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -133,6 +139,21 @@ func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountd
 		accountKeys: keys,
 		verifier:    verifier,
 	}
+}
+
+func (a *aclRecordBuilder) BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	newOwnerBytes, err := ownershipChange.NewOwner.Marshall()
+	if err != nil {
+		return nil, err
+	}
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_OwnershipChange{
+			&aclrecordproto.AclOwnershipChange{
+				NewOwnerIdentity:    newOwnerBytes,
+				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions)},
+		},
+	}
+	return a.buildRecord(content)
 }
 
 func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (batchResult BatchResult, err error) {

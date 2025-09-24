@@ -153,6 +153,8 @@ func TestAclExecutor(t *testing.T) {
 		{"joiner.invite_join::someId", nil},
 		// check that they can't be approved after they joined under a different link
 		{"a.approve::joiner,rw", fmt.Errorf("no join records to approve")},
+		{"a.ownership_change::joiner,r", nil},
+		{"joiner.add::friend,r,m1", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

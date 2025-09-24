@@ -3,6 +3,13 @@ package yamux
 import (
 	"bytes"
 	"context"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
@@ -13,11 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"io"
-	"net"
-	"sync"
-	"testing"
-	"time"
 )
 
 var ctx = context.Background()
@@ -253,3 +255,43 @@ func (t *testAccepter) Init(a *app.App) (err error) {
 }
 
 func (t *testAccepter) Name() (name string) { return "testAccepter" }
+
+// TestDialContextCancellation tests that canceling the dial context aborts the dial quickly
+func TestDialContextCancellation(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+
+	// Create a context that we'll cancel immediately
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Use a non-routable address to ensure the connection will hang
+	addr := "192.0.2.1:12345" // TEST-NET-1, guaranteed not to be routable
+
+	// Start the dial in a goroutine
+	done := make(chan error)
+	go func() {
+		_, err := fx.Dial(ctx, addr)
+		done <- err
+	}()
+
+	// Give the dial a moment to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Cancel the context
+	cancel()
+
+	// The dial should return quickly with an error
+	select {
+	case err := <-done:
+		require.Error(t, err)
+		// Check that the error is related to cancellation
+		errStr := err.Error()
+		assert.True(t,
+			strings.Contains(errStr, "context") ||
+				strings.Contains(errStr, "canceled") ||
+				strings.Contains(errStr, "operation was canceled"),
+			"Expected cancellation error, got: %s", errStr)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Dial did not abort quickly when context was cancelled")
+	}
+}
