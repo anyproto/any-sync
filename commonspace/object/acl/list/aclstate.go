@@ -39,6 +39,7 @@ var (
 	ErrIncorrectRecordSequence   = errors.New("incorrect prev id of a record")
 	ErrMetadataTooLarge          = errors.New("metadata size too large")
 	ErrOwnerNotFound             = errors.New("owner not found")
+	ErrCantAddRecordOneToOne     = errors.New("can't add record to one-to-one space")
 )
 
 const MaxMetadataLen = 1024
@@ -275,6 +276,10 @@ func (st *AclState) DecryptInvite(invitePk crypto.PrivKey) (key crypto.SymKey, e
 }
 
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
+	if st.IsOneToOne() {
+		return ErrCantAddRecordOneToOne
+	}
+
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
 		return
@@ -294,10 +299,6 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 		return
 	}
 	// getting all states for users at record and saving them
-	var states []AccountState
-	for _, state := range st.accountStates {
-		states = append(states, state)
-	}
 	st.lastRecordId = record.Id
 	return
 }
