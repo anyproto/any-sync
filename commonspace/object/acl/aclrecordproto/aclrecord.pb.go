@@ -7,12 +7,11 @@
 package aclrecordproto
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -410,6 +409,59 @@ func (x *AclAccountInviteChange) GetPermissions() AclUserPermissions {
 	return AclUserPermissions_None
 }
 
+// AclOwnershipChange contains the new owner identity
+type AclOwnershipChange struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	NewOwnerIdentity    []byte                 `protobuf:"bytes,1,opt,name=newOwnerIdentity,proto3" json:"newOwnerIdentity,omitempty"`
+	OldOwnerPermissions AclUserPermissions     `protobuf:"varint,2,opt,name=oldOwnerPermissions,proto3,enum=aclrecord.AclUserPermissions" json:"oldOwnerPermissions,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *AclOwnershipChange) Reset() {
+	*x = AclOwnershipChange{}
+	mi := &file_aclrecord_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclOwnershipChange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclOwnershipChange) ProtoMessage() {}
+
+func (x *AclOwnershipChange) ProtoReflect() protoreflect.Message {
+	mi := &file_aclrecord_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclOwnershipChange.ProtoReflect.Descriptor instead.
+func (*AclOwnershipChange) Descriptor() ([]byte, []int) {
+	return file_aclrecord_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AclOwnershipChange) GetNewOwnerIdentity() []byte {
+	if x != nil {
+		return x.NewOwnerIdentity
+	}
+	return nil
+}
+
+func (x *AclOwnershipChange) GetOldOwnerPermissions() AclUserPermissions {
+	if x != nil {
+		return x.OldOwnerPermissions
+	}
+	return AclUserPermissions_None
+}
+
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
 type AclAccountRequestJoin struct {
 	state                   protoimpl.MessageState `protogen:"open.v1"`
@@ -424,7 +476,7 @@ type AclAccountRequestJoin struct {
 
 func (x *AclAccountRequestJoin) Reset() {
 	*x = AclAccountRequestJoin{}
-	mi := &file_aclrecord_proto_msgTypes[4]
+	mi := &file_aclrecord_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +488,7 @@ func (x *AclAccountRequestJoin) String() string {
 func (*AclAccountRequestJoin) ProtoMessage() {}
 
 func (x *AclAccountRequestJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[4]
+	mi := &file_aclrecord_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +501,7 @@ func (x *AclAccountRequestJoin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestJoin.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestJoin) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{4}
+	return file_aclrecord_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AclAccountRequestJoin) GetInviteIdentity() []byte {
@@ -497,7 +549,7 @@ type AclAccountInviteJoin struct {
 
 func (x *AclAccountInviteJoin) Reset() {
 	*x = AclAccountInviteJoin{}
-	mi := &file_aclrecord_proto_msgTypes[5]
+	mi := &file_aclrecord_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -509,7 +561,7 @@ func (x *AclAccountInviteJoin) String() string {
 func (*AclAccountInviteJoin) ProtoMessage() {}
 
 func (x *AclAccountInviteJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[5]
+	mi := &file_aclrecord_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -522,7 +574,7 @@ func (x *AclAccountInviteJoin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountInviteJoin.ProtoReflect.Descriptor instead.
 func (*AclAccountInviteJoin) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{5}
+	return file_aclrecord_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AclAccountInviteJoin) GetIdentity() []byte {
@@ -580,7 +632,7 @@ type AclAccountRequestAccept struct {
 
 func (x *AclAccountRequestAccept) Reset() {
 	*x = AclAccountRequestAccept{}
-	mi := &file_aclrecord_proto_msgTypes[6]
+	mi := &file_aclrecord_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +644,7 @@ func (x *AclAccountRequestAccept) String() string {
 func (*AclAccountRequestAccept) ProtoMessage() {}
 
 func (x *AclAccountRequestAccept) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[6]
+	mi := &file_aclrecord_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +657,7 @@ func (x *AclAccountRequestAccept) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestAccept.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestAccept) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{6}
+	return file_aclrecord_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AclAccountRequestAccept) GetIdentity() []byte {
@@ -646,7 +698,7 @@ type AclAccountRequestDecline struct {
 
 func (x *AclAccountRequestDecline) Reset() {
 	*x = AclAccountRequestDecline{}
-	mi := &file_aclrecord_proto_msgTypes[7]
+	mi := &file_aclrecord_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -658,7 +710,7 @@ func (x *AclAccountRequestDecline) String() string {
 func (*AclAccountRequestDecline) ProtoMessage() {}
 
 func (x *AclAccountRequestDecline) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[7]
+	mi := &file_aclrecord_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -671,7 +723,7 @@ func (x *AclAccountRequestDecline) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestDecline.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestDecline) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{7}
+	return file_aclrecord_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AclAccountRequestDecline) GetRequestRecordId() string {
@@ -691,7 +743,7 @@ type AclAccountInviteRevoke struct {
 
 func (x *AclAccountInviteRevoke) Reset() {
 	*x = AclAccountInviteRevoke{}
-	mi := &file_aclrecord_proto_msgTypes[8]
+	mi := &file_aclrecord_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -703,7 +755,7 @@ func (x *AclAccountInviteRevoke) String() string {
 func (*AclAccountInviteRevoke) ProtoMessage() {}
 
 func (x *AclAccountInviteRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[8]
+	mi := &file_aclrecord_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -716,7 +768,7 @@ func (x *AclAccountInviteRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountInviteRevoke.ProtoReflect.Descriptor instead.
 func (*AclAccountInviteRevoke) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{8}
+	return file_aclrecord_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AclAccountInviteRevoke) GetInviteRecordId() string {
@@ -737,7 +789,7 @@ type AclEncryptedReadKey struct {
 
 func (x *AclEncryptedReadKey) Reset() {
 	*x = AclEncryptedReadKey{}
-	mi := &file_aclrecord_proto_msgTypes[9]
+	mi := &file_aclrecord_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -749,7 +801,7 @@ func (x *AclEncryptedReadKey) String() string {
 func (*AclEncryptedReadKey) ProtoMessage() {}
 
 func (x *AclEncryptedReadKey) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[9]
+	mi := &file_aclrecord_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -762,7 +814,7 @@ func (x *AclEncryptedReadKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclEncryptedReadKey.ProtoReflect.Descriptor instead.
 func (*AclEncryptedReadKey) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{9}
+	return file_aclrecord_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AclEncryptedReadKey) GetIdentity() []byte {
@@ -789,7 +841,7 @@ type AclAccountPermissionChanges struct {
 
 func (x *AclAccountPermissionChanges) Reset() {
 	*x = AclAccountPermissionChanges{}
-	mi := &file_aclrecord_proto_msgTypes[10]
+	mi := &file_aclrecord_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -801,7 +853,7 @@ func (x *AclAccountPermissionChanges) String() string {
 func (*AclAccountPermissionChanges) ProtoMessage() {}
 
 func (x *AclAccountPermissionChanges) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[10]
+	mi := &file_aclrecord_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -814,7 +866,7 @@ func (x *AclAccountPermissionChanges) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountPermissionChanges.ProtoReflect.Descriptor instead.
 func (*AclAccountPermissionChanges) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{10}
+	return file_aclrecord_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AclAccountPermissionChanges) GetChanges() []*AclAccountPermissionChange {
@@ -834,7 +886,7 @@ type AclAccountsAdd struct {
 
 func (x *AclAccountsAdd) Reset() {
 	*x = AclAccountsAdd{}
-	mi := &file_aclrecord_proto_msgTypes[11]
+	mi := &file_aclrecord_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -846,7 +898,7 @@ func (x *AclAccountsAdd) String() string {
 func (*AclAccountsAdd) ProtoMessage() {}
 
 func (x *AclAccountsAdd) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[11]
+	mi := &file_aclrecord_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -859,7 +911,7 @@ func (x *AclAccountsAdd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountsAdd.ProtoReflect.Descriptor instead.
 func (*AclAccountsAdd) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{11}
+	return file_aclrecord_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AclAccountsAdd) GetAdditions() []*AclAccountAdd {
@@ -882,7 +934,7 @@ type AclAccountAdd struct {
 
 func (x *AclAccountAdd) Reset() {
 	*x = AclAccountAdd{}
-	mi := &file_aclrecord_proto_msgTypes[12]
+	mi := &file_aclrecord_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -894,7 +946,7 @@ func (x *AclAccountAdd) String() string {
 func (*AclAccountAdd) ProtoMessage() {}
 
 func (x *AclAccountAdd) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[12]
+	mi := &file_aclrecord_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -907,7 +959,7 @@ func (x *AclAccountAdd) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountAdd.ProtoReflect.Descriptor instead.
 func (*AclAccountAdd) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{12}
+	return file_aclrecord_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AclAccountAdd) GetIdentity() []byte {
@@ -948,7 +1000,7 @@ type AclAccountRequestCancel struct {
 
 func (x *AclAccountRequestCancel) Reset() {
 	*x = AclAccountRequestCancel{}
-	mi := &file_aclrecord_proto_msgTypes[13]
+	mi := &file_aclrecord_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -960,7 +1012,7 @@ func (x *AclAccountRequestCancel) String() string {
 func (*AclAccountRequestCancel) ProtoMessage() {}
 
 func (x *AclAccountRequestCancel) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[13]
+	mi := &file_aclrecord_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -973,7 +1025,7 @@ func (x *AclAccountRequestCancel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestCancel.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestCancel) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{13}
+	return file_aclrecord_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AclAccountRequestCancel) GetRecordId() string {
@@ -994,7 +1046,7 @@ type AclAccountPermissionChange struct {
 
 func (x *AclAccountPermissionChange) Reset() {
 	*x = AclAccountPermissionChange{}
-	mi := &file_aclrecord_proto_msgTypes[14]
+	mi := &file_aclrecord_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1006,7 +1058,7 @@ func (x *AclAccountPermissionChange) String() string {
 func (*AclAccountPermissionChange) ProtoMessage() {}
 
 func (x *AclAccountPermissionChange) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[14]
+	mi := &file_aclrecord_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1019,7 +1071,7 @@ func (x *AclAccountPermissionChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountPermissionChange.ProtoReflect.Descriptor instead.
 func (*AclAccountPermissionChange) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{14}
+	return file_aclrecord_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AclAccountPermissionChange) GetIdentity() []byte {
@@ -1052,7 +1104,7 @@ type AclReadKeyChange struct {
 
 func (x *AclReadKeyChange) Reset() {
 	*x = AclReadKeyChange{}
-	mi := &file_aclrecord_proto_msgTypes[15]
+	mi := &file_aclrecord_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1064,7 +1116,7 @@ func (x *AclReadKeyChange) String() string {
 func (*AclReadKeyChange) ProtoMessage() {}
 
 func (x *AclReadKeyChange) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[15]
+	mi := &file_aclrecord_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1077,7 +1129,7 @@ func (x *AclReadKeyChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclReadKeyChange.ProtoReflect.Descriptor instead.
 func (*AclReadKeyChange) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{15}
+	return file_aclrecord_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AclReadKeyChange) GetAccountKeys() []*AclEncryptedReadKey {
@@ -1126,7 +1178,7 @@ type AclAccountRemove struct {
 
 func (x *AclAccountRemove) Reset() {
 	*x = AclAccountRemove{}
-	mi := &file_aclrecord_proto_msgTypes[16]
+	mi := &file_aclrecord_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1138,7 +1190,7 @@ func (x *AclAccountRemove) String() string {
 func (*AclAccountRemove) ProtoMessage() {}
 
 func (x *AclAccountRemove) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[16]
+	mi := &file_aclrecord_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1151,7 +1203,7 @@ func (x *AclAccountRemove) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRemove.ProtoReflect.Descriptor instead.
 func (*AclAccountRemove) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{16}
+	return file_aclrecord_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AclAccountRemove) GetIdentities() [][]byte {
@@ -1177,7 +1229,7 @@ type AclAccountRequestRemove struct {
 
 func (x *AclAccountRequestRemove) Reset() {
 	*x = AclAccountRequestRemove{}
-	mi := &file_aclrecord_proto_msgTypes[17]
+	mi := &file_aclrecord_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1189,7 +1241,7 @@ func (x *AclAccountRequestRemove) String() string {
 func (*AclAccountRequestRemove) ProtoMessage() {}
 
 func (x *AclAccountRequestRemove) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[17]
+	mi := &file_aclrecord_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1202,7 +1254,7 @@ func (x *AclAccountRequestRemove) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestRemove.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestRemove) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{17}
+	return file_aclrecord_proto_rawDescGZIP(), []int{18}
 }
 
 // AclContentValue contains possible values for Acl
@@ -1224,6 +1276,7 @@ type AclContentValue struct {
 	//	*AclContentValue_RequestCancel
 	//	*AclContentValue_InviteJoin
 	//	*AclContentValue_InviteChange
+	//	*AclContentValue_OwnershipChange
 	Value         isAclContentValue_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1231,7 +1284,7 @@ type AclContentValue struct {
 
 func (x *AclContentValue) Reset() {
 	*x = AclContentValue{}
-	mi := &file_aclrecord_proto_msgTypes[18]
+	mi := &file_aclrecord_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +1296,7 @@ func (x *AclContentValue) String() string {
 func (*AclContentValue) ProtoMessage() {}
 
 func (x *AclContentValue) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[18]
+	mi := &file_aclrecord_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +1309,7 @@ func (x *AclContentValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclContentValue.ProtoReflect.Descriptor instead.
 func (*AclContentValue) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{18}
+	return file_aclrecord_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AclContentValue) GetValue() isAclContentValue_Value {
@@ -1392,6 +1445,15 @@ func (x *AclContentValue) GetInviteChange() *AclAccountInviteChange {
 	return nil
 }
 
+func (x *AclContentValue) GetOwnershipChange() *AclOwnershipChange {
+	if x != nil {
+		if x, ok := x.Value.(*AclContentValue_OwnershipChange); ok {
+			return x.OwnershipChange
+		}
+	}
+	return nil
+}
+
 type isAclContentValue_Value interface {
 	isAclContentValue_Value()
 }
@@ -1453,6 +1515,10 @@ type AclContentValue_InviteChange struct {
 	InviteChange *AclAccountInviteChange `protobuf:"bytes,14,opt,name=inviteChange,proto3,oneof"`
 }
 
+type AclContentValue_OwnershipChange struct {
+	OwnershipChange *AclOwnershipChange `protobuf:"bytes,15,opt,name=ownershipChange,proto3,oneof"`
+}
+
 func (*AclContentValue_Invite) isAclContentValue_Value() {}
 
 func (*AclContentValue_InviteRevoke) isAclContentValue_Value() {}
@@ -1481,6 +1547,8 @@ func (*AclContentValue_InviteJoin) isAclContentValue_Value() {}
 
 func (*AclContentValue_InviteChange) isAclContentValue_Value() {}
 
+func (*AclContentValue_OwnershipChange) isAclContentValue_Value() {}
+
 // AclData contains different acl content
 type AclData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1491,7 +1559,7 @@ type AclData struct {
 
 func (x *AclData) Reset() {
 	*x = AclData{}
-	mi := &file_aclrecord_proto_msgTypes[19]
+	mi := &file_aclrecord_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1503,7 +1571,7 @@ func (x *AclData) String() string {
 func (*AclData) ProtoMessage() {}
 
 func (x *AclData) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[19]
+	mi := &file_aclrecord_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1516,7 +1584,7 @@ func (x *AclData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclData.ProtoReflect.Descriptor instead.
 func (*AclData) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{19}
+	return file_aclrecord_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AclData) GetAclContent() []*AclContentValue {
@@ -1554,7 +1622,10 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x10encryptedReadKey\x18\x04 \x01(\fR\x10encryptedReadKey\"\x81\x01\n" +
 	"\x16AclAccountInviteChange\x12&\n" +
 	"\x0einviteRecordId\x18\x01 \x01(\tR\x0einviteRecordId\x12?\n" +
-	"\vpermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\vpermissions\"\xbd\x01\n" +
+	"\vpermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\vpermissions\"\x91\x01\n" +
+	"\x12AclOwnershipChange\x12*\n" +
+	"\x10newOwnerIdentity\x18\x01 \x01(\fR\x10newOwnerIdentity\x12O\n" +
+	"\x13oldOwnerPermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\x13oldOwnerPermissions\"\xbd\x01\n" +
 	"\x15AclAccountRequestJoin\x12&\n" +
 	"\x0einviteIdentity\x18\x01 \x01(\fR\x0einviteIdentity\x12&\n" +
 	"\x0einviteRecordId\x18\x02 \x01(\tR\x0einviteRecordId\x128\n" +
@@ -1606,7 +1677,7 @@ const file_aclrecord_proto_rawDesc = "" +
 	"identities\x18\x01 \x03(\fR\n" +
 	"identities\x12A\n" +
 	"\rreadKeyChange\x18\x02 \x01(\v2\x1b.aclrecord.AclReadKeyChangeR\rreadKeyChange\"\x19\n" +
-	"\x17AclAccountRequestRemove\"\xa3\b\n" +
+	"\x17AclAccountRequestRemove\"\xee\b\n" +
 	"\x0fAclContentValue\x125\n" +
 	"\x06invite\x18\x01 \x01(\v2\x1b.aclrecord.AclAccountInviteH\x00R\x06invite\x12G\n" +
 	"\finviteRevoke\x18\x02 \x01(\v2!.aclrecord.AclAccountInviteRevokeH\x00R\finviteRevoke\x12D\n" +
@@ -1624,7 +1695,8 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\n" +
 	"inviteJoin\x18\r \x01(\v2\x1f.aclrecord.AclAccountInviteJoinH\x00R\n" +
 	"inviteJoin\x12G\n" +
-	"\finviteChange\x18\x0e \x01(\v2!.aclrecord.AclAccountInviteChangeH\x00R\finviteChangeB\a\n" +
+	"\finviteChange\x18\x0e \x01(\v2!.aclrecord.AclAccountInviteChangeH\x00R\finviteChange\x12I\n" +
+	"\x0fownershipChange\x18\x0f \x01(\v2\x1d.aclrecord.AclOwnershipChangeH\x00R\x0fownershipChangeB\a\n" +
 	"\x05value\"E\n" +
 	"\aAclData\x12:\n" +
 	"\n" +
@@ -1656,7 +1728,7 @@ func file_aclrecord_proto_rawDescGZIP() []byte {
 }
 
 var file_aclrecord_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_aclrecord_proto_goTypes = []any{
 	(AclInviteType)(0),                  // 0: aclrecord.AclInviteType
 	(AclUserPermissions)(0),             // 1: aclrecord.AclUserPermissions
@@ -1664,57 +1736,60 @@ var file_aclrecord_proto_goTypes = []any{
 	(*AclOneToOneInfo)(nil),             // 3: aclrecord.AclOneToOneInfo
 	(*AclAccountInvite)(nil),            // 4: aclrecord.AclAccountInvite
 	(*AclAccountInviteChange)(nil),      // 5: aclrecord.AclAccountInviteChange
-	(*AclAccountRequestJoin)(nil),       // 6: aclrecord.AclAccountRequestJoin
-	(*AclAccountInviteJoin)(nil),        // 7: aclrecord.AclAccountInviteJoin
-	(*AclAccountRequestAccept)(nil),     // 8: aclrecord.AclAccountRequestAccept
-	(*AclAccountRequestDecline)(nil),    // 9: aclrecord.AclAccountRequestDecline
-	(*AclAccountInviteRevoke)(nil),      // 10: aclrecord.AclAccountInviteRevoke
-	(*AclEncryptedReadKey)(nil),         // 11: aclrecord.AclEncryptedReadKey
-	(*AclAccountPermissionChanges)(nil), // 12: aclrecord.AclAccountPermissionChanges
-	(*AclAccountsAdd)(nil),              // 13: aclrecord.AclAccountsAdd
-	(*AclAccountAdd)(nil),               // 14: aclrecord.AclAccountAdd
-	(*AclAccountRequestCancel)(nil),     // 15: aclrecord.AclAccountRequestCancel
-	(*AclAccountPermissionChange)(nil),  // 16: aclrecord.AclAccountPermissionChange
-	(*AclReadKeyChange)(nil),            // 17: aclrecord.AclReadKeyChange
-	(*AclAccountRemove)(nil),            // 18: aclrecord.AclAccountRemove
-	(*AclAccountRequestRemove)(nil),     // 19: aclrecord.AclAccountRequestRemove
-	(*AclContentValue)(nil),             // 20: aclrecord.AclContentValue
-	(*AclData)(nil),                     // 21: aclrecord.AclData
+	(*AclOwnershipChange)(nil),          // 6: aclrecord.AclOwnershipChange
+	(*AclAccountRequestJoin)(nil),       // 7: aclrecord.AclAccountRequestJoin
+	(*AclAccountInviteJoin)(nil),        // 8: aclrecord.AclAccountInviteJoin
+	(*AclAccountRequestAccept)(nil),     // 9: aclrecord.AclAccountRequestAccept
+	(*AclAccountRequestDecline)(nil),    // 10: aclrecord.AclAccountRequestDecline
+	(*AclAccountInviteRevoke)(nil),      // 11: aclrecord.AclAccountInviteRevoke
+	(*AclEncryptedReadKey)(nil),         // 12: aclrecord.AclEncryptedReadKey
+	(*AclAccountPermissionChanges)(nil), // 13: aclrecord.AclAccountPermissionChanges
+	(*AclAccountsAdd)(nil),              // 14: aclrecord.AclAccountsAdd
+	(*AclAccountAdd)(nil),               // 15: aclrecord.AclAccountAdd
+	(*AclAccountRequestCancel)(nil),     // 16: aclrecord.AclAccountRequestCancel
+	(*AclAccountPermissionChange)(nil),  // 17: aclrecord.AclAccountPermissionChange
+	(*AclReadKeyChange)(nil),            // 18: aclrecord.AclReadKeyChange
+	(*AclAccountRemove)(nil),            // 19: aclrecord.AclAccountRemove
+	(*AclAccountRequestRemove)(nil),     // 20: aclrecord.AclAccountRequestRemove
+	(*AclContentValue)(nil),             // 21: aclrecord.AclContentValue
+	(*AclData)(nil),                     // 22: aclrecord.AclData
 }
 var file_aclrecord_proto_depIdxs = []int32{
 	3,  // 0: aclrecord.AclRoot.oneToOneInfo:type_name -> aclrecord.AclOneToOneInfo
 	0,  // 1: aclrecord.AclAccountInvite.inviteType:type_name -> aclrecord.AclInviteType
 	1,  // 2: aclrecord.AclAccountInvite.permissions:type_name -> aclrecord.AclUserPermissions
 	1,  // 3: aclrecord.AclAccountInviteChange.permissions:type_name -> aclrecord.AclUserPermissions
-	1,  // 4: aclrecord.AclAccountInviteJoin.permissions:type_name -> aclrecord.AclUserPermissions
-	1,  // 5: aclrecord.AclAccountRequestAccept.permissions:type_name -> aclrecord.AclUserPermissions
-	16, // 6: aclrecord.AclAccountPermissionChanges.changes:type_name -> aclrecord.AclAccountPermissionChange
-	14, // 7: aclrecord.AclAccountsAdd.additions:type_name -> aclrecord.AclAccountAdd
-	1,  // 8: aclrecord.AclAccountAdd.permissions:type_name -> aclrecord.AclUserPermissions
-	1,  // 9: aclrecord.AclAccountPermissionChange.permissions:type_name -> aclrecord.AclUserPermissions
-	11, // 10: aclrecord.AclReadKeyChange.accountKeys:type_name -> aclrecord.AclEncryptedReadKey
-	11, // 11: aclrecord.AclReadKeyChange.inviteKeys:type_name -> aclrecord.AclEncryptedReadKey
-	17, // 12: aclrecord.AclAccountRemove.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	4,  // 13: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
-	10, // 14: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
-	6,  // 15: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
-	8,  // 16: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
-	16, // 17: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
-	18, // 18: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
-	17, // 19: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	9,  // 20: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
-	19, // 21: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
-	12, // 22: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
-	13, // 23: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
-	15, // 24: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
-	7,  // 25: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
-	5,  // 26: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
-	20, // 27: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	1,  // 4: aclrecord.AclOwnershipChange.oldOwnerPermissions:type_name -> aclrecord.AclUserPermissions
+	1,  // 5: aclrecord.AclAccountInviteJoin.permissions:type_name -> aclrecord.AclUserPermissions
+	1,  // 6: aclrecord.AclAccountRequestAccept.permissions:type_name -> aclrecord.AclUserPermissions
+	17, // 7: aclrecord.AclAccountPermissionChanges.changes:type_name -> aclrecord.AclAccountPermissionChange
+	15, // 8: aclrecord.AclAccountsAdd.additions:type_name -> aclrecord.AclAccountAdd
+	1,  // 9: aclrecord.AclAccountAdd.permissions:type_name -> aclrecord.AclUserPermissions
+	1,  // 10: aclrecord.AclAccountPermissionChange.permissions:type_name -> aclrecord.AclUserPermissions
+	12, // 11: aclrecord.AclReadKeyChange.accountKeys:type_name -> aclrecord.AclEncryptedReadKey
+	12, // 12: aclrecord.AclReadKeyChange.inviteKeys:type_name -> aclrecord.AclEncryptedReadKey
+	18, // 13: aclrecord.AclAccountRemove.readKeyChange:type_name -> aclrecord.AclReadKeyChange
+	4,  // 14: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
+	11, // 15: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
+	7,  // 16: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
+	9,  // 17: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
+	17, // 18: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
+	19, // 19: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
+	18, // 20: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
+	10, // 21: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
+	20, // 22: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
+	13, // 23: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
+	14, // 24: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
+	16, // 25: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
+	8,  // 26: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
+	5,  // 27: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
+	6,  // 28: aclrecord.AclContentValue.ownershipChange:type_name -> aclrecord.AclOwnershipChange
+	21, // 29: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
+	30, // [30:30] is the sub-list for method output_type
+	30, // [30:30] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_aclrecord_proto_init() }
@@ -1722,7 +1797,7 @@ func file_aclrecord_proto_init() {
 	if File_aclrecord_proto != nil {
 		return
 	}
-	file_aclrecord_proto_msgTypes[18].OneofWrappers = []any{
+	file_aclrecord_proto_msgTypes[19].OneofWrappers = []any{
 		(*AclContentValue_Invite)(nil),
 		(*AclContentValue_InviteRevoke)(nil),
 		(*AclContentValue_RequestJoin)(nil),
@@ -1737,6 +1812,7 @@ func file_aclrecord_proto_init() {
 		(*AclContentValue_RequestCancel)(nil),
 		(*AclContentValue_InviteJoin)(nil),
 		(*AclContentValue_InviteChange)(nil),
+		(*AclContentValue_OwnershipChange)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1744,7 +1820,7 @@ func file_aclrecord_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_aclrecord_proto_rawDesc), len(file_aclrecord_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   20,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

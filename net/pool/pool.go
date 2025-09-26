@@ -70,12 +70,18 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 
 func (p *pool) Flush(ctx context.Context) error {
 	p.incoming.ForEach(func(v ocache.Object) (isContinue bool) {
-		pr := v.(peer.Peer)
+		pr, err := getPeer(v)
+		if err != nil {
+			return true
+		}
 		_, _ = p.incoming.Remove(ctx, pr.Id())
 		return true
 	})
 	p.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {
-		pr := v.(peer.Peer)
+		pr, err := getPeer(v)
+		if err != nil {
+			return true
+		}
 		_, _ = p.outgoing.Remove(ctx, pr.Id())
 		return true
 	})

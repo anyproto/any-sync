@@ -38,6 +38,12 @@ enum AclInviteType {
     AnyoneCanJoin = 1;
 }
 
+// AclOwnershipChange contains the new owner identity
+message AclOwnershipChange {
+    bytes newOwnerIdentity = 1;
+    AclUserPermissions oldOwnerPermissions = 2;
+}
+
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
 message AclAccountRequestJoin {
     bytes inviteIdentity = 1;
@@ -151,6 +157,7 @@ message AclContentValue {
         AclAccountRequestCancel requestCancel = 12;
         AclAccountInviteJoin inviteJoin = 13;
         AclAccountInviteChange inviteChange = 14;
+        AclOwnershipChange ownershipChange = 15;
     }
 }
 

@@ -14,10 +14,19 @@ import (
 
 type TreeStorageCreator interface {
 	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error)
+	CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error)
 }
 
 type tempTreeStorageCreator struct {
 	store anystore.DB
+}
+
+func (t *tempTreeStorageCreator) CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
+	headStorage, err := headstorage.New(ctx, t.store)
+	if err != nil {
+		return nil, err
+	}
+	return CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, headStorage, t.store)
 }
 
 func (t *tempTreeStorageCreator) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
@@ -186,7 +195,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 
 func ValidateRawTreeDefault(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (objTree ObjectTree, err error) {
 	ctx := context.Background()
-	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
+	treeStorage, err := storageCreator.CreateStorageWithDeferredCreation(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
@@ -224,7 +233,7 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storage
 	}
 	aclList.RUnlock()
 	ctx := context.Background()
-	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
+	treeStorage, err := storageCreator.CreateStorageWithDeferredCreation(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
