@@ -18,7 +18,8 @@ message AclRoot {
 
 // AclOneToOneInfo exists if its one-to-one space acl record
 message AclOneToOneInfo {
-    repeated bytes writers = 1;
+    bytes owner = 1;
+    repeated bytes writers = 2;
 }
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 message AclAccountInvite {

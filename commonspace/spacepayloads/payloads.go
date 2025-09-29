@@ -373,7 +373,9 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	if identity == nil {
 		return
 	}
-	if !payloadIdentity.Equals(identity) {
+
+	if !payloadIdentity.Equals(identity) && header.SpaceType != "anytype.onetoone" {
+		fmt.Printf("-- ValidateSpaceHeader. payload:%s, identity: %s \n", payloadIdentity.Account(), identity.Account())
 		return ErrIncorrectIdentity
 	}
 	return

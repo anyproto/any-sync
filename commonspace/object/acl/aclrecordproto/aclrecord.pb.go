@@ -246,7 +246,8 @@ func (x *AclRoot) GetOneToOneInfo() *AclOneToOneInfo {
 // AclOneToOneInfo exists if its one-to-one space acl record
 type AclOneToOneInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Writers       [][]byte               `protobuf:"bytes,1,rep,name=writers,proto3" json:"writers,omitempty"`
+	Owner         []byte                 `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Writers       [][]byte               `protobuf:"bytes,2,rep,name=writers,proto3" json:"writers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -279,6 +280,13 @@ func (x *AclOneToOneInfo) ProtoReflect() protoreflect.Message {
 // Deprecated: Use AclOneToOneInfo.ProtoReflect.Descriptor instead.
 func (*AclOneToOneInfo) Descriptor() ([]byte, []int) {
 	return file_aclrecord_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AclOneToOneInfo) GetOwner() []byte {
+	if x != nil {
+		return x.Owner
+	}
+	return nil
 }
 
 func (x *AclOneToOneInfo) GetWriters() [][]byte {
@@ -1610,9 +1618,10 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x18encryptedMetadataPrivKey\x18\b \x01(\fR\x18encryptedMetadataPrivKey\x126\n" +
 	"\x16encryptedOwnerMetadata\x18\t \x01(\fR\x16encryptedOwnerMetadata\x12>\n" +
 	"\foneToOneInfo\x18\n" +
-	" \x01(\v2\x1a.aclrecord.AclOneToOneInfoR\foneToOneInfo\"+\n" +
-	"\x0fAclOneToOneInfo\x12\x18\n" +
-	"\awriters\x18\x01 \x03(\fR\awriters\"\xd7\x01\n" +
+	" \x01(\v2\x1a.aclrecord.AclOneToOneInfoR\foneToOneInfo\"A\n" +
+	"\x0fAclOneToOneInfo\x12\x14\n" +
+	"\x05owner\x18\x01 \x01(\fR\x05owner\x12\x18\n" +
+	"\awriters\x18\x02 \x03(\fR\awriters\"\xd7\x01\n" +
 	"\x10AclAccountInvite\x12\x1c\n" +
 	"\tinviteKey\x18\x01 \x01(\fR\tinviteKey\x128\n" +
 	"\n" +
