@@ -103,6 +103,7 @@ func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRo
 		return
 	}
 
+	// we already foundMe in Writers in findMeAndValidateOneToOne
 	if !bytes.Equal(myPubKeyBytes, root.OneToOneInfo.Writers[0]) {
 		bobPubKeyBytes = root.OneToOneInfo.Writers[0]
 	} else {
