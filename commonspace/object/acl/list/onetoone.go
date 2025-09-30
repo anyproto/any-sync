@@ -125,7 +125,7 @@ func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRo
 	if err != nil {
 		return
 	}
-	if !bytes.Equal(myPubKeyBytes, sharedPkBytes) {
+	if !bytes.Equal(root.OneToOneInfo.Owner, sharedPkBytes) {
 		err = fmt.Errorf("deriveOneToOneKeys: Owner pubkey != derived pubkey")
 		return
 	}
