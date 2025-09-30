@@ -2,7 +2,6 @@ package list
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
@@ -1062,13 +1061,6 @@ func (a *aclRecordBuilder) BuildOneToOneRoot(content RootContent, oneToOneInfo *
 		MasterKey:         masterKey,
 		IdentitySignature: identitySignature,
 	}
-	// here it checks readkey
-	// and doesnt set meta if absent
-	// but readkey is set only in non derived payload?
-	// priv key is account key..?
-	// then 1-1 fails.
-	// no, we pass PrivKey from space payload, which is sharedSk
-	fmt.Printf("-- before marshal, privkey account: %s\n", content.PrivKey.GetPublic().Account())
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }
 
@@ -1118,6 +1110,5 @@ func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWit
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
-	fmt.Printf("-- marshalAclRoot aclHeadId: %s\n", aclHeadId)
 	return
 }

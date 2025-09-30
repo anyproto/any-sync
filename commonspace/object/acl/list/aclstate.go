@@ -2,7 +2,6 @@ package list
 
 import (
 	"errors"
-	"fmt"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -195,14 +194,9 @@ func (st *AclState) PermissionsAtRecord(id string, pubKey crypto.PubKey) (AclPer
 	// TODO: when adding to state, pubkey.Storage should be used, not just Account
 	accountState, ok := st.accountStates[mapKeyFromPubKey(pubKey)]
 	if !ok {
-		fmt.Printf("-- st.accountStates: %#v\n", st.accountStates)
-		fmt.Printf("-- no such account: %s\n", pubKey.Account())
 		return AclPermissionsNone, ErrNoSuchAccount
 	}
-	fmt.Printf("-- 2st.accountStates: %#v\n", st.accountStates)
-
 	perms := closestPermissions(accountState, id, st.list.isAfterNoCheck)
-	fmt.Printf("-- perms: %#v\n", perms)
 	return perms, nil
 }
 
@@ -930,7 +924,6 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	aclKeys := st.keys[state.KeyRecordId]
 
 	if aclKeys.MetadataPrivKey == nil {
-		fmt.Printf("getMetadataErr. %#v\n", aclKeys)
 		return nil, ErrFailedToDecrypt
 	}
 	return aclKeys.MetadataPrivKey.Decrypt(state.RequestMetadata)

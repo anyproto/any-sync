@@ -4,7 +4,6 @@ package syncacl
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.uber.org/zap"
 
@@ -71,9 +70,7 @@ func (s *syncAcl) Init(a *app.App) (err error) {
 	acc := a.MustComponent(accountservice.CName).(accountservice.Service)
 	verifier := a.MustComponent(recordverifier.CName).(recordverifier.RecordVerifier)
 	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, verifier)
-	fmt.Printf("-- BuildAclListWithIdentity...\n")
 	if err != nil {
-		fmt.Printf("-- BuildAclListWithIdentity err:%s\n", err.Error())
 		return
 	}
 	spaceId := storage.Id()

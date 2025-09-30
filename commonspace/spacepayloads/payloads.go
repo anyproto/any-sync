@@ -231,7 +231,6 @@ func StoragePayloadForOneToOneSpace(payload SpaceDerivePayload) (storagePayload 
 	var oneToOneInfo aclrecordproto.AclOneToOneInfo
 	err = oneToOneInfo.UnmarshalVT(payload.SpacePayload)
 	if err != nil {
-		fmt.Printf("-- oneToOneInfo Unmarshal err: %s\n", err.Error())
 		return
 	}
 
@@ -275,7 +274,6 @@ func StoragePayloadForOneToOneSpace(payload SpaceDerivePayload) (storagePayload 
 	}
 	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, repKey)
-	fmt.Printf("-- onetoone spaceId:: %s\n", spaceId)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
 		Id:        spaceId,
@@ -375,7 +373,6 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	}
 
 	if !payloadIdentity.Equals(identity) && header.SpaceType != "anytype.onetoone" {
-		fmt.Printf("-- ValidateSpaceHeader. payload:%s, identity: %s \n", payloadIdentity.Account(), identity.Account())
 		return ErrIncorrectIdentity
 	}
 	return

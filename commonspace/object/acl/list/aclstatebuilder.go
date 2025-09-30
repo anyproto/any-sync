@@ -1,8 +1,6 @@
 package list
 
 import (
-	"fmt"
-
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -36,7 +34,6 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 		// we probably shoud go different way with onetoone, and use sharedKey as st.key
 		state, err = newAclStateWithKeys(records[0], sb.privKey, list.verifier)
 		if err != nil {
-			fmt.Printf("-- newAclStateWithKeys err %s\n", err.Error())
 			return
 		}
 	} else {

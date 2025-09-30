@@ -120,11 +120,10 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 	st.parser = &anyenc.Parser{}
 	defer st.arena.Reset()
 	doc := newStorageChangeValue(stChange, st.arena)
-	fmt.Printf(" -- change insert: %s\n", stChange.Id)
 	err = st.changesColl.Insert(ctx, doc)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocExists) {
-			return nil, fmt.Errorf("-- change insert: %s, %w", stChange.Id, treestorage.ErrTreeExists)
+			return nil, treestorage.ErrTreeExists
 		}
 		return nil, err
 	}
