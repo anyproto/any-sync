@@ -231,7 +231,7 @@ type TestStore struct {
 }
 
 func CopyStore(ctx context.Context, t *testing.T, store TestStore, name string) anystore.DB {
-	err := store.Checkpoint(ctx, true)
+	err := store.Flush(ctx, 0, anystore.FlushModeCheckpointFull)
 	require.NoError(t, err)
 	newPath := filepath.Join(t.TempDir(), name)
 	err = copyFolder(store.Path, newPath)
