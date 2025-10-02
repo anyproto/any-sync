@@ -290,7 +290,6 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	if err != nil {
 		return
 	}
-	// getting all states for users at record and saving them
 	st.lastRecordId = record.Id
 	return
 }

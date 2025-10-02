@@ -494,6 +494,13 @@ func TestFailWithWrongAclHeadIdInSettingsPayload(t *testing.T) {
 	assert.EqualErrorf(t, err, spacestorage.ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", spacestorage.ErrIncorrectSpaceHeader, err)
 }
 
+func TestStoragePayloadForOneToOneSpace(t *testing.T) {
+
+}
+func TestValidateSpaceHeader_OneToOne(t *testing.T) {
+
+}
+
 func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId string) (rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
 	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	if err != nil {

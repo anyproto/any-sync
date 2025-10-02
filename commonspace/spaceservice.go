@@ -24,6 +24,7 @@ import (
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -66,7 +67,7 @@ type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (string, error)
-	DeriveOneToOneSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error)
+	DeriveOneToOneSpace(ctx context.Context, aSk crypto.PrivKey, bPk crypto.PubKey) (id string, err error)
 	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
 }
@@ -151,8 +152,8 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.Sp
 	return store.Id(), store.Close(ctx)
 }
 
-func (s *spaceService) DeriveOneToOneSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := spacepayloads.StoragePayloadForOneToOneSpace(payload)
+func (s *spaceService) DeriveOneToOneSpace(ctx context.Context, aSk crypto.PrivKey, bPk crypto.PubKey) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForOneToOneSpace(aSk, bPk)
 	if err != nil {
 		return
 	}
