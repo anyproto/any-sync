@@ -5,9 +5,12 @@ import (
 )
 
 const (
-	AnysyncSpacePath    = "m/SLIP-0021/anysync/space"
-	AnysyncTreePath     = "m/SLIP-0021/anysync/tree/%s"
-	AnysyncKeyValuePath = "m/SLIP-0021/anysync/keyvalue/%s"
+	AnysyncSpacePath             = "m/SLIP-0021/anysync/space"
+	AnysyncTreePath              = "m/SLIP-0021/anysync/tree/%s"
+	AnysyncKeyValuePath          = "m/SLIP-0021/anysync/keyvalue/%s"
+	AnysyncOneToOneSpacePath     = "m/SLIP-0021/anysync/onetoone/0"
+	AnysyncReadOneToOneSpacePath = "m/SLIP-0021/anysync/onetooneread"
+	AnysyncMetadataOneToOnePath  = "m/SLIP-0021/anysync/onetoonemeta"
 )
 
 // DeriveSymmetricKey derives a symmetric key from seed and path using slip-21

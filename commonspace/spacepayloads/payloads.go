@@ -1,9 +1,12 @@
 package spacepayloads
 
 import (
+	"bytes"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"hash/fnv"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +31,7 @@ type SpaceCreatePayload struct {
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 	// SpacePayload is an arbitrary payload related to space type
-	SpacePayload []byte
+	SpacePayload []byte // we probably should put onetooneinfo here
 	// MasterKey is the master key of the owner
 	MasterKey crypto.PrivKey
 	// ReadKey is the first read key of space
@@ -217,6 +220,132 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	return
 }
 
+func makeOneToOneInfo(sharedSk crypto.PrivKey, aPk, bPk crypto.PubKey) (oneToOneInfo aclrecordproto.AclOneToOneInfo, err error) {
+	writers := make([][]byte, 2)
+
+	writers[0], err = aPk.Marshall()
+	if err != nil {
+		err = fmt.Errorf("CreateOneToOne: failed to Marshal account pub key: %w", err)
+		return
+	}
+	writers[1], err = bPk.Marshall()
+	if err != nil {
+		err = fmt.Errorf("CreateOneToOne: failed to Marshal bPk: %w", err)
+		return
+	}
+
+	// sort for idempotent spaceid creation
+	sort.Slice(writers, func(i, j int) bool {
+		return bytes.Compare(writers[i], writers[j]) < 0
+	})
+
+	sharedPkBytes, err := sharedSk.GetPublic().Marshall()
+	if err != nil {
+		err = fmt.Errorf("CreateOneToOne: failed to Marshal sharedPk: %w", err)
+		return
+	}
+	oneToOneInfo = aclrecordproto.AclOneToOneInfo{
+		Owner:   sharedPkBytes,
+		Writers: writers,
+	}
+	return
+}
+
+func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	sharedSk, err := crypto.GenerateSharedKey(aSk, bPk, crypto.AnysyncOneToOneSpacePath)
+	if err != nil {
+		return
+	}
+
+	oneToOneInfo, err := makeOneToOneInfo(sharedSk, aSk.GetPublic(), bPk)
+	if err != nil {
+		return
+	}
+
+	oneToOneInfoBytes, err := oneToOneInfo.MarshalVT()
+	if err != nil {
+		err = fmt.Errorf("CreateOneToOneKeys: failed to Marshal oneToOneInfo: %w", err)
+		return
+	}
+
+	// marshalling keys
+	identity, err := sharedSk.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	pubKey, err := sharedSk.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+
+	// preparing replication key
+	hasher := fnv.New64()
+	_, err = hasher.Write(pubKey)
+	if err != nil {
+		return
+	}
+	repKey := hasher.Sum64()
+
+	// preparing header and space id
+	header := &spacesyncproto.SpaceHeader{
+		Identity:           identity,
+		SpaceType:          "anytype.onetoone",
+		SpaceHeaderPayload: oneToOneInfoBytes,
+		ReplicationKey:     repKey,
+	}
+	marshalled, err := header.MarshalVT()
+	if err != nil {
+		return
+	}
+	signature, err := sharedSk.Sign(marshalled)
+	if err != nil {
+		return
+	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
+	marshalled, err = rawHeader.MarshalVT()
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(marshalled)
+	spaceId := NewSpaceId(id, repKey)
+	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marshalled,
+		Id:        spaceId,
+	}
+
+	// building acl root
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
+	aclRoot, err := aclBuilder.BuildOneToOneRoot(list.RootContent{
+		PrivKey:   sharedSk,
+		MasterKey: sharedSk,
+		SpaceId:   spaceId,
+	}, &oneToOneInfo)
+	if err != nil {
+		return
+	}
+
+	// building settings
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
+		AclHeadId:  aclRoot.Id,
+		PrivKey:    sharedSk,
+		SpaceId:    spaceId,
+		ChangeType: SpaceReserved,
+	})
+	if err != nil {
+		return
+	}
+
+	// creating storage
+	storagePayload = spacestorage.SpaceStorageCreatePayload{
+		AclWithId:           aclRoot,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: settingsRoot,
+	}
+	return
+}
+
 func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePayload) (err error) {
 	err = ValidateSpaceHeader(payload.SpaceHeaderWithId, nil)
 	if err != nil {
@@ -276,7 +405,20 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	if identity == nil {
 		return
 	}
-	if !payloadIdentity.Equals(identity) {
+
+	// TODO: decide what to do here for OneToOne, for now we just skip
+	// identity check if space type is onetoone
+	// 1. create SpacePayload in anysync, include all onetooneinfo in  -- owners, writers + owner signature
+	// 2. if onetoone, validate towards owner
+	// 3. check on coordinator that pusher is one of the writers (not owner, as it usually goes)
+	if header.SpaceType == "anytype.onetoone" {
+		var oneToOneInfo aclrecordproto.AclOneToOneInfo
+		err = oneToOneInfo.UnmarshalVT(header.SpaceHeaderPayload)
+		if err != nil {
+			return
+		}
+
+	} else if !payloadIdentity.Equals(identity) {
 		return ErrIncorrectIdentity
 	}
 	return
