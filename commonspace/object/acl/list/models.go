@@ -17,10 +17,6 @@ const (
 	StatusCanceled
 )
 
-type AclOneToOneInfo struct {
-	Writers [][]byte
-}
-
 type AclRecord struct {
 	Id                string
 	PrevId            string
