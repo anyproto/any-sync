@@ -328,7 +328,6 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		// this should be a derived acl
 		st.keys[record.Id] = AclKeys{}
 	}
-
 	if st.key != nil && st.pubKey.Equals(record.Identity) {
 		err = st.saveKeysFromRoot(record.Id, root)
 		if err != nil {
@@ -367,7 +366,6 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 		readKey, err := st.unmarshallDecryptReadKey(root.EncryptedReadKey, st.key.Decrypt)
 		if err != nil {
 			return err
-
 		}
 		metadataKey, err := st.unmarshallDecryptPrivKey(root.EncryptedMetadataPrivKey, readKey.Decrypt)
 		if err != nil {
@@ -379,6 +377,7 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 	st.keys[id] = aclKeys
 	return
 }
+
 func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
 	for _, ch := range model.GetAclContent() {
@@ -918,9 +917,7 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !decrypt || st.IsOneToOne() {
 		return state.RequestMetadata, nil
 	}
-
 	aclKeys := st.keys[state.KeyRecordId]
-
 	if aclKeys.MetadataPrivKey == nil {
 		return nil, ErrFailedToDecrypt
 	}
