@@ -191,7 +191,6 @@ func (st *AclState) PermissionsAtRecord(id string, pubKey crypto.PubKey) (AclPer
 	if !st.list.HasHead(id) {
 		return AclPermissionsNone, ErrNoSuchRecord
 	}
-	// TODO: when adding to state, pubkey.Storage should be used, not just Account
 	accountState, ok := st.accountStates[mapKeyFromPubKey(pubKey)]
 	if !ok {
 		return AclPermissionsNone, ErrNoSuchAccount
