@@ -139,7 +139,6 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	return
 }
 
-// but forSpaceDerive doesn't add read key change to acl root
 func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
@@ -372,6 +371,8 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		return
 	}
 
+	// TODO: decide what to do here for OneToOne, for now we just skip
+	// identity check if space type is onetoone
 	if !payloadIdentity.Equals(identity) && header.SpaceType != "anytype.onetoone" {
 		return ErrIncorrectIdentity
 	}

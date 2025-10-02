@@ -365,7 +365,6 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 		}
 		aclKeys.ReadKey = readKey
 	} else {
-		// here, it uses st.key to dercypt read key and read key to decrypt metadata key
 		readKey, err := st.unmarshallDecryptReadKey(root.EncryptedReadKey, st.key.Decrypt)
 		if err != nil {
 			return err
@@ -1000,7 +999,6 @@ func (st *AclState) LastRecordId() string {
 	return st.lastRecordId
 }
 
-// should it work for 1-1 spaces?
 func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 	for _, aState := range st.accountStates {
 		if aState.Permissions.IsOwner() {

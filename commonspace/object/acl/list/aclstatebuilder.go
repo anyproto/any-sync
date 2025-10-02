@@ -29,9 +29,6 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 		return nil, ErrIncorrectRecordSequence
 	}
 	if sb.privKey != nil {
-		// here it builds acl state with sb.privKey, which is usually account key.
-		// it uses it to decrypt read key -> metadata key in saveKeysFromRoot
-		// we probably shoud go different way with onetoone, and use sharedKey as st.key
 		state, err = newAclStateWithKeys(records[0], sb.privKey, list.verifier)
 		if err != nil {
 			return
