@@ -2,57 +2,60 @@ package crypto
 
 import (
 	"crypto/rand"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_SharedKeyEqual(t *testing.T) {
+const testDerivePath = "m/SLIP-0021/anysync/test"
+
+func TestGenerateSharedKey(t *testing.T) {
 	privKeyA, pubKeyA, _ := GenerateEd25519Key(rand.Reader)
 	privKeyB, pubKeyB, _ := GenerateEd25519Key(rand.Reader)
 
-	sharedSkA, err := GenerateSharedKey(privKeyA, pubKeyB, "test")
+	sharedSkA, err := GenerateSharedKey(privKeyA, pubKeyB, testDerivePath)
 	require.NoError(t, err)
 
-	sharedSkB, err := GenerateSharedKey(privKeyB, pubKeyA, "test")
+	sharedSkB, err := GenerateSharedKey(privKeyB, pubKeyA, testDerivePath)
 	require.NoError(t, err)
 
-	assert.Equal(t, sharedSkA, sharedSkB)
-}
+	t.Run("both keys, derived for A and for B are equal", func(t *testing.T) {
+		assert.Equal(t, sharedSkA, sharedSkB)
 
-func Test_SharedKeyEncryptDecrypt(t *testing.T) {
-	privKeyA, pubKeyA, _ := GenerateEd25519Key(rand.Reader)
-	privKeyB, pubKeyB, _ := GenerateEd25519Key(rand.Reader)
+	})
+	t.Run("A and B decrypt results are consistent", func(t *testing.T) {
+		spkA := sharedSkA.GetPublic()
+		spkB := sharedSkB.GetPublic()
 
-	sharedSkA, err := GenerateSharedKey(privKeyA, pubKeyB, "test")
-	require.NoError(t, err)
+		msg := []byte{1, 0, 1, 0, 1}
+		encryptedA, err := spkA.Encrypt(msg)
+		require.NoError(t, err)
+		encryptedB, err := spkB.Encrypt(msg)
+		require.NoError(t, err)
 
-	sharedSkB, err := GenerateSharedKey(privKeyB, pubKeyA, "test")
-	require.NoError(t, err)
+		assert.NotEqual(t, encryptedA, encryptedB)
 
-	pkA := sharedSkA.GetPublic()
-	pkB := sharedSkB.GetPublic()
+		decryptedA, err := sharedSkA.Decrypt(encryptedB)
+		require.NoError(t, err)
+		decryptedB, err := sharedSkB.Decrypt(encryptedA)
+		require.NoError(t, err)
 
-	msg := []byte{1, 0, 1, 0, 1}
-	encryptedA, err := pkA.Encrypt(msg)
-	require.NoError(t, err)
-	encryptedB, err := pkB.Encrypt(msg)
-	require.NoError(t, err)
+		assert.Equal(t, decryptedA, decryptedB)
+		assert.Equal(t, decryptedA, msg)
 
-	assert.NotEqual(t, encryptedA, encryptedB)
+	})
+	t.Run("C, generated with different path is different", func(t *testing.T) {
+		spkA := sharedSkA.GetPublic()
 
-	decryptedA, err := sharedSkA.Decrypt(encryptedB)
-	require.NoError(t, err)
-	decryptedB, err := sharedSkB.Decrypt(encryptedA)
-	require.NoError(t, err)
+		msg := []byte{1, 0, 1, 0, 1}
+		encryptedA, err := spkA.Encrypt(msg)
+		require.NoError(t, err)
 
-	assert.Equal(t, decryptedA, decryptedB)
-	assert.Equal(t, decryptedA, msg)
-
-	sharedSkC, err := GenerateSharedKey(privKeyB, pubKeyA, "test2")
-	require.NoError(t, err)
-	_, err = sharedSkC.Decrypt(encryptedA)
-	require.Error(t, err)
-
+		sharedSkC, err := GenerateSharedKey(privKeyB, pubKeyA, fmt.Sprintf("%s-two", testDerivePath))
+		require.NoError(t, err)
+		_, err = sharedSkC.Decrypt(encryptedA)
+		require.Error(t, err)
+	})
 }
