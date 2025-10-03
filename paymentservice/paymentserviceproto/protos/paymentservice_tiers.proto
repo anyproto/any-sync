@@ -21,6 +21,8 @@ message GetTiersRequest {
   string ownerAnyId = 1;
 
   string locale = 2;
+
+  string version = 3;
 }
 
 message GetTiersRequestSigned {
@@ -76,6 +78,10 @@ message TierData {
 
   // something like "limited offer", etc
   string offer = 20;
+
+// version 2 only fields (specify version in GetTiersRequest request first):
+  // if the tier is yearly (periodType above is PeriodTypeYears) - then also we provide a monthly price here
+  uint32 priceStripeUsdCentsMonthly = 21;
 }
 
 message GetTiersResponse {
