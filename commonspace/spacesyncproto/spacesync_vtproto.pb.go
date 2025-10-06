@@ -686,6 +686,27 @@ func (m *SpaceHeader) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.Version != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Version))
+		i--
+		dAtA[i] = 0x6
+		i--
+		dAtA[i] = 0xa0
+	}
+	if len(m.SettingPayload) > 0 {
+		i -= len(m.SettingPayload)
+		copy(dAtA[i:], m.SettingPayload)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.SettingPayload)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.AclPayload) > 0 {
+		i -= len(m.AclPayload)
+		copy(dAtA[i:], m.AclPayload)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AclPayload)))
+		i--
+		dAtA[i] = 0x3a
+	}
 	if len(m.SpaceHeaderPayload) > 0 {
 		i -= len(m.SpaceHeaderPayload)
 		copy(dAtA[i:], m.SpaceHeaderPayload)
@@ -1967,6 +1988,17 @@ func (m *SpaceHeader) SizeVT() (n int) {
 	l = len(m.SpaceHeaderPayload)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.AclPayload)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.SettingPayload)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.Version != 0 {
+		n += 2 + protohelpers.SizeOfVarint(uint64(m.Version))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -4119,6 +4151,93 @@ func (m *SpaceHeader) UnmarshalVT(dAtA []byte) error {
 				m.SpaceHeaderPayload = []byte{}
 			}
 			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclPayload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclPayload = append(m.AclPayload[:0], dAtA[iNdEx:postIndex]...)
+			if m.AclPayload == nil {
+				m.AclPayload = []byte{}
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SettingPayload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SettingPayload = append(m.SettingPayload[:0], dAtA[iNdEx:postIndex]...)
+			if m.SettingPayload == nil {
+				m.SettingPayload = []byte{}
+			}
+			iNdEx = postIndex
+		case 100:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			m.Version = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Version |= SpaceHeaderVersion(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
