@@ -11,6 +11,89 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAclBuildOneToOne_findMeAndValidate(t *testing.T) {
+	t.Run("doesn't findMe in root", func(t *testing.T) {
+		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+		root := &aclrecordproto.AclRoot{
+			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+				Owner:   []byte{1, 0},
+				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
+			},
+		}
+		st := newTestAclStateWithKey(key)
+
+		foundMe, err := st.findMeAndValidateOneToOne(root)
+		require.NoError(t, err)
+		assert.False(t, foundMe)
+	})
+
+	t.Run("returns error if writers count is invalid", func(t *testing.T) {
+		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+		root := &aclrecordproto.AclRoot{
+			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+				Owner:   []byte{1},
+				Writers: [][]byte{{1}},
+			},
+		}
+		st := newTestAclStateWithKey(key)
+
+		_, err := st.findMeAndValidateOneToOne(root)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exactly two Writers")
+	})
+
+	t.Run("returns error if owner is empty", func(t *testing.T) {
+		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+		root := &aclrecordproto.AclRoot{
+			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
+			},
+		}
+		st := newTestAclStateWithKey(key)
+
+		_, err := st.findMeAndValidateOneToOne(root)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "Owner is empty")
+	})
+
+	t.Run("finds me in writers", func(t *testing.T) {
+		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+		myPubKeyBytes, err := key.GetPublic().Marshall()
+		require.NoError(t, err)
+		root := &aclrecordproto.AclRoot{
+			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+				Owner:   []byte{1, 0},
+				Writers: [][]byte{myPubKeyBytes, {2, 0}},
+			},
+		}
+		st := newTestAclStateWithKey(key)
+
+		foundMe, err := st.findMeAndValidateOneToOne(root)
+		require.NoError(t, err)
+		assert.True(t, foundMe)
+	})
+
+	t.Run("returns marshal error", func(t *testing.T) {
+		delegateKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+		root := &aclrecordproto.AclRoot{
+			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+				Owner:   []byte{1, 0},
+				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
+			},
+		}
+		errKey := errPrivKey{
+			PrivKey: delegateKey,
+			errPub:  delegateKey.GetPublic(),
+		}
+		st := newTestAclStateWithKey(errKey)
+
+		_, err := st.findMeAndValidateOneToOne(root)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "error Marshal() st.key")
+	})
+
+}
+
 func TestAclBuild_OneToOne(t *testing.T) {
 	// 2
 	t.Run("BuildOneToOneRoot", func(t *testing.T) {
@@ -50,88 +133,100 @@ func TestAclBuild_OneToOne(t *testing.T) {
 	})
 	// 1
 
-	t.Run("findMeAndValidateOneToOne doesn't findMe in root", func(t *testing.T) {
-		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		root := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Owner:   []byte{1, 0},
-				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
-			},
-		}
-		st := newTestAclStateWithKey(key)
-
-		foundMe, err := st.findMeAndValidateOneToOne(root)
-		require.NoError(t, err)
-		assert.False(t, foundMe)
-	})
-
-	t.Run("findMeAndValidateOneToOne returns error if writers count is invalid", func(t *testing.T) {
-		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		root := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Owner:   []byte{1},
-				Writers: [][]byte{{1}},
-			},
-		}
-		st := newTestAclStateWithKey(key)
-
-		_, err := st.findMeAndValidateOneToOne(root)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exactly two Writers")
-	})
-
-	t.Run("findMeAndValidateOneToOne returns error if owner is empty", func(t *testing.T) {
-		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		root := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
-			},
-		}
-		st := newTestAclStateWithKey(key)
-
-		_, err := st.findMeAndValidateOneToOne(root)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "Owner is empty")
-	})
-
-	t.Run("findMeAndValidateOneToOne finds me in writers", func(t *testing.T) {
-		key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		myPubKeyBytes, err := key.GetPublic().Marshall()
-		require.NoError(t, err)
-		root := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Owner:   []byte{1, 0},
-				Writers: [][]byte{myPubKeyBytes, {2, 0}},
-			},
-		}
-		st := newTestAclStateWithKey(key)
-
-		foundMe, err := st.findMeAndValidateOneToOne(root)
-		require.NoError(t, err)
-		assert.True(t, foundMe)
-	})
-
-	t.Run("findMeAndValidateOneToOne returns marshal error", func(t *testing.T) {
-		delegateKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		root := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Owner:   []byte{1, 0},
-				Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
-			},
-		}
-		errKey := errPrivKey{
-			PrivKey: delegateKey,
-			errPub:  delegateKey.GetPublic(),
-		}
-		st := newTestAclStateWithKey(errKey)
-
-		_, err := st.findMeAndValidateOneToOne(root)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error Marshal() st.key")
-	})
 	// 1
 	t.Run("deriveOneToOneKeys", func(t *testing.T) {
+		t.Run("success when my key is first writer", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			bobKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
 
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+			bobPubKeyBytes, _ := bobKey.GetPublic().Marshall()
+
+			sharedKey, _ := crypto.GenerateSharedKey(myKey, bobKey.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{myPubKeyBytes, bobPubKeyBytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.deriveOneToOneKeys("rootId", root)
+
+			require.NoError(t, err)
+			assert.Contains(t, st.keys, "rootId")
+			assert.NotNil(t, st.keys["rootId"].ReadKey)
+			assert.NotNil(t, st.keys["rootId"].MetadataPrivKey)
+			assert.NotNil(t, st.keys["rootId"].MetadataPubKey)
+		})
+
+		t.Run("success when my key is second writer", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			bobKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+			bobPubKeyBytes, _ := bobKey.GetPublic().Marshall()
+
+			sharedKey, _ := crypto.GenerateSharedKey(myKey, bobKey.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{bobPubKeyBytes, myPubKeyBytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.deriveOneToOneKeys("rootId", root)
+
+			require.NoError(t, err)
+			assert.Contains(t, st.keys, "rootId")
+			assert.NotNil(t, st.keys["rootId"].ReadKey)
+			assert.NotNil(t, st.keys["rootId"].MetadataPrivKey)
+			assert.NotNil(t, st.keys["rootId"].MetadataPubKey)
+		})
+
+		t.Run("error when bob public key is invalid", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 2, 3},
+					Writers: [][]byte{myPubKeyBytes, {1, 2, 3}}, // invalid bob key
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.deriveOneToOneKeys("rootId", root)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "error Unmarshal(bobPubKeyBytes)")
+		})
+
+		t.Run("error when owner pubkey doesn't match derived pubkey", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			bobKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+			bobPubKeyBytes, _ := bobKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 2, 3}, // wrong owner
+					Writers: [][]byte{myPubKeyBytes, bobPubKeyBytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.deriveOneToOneKeys("rootId", root)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "Owner pubkey != derived pubkey")
+		})
 	})
 
 }
