@@ -137,28 +137,3 @@ func TestAclState_DeriveOneToOne(t *testing.T) {
 	})
 
 }
-
-func TestAclBuild_OneToOne(t *testing.T) {
-	t.Run("BuildOneToOneRoot", func(t *testing.T) {
-
-	})
-	t.Run("ApplyRecord to onetoone returns error", func(t *testing.T) {
-
-	})
-	t.Run("applyChangeData, no decrypt if onetoone (TODO: decrypt when whe have metadata after inbox)", func(t *testing.T) {
-
-	})
-	t.Run("state.IsOneToOne", func(t *testing.T) {
-
-	})
-	t.Run("setOneToOneAcl", func(t *testing.T) {
-
-	})
-	t.Run("findMeAndValidateOneToOne", func(t *testing.T) {
-
-	})
-	t.Run("deriveOneToOneKeys", func(t *testing.T) {
-
-	})
-
-}
