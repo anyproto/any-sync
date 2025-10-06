@@ -109,27 +109,204 @@ func TestAclBuild_OneToOne(t *testing.T) {
 	})
 	// 1
 	t.Run("state.IsOneToOne", func(t *testing.T) {
-		// secretKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
-		// root := &aclrecordproto.AclRoot{
-		// 	OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-		// 		Owner:   []byte{1, 0},
-		// 		Writers: [][]byte{{1, 1, 0}, {1, 0, 0}},
-		// 	},
-		// }
+		t.Run("returns false by default", func(t *testing.T) {
+			key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			st := newTestAclStateWithKey(key)
 
-		// record := &AclRecord{
-		// 	Id:    "1",
-		// 	Model: root,
-		// }
-		// var verifier recordverifier.AcceptorVerifier
-		// st, err := newAclStateWithKeys(record, secretKey, verifier)
-		// require.NoError(t, err)
-		// assert.Equal(t, st.IsOneToOne(), false)
+			assert.False(t, st.IsOneToOne())
+		})
 
+		t.Run("returns true after setOneToOneAcl", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			bobKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+			bobPubKeyBytes, _ := bobKey.GetPublic().Marshall()
+
+			sharedKey, _ := crypto.GenerateSharedKey(myKey, bobKey.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{myPubKeyBytes, bobPubKeyBytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+			require.NoError(t, err)
+
+			assert.True(t, st.IsOneToOne())
+		})
+
+		t.Run("remains false if setOneToOneAcl fails", func(t *testing.T) {
+			key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 0},
+					Writers: [][]byte{{1, 1, 0}}, // invalid: only one writer
+				},
+			}
+
+			st := newTestAclStateWithKey(key)
+			err := st.setOneToOneAcl("rootId", root)
+			require.Error(t, err)
+
+			assert.False(t, st.IsOneToOne())
+		})
 	})
 	// 2
 	t.Run("setOneToOneAcl", func(t *testing.T) {
+		t.Run("error from findMeAndValidateOneToOne", func(t *testing.T) {
+			key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 0},
+					Writers: [][]byte{{1, 1, 0}}, // invalid: only one writer
+				},
+			}
 
+			st := newTestAclStateWithKey(key)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "exactly two Writers")
+			assert.False(t, st.IsOneToOne())
+		})
+
+		t.Run("foundMe=true, deriveOneToOneKeys error", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 2, 3}, // invalid owner
+					Writers: [][]byte{myPubKeyBytes, {4, 5, 6}}, // invalid bob key
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "error Unmarshal(bobPubKeyBytes)")
+			assert.False(t, st.IsOneToOne())
+		})
+
+		t.Run("foundMe=true, success path", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			bobKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			myPubKeyBytes, _ := myKey.GetPublic().Marshall()
+			bobPubKeyBytes, _ := bobKey.GetPublic().Marshall()
+
+			sharedKey, _ := crypto.GenerateSharedKey(myKey, bobKey.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{myPubKeyBytes, bobPubKeyBytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.NoError(t, err)
+			assert.True(t, st.IsOneToOne())
+			assert.Contains(t, st.keys, "rootId")
+			assert.Equal(t, []string{"rootId"}, st.readKeyChanges)
+			assert.Equal(t, "rootId", st.lastRecordId)
+
+			// Check owner account state
+			ownerStorage := string(sharedKey.GetPublic().Storage())
+			assert.Contains(t, st.accountStates, ownerStorage)
+			ownerState := st.accountStates[ownerStorage]
+			assert.Equal(t, sharedKey.GetPublic().Storage(), ownerState.PubKey.Storage())
+
+			// Check writer account states
+			myStorage := string(myKey.GetPublic().Storage())
+			assert.Contains(t, st.accountStates, myStorage)
+			bobStorage := string(bobKey.GetPublic().Storage())
+			assert.Contains(t, st.accountStates, bobStorage)
+		})
+
+		t.Run("foundMe=false, success path", func(t *testing.T) {
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			writer1Key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			writer2Key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			writer1Bytes, _ := writer1Key.GetPublic().Marshall()
+			writer2Bytes, _ := writer2Key.GetPublic().Marshall()
+
+			sharedKey, _ := crypto.GenerateSharedKey(writer1Key, writer2Key.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{writer1Bytes, writer2Bytes},
+				},
+			}
+
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.NoError(t, err)
+			assert.True(t, st.IsOneToOne())
+			assert.NotContains(t, st.keys, "rootId") // no keys derived since foundMe=false
+			assert.Equal(t, []string{"rootId"}, st.readKeyChanges)
+			assert.Equal(t, "rootId", st.lastRecordId)
+
+			// Check account states are still created
+			assert.Len(t, st.accountStates, 3) // owner + 2 writers
+		})
+
+		t.Run("error unmarshaling owner public key", func(t *testing.T) {
+			writer1Key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			writer2Key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+
+			writer1Bytes, _ := writer1Key.GetPublic().Marshall()
+			writer2Bytes, _ := writer2Key.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   []byte{1, 2, 3}, // invalid owner key
+					Writers: [][]byte{writer1Bytes, writer2Bytes},
+				},
+			}
+
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.Error(t, err)
+			assert.False(t, st.IsOneToOne())
+		})
+
+		t.Run("error unmarshaling writer public key", func(t *testing.T) {
+			writer1Key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			writer1Bytes, _ := writer1Key.GetPublic().Marshall()
+
+			sharedKey, _, _ := crypto.GenerateEd25519Key(rand.Reader) // dummy shared key
+			ownerBytes, _ := sharedKey.GetPublic().Marshall()
+
+			root := &aclrecordproto.AclRoot{
+				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
+					Owner:   ownerBytes,
+					Writers: [][]byte{writer1Bytes, {1, 2, 3}}, // invalid writer key
+				},
+			}
+
+			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)
+			st := newTestAclStateWithKey(myKey)
+			err := st.setOneToOneAcl("rootId", root)
+
+			require.Error(t, err)
+			assert.False(t, st.IsOneToOne())
+		})
 	})
 	// 1
 
