@@ -497,8 +497,10 @@ type GetSubscriptionResponse struct {
 	// if user verified her email OR provided it while buying a subscription, it will be here
 	UserEmail             string `protobuf:"bytes,8,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
 	SubscribeToNewsletter bool   `protobuf:"varint,9,opt,name=subscribeToNewsletter,proto3" json:"subscribeToNewsletter,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// for tiers that support yearly/monthly only
+	IsMonthly     bool `protobuf:"varint,10,opt,name=isMonthly,proto3" json:"isMonthly,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSubscriptionResponse) Reset() {
@@ -590,6 +592,13 @@ func (x *GetSubscriptionResponse) GetUserEmail() string {
 func (x *GetSubscriptionResponse) GetSubscribeToNewsletter() bool {
 	if x != nil {
 		return x.SubscribeToNewsletter
+	}
+	return false
+}
+
+func (x *GetSubscriptionResponse) GetIsMonthly() bool {
+	if x != nil {
+		return x.IsMonthly
 	}
 	return false
 }
@@ -2042,7 +2051,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_proto_rawDes
 	"ownerAnyID\"V\n" +
 	"\x1cGetSubscriptionRequestSigned\x12\x18\n" +
 	"\apayload\x18\x01 \x01(\fR\apayload\x12\x1c\n" +
-	"\tsignature\x18\x02 \x01(\fR\tsignature\"\xf0\x02\n" +
+	"\tsignature\x18\x02 \x01(\fR\tsignature\"\x8e\x03\n" +
 	"\x17GetSubscriptionResponse\x12\x12\n" +
 	"\x04tier\x18\x01 \x01(\rR\x04tier\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.SubscriptionStatusR\x06status\x12 \n" +
@@ -2052,7 +2061,9 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_proto_rawDes
 	"\rpaymentMethod\x18\x06 \x01(\x0e2\x0e.PaymentMethodR\rpaymentMethod\x12*\n" +
 	"\x10requestedAnyName\x18\a \x01(\tR\x10requestedAnyName\x12\x1c\n" +
 	"\tuserEmail\x18\b \x01(\tR\tuserEmail\x124\n" +
-	"\x15subscribeToNewsletter\x18\t \x01(\bR\x15subscribeToNewsletter\"\xa6\x02\n" +
+	"\x15subscribeToNewsletter\x18\t \x01(\bR\x15subscribeToNewsletter\x12\x1c\n" +
+	"\tisMonthly\x18\n" +
+	" \x01(\bR\tisMonthly\"\xa6\x02\n" +
 	"\x16BuySubscriptionRequest\x12\x1e\n" +
 	"\n" +
 	"ownerAnyId\x18\x01 \x01(\tR\n" +

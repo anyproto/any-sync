@@ -72,6 +72,8 @@ message GetSubscriptionResponse {
   // if user verified her email OR provided it while buying a subscription, it will be here
   string userEmail = 8;
   bool subscribeToNewsletter = 9;
+  // for tiers that support yearly/monthly only
+  bool isMonthly = 10;
 }
 
 message BuySubscriptionRequest {
