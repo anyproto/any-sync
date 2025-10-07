@@ -208,7 +208,11 @@ func TestSpaceDeleteIds(t *testing.T) {
 	require.NoError(t, err)
 	err = spc.Close()
 	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
+
+	for _, id := range ids {
+		_, _ = fx.treeManager.cache.Remove(ctx, id)
+	}
+
 	storeSetter := fx.storageProvider.(storeSetter)
 	storeSetter.SetStore(sp, newStore)
 	spc, err = fx.spaceService.NewSpace(ctx, sp, mockDeps())
