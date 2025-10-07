@@ -103,6 +103,12 @@ message SpacePullRequest {
 // SpacePullResponse is a response with header and acl root
 message SpacePullResponse {
     SpacePayload payload = 1;
+    repeated AclRecord aclRecords = 2;
+}
+
+message AclRecord {
+    bytes aclPayload = 1;
+    string id = 2;
 }
 
 // SpacePayload is a payload for pushing a space
@@ -247,6 +253,7 @@ enum DiffType {
     Initial = 0;
     V1 = 1;
     V2 = 2;
+    V3 = 3;
 }
 
 // ObjectType is a type of object

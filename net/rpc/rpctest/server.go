@@ -2,13 +2,16 @@ package rpctest
 
 import (
 	"context"
+	"net"
+
+	"storj.io/drpc/drpcmux"
+	"storj.io/drpc/drpcserver"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/encoding"
 	"github.com/anyproto/any-sync/net/rpc/server"
-	"net"
-	"storj.io/drpc/drpcmux"
-	"storj.io/drpc/drpcserver"
 )
 
 type mockCtrl struct {
@@ -26,7 +29,7 @@ func NewTestServer() *TestServer {
 	ts := &TestServer{
 		Mux: drpcmux.New(),
 	}
-	ts.Server = drpcserver.New(ts.Mux)
+	ts.Server = drpcserver.New(encoding.WrapHandler(ts.Mux))
 	return ts
 }
 

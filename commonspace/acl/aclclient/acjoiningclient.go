@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/node/nodeclient"
 )
@@ -20,7 +21,9 @@ type AclJoiningClient interface {
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (aclHeadId string, err error)
 	CancelJoin(ctx context.Context, spaceId string) (err error)
+	InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error)
 	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
+	RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) (err error)
 }
 
 type aclJoiningClient struct {
@@ -59,7 +62,7 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 	if err != nil {
 		return
 	}
-	return list.BuildAclListWithIdentity(c.keys, storage, list.NoOpAcceptorVerifier{})
+	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New())
 }
 
 func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {
@@ -106,6 +109,23 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 	return
 }
 
+func (c *aclJoiningClient) InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error) {
+	acl, err := c.getAcl(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	rec, err := acl.RecordBuilder().BuildInviteJoin(payload)
+	if err != nil {
+		return
+	}
+	recWithId, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
+	if err != nil {
+		return
+	}
+	aclHeadId = recWithId.Id
+	return
+}
+
 func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string) (err error) {
 	acl, err := c.getAcl(ctx, spaceId)
 	if err != nil {
@@ -127,4 +147,21 @@ func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string)
 	}
 	_, err = c.nodeClient.AclAddRecord(ctx, spaceId, newRec)
 	return
+}
+
+func (c *aclJoiningClient) RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) (err error) {
+	aclList.Lock()
+	res, err := aclList.RecordBuilder().BuildRequestRemove()
+	if err != nil {
+		aclList.Unlock()
+		return
+	}
+	aclList.Unlock()
+	rec, err := c.nodeClient.AclAddRecord(ctx, spaceId, res)
+	if err != nil {
+		return
+	}
+	aclList.Lock()
+	defer aclList.Unlock()
+	return aclList.AddRawRecord(rec)
 }

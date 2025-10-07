@@ -184,7 +184,7 @@ message GetOperationStatusRequest {
 }
 
 enum OperationState {
-  Unknown = 0;
+  OpUnknown = 0;
   
   Pending = 1;
   PendingOrNotFound = 2;

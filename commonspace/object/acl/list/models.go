@@ -24,6 +24,8 @@ type AclRecord struct {
 	AcceptorTimestamp int64
 	Data              []byte
 	Identity          crypto.PubKey
+	AcceptorIdentity  crypto.PubKey
+	AcceptorSignature []byte
 	Model             interface{}
 	Signature         []byte
 }
@@ -83,6 +85,10 @@ func (p AclPermissions) IsOwner() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Owner
 }
 
+func (p AclPermissions) IsGuest() bool {
+	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Guest
+}
+
 func (p AclPermissions) CanWrite() bool {
 	switch aclrecordproto.AclUserPermissions(p) {
 	case aclrecordproto.AclUserPermissions_Admin:
@@ -113,5 +119,20 @@ func (p AclPermissions) CanRequestRemove() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func (p AclPermissions) IsLessOrEqual(q AclPermissions) bool {
+	switch p {
+	case AclPermissionsNone:
+		return true
+	case AclPermissionsReader:
+		return q != AclPermissionsNone
+	case AclPermissionsWriter:
+		return q == AclPermissionsWriter || q == AclPermissionsAdmin
+	case AclPermissionsAdmin:
+		return p == q
+	default:
+		return false
 	}
 }

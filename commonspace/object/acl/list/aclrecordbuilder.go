@@ -4,10 +4,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -26,6 +25,12 @@ type RequestJoinPayload struct {
 	Metadata  []byte
 }
 
+type InviteJoinPayload struct {
+	InviteKey   crypto.PrivKey
+	Permissions AclPermissions
+	Metadata    []byte
+}
+
 type ReadKeyChangePayload struct {
 	MetadataKey crypto.PrivKey
 	ReadKey     crypto.SymKey
@@ -39,6 +44,11 @@ type RequestAcceptPayload struct {
 type PermissionChangePayload struct {
 	Identity    crypto.PubKey
 	Permissions AclPermissions
+}
+
+type InviteChangePayload struct {
+	IniviteRecordId string
+	Permissions     AclPermissions
 }
 
 type PermissionChangesPayload struct {
@@ -55,6 +65,15 @@ type AccountAdd struct {
 	Metadata    []byte
 }
 
+type NewInvites struct {
+	Permissions AclPermissions
+}
+
+type OwnershipChangePayload struct {
+	NewOwner            crypto.PubKey
+	OldOwnerPermissions AclPermissions
+}
+
 type BatchRequestPayload struct {
 	Additions     []AccountAdd
 	Changes       []PermissionChangePayload
@@ -62,6 +81,8 @@ type BatchRequestPayload struct {
 	Approvals     []RequestAcceptPayload
 	Declines      []string
 	InviteRevokes []string
+	InviteChanges []InviteChangePayload
+	NewInvites    []AclPermissions
 }
 
 type AccountRemovePayload struct {
@@ -74,14 +95,23 @@ type InviteResult struct {
 	InviteKey crypto.PrivKey
 }
 
+type BatchResult struct {
+	Rec     *consensusproto.RawRecord
+	Invites []crypto.PrivKey
+}
+
 type AclRecordBuilder interface {
 	UnmarshallWithId(rawIdRecord *consensusproto.RawRecordWithId) (rec *AclRecord, err error)
 	Unmarshall(rawRecord *consensusproto.RawRecord) (rec *AclRecord, err error)
 
 	BuildRoot(content RootContent) (rec *consensusproto.RawRecordWithId, err error)
-	BuildBatchRequest(payload BatchRequestPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildOneToOneRoot(content RootContent, oneToOneInfo *aclrecordproto.AclOneToOneInfo) (rec *consensusproto.RawRecordWithId, err error)
+	BuildBatchRequest(payload BatchRequestPayload) (batchResult BatchResult, err error)
 	BuildInvite() (res InviteResult, err error)
+	BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error)
+	BuildInviteChange(inviteChange InviteChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInviteRevoke(inviteRecordId string) (rawRecord *consensusproto.RawRecord, err error)
+	BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
@@ -89,6 +119,7 @@ type AclRecordBuilder interface {
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -98,11 +129,11 @@ type aclRecordBuilder struct {
 	id          string
 	keyStorage  crypto.KeyStorage
 	accountKeys *accountdata.AccountKeys
-	verifier    AcceptorVerifier
+	verifier    recordverifier.AcceptorVerifier
 	state       *AclState
 }
 
-func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier AcceptorVerifier) AclRecordBuilder {
+func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier recordverifier.AcceptorVerifier) AclRecordBuilder {
 	return &aclRecordBuilder{
 		id:          id,
 		keyStorage:  keyStorage,
@@ -111,51 +142,99 @@ func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountd
 	}
 }
 
-func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (rawRec *consensusproto.RawRecord, err error) {
-	var aclContent []*aclrecordproto.AclContentValue
-	if len(payload.Additions) > 0 {
-		content, err := a.buildAccountsAdd(AccountsAddPayload{Additions: payload.Additions})
+func (a *aclRecordBuilder) BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	newOwnerBytes, err := ownershipChange.NewOwner.Marshall()
+	if err != nil {
+		return nil, err
+	}
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_OwnershipChange{
+			&aclrecordproto.AclOwnershipChange{
+				NewOwnerIdentity:    newOwnerBytes,
+				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions)},
+		},
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (batchResult BatchResult, err error) {
+	var (
+		contentList []*aclrecordproto.AclContentValue
+		content     *aclrecordproto.AclContentValue
+	)
+	if len(payload.Removals.Identities) > 0 {
+		content, err = a.buildAccountRemove(payload.Removals)
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
+	}
+	if len(payload.Additions) > 0 {
+		content, err = a.buildAccountsAdd(AccountsAddPayload{Additions: payload.Additions}, payload.Removals.Change.MetadataKey.GetPublic(), payload.Removals.Change.ReadKey)
+		if err != nil {
+			return
+		}
+		contentList = append(contentList, content)
 	}
 	if len(payload.Changes) > 0 {
-		content, err := a.buildPermissionChanges(PermissionChangesPayload{Changes: payload.Changes})
+		content, err = a.buildPermissionChanges(PermissionChangesPayload{Changes: payload.Changes})
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
 	}
 	for _, acc := range payload.Approvals {
-		content, err := a.buildRequestAccept(acc)
+		content, err = a.buildRequestAccept(acc, payload.Removals.Change.ReadKey)
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
 	}
 	for _, id := range payload.Declines {
-		content, err := a.buildRequestDecline(id)
+		content, err = a.buildRequestDecline(id)
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
 	}
 	for _, id := range payload.InviteRevokes {
-		content, err := a.buildInviteRevoke(id)
+		content, err = a.buildInviteRevoke(id)
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
 	}
-	if len(payload.Removals.Identities) > 0 {
-		content, err := a.buildAccountRemove(payload.Removals)
+	for _, invite := range payload.InviteChanges {
+		content, err = a.buildInviteChange(invite)
 		if err != nil {
-			return nil, err
+			return
 		}
-		aclContent = append(aclContent, content)
+		contentList = append(contentList, content)
 	}
-	return a.buildRecords(aclContent)
+	for _, perms := range payload.NewInvites {
+		var privKey crypto.PrivKey
+		if perms.NoPermissions() {
+			privKey, content, err = a.buildInvite()
+			if err != nil {
+				return
+			}
+			contentList = append(contentList, content)
+			batchResult.Invites = append(batchResult.Invites, privKey)
+		} else {
+			privKey, content, err = a.buildInviteAnyone(perms)
+			if err != nil {
+				return
+			}
+			contentList = append(contentList, content)
+			batchResult.Invites = append(batchResult.Invites, privKey)
+		}
+	}
+	res, err := a.buildRecords(contentList)
+	if err != nil {
+		return
+	}
+	batchResult.Rec = res
+	return
 }
 
 func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValue) (rawRec *consensusproto.RawRecord, err error) {
@@ -164,7 +243,7 @@ func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValu
 
 func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentValue) (rawRec *consensusproto.RawRecord, err error) {
 	aclData := &aclrecordproto.AclData{AclContent: aclContent}
-	marshalledData, err := aclData.Marshal()
+	marshalledData, err := aclData.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -178,7 +257,7 @@ func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentV
 		Data:      marshalledData,
 		Timestamp: time.Now().Unix(),
 	}
-	marshalledRec, err := rec.Marshal()
+	marshalledRec, err := rec.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -190,7 +269,18 @@ func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentV
 		Payload:   marshalledRec,
 		Signature: signature,
 	}
+	err = a.preflightCheck(rawRec)
 	return
+}
+
+func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord) (err error) {
+	aclRec, err := a.Unmarshall(rawRecord)
+	if err != nil {
+		return
+	}
+	cp := a.state.Copy()
+	cp.contentValidator.(*contentValidator).verifier = recordverifier.NewValidateFull()
+	return cp.ApplyRecord(aclRec)
 }
 
 func (a *aclRecordBuilder) BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error) {
@@ -226,19 +316,19 @@ func (a *aclRecordBuilder) buildPermissionChanges(payload PermissionChangesPaylo
 		})
 	}
 	return &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{
-		&aclrecordproto.AclAccountPermissionChanges{changes},
+		&aclrecordproto.AclAccountPermissionChanges{Changes: changes},
 	}}, nil
 }
 
 func (a *aclRecordBuilder) BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error) {
-	content, err := a.buildAccountsAdd(payload)
+	content, err := a.buildAccountsAdd(payload, nil, nil)
 	if err != nil {
 		return
 	}
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload) (value *aclrecordproto.AclContentValue, err error) {
+func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload, mkKey crypto.PubKey, readKey crypto.SymKey) (value *aclrecordproto.AclContentValue, err error) {
 	var accs []*aclrecordproto.AclAccountAdd
 	for _, acc := range payload.Additions {
 		if !a.state.Permissions(acc.Identity).NoPermissions() {
@@ -247,9 +337,11 @@ func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload) (value *
 		if acc.Permissions.IsOwner() {
 			return nil, ErrIsOwner
 		}
-		mkKey, err := a.state.CurrentMetadataKey()
-		if err != nil {
-			return nil, err
+		if mkKey == nil {
+			mkKey, err = a.state.CurrentMetadataKey()
+			if err != nil {
+				return nil, err
+			}
 		}
 		encMeta, err := mkKey.Encrypt(acc.Metadata)
 		if err != nil {
@@ -258,9 +350,11 @@ func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload) (value *
 		if len(encMeta) > MaxMetadataLen {
 			return nil, ErrMetadataTooLarge
 		}
-		readKey, err := a.state.CurrentReadKey()
-		if err != nil {
-			return nil, ErrNoReadKey
+		if readKey == nil {
+			readKey, err = a.state.CurrentReadKey()
+			if err != nil {
+				return nil, ErrNoReadKey
+			}
 		}
 		protoKey, err := readKey.Marshall()
 		if err != nil {
@@ -282,11 +376,25 @@ func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload) (value *
 		})
 	}
 	return &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountsAdd{
-		&aclrecordproto.AclAccountsAdd{accs},
+		&aclrecordproto.AclAccountsAdd{Additions: accs},
 	}}, nil
 }
 
 func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {
+	privKey, content, err := a.buildInvite()
+	if err != nil {
+		return
+	}
+	rawRec, err := a.buildRecord(content)
+	if err != nil {
+		return
+	}
+	res.InviteKey = privKey
+	res.InviteRec = rawRec
+	return
+}
+
+func (a *aclRecordBuilder) buildInvite() (invKey crypto.PrivKey, content *aclrecordproto.AclContentValue, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
 		return
@@ -300,13 +408,79 @@ func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {
 		return
 	}
 	inviteRec := &aclrecordproto.AclAccountInvite{InviteKey: invitePubKey}
-	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}
+	content = &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}
+	invKey = privKey
+	return
+}
+
+func (a *aclRecordBuilder) BuildInviteChange(inviteChange InviteChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	content, err := a.buildInviteChange(inviteChange)
+	if err != nil {
+		return
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) buildInviteChange(inviteChange InviteChangePayload) (content *aclrecordproto.AclContentValue, err error) {
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	inviteRec := &aclrecordproto.AclAccountInviteChange{
+		InviteRecordId: inviteChange.IniviteRecordId,
+		Permissions:    aclrecordproto.AclUserPermissions(inviteChange.Permissions),
+	}
+	content = &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_InviteChange{InviteChange: inviteRec}}
+	return
+}
+
+func (a *aclRecordBuilder) BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error) {
+	privKey, content, err := a.buildInviteAnyone(permissions)
+	if err != nil {
+		return
+	}
 	rawRec, err := a.buildRecord(content)
 	if err != nil {
 		return
 	}
 	res.InviteKey = privKey
 	res.InviteRec = rawRec
+	return
+}
+
+func (a *aclRecordBuilder) buildInviteAnyone(permissions AclPermissions) (invKey crypto.PrivKey, content *aclrecordproto.AclContentValue, err error) {
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	privKey, pubKey, err := crypto.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return
+	}
+	invitePubKey, err := pubKey.Marshall()
+	if err != nil {
+		return
+	}
+	curReadKey, err := a.state.CurrentReadKey()
+	if err != nil {
+		return
+	}
+	raw, err := curReadKey.Marshall()
+	if err != nil {
+		return
+	}
+	encReadKey, err := pubKey.Encrypt(raw)
+	if err != nil {
+		return
+	}
+	inviteRec := &aclrecordproto.AclAccountInvite{
+		InviteKey:        invitePubKey,
+		InviteType:       aclrecordproto.AclInviteType_AnyoneCanJoin,
+		Permissions:      aclrecordproto.AclUserPermissions(permissions),
+		EncryptedReadKey: encReadKey,
+	}
+	content = &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}
+	invKey = privKey
 	return
 }
 
@@ -323,7 +497,7 @@ func (a *aclRecordBuilder) buildInviteRevoke(inviteRecordId string) (value *aclr
 		err = ErrInsufficientPermissions
 		return
 	}
-	_, exists := a.state.inviteKeys[inviteRecordId]
+	_, exists := a.state.invites[inviteRecordId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
@@ -334,17 +508,17 @@ func (a *aclRecordBuilder) buildInviteRevoke(inviteRecordId string) (value *aclr
 
 func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
 	var inviteId string
-	for id, key := range a.state.inviteKeys {
-		if key.Equals(payload.InviteKey.GetPublic()) {
+	for id, inv := range a.state.invites {
+		if inv.Key.Equals(payload.InviteKey.GetPublic()) {
 			inviteId = id
 		}
 	}
-	key, exists := a.state.inviteKeys[inviteId]
+	invite, exists := a.state.invites[inviteId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
 	}
-	if !payload.InviteKey.GetPublic().Equals(key) {
+	if !payload.InviteKey.GetPublic().Equals(invite.Key) {
 		err = ErrIncorrectInviteKey
 		return
 	}
@@ -385,15 +559,82 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	return a.buildRecord(content)
 }
 
+func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	var inviteId string
+	for id, inv := range a.state.invites {
+		if inv.Key.Equals(payload.InviteKey.GetPublic()) && inv.Type == aclrecordproto.AclInviteType_AnyoneCanJoin {
+			inviteId = id
+		}
+	}
+	invite, exists := a.state.invites[inviteId]
+	if !exists {
+		err = ErrNoSuchInvite
+		return
+	}
+	if !payload.InviteKey.GetPublic().Equals(invite.Key) {
+		err = ErrIncorrectInviteKey
+		return
+	}
+	if !a.state.Permissions(a.accountKeys.SignKey.GetPublic()).NoPermissions() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	mkKey, err := a.state.CurrentMetadataKey()
+	if err != nil {
+		return nil, err
+	}
+	encMeta, err := mkKey.Encrypt(payload.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	if len(encMeta) > MaxMetadataLen {
+		return nil, ErrMetadataTooLarge
+	}
+	rawIdentity, err := a.accountKeys.SignKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+	signature, err := payload.InviteKey.Sign(rawIdentity)
+	if err != nil {
+		return
+	}
+	key, err := a.state.DecryptInvite(payload.InviteKey)
+	if err != nil {
+		return
+	}
+	readKey, err := key.Marshall()
+	if err != nil {
+		return
+	}
+	encReadKey, err := a.accountKeys.SignKey.GetPublic().Encrypt(readKey)
+	if err != nil {
+		return
+	}
+	protoIdentity, err := a.accountKeys.SignKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	joinRec := &aclrecordproto.AclAccountInviteJoin{
+		Identity:                protoIdentity,
+		InviteRecordId:          inviteId,
+		InviteIdentitySignature: signature,
+		Metadata:                encMeta,
+		EncryptedReadKey:        encReadKey,
+		Permissions:             aclrecordproto.AclUserPermissions(payload.Permissions),
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_InviteJoin{InviteJoin: joinRec}}
+	return a.buildRecord(content)
+}
+
 func (a *aclRecordBuilder) BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error) {
-	content, err := a.buildRequestAccept(payload)
+	content, err := a.buildRequestAccept(payload, nil)
 	if err != nil {
 		return
 	}
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) buildRequestAccept(payload RequestAcceptPayload) (value *aclrecordproto.AclContentValue, err error) {
+func (a *aclRecordBuilder) buildRequestAccept(payload RequestAcceptPayload, readKey crypto.SymKey) (value *aclrecordproto.AclContentValue, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
 		return
@@ -403,9 +644,11 @@ func (a *aclRecordBuilder) buildRequestAccept(payload RequestAcceptPayload) (val
 		err = ErrNoSuchRequest
 		return
 	}
-	readKey, err := a.state.CurrentReadKey()
-	if err != nil {
-		return nil, ErrNoReadKey
+	if readKey == nil {
+		readKey, err = a.state.CurrentReadKey()
+		if err != nil {
+			return nil, ErrNoReadKey
+		}
 	}
 	protoKey, err := readKey.Marshall()
 	if err != nil {
@@ -506,12 +749,18 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 	if err != nil {
 		return nil, err
 	}
-	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
+	var (
+		aclReadKeys []*aclrecordproto.AclEncryptedReadKey
+		invites     []*aclrecordproto.AclEncryptedReadKey
+	)
 	for identity, st := range a.state.accountStates {
 		if removedIdentities != nil {
 			if _, exists := removedIdentities[identity]; exists {
 				continue
 			}
+		}
+		if st.Permissions.NoPermissions() {
+			continue
 		}
 		protoIdentity, err := st.PubKey.Marshall()
 		if err != nil {
@@ -522,6 +771,23 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 			return nil, err
 		}
 		aclReadKeys = append(aclReadKeys, &aclrecordproto.AclEncryptedReadKey{
+			Identity:         protoIdentity,
+			EncryptedReadKey: enc,
+		})
+	}
+	for _, invite := range a.state.invites {
+		if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
+			continue
+		}
+		protoIdentity, err := invite.Key.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		enc, err := invite.Key.Encrypt(protoKey)
+		if err != nil {
+			return nil, err
+		}
+		invites = append(invites, &aclrecordproto.AclEncryptedReadKey{
 			Identity:         protoIdentity,
 			EncryptedReadKey: enc,
 		})
@@ -557,6 +823,7 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 		MetadataPubKey:           mkPubKey,
 		EncryptedMetadataPrivKey: encPrivKey,
 		EncryptedOldReadKey:      encOldKey,
+		InviteKeys:               invites,
 	}
 	return readRec, nil
 }
@@ -622,7 +889,7 @@ func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *consensusproto.RawRe
 
 func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec *AclRecord, err error) {
 	aclRecord := &consensusproto.Record{}
-	err = proto.Unmarshal(rawRecord.Payload, aclRecord)
+	err = aclRecord.UnmarshalVT(rawRecord.Payload)
 	if err != nil {
 		return
 	}
@@ -631,7 +898,7 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 		return
 	}
 	aclData := &aclrecordproto.AclData{}
-	err = proto.Unmarshal(aclRecord.Data, aclData)
+	err = aclData.UnmarshalVT(aclRecord.Data)
 	if err != nil {
 		return
 	}
@@ -660,13 +927,13 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 		rawRec = &consensusproto.RawRecord{}
 		pubKey crypto.PubKey
 	)
-	err = proto.Unmarshal(rawIdRecord.Payload, rawRec)
+	err = rawRec.UnmarshalVT(rawIdRecord.Payload)
 	if err != nil {
 		return
 	}
 	if rawIdRecord.Id == a.id {
 		aclRoot := &aclrecordproto.AclRoot{}
-		err = proto.Unmarshal(rawRec.Payload, aclRoot)
+		err = aclRoot.UnmarshalVT(rawRec.Payload)
 		if err != nil {
 			return
 		}
@@ -687,7 +954,7 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 			return
 		}
 		aclRecord := &consensusproto.Record{}
-		err = proto.Unmarshal(rawRec.Payload, aclRecord)
+		err = aclRecord.UnmarshalVT(rawRec.Payload)
 		if err != nil {
 			return
 		}
@@ -696,7 +963,7 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 			return
 		}
 		aclData := &aclrecordproto.AclData{}
-		err = proto.Unmarshal(aclRecord.Data, aclData)
+		err = aclData.UnmarshalVT(aclRecord.Data)
 		if err != nil {
 			return
 		}
@@ -769,6 +1036,34 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }
 
+func (a *aclRecordBuilder) BuildOneToOneRoot(content RootContent, oneToOneInfo *aclrecordproto.AclOneToOneInfo) (rec *consensusproto.RawRecordWithId, err error) {
+	rawIdentity, err := content.PrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+	identity, err := content.PrivKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	masterKey, err := content.MasterKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	identitySignature, err := content.MasterKey.Sign(rawIdentity)
+	if err != nil {
+		return
+	}
+
+	aclRoot := &aclrecordproto.AclRoot{
+		OneToOneInfo:      oneToOneInfo,
+		Identity:          identity,
+		SpaceId:           content.SpaceId,
+		MasterKey:         masterKey,
+		IdentitySignature: identitySignature,
+	}
+	return marshalAclRoot(aclRoot, content.PrivKey)
+}
+
 func verifyRaw(
 	pubKey crypto.PubKey,
 	rawRec *consensusproto.RawRecord,
@@ -791,7 +1086,7 @@ func verifyRaw(
 }
 
 func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWithId *consensusproto.RawRecordWithId, err error) {
-	marshalledRoot, err := aclRoot.Marshal()
+	marshalledRoot, err := aclRoot.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -803,7 +1098,7 @@ func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWit
 		Payload:   marshalledRoot,
 		Signature: signature,
 	}
-	marshalledRaw, err := raw.Marshal()
+	marshalledRaw, err := raw.MarshalVT()
 	if err != nil {
 		return
 	}

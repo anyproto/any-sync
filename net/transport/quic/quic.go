@@ -54,8 +54,12 @@ func (q *quicTransport) Init(a *app.App) (err error) {
 	if q.conf.KeepAlivePeriodSec <= 0 {
 		q.conf.KeepAlivePeriodSec = 25
 	}
+	if q.conf.CloseTimeoutSec <= 0 {
+		q.conf.CloseTimeoutSec = 5
+	}
 	q.quicConf = &quic.Config{
 		HandshakeIdleTimeout: time.Duration(q.conf.DialTimeoutSec) * time.Second,
+		InitialPacketSize:    q.conf.InitialPacketSize,
 		MaxIncomingStreams:   q.conf.MaxStreams,
 		KeepAlivePeriod:      time.Duration(q.conf.KeepAlivePeriodSec) * time.Second,
 	}
@@ -89,10 +93,6 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 		return conf, tlsErr
 	}
 	tlsConf.NextProtos = []string{"anysync"}
-
-	if err != nil {
-		return
-	}
 	for _, listAddr := range addrs {
 		list, err := quic.ListenAddr(listAddr, &tlsConf, q.quicConf)
 		if err != nil {
@@ -110,10 +110,21 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	if err != nil {
 		return nil, err
 	}
-	qConn, err := quic.DialAddr(ctx, addr, tlsConf, q.quicConf)
+	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
 		return nil, err
 	}
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		_ = udpConn.Close()
+		return nil, err
+	}
+	qConn, err := quic.Dial(ctx, udpConn, udpAddr, tlsConf, q.quicConf)
+	if err != nil {
+		_ = udpConn.Close()
+		return nil, err
+	}
+	
 	var remotePubKey libp2crypto.PubKey
 	select {
 	case remotePubKey = <-keyCh:
@@ -121,18 +132,21 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	}
 	if remotePubKey == nil {
 		_ = qConn.CloseWithError(1, "")
+		_ = udpConn.Close()
 		return nil, fmt.Errorf("libp2p tls handshake bug: no key")
 	}
 
 	remotePeerId, err := peer.IDFromPublicKey(remotePubKey)
 	if err != nil {
 		_ = qConn.CloseWithError(1, "")
+		_ = udpConn.Close()
 		return nil, err
 	}
 
 	stream, err := qConn.OpenStreamSync(ctx)
 	if err != nil {
 		_ = qConn.CloseWithError(1, err.Error())
+		_ = udpConn.Close()
 		return nil, err
 	}
 	defer func() {
@@ -143,11 +157,11 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	if err != nil {
 		defer func() {
 			_ = qConn.CloseWithError(3, "outbound handshake failed")
+			_ = udpConn.Close()
 		}()
 		return nil, err
 	}
-
-	return newConn(cctx, qConn, time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
+	return newConn(cctx, udpConn, qConn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
 }
 
 func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
@@ -172,7 +186,7 @@ func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
 	}
 }
 
-func (q *quicTransport) accept(conn quic.Connection) (err error) {
+func (q *quicTransport) accept(conn *quic.Conn) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(q.conf.DialTimeoutSec))
 	defer cancel()
 	remotePubKey, err := libp2ptls.PubKeyFromCertChain(conn.ConnectionState().TLS.PeerCertificates)
@@ -199,7 +213,7 @@ func (q *quicTransport) accept(conn quic.Connection) (err error) {
 		}()
 		return
 	}
-	mc := newConn(cctx, conn, time.Second*time.Duration(q.conf.WriteTimeoutSec))
+	mc := newConn(cctx, nil, conn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec))
 	return q.accepter.Accept(mc)
 }
 

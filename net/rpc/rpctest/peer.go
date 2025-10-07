@@ -59,7 +59,7 @@ func (m MockPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return nil, nil
 }
 
-func (m MockPeer) ReleaseDrpcConn(conn drpc.Conn) {
+func (m MockPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 	return
 }
 

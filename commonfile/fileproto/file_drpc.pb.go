@@ -5,11 +5,9 @@
 package fileproto
 
 import (
-	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/anyproto/protobuf/jsonpb"
-	proto "github.com/anyproto/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -17,24 +15,19 @@ import (
 type drpcEncoding_File_commonfile_fileproto_protos_file_proto struct{}
 
 func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	var buf bytes.Buffer
-	err := new(jsonpb.Marshaler).Marshal(&buf, msg.(proto.Message))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCFileClient interface {
@@ -42,6 +35,7 @@ type DRPCFileClient interface {
 
 	BlockGet(ctx context.Context, in *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(ctx context.Context, in *BlockPushRequest) (*Ok, error)
+	BlockPushMany(ctx context.Context, in *BlockPushManyRequest) (*Ok, error)
 	BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(ctx context.Context, in *BlocksBindRequest) (*Ok, error)
 	FilesDelete(ctx context.Context, in *FilesDeleteRequest) (*FilesDeleteResponse, error)
@@ -76,6 +70,15 @@ func (c *drpcFileClient) BlockGet(ctx context.Context, in *BlockGetRequest) (*Bl
 func (c *drpcFileClient) BlockPush(ctx context.Context, in *BlockPushRequest) (*Ok, error) {
 	out := new(Ok)
 	err := c.cc.Invoke(ctx, "/filesync.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcFileClient) BlockPushMany(ctx context.Context, in *BlockPushManyRequest) (*Ok, error) {
+	out := new(Ok)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlockPushMany", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +209,7 @@ func (c *drpcFileClient) SpaceLimitSet(ctx context.Context, in *SpaceLimitSetReq
 type DRPCFileServer interface {
 	BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(context.Context, *BlockPushRequest) (*Ok, error)
+	BlockPushMany(context.Context, *BlockPushManyRequest) (*Ok, error)
 	BlocksCheck(context.Context, *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(context.Context, *BlocksBindRequest) (*Ok, error)
 	FilesDelete(context.Context, *FilesDeleteRequest) (*FilesDeleteResponse, error)
@@ -225,6 +229,10 @@ func (s *DRPCFileUnimplementedServer) BlockGet(context.Context, *BlockGetRequest
 }
 
 func (s *DRPCFileUnimplementedServer) BlockPush(context.Context, *BlockPushRequest) (*Ok, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCFileUnimplementedServer) BlockPushMany(context.Context, *BlockPushManyRequest) (*Ok, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -270,7 +278,7 @@ func (s *DRPCFileUnimplementedServer) SpaceLimitSet(context.Context, *SpaceLimit
 
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 12 }
+func (DRPCFileDescription) NumMethods() int { return 13 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -293,6 +301,15 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlockPush, true
 	case 2:
+		return "/filesync.File/BlockPushMany", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					BlockPushMany(
+						ctx,
+						in1.(*BlockPushManyRequest),
+					)
+			}, DRPCFileServer.BlockPushMany, true
+	case 3:
 		return "/filesync.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -301,7 +318,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*BlocksCheckRequest),
 					)
 			}, DRPCFileServer.BlocksCheck, true
-	case 3:
+	case 4:
 		return "/filesync.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -310,7 +327,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*BlocksBindRequest),
 					)
 			}, DRPCFileServer.BlocksBind, true
-	case 4:
+	case 5:
 		return "/filesync.File/FilesDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -319,7 +336,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*FilesDeleteRequest),
 					)
 			}, DRPCFileServer.FilesDelete, true
-	case 5:
+	case 6:
 		return "/filesync.File/FilesInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -328,7 +345,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*FilesInfoRequest),
 					)
 			}, DRPCFileServer.FilesInfo, true
-	case 6:
+	case 7:
 		return "/filesync.File/FilesGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCFileServer).
@@ -337,7 +354,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						&drpcFile_FilesGetStream{in2.(drpc.Stream)},
 					)
 			}, DRPCFileServer.FilesGet, true
-	case 7:
+	case 8:
 		return "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -346,7 +363,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*CheckRequest),
 					)
 			}, DRPCFileServer.Check, true
-	case 8:
+	case 9:
 		return "/filesync.File/SpaceInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -355,7 +372,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*SpaceInfoRequest),
 					)
 			}, DRPCFileServer.SpaceInfo, true
-	case 9:
+	case 10:
 		return "/filesync.File/AccountInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -364,7 +381,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*AccountInfoRequest),
 					)
 			}, DRPCFileServer.AccountInfo, true
-	case 10:
+	case 11:
 		return "/filesync.File/AccountLimitSet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -373,7 +390,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*AccountLimitSetRequest),
 					)
 			}, DRPCFileServer.AccountLimitSet, true
-	case 11:
+	case 12:
 		return "/filesync.File/SpaceLimitSet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -417,6 +434,22 @@ type drpcFile_BlockPushStream struct {
 }
 
 func (x *drpcFile_BlockPushStream) SendAndClose(m *Ok) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_BlockPushManyStream interface {
+	drpc.Stream
+	SendAndClose(*Ok) error
+}
+
+type drpcFile_BlockPushManyStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_BlockPushManyStream) SendAndClose(m *Ok) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}

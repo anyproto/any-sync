@@ -27,7 +27,7 @@ func (c *changeFactory) CreateObjectDeleteChange(id string, state *State, isSnap
 	if isSnapshot {
 		change.Snapshot = c.makeSnapshot(state, id)
 	}
-	res, err = change.Marshal()
+	res, err = change.MarshalVT()
 	return
 }
 

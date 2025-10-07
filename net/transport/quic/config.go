@@ -7,7 +7,9 @@ type configGetter interface {
 type Config struct {
 	ListenAddrs        []string `yaml:"listenAddrs"`
 	WriteTimeoutSec    int      `yaml:"writeTimeoutSec"`
+	CloseTimeoutSec    int      `yaml:"closeTimeoutSec"`
 	DialTimeoutSec     int      `yaml:"dialTimeoutSec"`
 	MaxStreams         int64    `yaml:"maxStreams"`
+	InitialPacketSize  uint16   `yaml:"initialPacketSize"`
 	KeepAlivePeriodSec int      `yaml:"keepAlivePeriodSec"`
 }

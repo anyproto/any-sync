@@ -6,12 +6,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/anyproto/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
-	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/syncqueues"
 )
 
@@ -50,7 +50,7 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 		calledOnce := false
 		for {
 			resp := collector.NewResponse()
-			err := stream.MsgRecv(resp, streampool.EncodingProto)
+			err := stream.MsgRecv(resp, nil)
 			if err != nil {
 				if errors.Is(err, io.EOF) && calledOnce {
 					return nil
@@ -93,7 +93,7 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)
 	defer r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, false)
 	newRq, err := r.handler.HandleStreamRequest(ctx, rq, r.metric, func(resp proto.Message) error {
-		return stream.MsgSend(resp, streampool.EncodingProto)
+		return stream.MsgSend(resp, nil)
 	})
 	// here is a little bit non-standard decision, because we can return error but still can queue the request
 	if newRq != nil {

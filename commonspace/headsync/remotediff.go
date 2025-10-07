@@ -75,7 +75,7 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
 	req := &spacesyncproto.HeadSyncRequest{
 		SpaceId:  r.spaceId,
-		DiffType: spacesyncproto.DiffType_V2,
+		DiffType: spacesyncproto.DiffType_V3,
 		Ranges:   []*spacesyncproto.HeadSyncRange{{From: 0, To: math.MaxUint64}},
 	}
 	resp, err := r.client.HeadSync(ctx, req)
@@ -95,12 +95,14 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 	}
 	r.diffType = resp.DiffType
 	switch resp.DiffType {
-	case spacesyncproto.DiffType_V2:
+	case spacesyncproto.DiffType_V3:
 		diff = diffContainer.NewDiff()
 		needsSync, err = checkHash(diff)
-	default:
+	case spacesyncproto.DiffType_V2:
 		diff = diffContainer.OldDiff()
 		needsSync, err = checkHash(diff)
+	default:
+		err = spacesyncproto.ErrUnexpected
 	}
 	return
 }

@@ -13,6 +13,8 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -22,6 +24,7 @@ import (
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -64,6 +67,7 @@ type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (string, error)
+	DeriveOneToOneSpace(ctx context.Context, aSk crypto.PrivKey, bPk crypto.PubKey) (id string, err error)
 	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
 }
@@ -72,6 +76,7 @@ type Deps struct {
 	SyncStatus     syncstatus.StatusUpdater
 	TreeSyncer     treesyncer.TreeSyncer
 	AccountService accountservice.Service
+	recordVerifier recordverifier.RecordVerifier
 	Indexer        keyvaluestorage.Indexer
 }
 
@@ -130,8 +135,25 @@ func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.Space
 	return
 }
 
+// maybe we should use derived space for onetoone
 func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
 	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
+	if err != nil {
+		return
+	}
+	store, err := s.createSpaceStorage(ctx, storageCreate)
+	if err != nil {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
+			return storageCreate.SpaceHeaderWithId.Id, nil
+		}
+		return
+	}
+
+	return store.Id(), store.Close(ctx)
+}
+
+func (s *spaceService) DeriveOneToOneSpace(ctx context.Context, aSk crypto.PrivKey, bPk crypto.PubKey) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForOneToOneSpace(aSk, bPk)
 	if err != nil {
 		return
 	}
@@ -159,7 +181,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 				return nil, err
 			}
 		} else {
-			st, err = s.getSpaceStorageFromRemote(ctx, id)
+			st, err = s.getSpaceStorageFromRemote(ctx, id, deps)
 			if err != nil {
 				return nil, err
 			}
@@ -188,8 +210,13 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if deps.Indexer != nil {
 		keyValueIndexer = deps.Indexer
 	}
+	recordVerifier := recordverifier.New()
+	if deps.recordVerifier != nil {
+		recordVerifier = deps.recordVerifier
+	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
+		Register(recordVerifier).
 		Register(peerManager).
 		Register(st).
 		Register(keyValueIndexer).
@@ -236,7 +263,7 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 	return
 }
 
-func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string) (st spacestorage.SpaceStorage, err error) {
+func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string, deps Deps) (st spacestorage.SpaceStorage, err error) {
 	// we can't connect to client if it is a node
 	if s.configurationService.IsResponsible(id) {
 		err = spacesyncproto.ErrSpaceMissing
@@ -275,7 +302,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		}
 	}
 	for i, p := range peers {
-		if st, err = s.spacePullWithPeer(ctx, p, id); err != nil {
+		if st, err = s.spacePullWithPeer(ctx, p, id, deps); err != nil {
 			if i+1 == len(peers) {
 				return
 			} else {
@@ -288,7 +315,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	return nil, net.ErrUnableToConnect
 }
 
-func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id string) (st spacestorage.SpaceStorage, err error) {
+func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id string, deps Deps) (st spacestorage.SpaceStorage, err error) {
 	var res *spacesyncproto.SpacePullResponse
 	err = p.DoDrpc(ctx, func(conn drpc.Conn) error {
 		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
@@ -300,7 +327,7 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		return
 	}
 
-	return s.createSpaceStorage(ctx, spacestorage.SpaceStorageCreatePayload{
+	st, err = s.createSpaceStorage(ctx, spacestorage.SpaceStorageCreatePayload{
 		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
@@ -311,6 +338,35 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		},
 		SpaceHeaderWithId: res.Payload.SpaceHeader,
 	})
+	if err != nil {
+		return
+	}
+	if res.AclRecords != nil {
+		aclSt, err := st.AclStorage()
+		if err != nil {
+			return nil, err
+		}
+		recordVerifier := recordverifier.New()
+		if deps.recordVerifier != nil {
+			recordVerifier = deps.recordVerifier
+		}
+		acl, err := list.BuildAclListWithIdentity(s.account.Account(), aclSt, recordVerifier)
+		if err != nil {
+			return nil, err
+		}
+		consRecs := make([]*consensusproto.RawRecordWithId, 0, len(res.AclRecords))
+		for _, rec := range res.AclRecords {
+			consRecs = append(consRecs, &consensusproto.RawRecordWithId{
+				Id:      rec.Id,
+				Payload: rec.AclPayload,
+			})
+		}
+		err = acl.AddRawRecords(consRecs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return st, nil
 }
 
 func (s *spaceService) createSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {

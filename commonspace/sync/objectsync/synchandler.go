@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
@@ -87,7 +87,7 @@ func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Reques
 			return nil, treechangeproto.ErrGetTree
 		}
 		treeSyncMsg := &treechangeproto.TreeSyncMessage{}
-		err := proto.Unmarshal(req.Bytes, treeSyncMsg)
+		err := treeSyncMsg.UnmarshalVT(req.Bytes)
 		if err != nil {
 			return nil, treechangeproto.ErrGetTree
 		}

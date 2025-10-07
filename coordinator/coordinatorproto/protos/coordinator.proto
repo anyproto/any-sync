@@ -55,6 +55,8 @@ service Coordinator {
 
   // NotifySubscribe returns a subscription to new inbox msg
   rpc NotifySubscribe(NotifySubscribeRequest) returns (stream NotifySubscribeEvent);
+  // AclUploadInvite uploads invite binary data to the filenodes
+  rpc AclUploadInvite(AclUploadInviteRequest) returns (AclUploadInviteResponse);
 }
 
 
@@ -481,3 +483,10 @@ message NotifySubscribeEvent {
   NotifyEventType eventType = 1;
   bytes payload = 2;
 }
+
+message AclUploadInviteRequest {
+  bytes cid = 1;
+  bytes data = 2;
+}
+
+message AclUploadInviteResponse {}

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -18,15 +19,19 @@ type InviteResponse struct {
 	InviteKey crypto.PrivKey
 }
 
+type InvitePayload struct {
+	InviteType  aclrecordproto.AclInviteType
+	Permissions list.AclPermissions
+}
+
 type GetRecordsResponse struct {
 	Records []*consensusproto.RawRecordWithId
 }
 
-type InviteSaveFunc func()
-
 type AclSpaceClient interface {
 	app.Component
-	GenerateInvite() (list.InviteResult, error)
+	ReplaceInvite(ctx context.Context, invite InvitePayload) (list.InviteResult, error)
+	ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error
 	StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error)
 	AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) error
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
@@ -127,7 +132,7 @@ func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
 		return
 	}
 	c.acl.Unlock()
-	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res.Rec)
 }
 
 func (c *aclSpaceClient) StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error) {
@@ -164,7 +169,7 @@ func (c *aclSpaceClient) StopSharing(ctx context.Context, readKeyChange list.Rea
 		return
 	}
 	c.acl.Unlock()
-	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res.Rec)
 }
 
 func (c *aclSpaceClient) DeclineRequest(ctx context.Context, identity crypto.PubKey) (err error) {
@@ -210,10 +215,65 @@ func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.Request
 	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
-func (c *aclSpaceClient) GenerateInvite() (resp list.InviteResult, err error) {
-	c.acl.RLock()
-	defer c.acl.RUnlock()
-	return c.acl.RecordBuilder().BuildInvite()
+func (c *aclSpaceClient) OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) (err error) {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildOwnershipChange(list.OwnershipChangePayload{
+		NewOwner:            identity,
+		OldOwnerPermissions: oldOwnerPermissions,
+	})
+	if err != nil {
+		c.acl.Unlock()
+		return err
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+func (c *aclSpaceClient) ChangeInvitePermissions(ctx context.Context, inviteId string, permissions list.AclPermissions) error {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildInviteChange(list.InviteChangePayload{
+		IniviteRecordId: inviteId,
+		Permissions:     permissions,
+	})
+	if err != nil {
+		c.acl.Unlock()
+		return err
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+func (c *aclSpaceClient) ReplaceInvite(ctx context.Context, payload InvitePayload) (list.InviteResult, error) {
+	c.acl.Lock()
+	defer c.acl.Unlock()
+	for _, invite := range c.acl.AclState().Invites() {
+		if equalInvites(payload, invite) {
+			return list.InviteResult{}, list.ErrDuplicateInvites
+		}
+	}
+	var (
+		inviteIds = c.acl.AclState().InviteIds()
+		batch     list.BatchRequestPayload
+	)
+	if payload.InviteType == aclrecordproto.AclInviteType_RequestToJoin {
+		batch = list.BatchRequestPayload{
+			InviteRevokes: inviteIds,
+			NewInvites:    []list.AclPermissions{list.AclPermissionsNone},
+		}
+	} else {
+		batch = list.BatchRequestPayload{
+			InviteRevokes: inviteIds,
+			NewInvites:    []list.AclPermissions{payload.Permissions},
+		}
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(batch)
+	if err != nil {
+		return list.InviteResult{}, err
+	}
+	return list.InviteResult{
+		InviteRec: res.Rec,
+		InviteKey: res.Invites[0],
+	}, nil
 }
 
 func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) (err error) {
@@ -232,4 +292,13 @@ func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string
 		err = nil
 	}
 	return
+}
+
+func equalInvites(payload InvitePayload, invite list.Invite) bool {
+	switch payload.InviteType {
+	case aclrecordproto.AclInviteType_RequestToJoin:
+		return invite.Type == aclrecordproto.AclInviteType_RequestToJoin
+	default:
+		return invite.Type == aclrecordproto.AclInviteType_AnyoneCanJoin && invite.Permissions == payload.Permissions
+	}
 }

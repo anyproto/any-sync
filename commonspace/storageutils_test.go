@@ -43,7 +43,7 @@ func (s *spaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) 
 	}
 	dbPath := path.Join(s.rootPath, id)
 	if _, err := os.Stat(dbPath); err != nil {
-		return nil, err
+		return nil, spacestorage.ErrSpaceStorageMissing
 	}
 	db, err := anystore.Open(ctx, dbPath, nil)
 	if err != nil {

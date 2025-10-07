@@ -1,3 +1,5 @@
+//go:generate mockgen -package=mock_quic -destination=mock_quic/mock_packet_conn.go net PacketConn
+//go:generate mockgen -package=mock_quic -source=$GOFILE -destination=mock_quic/mock_quic_conn.go connection
 package quic
 
 import (
@@ -7,24 +9,39 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
 )
 
-func newConn(cctx context.Context, qconn quic.Connection, writeTimeout time.Duration) transport.MultiConn {
+type connection interface {
+	OpenStreamSync(context.Context) (*quic.Stream, error)
+	LocalAddr() net.Addr
+	RemoteAddr() net.Addr
+	CloseWithError(quic.ApplicationErrorCode, string) error
+	Context() context.Context
+	AcceptStream(context.Context) (*quic.Stream, error)
+}
+
+func newConn(cctx context.Context, udpConn net.PacketConn, qconn connection, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Quic+"://"+qconn.RemoteAddr().String())
 	return &quicMultiConn{
 		cctx:         cctx,
-		Connection:   qconn,
+		udpConn:      udpConn,
+		connection:   qconn,
 		writeTimeout: writeTimeout,
+		closeTimeout: closeTimeout,
 	}
 }
 
 type quicMultiConn struct {
+	udpConn      net.PacketConn
 	cctx         context.Context
 	writeTimeout time.Duration
-	quic.Connection
+	closeTimeout time.Duration
+	connection
 }
 
 func (q *quicMultiConn) Context() context.Context {
@@ -32,7 +49,7 @@ func (q *quicMultiConn) Context() context.Context {
 }
 
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
-	stream, err := q.Connection.AcceptStream(context.Background())
+	stream, err := q.connection.AcceptStream(context.Background())
 	if err != nil {
 		if errors.Is(err, quic.ErrServerClosed) {
 			err = transport.ErrConnClosed
@@ -55,9 +72,10 @@ func (q *quicMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 		return nil, err
 	}
 	return quicNetConn{
-		Stream:     stream,
-		localAddr:  q.LocalAddr(),
-		remoteAddr: q.RemoteAddr(),
+		Stream:       stream,
+		localAddr:    q.LocalAddr(),
+		remoteAddr:   q.RemoteAddr(),
+		writeTimeout: q.writeTimeout,
 	}, nil
 }
 
@@ -75,11 +93,41 @@ func (q *quicMultiConn) IsClosed() bool {
 }
 
 func (q *quicMultiConn) CloseChan() <-chan struct{} {
-	return q.Connection.Context().Done()
+	return q.connection.Context().Done()
 }
 
 func (q *quicMultiConn) Close() error {
-	return q.Connection.CloseWithError(2, "")
+	// if we have the udp connection saved in quicMultiConn, then we manage it ourselves
+	// we don't manage/close the udp connections when we accept streams, otherwise we would kill the server
+	closeWait := make(chan struct{})
+	isTimeout := atomic.NewBool(false)
+	go func() {
+		select {
+		case <-closeWait:
+		case <-time.After(q.closeTimeout):
+			isTimeout.Store(true)
+			if q.udpConn != nil {
+				err := q.udpConn.Close()
+				if err != nil {
+					log.Error("udp conn closed with error", zap.Error(err))
+				}
+			}
+		}
+	}()
+	go func() {
+		err := q.connection.CloseWithError(2, "")
+		if err != nil {
+			log.Error("quic conn closed with error", zap.Error(err))
+		}
+		if !isTimeout.Load() && q.udpConn != nil {
+			err := q.udpConn.Close()
+			if err != nil {
+				log.Error("upd conn closed with error", zap.Error(err))
+			}
+		}
+		close(closeWait)
+	}()
+	return nil
 }
 
 const (
@@ -87,7 +135,7 @@ const (
 )
 
 type quicNetConn struct {
-	quic.Stream
+	*quic.Stream
 	writeTimeout          time.Duration
 	localAddr, remoteAddr net.Addr
 }
@@ -119,3 +167,4 @@ func (q quicNetConn) LocalAddr() net.Addr {
 func (q quicNetConn) RemoteAddr() net.Addr {
 	return q.remoteAddr
 }
+

@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -186,8 +187,8 @@ func TestAclList_InviteRevoke(t *testing.T) {
 	// checking acl state
 	require.True(t, ownerState().Permissions(ownerState().pubKey).IsOwner())
 	require.True(t, ownerState().Permissions(accountState().pubKey).NoPermissions())
-	require.Empty(t, ownerState().inviteKeys)
-	require.Empty(t, accountState().inviteKeys)
+	require.Empty(t, ownerState().invites)
+	require.Empty(t, accountState().invites)
 }
 
 func TestAclList_RequestDecline(t *testing.T) {
@@ -279,7 +280,7 @@ func TestAclList_FixAcceptPanic(t *testing.T) {
 	fx := newFixture(t)
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 
-	_, err := BuildAclListWithIdentity(fx.accountKeys, fx.ownerAcl.storage, NoOpAcceptorVerifier{})
+	_, err := BuildAclListWithIdentity(fx.accountKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
 	require.NoError(t, err)
 }
 
@@ -307,6 +308,27 @@ func TestAclList_MetadataDecrypt(t *testing.T) {
 	meta, err = fx.ownerAcl.AclState().GetMetadata(fx.accountKeys.SignKey.GetPublic(), false)
 	require.NoError(t, err)
 	require.NotEqual(t, mockMetadata, meta)
+}
+
+func TestAclList_ValidateUsesCorrectVerifier(t *testing.T) {
+	fx := newFixture(t)
+	var ownerAcl = fx.ownerAcl
+	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New()
+	ownerAcl.verifier = recordverifier.New()
+	// building invite
+	inv, err := ownerAcl.RecordBuilder().BuildInvite()
+	require.NoError(t, err)
+	isCalled := false
+	ok := ownerAcl.aclState.contentValidator.(*contentValidator).verifier.ShouldValidate()
+	require.False(t, ok)
+	err = fx.ownerAcl.ValidateRawRecord(inv.InviteRec, func(state *AclState) error {
+		isCalled = true
+		// check that we change the validator to the verifying one
+		require.True(t, state.contentValidator.(*contentValidator).verifier.ShouldValidate())
+		return nil
+	})
+	require.NoError(t, err)
+	require.True(t, isCalled)
 }
 
 func TestAclList_ReadKeyChange(t *testing.T) {

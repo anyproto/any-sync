@@ -20,6 +20,218 @@ import (
 
 var ctx = context.Background()
 
+func TestPool_Flush(t *testing.T) {
+	t.Run("flush empty pool", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		err := fx.Flush(ctx)
+		assert.NoError(t, err)
+	})
+	t.Run("flush pool with incoming peers", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("incoming1")
+		p2 := newTestPeer("incoming2")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, fx.AddPeer(ctx, p2))
+		peer1, err := fx.Pick(ctx, "incoming1")
+		require.NoError(t, err)
+		assert.Equal(t, p1, peer1)
+		peer2, err := fx.Pick(ctx, "incoming2")
+		require.NoError(t, err)
+		assert.Equal(t, p2, peer2)
+		err = fx.Flush(ctx)
+		require.NoError(t, err)
+		_, err = fx.Pick(ctx, "incoming1")
+		assert.Error(t, err)
+		_, err = fx.Pick(ctx, "incoming2")
+		assert.Error(t, err)
+	})
+	t.Run("flush pool with outgoing peers", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("outgoing1")
+		p2 := newTestPeer("outgoing2")
+		dialCount := 0
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			dialCount++
+			switch peerId {
+			case "outgoing1":
+				return p1, nil
+			case "outgoing2":
+				return p2, nil
+			default:
+				return nil, assert.AnError
+			}
+		}
+		peer1, err := fx.Get(ctx, "outgoing1")
+		require.NoError(t, err)
+		assert.Equal(t, p1, peer1)
+		peer2, err := fx.Get(ctx, "outgoing2")
+		require.NoError(t, err)
+		assert.Equal(t, p2, peer2)
+		fx.Dialer.dial = nil
+		peer1Cached, err := fx.Pick(ctx, "outgoing1")
+		require.NoError(t, err)
+		assert.Equal(t, p1, peer1Cached)
+		err = fx.Flush(ctx)
+		require.NoError(t, err)
+		_, err = fx.Pick(ctx, "outgoing1")
+		assert.Error(t, err)
+		_, err = fx.Pick(ctx, "outgoing2")
+		assert.Error(t, err)
+	})
+	t.Run("flush pool with mixed incoming and outgoing peers", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		incomingPeer := newTestPeer("incoming")
+		require.NoError(t, fx.AddPeer(ctx, incomingPeer))
+		outgoingPeer := newTestPeer("outgoing")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			if peerId == "outgoing" {
+				return outgoingPeer, nil
+			}
+			return nil, assert.AnError
+		}
+		_, err := fx.Get(ctx, "outgoing")
+		require.NoError(t, err)
+		peer1, err := fx.Pick(ctx, "incoming")
+		require.NoError(t, err)
+		assert.Equal(t, incomingPeer, peer1)
+		peer2, err := fx.Pick(ctx, "outgoing")
+		require.NoError(t, err)
+		assert.Equal(t, outgoingPeer, peer2)
+		err = fx.Flush(ctx)
+		require.NoError(t, err)
+		_, err = fx.Pick(ctx, "incoming")
+		assert.Error(t, err)
+		_, err = fx.Pick(ctx, "outgoing")
+		assert.Error(t, err)
+	})
+	t.Run("flush pool with closed peers", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("peer1")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, p1.Close())
+		p2 := newTestPeer("peer2")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			return p2, nil
+		}
+		_, err := fx.Get(ctx, "peer2")
+		require.NoError(t, err)
+		require.NoError(t, p2.Close())
+		err = fx.Flush(ctx)
+		assert.NoError(t, err)
+		_, err = fx.Pick(ctx, "peer1")
+		assert.Error(t, err)
+		_, err = fx.Pick(ctx, "peer2")
+		assert.Error(t, err)
+	})
+	t.Run("concurrent flush operations", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("peer1")
+		p2 := newTestPeer("peer2")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, fx.AddPeer(ctx, p2))
+		done := make(chan error, 2)
+		go func() {
+			done <- fx.Flush(ctx)
+		}()
+		go func() {
+			done <- fx.Flush(ctx)
+		}()
+		err1 := <-done
+		err2 := <-done
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
+		_, err := fx.Pick(ctx, "peer1")
+		assert.Error(t, err)
+		_, err = fx.Pick(ctx, "peer2")
+		assert.Error(t, err)
+	})
+	t.Run("flush then get should work correctly", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("peer1")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		pr, err := fx.Pick(ctx, "peer1")
+		require.NoError(t, err)
+		assert.Equal(t, p1, pr)
+		err = fx.Flush(ctx)
+		require.NoError(t, err)
+		_, err = fx.Pick(ctx, "peer1")
+		assert.Error(t, err)
+		p2 := newTestPeer("peer1")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			if peerId == "peer1" {
+				return p2, nil
+			}
+			return nil, assert.AnError
+		}
+		pr, err = fx.Get(ctx, "peer1")
+		require.NoError(t, err)
+		assert.Equal(t, p2, pr)
+	})
+	t.Run("stat provider after flush", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		created1 := time.Now().Add(-time.Hour)
+		created2 := time.Now().Add(-30 * time.Minute)
+		p1 := newTestPeerWithParams("peer1", created1, 2, 1)
+		p2 := newTestPeerWithParams("peer2", created2, 1, 2)
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			if peerId == "peer2" {
+				return p2, nil
+			}
+			return nil, assert.AnError
+		}
+		_, err := fx.Get(ctx, "peer2")
+		require.NoError(t, err)
+		statProvider, ok := fx.Service.(*poolService)
+		require.True(t, ok)
+		stat := statProvider.ProvideStat()
+		poolStat, ok := stat.(*poolStats)
+		require.True(t, ok)
+		assert.Len(t, poolStat.PeerStats, 2)
+		err = fx.Flush(ctx)
+		require.NoError(t, err)
+		stat = statProvider.ProvideStat()
+		poolStat, ok = stat.(*poolStats)
+		require.True(t, ok)
+		assert.Len(t, poolStat.PeerStats, 0)
+	})
+	t.Run("flush does not remove peers loading during flush", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		dialStarted := make(chan struct{})
+		blockDial := make(chan struct{})
+		loadingPeer := newTestPeer("loading-peer")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			close(dialStarted)
+			<-blockDial
+			return loadingPeer, nil
+		}
+		resultChan := make(chan peer.Peer, 1)
+		go func() {
+			p, err := fx.Get(ctx, "loading-peer")
+			require.NoError(t, err)
+			resultChan <- p
+		}()
+		<-dialStarted
+		err := fx.Flush(ctx)
+		require.NoError(t, err)
+		close(blockDial)
+		p := <-resultChan
+		require.Equal(t, loadingPeer, p)
+		pickedPeer, err := fx.Pick(ctx, "loading-peer")
+		require.NoError(t, err)
+		assert.Equal(t, loadingPeer, pickedPeer)
+	})
+}
+
 func TestPool_Get(t *testing.T) {
 	t.Run("dial error", func(t *testing.T) {
 		fx := newFixture(t)
@@ -126,12 +338,46 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("handshake error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
+		var calls int
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			calls++
 			return nil, handshake.ErrIncompatibleVersion
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
 		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 3, calls)
 		assert.Nil(t, p)
+
+		// second call - expect dialed not called more
+		p, err = fx.GetOneOf(ctx, []string{"3", "2", "1"})
+		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 3, calls)
+		assert.Nil(t, p)
+	})
+	t.Run("handshake error gc", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		var calls int
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			calls++
+			return nil, handshake.ErrIncompatibleVersion
+		}
+		p, err := fx.Get(ctx, "1")
+		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, 1, calls)
+		assert.Nil(t, p)
+
+		val, err := fx.Service.(*poolService).outgoing.Pick(ctx, "1")
+		require.NoError(t, err)
+		errObj := val.(*errObject)
+		closed, err := errObj.TryClose(time.Minute)
+		require.NoError(t, err)
+		assert.False(t, closed)
+
+		errObj.createdTime.Store(time.Now().Add(-time.Hour))
+		closed, err = errObj.TryClose(time.Minute)
+		require.NoError(t, err)
+		assert.True(t, closed)
 	})
 }
 
@@ -378,6 +624,8 @@ func newTestPeerWithParams(id string, created time.Time, subConnections int, ver
 	}
 }
 
+var _ peer.Peer = (*testPeer)(nil)
+
 type testPeer struct {
 	id             string
 	closed         chan struct{}
@@ -408,7 +656,7 @@ func (t *testPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (t *testPeer) ReleaseDrpcConn(conn drpc.Conn) {}
+func (t *testPeer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {}
 
 func (t *testPeer) Context() context.Context {
 	//TODO implement me

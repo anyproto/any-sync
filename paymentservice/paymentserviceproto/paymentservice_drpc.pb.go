@@ -5,11 +5,9 @@
 package paymentserviceproto
 
 import (
-	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/anyproto/protobuf/jsonpb"
-	proto "github.com/anyproto/protobuf/proto"
+	drpc1 "github.com/planetscale/vtprotobuf/codec/drpc"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )
@@ -17,24 +15,19 @@ import (
 type drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto struct{}
 
 func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto) Marshal(msg drpc.Message) ([]byte, error) {
-	return proto.Marshal(msg.(proto.Message))
+	return drpc1.Marshal(msg)
 }
 
 func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto) Unmarshal(buf []byte, msg drpc.Message) error {
-	return proto.Unmarshal(buf, msg.(proto.Message))
+	return drpc1.Unmarshal(buf, msg)
 }
 
 func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto) JSONMarshal(msg drpc.Message) ([]byte, error) {
-	var buf bytes.Buffer
-	err := new(jsonpb.Marshaler).Marshal(&buf, msg.(proto.Message))
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return drpc1.JSONMarshal(msg)
 }
 
 func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto) JSONUnmarshal(buf []byte, msg drpc.Message) error {
-	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
+	return drpc1.JSONUnmarshal(buf, msg)
 }
 
 type DRPCAnyPaymentProcessingClient interface {
@@ -49,6 +42,8 @@ type DRPCAnyPaymentProcessingClient interface {
 	VerifyEmail(ctx context.Context, in *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(ctx context.Context, in *GetTiersRequestSigned) (*GetTiersResponse, error)
 	VerifyAppStoreReceipt(ctx context.Context, in *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptResponse, error)
+	CodeGetInfo(ctx context.Context, in *CodeGetInfoRequestSigned) (*CodeGetInfoResponse, error)
+	CodeRedeem(ctx context.Context, in *CodeRedeemRequestSigned) (*CodeRedeemResponse, error)
 }
 
 type drpcAnyPaymentProcessingClient struct {
@@ -142,6 +137,24 @@ func (c *drpcAnyPaymentProcessingClient) VerifyAppStoreReceipt(ctx context.Conte
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessingClient) CodeGetInfo(ctx context.Context, in *CodeGetInfoRequestSigned) (*CodeGetInfoResponse, error) {
+	out := new(CodeGetInfoResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/CodeGetInfo", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) CodeRedeem(ctx context.Context, in *CodeRedeemRequestSigned) (*CodeRedeemResponse, error) {
+	out := new(CodeRedeemResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/CodeRedeem", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessingServer interface {
 	GetSubscriptionStatus(context.Context, *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	IsNameValid(context.Context, *IsNameValidRequest) (*IsNameValidResponse, error)
@@ -152,6 +165,8 @@ type DRPCAnyPaymentProcessingServer interface {
 	VerifyEmail(context.Context, *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(context.Context, *GetTiersRequestSigned) (*GetTiersResponse, error)
 	VerifyAppStoreReceipt(context.Context, *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptResponse, error)
+	CodeGetInfo(context.Context, *CodeGetInfoRequestSigned) (*CodeGetInfoResponse, error)
+	CodeRedeem(context.Context, *CodeRedeemRequestSigned) (*CodeRedeemResponse, error)
 }
 
 type DRPCAnyPaymentProcessingUnimplementedServer struct{}
@@ -192,9 +207,17 @@ func (s *DRPCAnyPaymentProcessingUnimplementedServer) VerifyAppStoreReceipt(cont
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) CodeGetInfo(context.Context, *CodeGetInfoRequestSigned) (*CodeGetInfoResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) CodeRedeem(context.Context, *CodeRedeemRequestSigned) (*CodeRedeemResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessingDescription struct{}
 
-func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 9 }
+func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 11 }
 
 func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -279,6 +302,24 @@ func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding,
 						in1.(*VerifyAppStoreReceiptRequestSigned),
 					)
 			}, DRPCAnyPaymentProcessingServer.VerifyAppStoreReceipt, true
+	case 9:
+		return "/AnyPaymentProcessing/CodeGetInfo", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					CodeGetInfo(
+						ctx,
+						in1.(*CodeGetInfoRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.CodeGetInfo, true
+	case 10:
+		return "/AnyPaymentProcessing/CodeRedeem", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					CodeRedeem(
+						ctx,
+						in1.(*CodeRedeemRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.CodeRedeem, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -426,6 +467,38 @@ type drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream) SendAndClose(m *VerifyAppStoreReceiptResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_CodeGetInfoStream interface {
+	drpc.Stream
+	SendAndClose(*CodeGetInfoResponse) error
+}
+
+type drpcAnyPaymentProcessing_CodeGetInfoStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_CodeGetInfoStream) SendAndClose(m *CodeGetInfoResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_CodeRedeemStream interface {
+	drpc.Stream
+	SendAndClose(*CodeRedeemResponse) error
+}
+
+type drpcAnyPaymentProcessing_CodeRedeemStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_CodeRedeemStream) SendAndClose(m *CodeRedeemResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
 		return err
 	}

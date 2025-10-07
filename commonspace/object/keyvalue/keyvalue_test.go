@@ -17,6 +17,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/innerstorage"
 	"github.com/anyproto/any-sync/commonspace/spacepayloads"
@@ -280,7 +281,7 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 	require.NoError(t, err)
 	aclStorage, err := storage.AclStorage()
 	require.NoError(t, err)
-	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, list.NoOpAcceptorVerifier{})
+	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.NewValidateFull())
 	require.NoError(t, err)
 	storageId := "kv.storage"
 	rpcHandler := rpctest.NewTestServer()

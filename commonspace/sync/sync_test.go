@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"storj.io/drpc"
@@ -198,17 +200,6 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-type mockEncoding struct {
-}
-
-func (m mockEncoding) Marshal(msg drpc.Message) ([]byte, error) {
-	return nil, nil
-}
-
-func (m mockEncoding) Unmarshal(buf []byte, msg drpc.Message) error {
-	return nil
-}
-
 type testSyncHandler struct {
 	toSendData      map[string][]*testResponse
 	toReceiveData   map[string][]*testResponse
@@ -348,6 +339,10 @@ func (t *testResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 
 type testResponse struct {
 	msg string
+}
+
+func (t *testResponse) ProtoReflect() protoreflect.Message {
+	panic("implement me")
 }
 
 func (t *testResponse) Reset() {
