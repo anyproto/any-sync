@@ -377,12 +377,37 @@ func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (stor
 	}
 	repKey := hasher.Sum64()
 
+	// building acl root
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
+	aclRoot, err := aclBuilder.BuildOneToOneRoot(list.RootContent{
+		PrivKey:   sharedSk,
+		MasterKey: sharedSk,
+	}, &oneToOneInfo)
+	if err != nil {
+		return
+	}
+
+	// building settings
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
+		AclHeadId:  aclRoot.Id,
+		PrivKey:    sharedSk,
+		ChangeType: SpaceReserved,
+	})
+	if err != nil {
+		return
+	}
+
 	// preparing header and space id
 	header := &spacesyncproto.SpaceHeader{
 		Identity:           identity,
 		SpaceType:          "anytype.onetoone",
 		SpaceHeaderPayload: oneToOneInfoBytes,
 		ReplicationKey:     repKey,
+		SettingPayload:     settingsRoot.RawChange,
+		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
+		AclPayload:         aclRoot.Payload,
 	}
 	marshalled, err := header.MarshalVT()
 	if err != nil {
@@ -402,30 +427,6 @@ func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (stor
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
 		Id:        spaceId,
-	}
-
-	// building acl root
-	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
-	aclRoot, err := aclBuilder.BuildOneToOneRoot(list.RootContent{
-		PrivKey:   sharedSk,
-		MasterKey: sharedSk,
-		SpaceId:   spaceId,
-	}, &oneToOneInfo)
-	if err != nil {
-		return
-	}
-
-	// building settings
-	builder := objecttree.NewChangeBuilder(keyStorage, nil)
-	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
-		AclHeadId:  aclRoot.Id,
-		PrivKey:    sharedSk,
-		SpaceId:    spaceId,
-		ChangeType: SpaceReserved,
-	})
-	if err != nil {
-		return
 	}
 
 	// creating storage
@@ -506,9 +507,6 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 			return false, spacestorage.ErrIncorrectSpaceHeader
 		}
 	}
-	if identity == nil {
-		return
-	}
 
 	if header.SpaceType == "anytype.onetoone" {
 		var oneToOneInfo aclrecordproto.AclOneToOneInfo
@@ -516,7 +514,7 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		if err != nil {
 			return false, ErrIncorrectOneToOnePayload
 		}
-	} else if !payloadIdentity.Equals(identity) {
+	} else if identity == nil || !payloadIdentity.Equals(identity) {
 		return false, ErrIncorrectIdentity
 	}
 
