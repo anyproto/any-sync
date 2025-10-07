@@ -120,6 +120,11 @@ message SpacePayload {
     string spaceSettingsPayloadId = 5;
 }
 
+enum SpaceHeaderVersion {
+  SpaceHeaderVersion0 = 0;
+  SpaceHeaderVersion1 = 1;
+}
+
 // SpaceHeader is a header for a space
 message SpaceHeader {
     bytes identity = 1;
@@ -128,6 +133,12 @@ message SpaceHeader {
     uint64 replicationKey = 4;
     bytes seed = 5;
     bytes spaceHeaderPayload = 6;
+
+    // since v1 fields
+    bytes aclPayload = 7;
+    bytes settingPayload = 8;
+
+    SpaceHeaderVersion version = 100;
 }
 
 // RawSpaceHeader is raw header for SpaceHeader

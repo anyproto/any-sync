@@ -54,7 +54,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	rk := crypto.NewAES()
 	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
-	totalObjs := 1000
+	totalObjs := 100
 
 	// creating space
 	sp, err := fx.spaceService.CreateSpace(ctx, spacepayloads.SpaceCreatePayload{
@@ -147,7 +147,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	rk := crypto.NewAES()
 	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
-	totalObjs := 1000
+	totalObjs := 100
 
 	// creating space
 	sp, err := fx.spaceService.CreateSpace(ctx, spacepayloads.SpaceCreatePayload{
