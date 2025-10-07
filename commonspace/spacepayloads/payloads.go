@@ -514,7 +514,7 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		if err != nil {
 			return false, ErrIncorrectOneToOnePayload
 		}
-	} else if identity == nil || !payloadIdentity.Equals(identity) {
+	} else if identity != nil && !payloadIdentity.Equals(identity) {
 		return false, ErrIncorrectIdentity
 	}
 
