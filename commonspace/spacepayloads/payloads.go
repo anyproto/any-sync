@@ -54,6 +54,7 @@ const (
 )
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
+var ErrIncorrectOneToOnePayload = errors.New("incorrect onetoone payload")
 
 func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
@@ -130,6 +131,96 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	})
 	if err != nil {
 		return
+	}
+
+	// creating storage
+	storagePayload = spacestorage.SpaceStorageCreatePayload{
+		AclWithId:           aclRoot,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: settingsRoot,
+	}
+	return
+}
+
+func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	// marshalling keys
+	identity, err := payload.SigningKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+
+	// preparing header and space id
+	spaceHeaderSeed := make([]byte, 32)
+	_, err = rand.Read(spaceHeaderSeed)
+	if err != nil {
+		return
+	}
+	header := &spacesyncproto.SpaceHeader{
+		Identity:           identity,
+		Timestamp:          time.Now().Unix(),
+		SpaceType:          payload.SpaceType,
+		SpaceHeaderPayload: payload.SpacePayload,
+		ReplicationKey:     payload.ReplicationKey,
+		Seed:               spaceHeaderSeed,
+		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
+	}
+
+	// building acl root
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
+	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
+		PrivKey:   payload.SigningKey,
+		MasterKey: payload.MasterKey,
+		Change: list.ReadKeyChangePayload{
+			MetadataKey: payload.MetadataKey,
+			ReadKey:     payload.ReadKey,
+		},
+		Metadata: payload.Metadata,
+	})
+	if err != nil {
+		return
+	}
+
+	// building settings
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
+	spaceSettingsSeed := make([]byte, 32)
+	_, err = rand.Read(spaceSettingsSeed)
+	if err != nil {
+		return
+	}
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
+		AclHeadId:  aclRoot.Id,
+		PrivKey:    payload.SigningKey,
+		Seed:       spaceSettingsSeed,
+		ChangeType: SpaceReserved,
+		Timestamp:  time.Now().Unix(),
+	})
+	if err != nil {
+		return
+	}
+
+	// build header
+	header.AclPayload = aclRoot.Payload
+	header.SettingPayload = settingsRoot.RawChange
+
+	marshalled, err := header.MarshalVT()
+	if err != nil {
+		return
+	}
+	signature, err := payload.SigningKey.Sign(marshalled)
+	if err != nil {
+		return
+	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
+	marshalled, err = rawHeader.MarshalVT()
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(marshalled)
+	spaceId := NewSpaceId(id, payload.ReplicationKey)
+	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marshalled,
+		Id:        spaceId,
 	}
 
 	// creating storage
@@ -347,7 +438,7 @@ func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (stor
 }
 
 func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePayload) (err error) {
-	err = ValidateSpaceHeader(payload.SpaceHeaderWithId, nil)
+	needCheckSpaceId, err := ValidateSpaceHeader(payload.SpaceHeaderWithId, nil, payload.AclWithId.Payload, payload.SpaceSettingsWithId.RawChange)
 	if err != nil {
 		return
 	}
@@ -359,9 +450,11 @@ func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 	if err != nil {
 		return
 	}
-	if aclSpaceId != payload.SpaceHeaderWithId.Id || aclSpaceId != settingsSpaceId {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+	if needCheckSpaceId {
+		if aclSpaceId != payload.SpaceHeaderWithId.Id || aclSpaceId != settingsSpaceId {
+			err = spacestorage.ErrIncorrectSpaceHeader
+			return
+		}
 	}
 	if aclHeadId != payload.AclWithId.Id {
 		err = spacestorage.ErrIncorrectSpaceHeader
@@ -370,16 +463,16 @@ func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 	return
 }
 
-func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey) (err error) {
+func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey, aclPayload []byte, settingsPayload []byte) (needCheckSpaceId bool, err error) {
 	if rawHeaderWithId == nil {
-		return spacestorage.ErrIncorrectSpaceHeader
+		return false, spacestorage.ErrIncorrectSpaceHeader
 	}
 	sepIdx := strings.Index(rawHeaderWithId.Id, ".")
 	if sepIdx == -1 {
-		return spacestorage.ErrIncorrectSpaceHeader
+		return false, spacestorage.ErrIncorrectSpaceHeader
 	}
 	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, rawHeaderWithId.Id[:sepIdx]) {
-		return objecttree.ErrIncorrectCid
+		return false, objecttree.ErrIncorrectCid
 	}
 	var rawSpaceHeader spacesyncproto.RawSpaceHeader
 	err = rawSpaceHeader.UnmarshalVT(rawHeaderWithId.RawHeader)
@@ -397,30 +490,36 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	}
 	res, err := payloadIdentity.Verify(rawSpaceHeader.SpaceHeader, rawSpaceHeader.Signature)
 	if err != nil || !res {
-		return spacestorage.ErrIncorrectSpaceHeader
+		return false, spacestorage.ErrIncorrectSpaceHeader
 	}
 	if rawHeaderWithId.Id[sepIdx+1:] != strconv.FormatUint(header.ReplicationKey, 36) {
-		return spacestorage.ErrIncorrectSpaceHeader
+		return false, spacestorage.ErrIncorrectSpaceHeader
+	}
+	isV1 := header.Version == spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1
+	needCheckSpaceId = !isV1
+
+	if isV1 {
+		if aclPayload != nil && !bytes.Equal(aclPayload, header.AclPayload) {
+			return false, spacestorage.ErrIncorrectSpaceHeader
+		}
+		if settingsPayload != nil && !bytes.Equal(settingsPayload, header.SettingPayload) {
+			return false, spacestorage.ErrIncorrectSpaceHeader
+		}
 	}
 	if identity == nil {
 		return
 	}
 
-	// TODO: decide what to do here for OneToOne, for now we just skip
-	// identity check if space type is onetoone
-	// 1. create SpacePayload in anysync, include all onetooneinfo in  -- owners, writers + owner signature
-	// 2. if onetoone, validate towards owner
-	// 3. check on coordinator that pusher is one of the writers (not owner, as it usually goes)
 	if header.SpaceType == "anytype.onetoone" {
 		var oneToOneInfo aclrecordproto.AclOneToOneInfo
 		err = oneToOneInfo.UnmarshalVT(header.SpaceHeaderPayload)
 		if err != nil {
-			return
+			return false, ErrIncorrectOneToOnePayload
 		}
-
 	} else if !payloadIdentity.Equals(identity) {
-		return ErrIncorrectIdentity
+		return false, ErrIncorrectIdentity
 	}
+
 	return
 }
 
@@ -497,5 +596,5 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 }
 
 func NewSpaceId(id string, repKey uint64) string {
-	return strings.Join([]string{id, strconv.FormatUint(repKey, 36)}, ".")
+	return id + "." + strconv.FormatUint(repKey, 36)
 }
