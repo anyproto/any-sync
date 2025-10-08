@@ -111,6 +111,8 @@ func (s *spaceService) Name() (name string) {
 }
 
 func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (id string, err error) {
+	// TODO: switch to SpaceCreatePayloadV1 after next proto update
+	// storageCreate, err := spacepayloads.StoragePayloadForSpaceCreateV1(payload)
 	storageCreate, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	if err != nil {
 		return

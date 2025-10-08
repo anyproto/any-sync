@@ -45,7 +45,7 @@ func (s *spaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) 
 	if _, err := os.Stat(dbPath); err != nil {
 		return nil, spacestorage.ErrSpaceStorageMissing
 	}
-	db, err := anystore.Open(ctx, dbPath, nil)
+	db, err := anystore.Open(ctx, dbPath, &anystore.Config{SQLiteConnectionOptions: map[string]string{"synchronous": "off"}})
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/stretchr/testify/require"
@@ -111,29 +110,4 @@ func TestAclState_FirstMetadataKey(t *testing.T) {
 		_, err := state.FirstMetadataKey()
 		require.ErrorIs(t, err, ErrNoMetadataKey)
 	})
-}
-
-func TestAclState_DeriveOneToOne(t *testing.T) {
-	t.Run("creates aclState map without error", func(t *testing.T) {
-		writerOneSk, writerOnePk, _ := crypto.GenerateEd25519Key(rand.Reader)
-		writerOnePkBytes, _ := writerOnePk.Marshall()
-		_, writerTwoPk, _ := crypto.GenerateEd25519Key(rand.Reader)
-		writerTwoPkBytes, _ := writerTwoPk.Marshall()
-		rootId := "root-id"
-
-		aclRoot := &aclrecordproto.AclRoot{
-			OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-				Writers: [][]byte{writerOnePkBytes, writerTwoPkBytes},
-			},
-		}
-		aclState := &AclState{
-			key:  writerOneSk,
-			keys: make(map[string]AclKeys),
-		}
-
-		err := aclState.deriveOneToOneKeys(rootId, aclRoot)
-		require.NoError(t, err)
-
-	})
-
 }

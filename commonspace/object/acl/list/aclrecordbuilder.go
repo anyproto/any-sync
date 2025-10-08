@@ -1057,7 +1057,6 @@ func (a *aclRecordBuilder) BuildOneToOneRoot(content RootContent, oneToOneInfo *
 	aclRoot := &aclrecordproto.AclRoot{
 		OneToOneInfo:      oneToOneInfo,
 		Identity:          identity,
-		SpaceId:           content.SpaceId,
 		MasterKey:         masterKey,
 		IdentitySignature: identitySignature,
 	}
