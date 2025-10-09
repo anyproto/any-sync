@@ -533,13 +533,20 @@ func TestStoragePayloadForOneToOneSpace(t *testing.T) {
 		assert.True(t, bytes.Equal(oneToOneInfoA.Writers[1], oneToOneInfoB.Writers[1]))
 	})
 
-	t.Run("StoragePayloadForOneToOneSpace", func(t *testing.T) {
+	t.Run("StoragePayloadForOneToOneSpace generates the same header for alice and bob", func(t *testing.T) {
+		aSk, aPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		bSk, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
 
+		spA, err := StoragePayloadForOneToOneSpace(aSk, bPk)
+		require.NoError(t, err)
+		spB, err := StoragePayloadForOneToOneSpace(bSk, aPk)
+		require.NoError(t, err)
+
+		assert.True(t, bytes.Equal(spA.SpaceHeaderWithId.RawHeader, spB.SpaceHeaderWithId.RawHeader))
+		require.NoError(t, ValidateSpaceStorageCreatePayload(spA))
+		require.NoError(t, ValidateSpaceStorageCreatePayload(spB))
 	})
 
-}
-func TestValidateSpaceHeader_OneToOne(t *testing.T) {
-	// ValidateSpaceHeader
 }
 
 func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId string) (rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
