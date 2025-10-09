@@ -95,19 +95,6 @@ func TestAclBuildOneToOne_findMeAndValidate(t *testing.T) {
 }
 
 func TestAclBuild_OneToOne(t *testing.T) {
-	// 2
-	t.Run("BuildOneToOneRoot", func(t *testing.T) {
-
-	})
-	// 1
-	t.Run("ApplyRecord to onetoone returns error", func(t *testing.T) {
-
-	})
-	// 2
-	t.Run("applyChangeData, no decrypt if onetoone (TODO: decrypt when whe have metadata after inbox)", func(t *testing.T) {
-
-	})
-	// 1
 	t.Run("state.IsOneToOne", func(t *testing.T) {
 		t.Run("returns false by default", func(t *testing.T) {
 			key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
@@ -156,7 +143,7 @@ func TestAclBuild_OneToOne(t *testing.T) {
 			assert.False(t, st.IsOneToOne())
 		})
 	})
-	// 2
+
 	t.Run("setOneToOneAcl", func(t *testing.T) {
 		t.Run("error from findMeAndValidateOneToOne", func(t *testing.T) {
 			key, _, _ := crypto.GenerateEd25519Key(rand.Reader)
@@ -181,7 +168,7 @@ func TestAclBuild_OneToOne(t *testing.T) {
 
 			root := &aclrecordproto.AclRoot{
 				OneToOneInfo: &aclrecordproto.AclOneToOneInfo{
-					Owner:   []byte{1, 2, 3}, // invalid owner
+					Owner:   []byte{1, 2, 3},                    // invalid owner
 					Writers: [][]byte{myPubKeyBytes, {4, 5, 6}}, // invalid bob key
 				},
 			}
@@ -308,9 +295,7 @@ func TestAclBuild_OneToOne(t *testing.T) {
 			assert.False(t, st.IsOneToOne())
 		})
 	})
-	// 1
 
-	// 1
 	t.Run("deriveOneToOneKeys", func(t *testing.T) {
 		t.Run("success when my key is first writer", func(t *testing.T) {
 			myKey, _, _ := crypto.GenerateEd25519Key(rand.Reader)

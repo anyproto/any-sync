@@ -137,7 +137,6 @@ func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.Space
 	return
 }
 
-// maybe we should use derived space for onetoone
 func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
 	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
 	if err != nil {
