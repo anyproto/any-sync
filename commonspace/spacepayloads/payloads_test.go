@@ -1,6 +1,7 @@
 package spacepayloads
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	mrand "math/rand"
@@ -498,7 +499,7 @@ func TestValidateSpaceStorageCreatePayload(t *testing.T) {
 }
 
 func TestStoragePayloadForOneToOneSpace(t *testing.T) {
-	t.Run("makeOneToOneInfo", func(t *testing.T) {
+	t.Run("makeOneToOneInfo basic test", func(t *testing.T) {
 		aSk, aPk, _ := crypto.GenerateRandomEd25519KeyPair()
 		_, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
 		sharedSk, _ := crypto.GenerateSharedKey(aSk, bPk, crypto.AnysyncOneToOneSpacePath)
@@ -516,6 +517,20 @@ func TestStoragePayloadForOneToOneSpace(t *testing.T) {
 		assert.True(t, writer0Pk.Equals(aPk) || writer1Pk.Equals(aPk))
 		assert.True(t, writer0Pk.Equals(bPk) || writer1Pk.Equals(bPk))
 		assert.False(t, writer0Pk.Equals(writer1Pk))
+	})
+
+	t.Run("makeOneToOneInfo generates identical acl info for both alice and bob", func(t *testing.T) {
+		aSk, aPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		bSk, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		sharedSkA, _ := crypto.GenerateSharedKey(aSk, bPk, crypto.AnysyncOneToOneSpacePath)
+		sharedSkB, _ := crypto.GenerateSharedKey(bSk, aPk, crypto.AnysyncOneToOneSpacePath)
+
+		oneToOneInfoA, _ := makeOneToOneInfo(sharedSkA, aPk, bPk)
+		oneToOneInfoB, _ := makeOneToOneInfo(sharedSkB, bPk, aPk)
+
+		assert.True(t, bytes.Equal(oneToOneInfoA.Owner, oneToOneInfoB.Owner))
+		assert.True(t, bytes.Equal(oneToOneInfoA.Writers[0], oneToOneInfoB.Writers[0]))
+		assert.True(t, bytes.Equal(oneToOneInfoA.Writers[1], oneToOneInfoB.Writers[1]))
 	})
 
 	t.Run("StoragePayloadForOneToOneSpace", func(t *testing.T) {
