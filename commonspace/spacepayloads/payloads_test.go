@@ -505,18 +505,26 @@ func TestStoragePayloadForOneToOneSpace(t *testing.T) {
 
 		oneToOneInfo, err := makeOneToOneInfo(sharedSk, aPk, bPk)
 		ownerPk, err := crypto.UnmarshalEd25519PublicKeyProto(oneToOneInfo.Owner)
-
 		require.NoError(t, err)
 		assert.True(t, ownerPk.Equals(sharedSk.GetPublic()))
 
+		writer0Pk, err := crypto.UnmarshalEd25519PublicKeyProto(oneToOneInfo.Writers[0])
+		require.NoError(t, err)
+		writer1Pk, err := crypto.UnmarshalEd25519PublicKeyProto(oneToOneInfo.Writers[1])
+		require.NoError(t, err)
+
+		assert.True(t, writer0Pk.Equals(aPk) || writer1Pk.Equals(aPk))
+		assert.True(t, writer0Pk.Equals(bPk) || writer1Pk.Equals(bPk))
+		assert.False(t, writer0Pk.Equals(writer1Pk))
 	})
+
 	t.Run("StoragePayloadForOneToOneSpace", func(t *testing.T) {
 
 	})
 
 }
 func TestValidateSpaceHeader_OneToOne(t *testing.T) {
-
+	// ValidateSpaceHeader
 }
 
 func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId string) (rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
