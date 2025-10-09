@@ -316,12 +316,12 @@ func makeOneToOneInfo(sharedSk crypto.PrivKey, aPk, bPk crypto.PubKey) (oneToOne
 
 	writers[0], err = aPk.Marshall()
 	if err != nil {
-		err = fmt.Errorf("CreateOneToOne: failed to Marshal account pub key: %w", err)
+		err = fmt.Errorf("makeOneToOneInfo: failed to Marshal account pub key: %w", err)
 		return
 	}
 	writers[1], err = bPk.Marshall()
 	if err != nil {
-		err = fmt.Errorf("CreateOneToOne: failed to Marshal bPk: %w", err)
+		err = fmt.Errorf("makeOneToOneInfo: failed to Marshal bPk: %w", err)
 		return
 	}
 
@@ -332,7 +332,7 @@ func makeOneToOneInfo(sharedSk crypto.PrivKey, aPk, bPk crypto.PubKey) (oneToOne
 
 	sharedPkBytes, err := sharedSk.GetPublic().Marshall()
 	if err != nil {
-		err = fmt.Errorf("CreateOneToOne: failed to Marshal sharedPk: %w", err)
+		err = fmt.Errorf("makeOneToOneInfo: failed to Marshal sharedPk: %w", err)
 		return
 	}
 	oneToOneInfo = aclrecordproto.AclOneToOneInfo{
