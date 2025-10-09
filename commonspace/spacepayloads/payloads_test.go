@@ -498,6 +498,21 @@ func TestValidateSpaceStorageCreatePayload(t *testing.T) {
 }
 
 func TestStoragePayloadForOneToOneSpace(t *testing.T) {
+	t.Run("makeOneToOneInfo", func(t *testing.T) {
+		aSk, aPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		_, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		sharedSk, _ := crypto.GenerateSharedKey(aSk, bPk, crypto.AnysyncOneToOneSpacePath)
+
+		oneToOneInfo, err := makeOneToOneInfo(sharedSk, aPk, bPk)
+		ownerPk, err := crypto.UnmarshalEd25519PublicKeyProto(oneToOneInfo.Owner)
+
+		require.NoError(t, err)
+		assert.True(t, ownerPk.Equals(sharedSk.GetPublic()))
+
+	})
+	t.Run("StoragePayloadForOneToOneSpace", func(t *testing.T) {
+
+	})
 
 }
 func TestValidateSpaceHeader_OneToOne(t *testing.T) {
