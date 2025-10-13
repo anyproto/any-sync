@@ -18,7 +18,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-func (m *Membership2_Amount) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_Amount) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -31,12 +31,12 @@ func (m *Membership2_Amount) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_Amount) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Amount) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_Amount) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Amount) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -63,7 +63,7 @@ func (m *Membership2_Amount) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_Product) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_Product) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -76,12 +76,12 @@ func (m *Membership2_Product) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_Product) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Product) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -184,7 +184,7 @@ func (m *Membership2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_PurchaseInfo) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_PurchaseInfo) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -197,12 +197,12 @@ func (m *Membership2_PurchaseInfo) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_PurchaseInfo) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_PurchaseInfo) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_PurchaseInfo) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_PurchaseInfo) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -247,7 +247,7 @@ func (m *Membership2_PurchaseInfo) MarshalToSizedBufferVT(dAtA []byte) (int, err
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_ProductStatus) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_ProductStatus) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -260,12 +260,12 @@ func (m *Membership2_ProductStatus) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_ProductStatus) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_ProductStatus) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_ProductStatus) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_ProductStatus) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -312,7 +312,7 @@ func (m *Membership2_ProductStatus) MarshalToSizedBufferVT(dAtA []byte) (int, er
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_PurchasedProduct) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_PurchasedProduct) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -325,12 +325,12 @@ func (m *Membership2_PurchasedProduct) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_PurchasedProduct) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_PurchasedProduct) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_PurchasedProduct) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_PurchasedProduct) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -375,7 +375,7 @@ func (m *Membership2_PurchasedProduct) MarshalToSizedBufferVT(dAtA []byte) (int,
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_CartProduct) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_CartProduct) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -388,12 +388,12 @@ func (m *Membership2_CartProduct) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_CartProduct) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_CartProduct) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_CartProduct) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_CartProduct) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -438,7 +438,7 @@ func (m *Membership2_CartProduct) MarshalToSizedBufferVT(dAtA []byte) (int, erro
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_Invoice) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_Invoice) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -451,12 +451,12 @@ func (m *Membership2_Invoice) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_Invoice) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Invoice) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_Invoice) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Invoice) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -498,7 +498,7 @@ func (m *Membership2_Invoice) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_Cart) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_Cart) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -511,12 +511,12 @@ func (m *Membership2_Cart) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_Cart) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Cart) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_Cart) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_Cart) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -568,7 +568,7 @@ func (m *Membership2_Cart) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_GetProductsRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_GetProductsRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -581,12 +581,12 @@ func (m *Membership2_GetProductsRequest) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_GetProductsRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetProductsRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_GetProductsRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetProductsRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -601,7 +601,7 @@ func (m *Membership2_GetProductsRequest) MarshalToSizedBufferVT(dAtA []byte) (in
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_GetProductsResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_GetProductsResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -614,12 +614,12 @@ func (m *Membership2_GetProductsResponse) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_GetProductsResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetProductsResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_GetProductsResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetProductsResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -646,7 +646,7 @@ func (m *Membership2_GetProductsResponse) MarshalToSizedBufferVT(dAtA []byte) (i
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_GetStatusRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_GetStatusRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -659,12 +659,12 @@ func (m *Membership2_GetStatusRequest) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_GetStatusRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetStatusRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_GetStatusRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetStatusRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -679,7 +679,7 @@ func (m *Membership2_GetStatusRequest) MarshalToSizedBufferVT(dAtA []byte) (int,
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_GetStatusResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_GetStatusResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -692,12 +692,12 @@ func (m *Membership2_GetStatusResponse) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_GetStatusResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetStatusResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_GetStatusResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_GetStatusResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -734,7 +734,7 @@ func (m *Membership2_GetStatusResponse) MarshalToSizedBufferVT(dAtA []byte) (int
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartGetRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartGetRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -747,12 +747,12 @@ func (m *Membership2_StoreCartGetRequest) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartGetRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartGetRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartGetRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartGetRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -767,7 +767,7 @@ func (m *Membership2_StoreCartGetRequest) MarshalToSizedBufferVT(dAtA []byte) (i
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -780,12 +780,12 @@ func (m *Membership2_StoreCartResponse) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -810,7 +810,7 @@ func (m *Membership2_StoreCartResponse) MarshalToSizedBufferVT(dAtA []byte) (int
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartPromocodeApplyRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartPromocodeApplyRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -823,12 +823,12 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) MarshalVT() (dAtA []byte, e
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartPromocodeApplyRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartPromocodeApplyRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartPromocodeApplyRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartPromocodeApplyRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -850,7 +850,7 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) MarshalToSizedBufferVT(dAtA
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartCheckoutRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartCheckoutRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -863,12 +863,12 @@ func (m *Membership2_StoreCartCheckoutRequest) MarshalVT() (dAtA []byte, err err
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartCheckoutRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartCheckoutRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartCheckoutRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartCheckoutRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -883,7 +883,7 @@ func (m *Membership2_StoreCartCheckoutRequest) MarshalToSizedBufferVT(dAtA []byt
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartCheckoutResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartCheckoutResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -896,12 +896,12 @@ func (m *Membership2_StoreCartCheckoutResponse) MarshalVT() (dAtA []byte, err er
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartCheckoutResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartCheckoutResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartCheckoutResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartCheckoutResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -923,7 +923,7 @@ func (m *Membership2_StoreCartCheckoutResponse) MarshalToSizedBufferVT(dAtA []by
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartUpdateRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartUpdateRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -936,12 +936,12 @@ func (m *Membership2_StoreCartUpdateRequest) MarshalVT() (dAtA []byte, err error
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartUpdateRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartUpdateRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartUpdateRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartUpdateRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -975,7 +975,7 @@ func (m *Membership2_StoreCartUpdateRequest) MarshalToSizedBufferVT(dAtA []byte)
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartUpdateResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartUpdateResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -988,12 +988,12 @@ func (m *Membership2_StoreCartUpdateResponse) MarshalVT() (dAtA []byte, err erro
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartUpdateResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartUpdateResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartUpdateResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartUpdateResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1018,7 +1018,7 @@ func (m *Membership2_StoreCartUpdateResponse) MarshalToSizedBufferVT(dAtA []byte
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_StoreCartClearRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_StoreCartClearRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -1031,12 +1031,12 @@ func (m *Membership2_StoreCartClearRequest) MarshalVT() (dAtA []byte, err error)
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_StoreCartClearRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartClearRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_StoreCartClearRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_StoreCartClearRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1051,7 +1051,7 @@ func (m *Membership2_StoreCartClearRequest) MarshalToSizedBufferVT(dAtA []byte) 
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_WebAuthRequest) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_WebAuthRequest) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -1064,12 +1064,12 @@ func (m *Membership2_WebAuthRequest) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_WebAuthRequest) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_WebAuthRequest) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_WebAuthRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_WebAuthRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1084,7 +1084,7 @@ func (m *Membership2_WebAuthRequest) MarshalToSizedBufferVT(dAtA []byte) (int, e
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_WebAuthResponse) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2_WebAuthResponse) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -1097,12 +1097,12 @@ func (m *Membership2_WebAuthResponse) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2_WebAuthResponse) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_WebAuthResponse) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2_WebAuthResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2_WebAuthResponse) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1131,7 +1131,7 @@ func (m *Membership2_WebAuthResponse) MarshalToSizedBufferVT(dAtA []byte) (int, 
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2) MarshalVT() (dAtA []byte, err error) {
+func (m *MembershipV2) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -1144,12 +1144,12 @@ func (m *Membership2) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Membership2) MarshalToVT(dAtA []byte) (int, error) {
+func (m *MembershipV2) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *Membership2) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *MembershipV2) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -1164,7 +1164,7 @@ func (m *Membership2) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Membership2_Amount) SizeVT() (n int) {
+func (m *MembershipV2_Amount) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1181,7 +1181,7 @@ func (m *Membership2_Amount) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_Product) SizeVT() (n int) {
+func (m *MembershipV2_Product) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1235,7 +1235,7 @@ func (m *Membership2_Product) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_PurchaseInfo) SizeVT() (n int) {
+func (m *MembershipV2_PurchaseInfo) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1257,7 +1257,7 @@ func (m *Membership2_PurchaseInfo) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_ProductStatus) SizeVT() (n int) {
+func (m *MembershipV2_ProductStatus) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1280,7 +1280,7 @@ func (m *Membership2_ProductStatus) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_PurchasedProduct) SizeVT() (n int) {
+func (m *MembershipV2_PurchasedProduct) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1302,7 +1302,7 @@ func (m *Membership2_PurchasedProduct) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_CartProduct) SizeVT() (n int) {
+func (m *MembershipV2_CartProduct) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1322,7 +1322,7 @@ func (m *Membership2_CartProduct) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_Invoice) SizeVT() (n int) {
+func (m *MembershipV2_Invoice) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1346,7 +1346,7 @@ func (m *Membership2_Invoice) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_Cart) SizeVT() (n int) {
+func (m *MembershipV2_Cart) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1373,7 +1373,7 @@ func (m *Membership2_Cart) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_GetProductsRequest) SizeVT() (n int) {
+func (m *MembershipV2_GetProductsRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1383,7 +1383,7 @@ func (m *Membership2_GetProductsRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_GetProductsResponse) SizeVT() (n int) {
+func (m *MembershipV2_GetProductsResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1399,7 +1399,7 @@ func (m *Membership2_GetProductsResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_GetStatusRequest) SizeVT() (n int) {
+func (m *MembershipV2_GetStatusRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1409,7 +1409,7 @@ func (m *Membership2_GetStatusRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_GetStatusResponse) SizeVT() (n int) {
+func (m *MembershipV2_GetStatusResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1429,7 +1429,7 @@ func (m *Membership2_GetStatusResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartGetRequest) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartGetRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1439,7 +1439,7 @@ func (m *Membership2_StoreCartGetRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartResponse) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1453,7 +1453,7 @@ func (m *Membership2_StoreCartResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartPromocodeApplyRequest) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartPromocodeApplyRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1467,7 +1467,7 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartCheckoutRequest) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartCheckoutRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1477,7 +1477,7 @@ func (m *Membership2_StoreCartCheckoutRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartCheckoutResponse) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartCheckoutResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1491,7 +1491,7 @@ func (m *Membership2_StoreCartCheckoutResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartUpdateRequest) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartUpdateRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1511,7 +1511,7 @@ func (m *Membership2_StoreCartUpdateRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartUpdateResponse) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartUpdateResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1525,7 +1525,7 @@ func (m *Membership2_StoreCartUpdateResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_StoreCartClearRequest) SizeVT() (n int) {
+func (m *MembershipV2_StoreCartClearRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1535,7 +1535,7 @@ func (m *Membership2_StoreCartClearRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_WebAuthRequest) SizeVT() (n int) {
+func (m *MembershipV2_WebAuthRequest) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1545,7 +1545,7 @@ func (m *Membership2_WebAuthRequest) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_WebAuthResponse) SizeVT() (n int) {
+func (m *MembershipV2_WebAuthResponse) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1563,7 +1563,7 @@ func (m *Membership2_WebAuthResponse) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2) SizeVT() (n int) {
+func (m *MembershipV2) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1573,7 +1573,7 @@ func (m *Membership2) SizeVT() (n int) {
 	return n
 }
 
-func (m *Membership2_Amount) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_Amount) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1596,10 +1596,10 @@ func (m *Membership2_Amount) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_Amount: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_Amount: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_Amount: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_Amount: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1675,7 +1675,7 @@ func (m *Membership2_Amount) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1698,10 +1698,10 @@ func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_Product: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_Product: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_Product: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_Product: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1869,7 +1869,7 @@ func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.PricesYearly = append(m.PricesYearly, &Membership2_Amount{})
+			m.PricesYearly = append(m.PricesYearly, &MembershipV2_Amount{})
 			if err := m.PricesYearly[len(m.PricesYearly)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -1903,7 +1903,7 @@ func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.PricesMonthly = append(m.PricesMonthly, &Membership2_Amount{})
+			m.PricesMonthly = append(m.PricesMonthly, &MembershipV2_Amount{})
 			if err := m.PricesMonthly[len(m.PricesMonthly)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -2026,7 +2026,7 @@ func (m *Membership2_Product) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2049,10 +2049,10 @@ func (m *Membership2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_PurchaseInfo: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_PurchaseInfo: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_PurchaseInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_PurchaseInfo: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2155,7 +2155,7 @@ func (m *Membership2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_ProductStatus) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_ProductStatus) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2178,10 +2178,10 @@ func (m *Membership2_ProductStatus) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_ProductStatus: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_ProductStatus: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_ProductStatus: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_ProductStatus: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2198,7 +2198,7 @@ func (m *Membership2_ProductStatus) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Status |= Membership2_ProductStatus_Status(b&0x7F) << shift
+				m.Status |= MembershipV2_ProductStatus_Status(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2297,7 +2297,7 @@ func (m *Membership2_ProductStatus) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2320,10 +2320,10 @@ func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_PurchasedProduct: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_PurchasedProduct: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_PurchasedProduct: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_PurchasedProduct: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2356,7 +2356,7 @@ func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Product == nil {
-				m.Product = &Membership2_Product{}
+				m.Product = &MembershipV2_Product{}
 			}
 			if err := m.Product.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2392,7 +2392,7 @@ func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.PurchaseInfo == nil {
-				m.PurchaseInfo = &Membership2_PurchaseInfo{}
+				m.PurchaseInfo = &MembershipV2_PurchaseInfo{}
 			}
 			if err := m.PurchaseInfo.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2428,7 +2428,7 @@ func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.ProductStatus == nil {
-				m.ProductStatus = &Membership2_ProductStatus{}
+				m.ProductStatus = &MembershipV2_ProductStatus{}
 			}
 			if err := m.ProductStatus.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2456,7 +2456,7 @@ func (m *Membership2_PurchasedProduct) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_CartProduct) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_CartProduct) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2479,10 +2479,10 @@ func (m *Membership2_CartProduct) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_CartProduct: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_CartProduct: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_CartProduct: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_CartProduct: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2515,7 +2515,7 @@ func (m *Membership2_CartProduct) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Product == nil {
-				m.Product = &Membership2_Product{}
+				m.Product = &MembershipV2_Product{}
 			}
 			if err := m.Product.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2583,7 +2583,7 @@ func (m *Membership2_CartProduct) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_Invoice) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_Invoice) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2606,10 +2606,10 @@ func (m *Membership2_Invoice) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_Invoice: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_Invoice: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_Invoice: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_Invoice: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2693,7 +2693,7 @@ func (m *Membership2_Invoice) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Total == nil {
-				m.Total = &Membership2_Amount{}
+				m.Total = &MembershipV2_Amount{}
 			}
 			if err := m.Total.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2713,7 +2713,7 @@ func (m *Membership2_Invoice) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Status |= Membership2_Invoice_Status(b&0x7F) << shift
+				m.Status |= MembershipV2_Invoice_Status(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2740,7 +2740,7 @@ func (m *Membership2_Invoice) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_Cart) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2763,10 +2763,10 @@ func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_Cart: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_Cart: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_Cart: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_Cart: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2798,7 +2798,7 @@ func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Products = append(m.Products, &Membership2_CartProduct{})
+			m.Products = append(m.Products, &MembershipV2_CartProduct{})
 			if err := m.Products[len(m.Products)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -2833,7 +2833,7 @@ func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Total == nil {
-				m.Total = &Membership2_Amount{}
+				m.Total = &MembershipV2_Amount{}
 			}
 			if err := m.Total.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2869,7 +2869,7 @@ func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.TotalNextInvoice == nil {
-				m.TotalNextInvoice = &Membership2_Amount{}
+				m.TotalNextInvoice = &MembershipV2_Amount{}
 			}
 			if err := m.TotalNextInvoice.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2916,7 +2916,7 @@ func (m *Membership2_Cart) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_GetProductsRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_GetProductsRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2939,10 +2939,10 @@ func (m *Membership2_GetProductsRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_GetProductsRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_GetProductsRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_GetProductsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_GetProductsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -2967,7 +2967,7 @@ func (m *Membership2_GetProductsRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_GetProductsResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_GetProductsResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2990,10 +2990,10 @@ func (m *Membership2_GetProductsResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_GetProductsResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_GetProductsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_GetProductsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_GetProductsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3025,7 +3025,7 @@ func (m *Membership2_GetProductsResponse) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Products = append(m.Products, &Membership2_Product{})
+			m.Products = append(m.Products, &MembershipV2_Product{})
 			if err := m.Products[len(m.Products)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3052,7 +3052,7 @@ func (m *Membership2_GetProductsResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_GetStatusRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_GetStatusRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3075,10 +3075,10 @@ func (m *Membership2_GetStatusRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_GetStatusRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_GetStatusRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_GetStatusRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_GetStatusRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3103,7 +3103,7 @@ func (m *Membership2_GetStatusRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3126,10 +3126,10 @@ func (m *Membership2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_GetStatusResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_GetStatusResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_GetStatusResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_GetStatusResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3161,7 +3161,7 @@ func (m *Membership2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Products = append(m.Products, &Membership2_PurchasedProduct{})
+			m.Products = append(m.Products, &MembershipV2_PurchasedProduct{})
 			if err := m.Products[len(m.Products)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3196,7 +3196,7 @@ func (m *Membership2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.NextInvoice == nil {
-				m.NextInvoice = &Membership2_Invoice{}
+				m.NextInvoice = &MembershipV2_Invoice{}
 			}
 			if err := m.NextInvoice.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3224,7 +3224,7 @@ func (m *Membership2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartGetRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartGetRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3247,10 +3247,10 @@ func (m *Membership2_StoreCartGetRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartGetRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartGetRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartGetRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartGetRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3275,7 +3275,7 @@ func (m *Membership2_StoreCartGetRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3298,10 +3298,10 @@ func (m *Membership2_StoreCartResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3334,7 +3334,7 @@ func (m *Membership2_StoreCartResponse) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Cart == nil {
-				m.Cart = &Membership2_Cart{}
+				m.Cart = &MembershipV2_Cart{}
 			}
 			if err := m.Cart.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3362,7 +3362,7 @@ func (m *Membership2_StoreCartResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartPromocodeApplyRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartPromocodeApplyRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3385,10 +3385,10 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) UnmarshalVT(dAtA []byte) er
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartPromocodeApplyRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartPromocodeApplyRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartPromocodeApplyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartPromocodeApplyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3445,7 +3445,7 @@ func (m *Membership2_StoreCartPromocodeApplyRequest) UnmarshalVT(dAtA []byte) er
 	}
 	return nil
 }
-func (m *Membership2_StoreCartCheckoutRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartCheckoutRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3468,10 +3468,10 @@ func (m *Membership2_StoreCartCheckoutRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartCheckoutRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartCheckoutRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartCheckoutRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartCheckoutRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3496,7 +3496,7 @@ func (m *Membership2_StoreCartCheckoutRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartCheckoutResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartCheckoutResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3519,10 +3519,10 @@ func (m *Membership2_StoreCartCheckoutResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartCheckoutResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartCheckoutResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartCheckoutResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartCheckoutResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3579,7 +3579,7 @@ func (m *Membership2_StoreCartCheckoutResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3602,10 +3602,10 @@ func (m *Membership2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartUpdateRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartUpdateRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartUpdateRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartUpdateRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3637,7 +3637,7 @@ func (m *Membership2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Products = append(m.Products, &Membership2_CartProduct{})
+			m.Products = append(m.Products, &MembershipV2_CartProduct{})
 			if err := m.Products[len(m.Products)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3696,7 +3696,7 @@ func (m *Membership2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartUpdateResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartUpdateResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3719,10 +3719,10 @@ func (m *Membership2_StoreCartUpdateResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartUpdateResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartUpdateResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartUpdateResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartUpdateResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3755,7 +3755,7 @@ func (m *Membership2_StoreCartUpdateResponse) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Cart == nil {
-				m.Cart = &Membership2_Cart{}
+				m.Cart = &MembershipV2_Cart{}
 			}
 			if err := m.Cart.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3783,7 +3783,7 @@ func (m *Membership2_StoreCartUpdateResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_StoreCartClearRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_StoreCartClearRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3806,10 +3806,10 @@ func (m *Membership2_StoreCartClearRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_StoreCartClearRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_StoreCartClearRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_StoreCartClearRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_StoreCartClearRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3834,7 +3834,7 @@ func (m *Membership2_StoreCartClearRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_WebAuthRequest) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_WebAuthRequest) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3857,10 +3857,10 @@ func (m *Membership2_WebAuthRequest) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_WebAuthRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_WebAuthRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_WebAuthRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_WebAuthRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3885,7 +3885,7 @@ func (m *Membership2_WebAuthRequest) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2_WebAuthResponse) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2_WebAuthResponse) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3908,10 +3908,10 @@ func (m *Membership2_WebAuthResponse) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2_WebAuthResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2_WebAuthResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2_WebAuthResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2_WebAuthResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4000,7 +4000,7 @@ func (m *Membership2_WebAuthResponse) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Membership2) UnmarshalVT(dAtA []byte) error {
+func (m *MembershipV2) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4023,10 +4023,10 @@ func (m *Membership2) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Membership2: wiretype end group for non-group")
+			return fmt.Errorf("proto: MembershipV2: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Membership2: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MembershipV2: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:

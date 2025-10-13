@@ -30,155 +30,155 @@ func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice
 	return drpc1.JSONUnmarshal(buf, msg)
 }
 
-type DRPCAnyPaymentProcessing2Client interface {
+type DRPCAnyPaymentProcessingV2Client interface {
 	DRPCConn() drpc.Conn
 
-	GetProducts(ctx context.Context, in *Membership2_GetProductsRequest) (*Membership2_GetProductsResponse, error)
-	GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
-	WebAuth(ctx context.Context, in *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error)
+	GetProducts(ctx context.Context, in *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error)
+	GetStatus(ctx context.Context, in *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error)
+	WebAuth(ctx context.Context, in *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error)
 }
 
-type drpcAnyPaymentProcessing2Client struct {
+type drpcAnyPaymentProcessingV2Client struct {
 	cc drpc.Conn
 }
 
-func NewDRPCAnyPaymentProcessing2Client(cc drpc.Conn) DRPCAnyPaymentProcessing2Client {
-	return &drpcAnyPaymentProcessing2Client{cc}
+func NewDRPCAnyPaymentProcessingV2Client(cc drpc.Conn) DRPCAnyPaymentProcessingV2Client {
+	return &drpcAnyPaymentProcessingV2Client{cc}
 }
 
-func (c *drpcAnyPaymentProcessing2Client) DRPCConn() drpc.Conn { return c.cc }
+func (c *drpcAnyPaymentProcessingV2Client) DRPCConn() drpc.Conn { return c.cc }
 
-func (c *drpcAnyPaymentProcessing2Client) GetProducts(ctx context.Context, in *Membership2_GetProductsRequest) (*Membership2_GetProductsResponse, error) {
-	out := new(Membership2_GetProductsResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/GetProducts", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+func (c *drpcAnyPaymentProcessingV2Client) GetProducts(ctx context.Context, in *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error) {
+	out := new(MembershipV2_GetProductsResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessingV2/GetProducts", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcAnyPaymentProcessing2Client) GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
-	out := new(Membership2_GetStatusResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+func (c *drpcAnyPaymentProcessingV2Client) GetStatus(ctx context.Context, in *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error) {
+	out := new(MembershipV2_GetStatusResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessingV2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcAnyPaymentProcessing2Client) WebAuth(ctx context.Context, in *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error) {
-	out := new(Membership2_WebAuthResponse)
-	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+func (c *drpcAnyPaymentProcessingV2Client) WebAuth(ctx context.Context, in *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error) {
+	out := new(MembershipV2_WebAuthResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessingV2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-type DRPCAnyPaymentProcessing2Server interface {
-	GetProducts(context.Context, *Membership2_GetProductsRequest) (*Membership2_GetProductsResponse, error)
-	GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
-	WebAuth(context.Context, *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error)
+type DRPCAnyPaymentProcessingV2Server interface {
+	GetProducts(context.Context, *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error)
+	GetStatus(context.Context, *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error)
+	WebAuth(context.Context, *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error)
 }
 
-type DRPCAnyPaymentProcessing2UnimplementedServer struct{}
+type DRPCAnyPaymentProcessingV2UnimplementedServer struct{}
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) GetProducts(context.Context, *Membership2_GetProductsRequest) (*Membership2_GetProductsResponse, error) {
+func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) GetProducts(context.Context, *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error) {
+func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) GetStatus(context.Context, *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCAnyPaymentProcessing2UnimplementedServer) WebAuth(context.Context, *Membership2_WebAuthRequest) (*Membership2_WebAuthResponse, error) {
+func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) WebAuth(context.Context, *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-type DRPCAnyPaymentProcessing2Description struct{}
+type DRPCAnyPaymentProcessingV2Description struct{}
 
-func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 3 }
+func (DRPCAnyPaymentProcessingV2Description) NumMethods() int { return 3 }
 
-func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
+func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/AnyPaymentProcessing2/GetProducts", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+		return "/AnyPaymentProcessingV2/GetProducts", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
+				return srv.(DRPCAnyPaymentProcessingV2Server).
 					GetProducts(
 						ctx,
-						in1.(*Membership2_GetProductsRequest),
+						in1.(*MembershipV2_GetProductsRequest),
 					)
-			}, DRPCAnyPaymentProcessing2Server.GetProducts, true
+			}, DRPCAnyPaymentProcessingV2Server.GetProducts, true
 	case 1:
-		return "/AnyPaymentProcessing2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+		return "/AnyPaymentProcessingV2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
+				return srv.(DRPCAnyPaymentProcessingV2Server).
 					GetStatus(
 						ctx,
-						in1.(*Membership2_GetStatusRequest),
+						in1.(*MembershipV2_GetStatusRequest),
 					)
-			}, DRPCAnyPaymentProcessing2Server.GetStatus, true
+			}, DRPCAnyPaymentProcessingV2Server.GetStatus, true
 	case 2:
-		return "/AnyPaymentProcessing2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+		return "/AnyPaymentProcessingV2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCAnyPaymentProcessing2Server).
+				return srv.(DRPCAnyPaymentProcessingV2Server).
 					WebAuth(
 						ctx,
-						in1.(*Membership2_WebAuthRequest),
+						in1.(*MembershipV2_WebAuthRequest),
 					)
-			}, DRPCAnyPaymentProcessing2Server.WebAuth, true
+			}, DRPCAnyPaymentProcessingV2Server.WebAuth, true
 	default:
 		return "", nil, nil, nil, false
 	}
 }
 
-func DRPCRegisterAnyPaymentProcessing2(mux drpc.Mux, impl DRPCAnyPaymentProcessing2Server) error {
-	return mux.Register(impl, DRPCAnyPaymentProcessing2Description{})
+func DRPCRegisterAnyPaymentProcessingV2(mux drpc.Mux, impl DRPCAnyPaymentProcessingV2Server) error {
+	return mux.Register(impl, DRPCAnyPaymentProcessingV2Description{})
 }
 
-type DRPCAnyPaymentProcessing2_GetProductsStream interface {
+type DRPCAnyPaymentProcessingV2_GetProductsStream interface {
 	drpc.Stream
-	SendAndClose(*Membership2_GetProductsResponse) error
+	SendAndClose(*MembershipV2_GetProductsResponse) error
 }
 
-type drpcAnyPaymentProcessing2_GetProductsStream struct {
+type drpcAnyPaymentProcessingV2_GetProductsStream struct {
 	drpc.Stream
 }
 
-func (x *drpcAnyPaymentProcessing2_GetProductsStream) SendAndClose(m *Membership2_GetProductsResponse) error {
+func (x *drpcAnyPaymentProcessingV2_GetProductsStream) SendAndClose(m *MembershipV2_GetProductsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCAnyPaymentProcessing2_GetStatusStream interface {
+type DRPCAnyPaymentProcessingV2_GetStatusStream interface {
 	drpc.Stream
-	SendAndClose(*Membership2_GetStatusResponse) error
+	SendAndClose(*MembershipV2_GetStatusResponse) error
 }
 
-type drpcAnyPaymentProcessing2_GetStatusStream struct {
+type drpcAnyPaymentProcessingV2_GetStatusStream struct {
 	drpc.Stream
 }
 
-func (x *drpcAnyPaymentProcessing2_GetStatusStream) SendAndClose(m *Membership2_GetStatusResponse) error {
+func (x *drpcAnyPaymentProcessingV2_GetStatusStream) SendAndClose(m *MembershipV2_GetStatusResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCAnyPaymentProcessing2_WebAuthStream interface {
+type DRPCAnyPaymentProcessingV2_WebAuthStream interface {
 	drpc.Stream
-	SendAndClose(*Membership2_WebAuthResponse) error
+	SendAndClose(*MembershipV2_WebAuthResponse) error
 }
 
-type drpcAnyPaymentProcessing2_WebAuthStream struct {
+type drpcAnyPaymentProcessingV2_WebAuthStream struct {
 	drpc.Stream
 }
 
-func (x *drpcAnyPaymentProcessing2_WebAuthStream) SendAndClose(m *Membership2_WebAuthResponse) error {
+func (x *drpcAnyPaymentProcessingV2_WebAuthStream) SendAndClose(m *MembershipV2_WebAuthResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}

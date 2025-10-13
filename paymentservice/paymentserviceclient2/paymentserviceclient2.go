@@ -1,4 +1,4 @@
-//go:generate mockgen -destination=mock/mock_paymentserviceclient2.go -package=mock_paymentserviceclient2 github.com/anyproto/any-sync/paymentservice/paymentserviceclient2 AnyPpClientService2
+//go:generate mockgen -destination=mock/mock_paymentserviceclient2.go -package=mock_paymentserviceclient2 github.com/anyproto/any-sync/paymentservice/paymentserviceclient2 AnyPpClientServiceV2
 package paymentserviceclient2
 
 import (
@@ -19,12 +19,12 @@ const CName = "any-pp.drpcclient2"
 
 var log = logger.NewNamed(CName)
 
-type AnyPpClientService2 interface {
-	GetProducts(ctx context.Context, in *pp.Membership2_GetProductsRequest) (out *pp.Membership2_GetProductsResponse, err error)
+type AnyPpClientServiceV2 interface {
+	GetProducts(ctx context.Context, in *pp.MembershipV2_GetProductsRequest) (out *pp.MembershipV2_GetProductsResponse, err error)
 
-	GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error)
+	GetStatus(ctx context.Context, in *pp.MembershipV2_GetStatusRequest) (out *pp.MembershipV2_GetStatusResponse, err error)
 
-	WebAuth(ctx context.Context, in *pp.Membership2_WebAuthRequest) (out *pp.Membership2_WebAuthResponse, err error)
+	WebAuth(ctx context.Context, in *pp.MembershipV2_WebAuthRequest) (out *pp.MembershipV2_WebAuthResponse, err error)
 	app.Component
 }
 
@@ -43,11 +43,11 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func New() AnyPpClientService2 {
+func New() AnyPpClientServiceV2 {
 	return new(service)
 }
 
-func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessing2Client) error) error {
+func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingV2Client) error) error {
 	if len(s.nodeconf.PaymentProcessingNodePeers()) == 0 {
 		log.Error("no payment processing peers configured")
 		return errors.New("no paymentProcessingNode peers configured. Node config ID: " + s.nodeconf.Id())
@@ -70,11 +70,11 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 	}
 	defer peer.ReleaseDrpcConn(ctx, dc)
 
-	return fn(pp.NewDRPCAnyPaymentProcessing2Client(dc))
+	return fn(pp.NewDRPCAnyPaymentProcessingV2Client(dc))
 }
 
-func (s *service) GetProducts(ctx context.Context, in *pp.Membership2_GetProductsRequest) (out *pp.Membership2_GetProductsResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
+func (s *service) GetProducts(ctx context.Context, in *pp.MembershipV2_GetProductsRequest) (out *pp.MembershipV2_GetProductsResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.GetProducts(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
@@ -83,8 +83,8 @@ func (s *service) GetProducts(ctx context.Context, in *pp.Membership2_GetProduct
 	return
 }
 
-func (s *service) GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
+func (s *service) GetStatus(ctx context.Context, in *pp.MembershipV2_GetStatusRequest) (out *pp.MembershipV2_GetStatusResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.GetStatus(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
@@ -93,8 +93,8 @@ func (s *service) GetStatus(ctx context.Context, in *pp.Membership2_GetStatusReq
 	return
 }
 
-func (s *service) WebAuth(ctx context.Context, in *pp.Membership2_WebAuthRequest) (out *pp.Membership2_WebAuthResponse, err error) {
-	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
+func (s *service) WebAuth(ctx context.Context, in *pp.MembershipV2_WebAuthRequest) (out *pp.MembershipV2_WebAuthResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.WebAuth(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}

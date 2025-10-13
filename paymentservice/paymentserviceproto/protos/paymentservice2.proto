@@ -1,7 +1,7 @@
 syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
-message Membership2 {
+message MembershipV2 {
   enum PaymentMethod {
     MethodNone = 0;
     MethodStripe = 1;
@@ -115,8 +115,8 @@ message Membership2 {
   }
 
   message GetStatusResponse {
-    repeated Membership2.PurchasedProduct products = 1;
-    Membership2.Invoice nextInvoice = 2;
+    repeated MembershipV2.PurchasedProduct products = 1;
+    MembershipV2.Invoice nextInvoice = 2;
   }
 
   message StoreCartGetRequest {
@@ -124,7 +124,7 @@ message Membership2 {
   }
 
   message StoreCartResponse {
-    Membership2.Cart cart = 1;
+    MembershipV2.Cart cart = 1;
   }
 
   message StoreCartPromocodeApplyRequest {
@@ -150,7 +150,7 @@ message Membership2 {
   }
 
   message StoreCartUpdateResponse {
-    Membership2.Cart cart = 1;
+    MembershipV2.Cart cart = 1;
   }
 
   message StoreCartClearRequest {
@@ -169,8 +169,8 @@ message Membership2 {
   }
 }
 
-service AnyPaymentProcessing2 {
-  rpc GetProducts (Membership2.GetProductsRequest) returns (Membership2.GetProductsResponse);
-  rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
-  rpc WebAuth(Membership2.WebAuthRequest) returns (Membership2.WebAuthResponse); 
+service AnyPaymentProcessingV2 {
+  rpc GetProducts (MembershipV2.GetProductsRequest) returns (MembershipV2.GetProductsResponse);
+  rpc GetStatus (MembershipV2.GetStatusRequest) returns (MembershipV2.GetStatusResponse);
+  rpc WebAuth(MembershipV2.WebAuthRequest) returns (MembershipV2.WebAuthResponse); 
 }

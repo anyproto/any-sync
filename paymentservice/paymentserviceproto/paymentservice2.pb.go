@@ -21,26 +21,26 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Membership2_PaymentMethod int32
+type MembershipV2_PaymentMethod int32
 
 const (
-	Membership2_MethodNone        Membership2_PaymentMethod = 0
-	Membership2_MethodStripe      Membership2_PaymentMethod = 1
-	Membership2_MethodCrypto      Membership2_PaymentMethod = 2
-	Membership2_MethodInappApple  Membership2_PaymentMethod = 3
-	Membership2_MethodInappGoogle Membership2_PaymentMethod = 4
+	MembershipV2_MethodNone        MembershipV2_PaymentMethod = 0
+	MembershipV2_MethodStripe      MembershipV2_PaymentMethod = 1
+	MembershipV2_MethodCrypto      MembershipV2_PaymentMethod = 2
+	MembershipV2_MethodInappApple  MembershipV2_PaymentMethod = 3
+	MembershipV2_MethodInappGoogle MembershipV2_PaymentMethod = 4
 )
 
-// Enum value maps for Membership2_PaymentMethod.
+// Enum value maps for MembershipV2_PaymentMethod.
 var (
-	Membership2_PaymentMethod_name = map[int32]string{
+	MembershipV2_PaymentMethod_name = map[int32]string{
 		0: "MethodNone",
 		1: "MethodStripe",
 		2: "MethodCrypto",
 		3: "MethodInappApple",
 		4: "MethodInappGoogle",
 	}
-	Membership2_PaymentMethod_value = map[string]int32{
+	MembershipV2_PaymentMethod_value = map[string]int32{
 		"MethodNone":        0,
 		"MethodStripe":      1,
 		"MethodCrypto":      2,
@@ -49,51 +49,51 @@ var (
 	}
 )
 
-func (x Membership2_PaymentMethod) Enum() *Membership2_PaymentMethod {
-	p := new(Membership2_PaymentMethod)
+func (x MembershipV2_PaymentMethod) Enum() *MembershipV2_PaymentMethod {
+	p := new(MembershipV2_PaymentMethod)
 	*p = x
 	return p
 }
 
-func (x Membership2_PaymentMethod) String() string {
+func (x MembershipV2_PaymentMethod) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (Membership2_PaymentMethod) Descriptor() protoreflect.EnumDescriptor {
+func (MembershipV2_PaymentMethod) Descriptor() protoreflect.EnumDescriptor {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[0].Descriptor()
 }
 
-func (Membership2_PaymentMethod) Type() protoreflect.EnumType {
+func (MembershipV2_PaymentMethod) Type() protoreflect.EnumType {
 	return &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[0]
 }
 
-func (x Membership2_PaymentMethod) Number() protoreflect.EnumNumber {
+func (x MembershipV2_PaymentMethod) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use Membership2_PaymentMethod.Descriptor instead.
-func (Membership2_PaymentMethod) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_PaymentMethod.Descriptor instead.
+func (MembershipV2_PaymentMethod) EnumDescriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 0}
 }
 
-type Membership2_ProductStatus_Status int32
+type MembershipV2_ProductStatus_Status int32
 
 const (
-	Membership2_ProductStatus_StatusUnknown                     Membership2_ProductStatus_Status = 0
-	Membership2_ProductStatus_StatusPending                     Membership2_ProductStatus_Status = 1
-	Membership2_ProductStatus_StatusActive                      Membership2_ProductStatus_Status = 2
-	Membership2_ProductStatus_StatusPendingRequiresFinalization Membership2_ProductStatus_Status = 3
+	MembershipV2_ProductStatus_StatusUnknown                     MembershipV2_ProductStatus_Status = 0
+	MembershipV2_ProductStatus_StatusPending                     MembershipV2_ProductStatus_Status = 1
+	MembershipV2_ProductStatus_StatusActive                      MembershipV2_ProductStatus_Status = 2
+	MembershipV2_ProductStatus_StatusPendingRequiresFinalization MembershipV2_ProductStatus_Status = 3
 )
 
-// Enum value maps for Membership2_ProductStatus_Status.
+// Enum value maps for MembershipV2_ProductStatus_Status.
 var (
-	Membership2_ProductStatus_Status_name = map[int32]string{
+	MembershipV2_ProductStatus_Status_name = map[int32]string{
 		0: "StatusUnknown",
 		1: "StatusPending",
 		2: "StatusActive",
 		3: "StatusPendingRequiresFinalization",
 	}
-	Membership2_ProductStatus_Status_value = map[string]int32{
+	MembershipV2_ProductStatus_Status_value = map[string]int32{
 		"StatusUnknown":                     0,
 		"StatusPending":                     1,
 		"StatusActive":                      2,
@@ -101,99 +101,99 @@ var (
 	}
 )
 
-func (x Membership2_ProductStatus_Status) Enum() *Membership2_ProductStatus_Status {
-	p := new(Membership2_ProductStatus_Status)
+func (x MembershipV2_ProductStatus_Status) Enum() *MembershipV2_ProductStatus_Status {
+	p := new(MembershipV2_ProductStatus_Status)
 	*p = x
 	return p
 }
 
-func (x Membership2_ProductStatus_Status) String() string {
+func (x MembershipV2_ProductStatus_Status) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (Membership2_ProductStatus_Status) Descriptor() protoreflect.EnumDescriptor {
+func (MembershipV2_ProductStatus_Status) Descriptor() protoreflect.EnumDescriptor {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[1].Descriptor()
 }
 
-func (Membership2_ProductStatus_Status) Type() protoreflect.EnumType {
+func (MembershipV2_ProductStatus_Status) Type() protoreflect.EnumType {
 	return &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[1]
 }
 
-func (x Membership2_ProductStatus_Status) Number() protoreflect.EnumNumber {
+func (x MembershipV2_ProductStatus_Status) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use Membership2_ProductStatus_Status.Descriptor instead.
-func (Membership2_ProductStatus_Status) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_ProductStatus_Status.Descriptor instead.
+func (MembershipV2_ProductStatus_Status) EnumDescriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 3, 0}
 }
 
-type Membership2_Invoice_Status int32
+type MembershipV2_Invoice_Status int32
 
 const (
-	Membership2_Invoice_Unpaid Membership2_Invoice_Status = 0
-	Membership2_Invoice_Paid   Membership2_Invoice_Status = 1
+	MembershipV2_Invoice_Unpaid MembershipV2_Invoice_Status = 0
+	MembershipV2_Invoice_Paid   MembershipV2_Invoice_Status = 1
 )
 
-// Enum value maps for Membership2_Invoice_Status.
+// Enum value maps for MembershipV2_Invoice_Status.
 var (
-	Membership2_Invoice_Status_name = map[int32]string{
+	MembershipV2_Invoice_Status_name = map[int32]string{
 		0: "Unpaid",
 		1: "Paid",
 	}
-	Membership2_Invoice_Status_value = map[string]int32{
+	MembershipV2_Invoice_Status_value = map[string]int32{
 		"Unpaid": 0,
 		"Paid":   1,
 	}
 )
 
-func (x Membership2_Invoice_Status) Enum() *Membership2_Invoice_Status {
-	p := new(Membership2_Invoice_Status)
+func (x MembershipV2_Invoice_Status) Enum() *MembershipV2_Invoice_Status {
+	p := new(MembershipV2_Invoice_Status)
 	*p = x
 	return p
 }
 
-func (x Membership2_Invoice_Status) String() string {
+func (x MembershipV2_Invoice_Status) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (Membership2_Invoice_Status) Descriptor() protoreflect.EnumDescriptor {
+func (MembershipV2_Invoice_Status) Descriptor() protoreflect.EnumDescriptor {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[2].Descriptor()
 }
 
-func (Membership2_Invoice_Status) Type() protoreflect.EnumType {
+func (MembershipV2_Invoice_Status) Type() protoreflect.EnumType {
 	return &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[2]
 }
 
-func (x Membership2_Invoice_Status) Number() protoreflect.EnumNumber {
+func (x MembershipV2_Invoice_Status) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use Membership2_Invoice_Status.Descriptor instead.
-func (Membership2_Invoice_Status) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_Invoice_Status.Descriptor instead.
+func (MembershipV2_Invoice_Status) EnumDescriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 6, 0}
 }
 
-type Membership2 struct {
+type MembershipV2 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2) Reset() {
-	*x = Membership2{}
+func (x *MembershipV2) Reset() {
+	*x = MembershipV2{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2) String() string {
+func (x *MembershipV2) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2) ProtoMessage() {}
+func (*MembershipV2) ProtoMessage() {}
 
-func (x *Membership2) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -205,12 +205,12 @@ func (x *Membership2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2.ProtoReflect.Descriptor instead.
-func (*Membership2) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2.ProtoReflect.Descriptor instead.
+func (*MembershipV2) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0}
 }
 
-type Membership2_Amount struct {
+type MembershipV2_Amount struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Currency string                 `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty"`
 	// $0.01 = 1
@@ -221,20 +221,20 @@ type Membership2_Amount struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_Amount) Reset() {
-	*x = Membership2_Amount{}
+func (x *MembershipV2_Amount) Reset() {
+	*x = MembershipV2_Amount{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_Amount) String() string {
+func (x *MembershipV2_Amount) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_Amount) ProtoMessage() {}
+func (*MembershipV2_Amount) ProtoMessage() {}
 
-func (x *Membership2_Amount) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_Amount) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -246,26 +246,26 @@ func (x *Membership2_Amount) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_Amount.ProtoReflect.Descriptor instead.
-func (*Membership2_Amount) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_Amount.ProtoReflect.Descriptor instead.
+func (*MembershipV2_Amount) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 0}
 }
 
-func (x *Membership2_Amount) GetCurrency() string {
+func (x *MembershipV2_Amount) GetCurrency() string {
 	if x != nil {
 		return x.Currency
 	}
 	return ""
 }
 
-func (x *Membership2_Amount) GetAmountCents() int64 {
+func (x *MembershipV2_Amount) GetAmountCents() int64 {
 	if x != nil {
 		return x.AmountCents
 	}
 	return 0
 }
 
-type Membership2_Product struct {
+type MembershipV2_Product struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// this is a unique Payment Node ID
 	// adding 2 same products to a cart means we will have 2 items with same ID
@@ -275,10 +275,10 @@ type Membership2_Product struct {
 	// the price of a Package may not be equal to the sum of all underlying products
 	IsPackage bool `protobuf:"varint,3,opt,name=isPackage,proto3" json:"isPackage,omitempty"`
 	// localized
-	Name          string                `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	PricesYearly  []*Membership2_Amount `protobuf:"bytes,6,rep,name=pricesYearly,proto3" json:"pricesYearly,omitempty"`
-	PricesMonthly []*Membership2_Amount `protobuf:"bytes,7,rep,name=pricesMonthly,proto3" json:"pricesMonthly,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	PricesYearly  []*MembershipV2_Amount `protobuf:"bytes,6,rep,name=pricesYearly,proto3" json:"pricesYearly,omitempty"`
+	PricesMonthly []*MembershipV2_Amount `protobuf:"bytes,7,rep,name=pricesMonthly,proto3" json:"pricesMonthly,omitempty"`
 	// localized strings for the features
 	Features []string `protobuf:"bytes,8,rep,name=features,proto3" json:"features,omitempty"`
 	// green, blue, red, purple, custom
@@ -289,20 +289,20 @@ type Membership2_Product struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_Product) Reset() {
-	*x = Membership2_Product{}
+func (x *MembershipV2_Product) Reset() {
+	*x = MembershipV2_Product{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_Product) String() string {
+func (x *MembershipV2_Product) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_Product) ProtoMessage() {}
+func (*MembershipV2_Product) ProtoMessage() {}
 
-func (x *Membership2_Product) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_Product) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -314,82 +314,82 @@ func (x *Membership2_Product) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_Product.ProtoReflect.Descriptor instead.
-func (*Membership2_Product) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_Product.ProtoReflect.Descriptor instead.
+func (*MembershipV2_Product) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 1}
 }
 
-func (x *Membership2_Product) GetId() string {
+func (x *MembershipV2_Product) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Membership2_Product) GetIsAttachToSpace() bool {
+func (x *MembershipV2_Product) GetIsAttachToSpace() bool {
 	if x != nil {
 		return x.IsAttachToSpace
 	}
 	return false
 }
 
-func (x *Membership2_Product) GetIsPackage() bool {
+func (x *MembershipV2_Product) GetIsPackage() bool {
 	if x != nil {
 		return x.IsPackage
 	}
 	return false
 }
 
-func (x *Membership2_Product) GetName() string {
+func (x *MembershipV2_Product) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Membership2_Product) GetDescription() string {
+func (x *MembershipV2_Product) GetDescription() string {
 	if x != nil {
 		return x.Description
 	}
 	return ""
 }
 
-func (x *Membership2_Product) GetPricesYearly() []*Membership2_Amount {
+func (x *MembershipV2_Product) GetPricesYearly() []*MembershipV2_Amount {
 	if x != nil {
 		return x.PricesYearly
 	}
 	return nil
 }
 
-func (x *Membership2_Product) GetPricesMonthly() []*Membership2_Amount {
+func (x *MembershipV2_Product) GetPricesMonthly() []*MembershipV2_Amount {
 	if x != nil {
 		return x.PricesMonthly
 	}
 	return nil
 }
 
-func (x *Membership2_Product) GetFeatures() []string {
+func (x *MembershipV2_Product) GetFeatures() []string {
 	if x != nil {
 		return x.Features
 	}
 	return nil
 }
 
-func (x *Membership2_Product) GetColorStr() string {
+func (x *MembershipV2_Product) GetColorStr() string {
 	if x != nil {
 		return x.ColorStr
 	}
 	return ""
 }
 
-func (x *Membership2_Product) GetOffer() string {
+func (x *MembershipV2_Product) GetOffer() string {
 	if x != nil {
 		return x.Offer
 	}
 	return ""
 }
 
-type Membership2_PurchaseInfo struct {
+type MembershipV2_PurchaseInfo struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	DateStarted uint64                 `protobuf:"varint,1,opt,name=dateStarted,proto3" json:"dateStarted,omitempty"`
 	DateEnds    uint64                 `protobuf:"varint,2,opt,name=dateEnds,proto3" json:"dateEnds,omitempty"`
@@ -400,20 +400,20 @@ type Membership2_PurchaseInfo struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_PurchaseInfo) Reset() {
-	*x = Membership2_PurchaseInfo{}
+func (x *MembershipV2_PurchaseInfo) Reset() {
+	*x = MembershipV2_PurchaseInfo{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_PurchaseInfo) String() string {
+func (x *MembershipV2_PurchaseInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_PurchaseInfo) ProtoMessage() {}
+func (*MembershipV2_PurchaseInfo) ProtoMessage() {}
 
-func (x *Membership2_PurchaseInfo) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_PurchaseInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -425,63 +425,63 @@ func (x *Membership2_PurchaseInfo) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_PurchaseInfo.ProtoReflect.Descriptor instead.
-func (*Membership2_PurchaseInfo) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_PurchaseInfo.ProtoReflect.Descriptor instead.
+func (*MembershipV2_PurchaseInfo) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 2}
 }
 
-func (x *Membership2_PurchaseInfo) GetDateStarted() uint64 {
+func (x *MembershipV2_PurchaseInfo) GetDateStarted() uint64 {
 	if x != nil {
 		return x.DateStarted
 	}
 	return 0
 }
 
-func (x *Membership2_PurchaseInfo) GetDateEnds() uint64 {
+func (x *MembershipV2_PurchaseInfo) GetDateEnds() uint64 {
 	if x != nil {
 		return x.DateEnds
 	}
 	return 0
 }
 
-func (x *Membership2_PurchaseInfo) GetIsAutoRenew() bool {
+func (x *MembershipV2_PurchaseInfo) GetIsAutoRenew() bool {
 	if x != nil {
 		return x.IsAutoRenew
 	}
 	return false
 }
 
-func (x *Membership2_PurchaseInfo) GetIsYearly() bool {
+func (x *MembershipV2_PurchaseInfo) GetIsYearly() bool {
 	if x != nil {
 		return x.IsYearly
 	}
 	return false
 }
 
-type Membership2_ProductStatus struct {
-	state                    protoimpl.MessageState           `protogen:"open.v1"`
-	Status                   Membership2_ProductStatus_Status `protobuf:"varint,1,opt,name=status,proto3,enum=Membership2_ProductStatus_Status" json:"status,omitempty"`
-	SpaceAttachedTo          string                           `protobuf:"bytes,2,opt,name=spaceAttachedTo,proto3" json:"spaceAttachedTo,omitempty"`
-	IsNeedsAttachmentToSpace bool                             `protobuf:"varint,3,opt,name=isNeedsAttachmentToSpace,proto3" json:"isNeedsAttachmentToSpace,omitempty"`
-	IsRenewalEnabled         bool                             `protobuf:"varint,4,opt,name=isRenewalEnabled,proto3" json:"isRenewalEnabled,omitempty"`
+type MembershipV2_ProductStatus struct {
+	state                    protoimpl.MessageState            `protogen:"open.v1"`
+	Status                   MembershipV2_ProductStatus_Status `protobuf:"varint,1,opt,name=status,proto3,enum=MembershipV2_ProductStatus_Status" json:"status,omitempty"`
+	SpaceAttachedTo          string                            `protobuf:"bytes,2,opt,name=spaceAttachedTo,proto3" json:"spaceAttachedTo,omitempty"`
+	IsNeedsAttachmentToSpace bool                              `protobuf:"varint,3,opt,name=isNeedsAttachmentToSpace,proto3" json:"isNeedsAttachmentToSpace,omitempty"`
+	IsRenewalEnabled         bool                              `protobuf:"varint,4,opt,name=isRenewalEnabled,proto3" json:"isRenewalEnabled,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
 
-func (x *Membership2_ProductStatus) Reset() {
-	*x = Membership2_ProductStatus{}
+func (x *MembershipV2_ProductStatus) Reset() {
+	*x = MembershipV2_ProductStatus{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_ProductStatus) String() string {
+func (x *MembershipV2_ProductStatus) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_ProductStatus) ProtoMessage() {}
+func (*MembershipV2_ProductStatus) ProtoMessage() {}
 
-func (x *Membership2_ProductStatus) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_ProductStatus) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -493,62 +493,62 @@ func (x *Membership2_ProductStatus) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_ProductStatus.ProtoReflect.Descriptor instead.
-func (*Membership2_ProductStatus) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_ProductStatus.ProtoReflect.Descriptor instead.
+func (*MembershipV2_ProductStatus) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 3}
 }
 
-func (x *Membership2_ProductStatus) GetStatus() Membership2_ProductStatus_Status {
+func (x *MembershipV2_ProductStatus) GetStatus() MembershipV2_ProductStatus_Status {
 	if x != nil {
 		return x.Status
 	}
-	return Membership2_ProductStatus_StatusUnknown
+	return MembershipV2_ProductStatus_StatusUnknown
 }
 
-func (x *Membership2_ProductStatus) GetSpaceAttachedTo() string {
+func (x *MembershipV2_ProductStatus) GetSpaceAttachedTo() string {
 	if x != nil {
 		return x.SpaceAttachedTo
 	}
 	return ""
 }
 
-func (x *Membership2_ProductStatus) GetIsNeedsAttachmentToSpace() bool {
+func (x *MembershipV2_ProductStatus) GetIsNeedsAttachmentToSpace() bool {
 	if x != nil {
 		return x.IsNeedsAttachmentToSpace
 	}
 	return false
 }
 
-func (x *Membership2_ProductStatus) GetIsRenewalEnabled() bool {
+func (x *MembershipV2_ProductStatus) GetIsRenewalEnabled() bool {
 	if x != nil {
 		return x.IsRenewalEnabled
 	}
 	return false
 }
 
-type Membership2_PurchasedProduct struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Product       *Membership2_Product       `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
-	PurchaseInfo  *Membership2_PurchaseInfo  `protobuf:"bytes,2,opt,name=purchaseInfo,proto3" json:"purchaseInfo,omitempty"`
-	ProductStatus *Membership2_ProductStatus `protobuf:"bytes,3,opt,name=productStatus,proto3" json:"productStatus,omitempty"`
+type MembershipV2_PurchasedProduct struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Product       *MembershipV2_Product       `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
+	PurchaseInfo  *MembershipV2_PurchaseInfo  `protobuf:"bytes,2,opt,name=purchaseInfo,proto3" json:"purchaseInfo,omitempty"`
+	ProductStatus *MembershipV2_ProductStatus `protobuf:"bytes,3,opt,name=productStatus,proto3" json:"productStatus,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_PurchasedProduct) Reset() {
-	*x = Membership2_PurchasedProduct{}
+func (x *MembershipV2_PurchasedProduct) Reset() {
+	*x = MembershipV2_PurchasedProduct{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_PurchasedProduct) String() string {
+func (x *MembershipV2_PurchasedProduct) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_PurchasedProduct) ProtoMessage() {}
+func (*MembershipV2_PurchasedProduct) ProtoMessage() {}
 
-func (x *Membership2_PurchasedProduct) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_PurchasedProduct) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -560,35 +560,35 @@ func (x *Membership2_PurchasedProduct) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_PurchasedProduct.ProtoReflect.Descriptor instead.
-func (*Membership2_PurchasedProduct) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_PurchasedProduct.ProtoReflect.Descriptor instead.
+func (*MembershipV2_PurchasedProduct) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 4}
 }
 
-func (x *Membership2_PurchasedProduct) GetProduct() *Membership2_Product {
+func (x *MembershipV2_PurchasedProduct) GetProduct() *MembershipV2_Product {
 	if x != nil {
 		return x.Product
 	}
 	return nil
 }
 
-func (x *Membership2_PurchasedProduct) GetPurchaseInfo() *Membership2_PurchaseInfo {
+func (x *MembershipV2_PurchasedProduct) GetPurchaseInfo() *MembershipV2_PurchaseInfo {
 	if x != nil {
 		return x.PurchaseInfo
 	}
 	return nil
 }
 
-func (x *Membership2_PurchasedProduct) GetProductStatus() *Membership2_ProductStatus {
+func (x *MembershipV2_PurchasedProduct) GetProductStatus() *MembershipV2_ProductStatus {
 	if x != nil {
 		return x.ProductStatus
 	}
 	return nil
 }
 
-type Membership2_CartProduct struct {
+type MembershipV2_CartProduct struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
-	Product *Membership2_Product   `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
+	Product *MembershipV2_Product  `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
 	// otherwise - monthly
 	IsYearly bool `protobuf:"varint,2,opt,name=isYearly,proto3" json:"isYearly,omitempty"`
 	// set to true if you want to remove this item from the customer
@@ -598,20 +598,20 @@ type Membership2_CartProduct struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_CartProduct) Reset() {
-	*x = Membership2_CartProduct{}
+func (x *MembershipV2_CartProduct) Reset() {
+	*x = MembershipV2_CartProduct{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_CartProduct) String() string {
+func (x *MembershipV2_CartProduct) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_CartProduct) ProtoMessage() {}
+func (*MembershipV2_CartProduct) ProtoMessage() {}
 
-func (x *Membership2_CartProduct) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_CartProduct) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -623,56 +623,56 @@ func (x *Membership2_CartProduct) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_CartProduct.ProtoReflect.Descriptor instead.
-func (*Membership2_CartProduct) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_CartProduct.ProtoReflect.Descriptor instead.
+func (*MembershipV2_CartProduct) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 5}
 }
 
-func (x *Membership2_CartProduct) GetProduct() *Membership2_Product {
+func (x *MembershipV2_CartProduct) GetProduct() *MembershipV2_Product {
 	if x != nil {
 		return x.Product
 	}
 	return nil
 }
 
-func (x *Membership2_CartProduct) GetIsYearly() bool {
+func (x *MembershipV2_CartProduct) GetIsYearly() bool {
 	if x != nil {
 		return x.IsYearly
 	}
 	return false
 }
 
-func (x *Membership2_CartProduct) GetRemove() bool {
+func (x *MembershipV2_CartProduct) GetRemove() bool {
 	if x != nil {
 		return x.Remove
 	}
 	return false
 }
 
-type Membership2_Invoice struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Id            string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Date          uint64                     `protobuf:"varint,2,opt,name=date,proto3" json:"date,omitempty"`
-	Total         *Membership2_Amount        `protobuf:"bytes,3,opt,name=total,proto3" json:"total,omitempty"`
-	Status        Membership2_Invoice_Status `protobuf:"varint,4,opt,name=status,proto3,enum=Membership2_Invoice_Status" json:"status,omitempty"`
+type MembershipV2_Invoice struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	Id            string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Date          uint64                      `protobuf:"varint,2,opt,name=date,proto3" json:"date,omitempty"`
+	Total         *MembershipV2_Amount        `protobuf:"bytes,3,opt,name=total,proto3" json:"total,omitempty"`
+	Status        MembershipV2_Invoice_Status `protobuf:"varint,4,opt,name=status,proto3,enum=MembershipV2_Invoice_Status" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_Invoice) Reset() {
-	*x = Membership2_Invoice{}
+func (x *MembershipV2_Invoice) Reset() {
+	*x = MembershipV2_Invoice{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_Invoice) String() string {
+func (x *MembershipV2_Invoice) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_Invoice) ProtoMessage() {}
+func (*MembershipV2_Invoice) ProtoMessage() {}
 
-func (x *Membership2_Invoice) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_Invoice) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -684,68 +684,68 @@ func (x *Membership2_Invoice) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_Invoice.ProtoReflect.Descriptor instead.
-func (*Membership2_Invoice) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_Invoice.ProtoReflect.Descriptor instead.
+func (*MembershipV2_Invoice) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 6}
 }
 
-func (x *Membership2_Invoice) GetId() string {
+func (x *MembershipV2_Invoice) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Membership2_Invoice) GetDate() uint64 {
+func (x *MembershipV2_Invoice) GetDate() uint64 {
 	if x != nil {
 		return x.Date
 	}
 	return 0
 }
 
-func (x *Membership2_Invoice) GetTotal() *Membership2_Amount {
+func (x *MembershipV2_Invoice) GetTotal() *MembershipV2_Amount {
 	if x != nil {
 		return x.Total
 	}
 	return nil
 }
 
-func (x *Membership2_Invoice) GetStatus() Membership2_Invoice_Status {
+func (x *MembershipV2_Invoice) GetStatus() MembershipV2_Invoice_Status {
 	if x != nil {
 		return x.Status
 	}
-	return Membership2_Invoice_Unpaid
+	return MembershipV2_Invoice_Unpaid
 }
 
-type Membership2_Cart struct {
+type MembershipV2_Cart struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// if you add Nx the same product - it will be Nx in the 'products' array, i.e:
 	// each product instance has a unique index
-	Products []*Membership2_CartProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	Products []*MembershipV2_CartProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
 	// total amount of the cart (including discounts, etc)
-	Total *Membership2_Amount `protobuf:"bytes,2,opt,name=total,proto3" json:"total,omitempty"`
+	Total *MembershipV2_Amount `protobuf:"bytes,2,opt,name=total,proto3" json:"total,omitempty"`
 	// in case you are paying in the middle of the period (for existing customers)
 	// the next invoice amount will also be generated
-	TotalNextInvoice *Membership2_Amount `protobuf:"bytes,3,opt,name=totalNextInvoice,proto3" json:"totalNextInvoice,omitempty"`
-	NextInvoiceDate  uint64              `protobuf:"varint,4,opt,name=nextInvoiceDate,proto3" json:"nextInvoiceDate,omitempty"`
+	TotalNextInvoice *MembershipV2_Amount `protobuf:"bytes,3,opt,name=totalNextInvoice,proto3" json:"totalNextInvoice,omitempty"`
+	NextInvoiceDate  uint64               `protobuf:"varint,4,opt,name=nextInvoiceDate,proto3" json:"nextInvoiceDate,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *Membership2_Cart) Reset() {
-	*x = Membership2_Cart{}
+func (x *MembershipV2_Cart) Reset() {
+	*x = MembershipV2_Cart{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_Cart) String() string {
+func (x *MembershipV2_Cart) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_Cart) ProtoMessage() {}
+func (*MembershipV2_Cart) ProtoMessage() {}
 
-func (x *Membership2_Cart) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_Cart) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -757,59 +757,59 @@ func (x *Membership2_Cart) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_Cart.ProtoReflect.Descriptor instead.
-func (*Membership2_Cart) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_Cart.ProtoReflect.Descriptor instead.
+func (*MembershipV2_Cart) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 7}
 }
 
-func (x *Membership2_Cart) GetProducts() []*Membership2_CartProduct {
+func (x *MembershipV2_Cart) GetProducts() []*MembershipV2_CartProduct {
 	if x != nil {
 		return x.Products
 	}
 	return nil
 }
 
-func (x *Membership2_Cart) GetTotal() *Membership2_Amount {
+func (x *MembershipV2_Cart) GetTotal() *MembershipV2_Amount {
 	if x != nil {
 		return x.Total
 	}
 	return nil
 }
 
-func (x *Membership2_Cart) GetTotalNextInvoice() *Membership2_Amount {
+func (x *MembershipV2_Cart) GetTotalNextInvoice() *MembershipV2_Amount {
 	if x != nil {
 		return x.TotalNextInvoice
 	}
 	return nil
 }
 
-func (x *Membership2_Cart) GetNextInvoiceDate() uint64 {
+func (x *MembershipV2_Cart) GetNextInvoiceDate() uint64 {
 	if x != nil {
 		return x.NextInvoiceDate
 	}
 	return 0
 }
 
-type Membership2_GetProductsRequest struct {
+type MembershipV2_GetProductsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_GetProductsRequest) Reset() {
-	*x = Membership2_GetProductsRequest{}
+func (x *MembershipV2_GetProductsRequest) Reset() {
+	*x = MembershipV2_GetProductsRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_GetProductsRequest) String() string {
+func (x *MembershipV2_GetProductsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_GetProductsRequest) ProtoMessage() {}
+func (*MembershipV2_GetProductsRequest) ProtoMessage() {}
 
-func (x *Membership2_GetProductsRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_GetProductsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -821,32 +821,32 @@ func (x *Membership2_GetProductsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_GetProductsRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_GetProductsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_GetProductsRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_GetProductsRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 8}
 }
 
-type Membership2_GetProductsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Products      []*Membership2_Product `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+type MembershipV2_GetProductsResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Products      []*MembershipV2_Product `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_GetProductsResponse) Reset() {
-	*x = Membership2_GetProductsResponse{}
+func (x *MembershipV2_GetProductsResponse) Reset() {
+	*x = MembershipV2_GetProductsResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_GetProductsResponse) String() string {
+func (x *MembershipV2_GetProductsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_GetProductsResponse) ProtoMessage() {}
+func (*MembershipV2_GetProductsResponse) ProtoMessage() {}
 
-func (x *Membership2_GetProductsResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_GetProductsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -858,38 +858,38 @@ func (x *Membership2_GetProductsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_GetProductsResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_GetProductsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_GetProductsResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_GetProductsResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 9}
 }
 
-func (x *Membership2_GetProductsResponse) GetProducts() []*Membership2_Product {
+func (x *MembershipV2_GetProductsResponse) GetProducts() []*MembershipV2_Product {
 	if x != nil {
 		return x.Products
 	}
 	return nil
 }
 
-type Membership2_GetStatusRequest struct {
+type MembershipV2_GetStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_GetStatusRequest) Reset() {
-	*x = Membership2_GetStatusRequest{}
+func (x *MembershipV2_GetStatusRequest) Reset() {
+	*x = MembershipV2_GetStatusRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_GetStatusRequest) String() string {
+func (x *MembershipV2_GetStatusRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_GetStatusRequest) ProtoMessage() {}
+func (*MembershipV2_GetStatusRequest) ProtoMessage() {}
 
-func (x *Membership2_GetStatusRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_GetStatusRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -901,33 +901,33 @@ func (x *Membership2_GetStatusRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_GetStatusRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_GetStatusRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_GetStatusRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_GetStatusRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 10}
 }
 
-type Membership2_GetStatusResponse struct {
-	state         protoimpl.MessageState          `protogen:"open.v1"`
-	Products      []*Membership2_PurchasedProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
-	NextInvoice   *Membership2_Invoice            `protobuf:"bytes,2,opt,name=nextInvoice,proto3" json:"nextInvoice,omitempty"`
+type MembershipV2_GetStatusResponse struct {
+	state         protoimpl.MessageState           `protogen:"open.v1"`
+	Products      []*MembershipV2_PurchasedProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	NextInvoice   *MembershipV2_Invoice            `protobuf:"bytes,2,opt,name=nextInvoice,proto3" json:"nextInvoice,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_GetStatusResponse) Reset() {
-	*x = Membership2_GetStatusResponse{}
+func (x *MembershipV2_GetStatusResponse) Reset() {
+	*x = MembershipV2_GetStatusResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_GetStatusResponse) String() string {
+func (x *MembershipV2_GetStatusResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_GetStatusResponse) ProtoMessage() {}
+func (*MembershipV2_GetStatusResponse) ProtoMessage() {}
 
-func (x *Membership2_GetStatusResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_GetStatusResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -939,45 +939,45 @@ func (x *Membership2_GetStatusResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_GetStatusResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_GetStatusResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_GetStatusResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_GetStatusResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 11}
 }
 
-func (x *Membership2_GetStatusResponse) GetProducts() []*Membership2_PurchasedProduct {
+func (x *MembershipV2_GetStatusResponse) GetProducts() []*MembershipV2_PurchasedProduct {
 	if x != nil {
 		return x.Products
 	}
 	return nil
 }
 
-func (x *Membership2_GetStatusResponse) GetNextInvoice() *Membership2_Invoice {
+func (x *MembershipV2_GetStatusResponse) GetNextInvoice() *MembershipV2_Invoice {
 	if x != nil {
 		return x.NextInvoice
 	}
 	return nil
 }
 
-type Membership2_StoreCartGetRequest struct {
+type MembershipV2_StoreCartGetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartGetRequest) Reset() {
-	*x = Membership2_StoreCartGetRequest{}
+func (x *MembershipV2_StoreCartGetRequest) Reset() {
+	*x = MembershipV2_StoreCartGetRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartGetRequest) String() string {
+func (x *MembershipV2_StoreCartGetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartGetRequest) ProtoMessage() {}
+func (*MembershipV2_StoreCartGetRequest) ProtoMessage() {}
 
-func (x *Membership2_StoreCartGetRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartGetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -989,32 +989,32 @@ func (x *Membership2_StoreCartGetRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartGetRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartGetRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartGetRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartGetRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 12}
 }
 
-type Membership2_StoreCartResponse struct {
+type MembershipV2_StoreCartResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cart          *Membership2_Cart      `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
+	Cart          *MembershipV2_Cart     `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartResponse) Reset() {
-	*x = Membership2_StoreCartResponse{}
+func (x *MembershipV2_StoreCartResponse) Reset() {
+	*x = MembershipV2_StoreCartResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartResponse) String() string {
+func (x *MembershipV2_StoreCartResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartResponse) ProtoMessage() {}
+func (*MembershipV2_StoreCartResponse) ProtoMessage() {}
 
-func (x *Membership2_StoreCartResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1026,39 +1026,39 @@ func (x *Membership2_StoreCartResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 13}
 }
 
-func (x *Membership2_StoreCartResponse) GetCart() *Membership2_Cart {
+func (x *MembershipV2_StoreCartResponse) GetCart() *MembershipV2_Cart {
 	if x != nil {
 		return x.Cart
 	}
 	return nil
 }
 
-type Membership2_StoreCartPromocodeApplyRequest struct {
+type MembershipV2_StoreCartPromocodeApplyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Promocode     string                 `protobuf:"bytes,1,opt,name=promocode,proto3" json:"promocode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartPromocodeApplyRequest) Reset() {
-	*x = Membership2_StoreCartPromocodeApplyRequest{}
+func (x *MembershipV2_StoreCartPromocodeApplyRequest) Reset() {
+	*x = MembershipV2_StoreCartPromocodeApplyRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartPromocodeApplyRequest) String() string {
+func (x *MembershipV2_StoreCartPromocodeApplyRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartPromocodeApplyRequest) ProtoMessage() {}
+func (*MembershipV2_StoreCartPromocodeApplyRequest) ProtoMessage() {}
 
-func (x *Membership2_StoreCartPromocodeApplyRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartPromocodeApplyRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1070,38 +1070,38 @@ func (x *Membership2_StoreCartPromocodeApplyRequest) ProtoReflect() protoreflect
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartPromocodeApplyRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartPromocodeApplyRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartPromocodeApplyRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartPromocodeApplyRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 14}
 }
 
-func (x *Membership2_StoreCartPromocodeApplyRequest) GetPromocode() string {
+func (x *MembershipV2_StoreCartPromocodeApplyRequest) GetPromocode() string {
 	if x != nil {
 		return x.Promocode
 	}
 	return ""
 }
 
-type Membership2_StoreCartCheckoutRequest struct {
+type MembershipV2_StoreCartCheckoutRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartCheckoutRequest) Reset() {
-	*x = Membership2_StoreCartCheckoutRequest{}
+func (x *MembershipV2_StoreCartCheckoutRequest) Reset() {
+	*x = MembershipV2_StoreCartCheckoutRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartCheckoutRequest) String() string {
+func (x *MembershipV2_StoreCartCheckoutRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartCheckoutRequest) ProtoMessage() {}
+func (*MembershipV2_StoreCartCheckoutRequest) ProtoMessage() {}
 
-func (x *Membership2_StoreCartCheckoutRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartCheckoutRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1113,12 +1113,12 @@ func (x *Membership2_StoreCartCheckoutRequest) ProtoReflect() protoreflect.Messa
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartCheckoutRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartCheckoutRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartCheckoutRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartCheckoutRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 15}
 }
 
-type Membership2_StoreCartCheckoutResponse struct {
+type MembershipV2_StoreCartCheckoutResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// for new customers - will contain a payment URL
 	// (new Stripe session)
@@ -1130,20 +1130,20 @@ type Membership2_StoreCartCheckoutResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartCheckoutResponse) Reset() {
-	*x = Membership2_StoreCartCheckoutResponse{}
+func (x *MembershipV2_StoreCartCheckoutResponse) Reset() {
+	*x = MembershipV2_StoreCartCheckoutResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartCheckoutResponse) String() string {
+func (x *MembershipV2_StoreCartCheckoutResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartCheckoutResponse) ProtoMessage() {}
+func (*MembershipV2_StoreCartCheckoutResponse) ProtoMessage() {}
 
-func (x *Membership2_StoreCartCheckoutResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartCheckoutResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1155,40 +1155,40 @@ func (x *Membership2_StoreCartCheckoutResponse) ProtoReflect() protoreflect.Mess
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartCheckoutResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartCheckoutResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartCheckoutResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartCheckoutResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 16}
 }
 
-func (x *Membership2_StoreCartCheckoutResponse) GetPaymentUrl() string {
+func (x *MembershipV2_StoreCartCheckoutResponse) GetPaymentUrl() string {
 	if x != nil {
 		return x.PaymentUrl
 	}
 	return ""
 }
 
-type Membership2_StoreCartUpdateRequest struct {
-	state           protoimpl.MessageState     `protogen:"open.v1"`
-	Products        []*Membership2_CartProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
-	OwnerEthAddress string                     `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+type MembershipV2_StoreCartUpdateRequest struct {
+	state           protoimpl.MessageState      `protogen:"open.v1"`
+	Products        []*MembershipV2_CartProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	OwnerEthAddress string                      `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartUpdateRequest) Reset() {
-	*x = Membership2_StoreCartUpdateRequest{}
+func (x *MembershipV2_StoreCartUpdateRequest) Reset() {
+	*x = MembershipV2_StoreCartUpdateRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartUpdateRequest) String() string {
+func (x *MembershipV2_StoreCartUpdateRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartUpdateRequest) ProtoMessage() {}
+func (*MembershipV2_StoreCartUpdateRequest) ProtoMessage() {}
 
-func (x *Membership2_StoreCartUpdateRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartUpdateRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1200,46 +1200,46 @@ func (x *Membership2_StoreCartUpdateRequest) ProtoReflect() protoreflect.Message
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartUpdateRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartUpdateRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartUpdateRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartUpdateRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 17}
 }
 
-func (x *Membership2_StoreCartUpdateRequest) GetProducts() []*Membership2_CartProduct {
+func (x *MembershipV2_StoreCartUpdateRequest) GetProducts() []*MembershipV2_CartProduct {
 	if x != nil {
 		return x.Products
 	}
 	return nil
 }
 
-func (x *Membership2_StoreCartUpdateRequest) GetOwnerEthAddress() string {
+func (x *MembershipV2_StoreCartUpdateRequest) GetOwnerEthAddress() string {
 	if x != nil {
 		return x.OwnerEthAddress
 	}
 	return ""
 }
 
-type Membership2_StoreCartUpdateResponse struct {
+type MembershipV2_StoreCartUpdateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cart          *Membership2_Cart      `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
+	Cart          *MembershipV2_Cart     `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartUpdateResponse) Reset() {
-	*x = Membership2_StoreCartUpdateResponse{}
+func (x *MembershipV2_StoreCartUpdateResponse) Reset() {
+	*x = MembershipV2_StoreCartUpdateResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartUpdateResponse) String() string {
+func (x *MembershipV2_StoreCartUpdateResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartUpdateResponse) ProtoMessage() {}
+func (*MembershipV2_StoreCartUpdateResponse) ProtoMessage() {}
 
-func (x *Membership2_StoreCartUpdateResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartUpdateResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1251,38 +1251,38 @@ func (x *Membership2_StoreCartUpdateResponse) ProtoReflect() protoreflect.Messag
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartUpdateResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartUpdateResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartUpdateResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartUpdateResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 18}
 }
 
-func (x *Membership2_StoreCartUpdateResponse) GetCart() *Membership2_Cart {
+func (x *MembershipV2_StoreCartUpdateResponse) GetCart() *MembershipV2_Cart {
 	if x != nil {
 		return x.Cart
 	}
 	return nil
 }
 
-type Membership2_StoreCartClearRequest struct {
+type MembershipV2_StoreCartClearRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_StoreCartClearRequest) Reset() {
-	*x = Membership2_StoreCartClearRequest{}
+func (x *MembershipV2_StoreCartClearRequest) Reset() {
+	*x = MembershipV2_StoreCartClearRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_StoreCartClearRequest) String() string {
+func (x *MembershipV2_StoreCartClearRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_StoreCartClearRequest) ProtoMessage() {}
+func (*MembershipV2_StoreCartClearRequest) ProtoMessage() {}
 
-func (x *Membership2_StoreCartClearRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartClearRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1294,31 +1294,31 @@ func (x *Membership2_StoreCartClearRequest) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_StoreCartClearRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_StoreCartClearRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartClearRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartClearRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 19}
 }
 
-type Membership2_WebAuthRequest struct {
+type MembershipV2_WebAuthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_WebAuthRequest) Reset() {
-	*x = Membership2_WebAuthRequest{}
+func (x *MembershipV2_WebAuthRequest) Reset() {
+	*x = MembershipV2_WebAuthRequest{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_WebAuthRequest) String() string {
+func (x *MembershipV2_WebAuthRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_WebAuthRequest) ProtoMessage() {}
+func (*MembershipV2_WebAuthRequest) ProtoMessage() {}
 
-func (x *Membership2_WebAuthRequest) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_WebAuthRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1330,12 +1330,12 @@ func (x *Membership2_WebAuthRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_WebAuthRequest.ProtoReflect.Descriptor instead.
-func (*Membership2_WebAuthRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_WebAuthRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_WebAuthRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 20}
 }
 
-type Membership2_WebAuthResponse struct {
+type MembershipV2_WebAuthResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Jwt   string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
 	// (optional) redirect here after the auth
@@ -1344,20 +1344,20 @@ type Membership2_WebAuthResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Membership2_WebAuthResponse) Reset() {
-	*x = Membership2_WebAuthResponse{}
+func (x *MembershipV2_WebAuthResponse) Reset() {
+	*x = MembershipV2_WebAuthResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Membership2_WebAuthResponse) String() string {
+func (x *MembershipV2_WebAuthResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Membership2_WebAuthResponse) ProtoMessage() {}
+func (*MembershipV2_WebAuthResponse) ProtoMessage() {}
 
-func (x *Membership2_WebAuthResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_WebAuthResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1369,19 +1369,19 @@ func (x *Membership2_WebAuthResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Membership2_WebAuthResponse.ProtoReflect.Descriptor instead.
-func (*Membership2_WebAuthResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_WebAuthResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_WebAuthResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 21}
 }
 
-func (x *Membership2_WebAuthResponse) GetJwt() string {
+func (x *MembershipV2_WebAuthResponse) GetJwt() string {
 	if x != nil {
 		return x.Jwt
 	}
 	return ""
 }
 
-func (x *Membership2_WebAuthResponse) GetUrl() string {
+func (x *MembershipV2_WebAuthResponse) GetUrl() string {
 	if x != nil {
 		return x.Url
 	}
@@ -1392,19 +1392,19 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xbc\x13\n" +
-	"\vMembership2\x1aF\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xcf\x13\n" +
+	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
-	"\vamountCents\x18\x02 \x01(\x03R\vamountCents\x1a\xd9\x02\n" +
+	"\vamountCents\x18\x02 \x01(\x03R\vamountCents\x1a\xdb\x02\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x0fisAttachToSpace\x18\x02 \x01(\bR\x0fisAttachToSpace\x12\x1c\n" +
 	"\tisPackage\x18\x03 \x01(\bR\tisPackage\x12\x12\n" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x127\n" +
-	"\fpricesYearly\x18\x06 \x03(\v2\x13.Membership2.AmountR\fpricesYearly\x129\n" +
-	"\rpricesMonthly\x18\a \x03(\v2\x13.Membership2.AmountR\rpricesMonthly\x12\x1a\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x128\n" +
+	"\fpricesYearly\x18\x06 \x03(\v2\x14.MembershipV2.AmountR\fpricesYearly\x12:\n" +
+	"\rpricesMonthly\x18\a \x03(\v2\x14.MembershipV2.AmountR\rpricesMonthly\x12\x1a\n" +
 	"\bfeatures\x18\b \x03(\tR\bfeatures\x12\x1a\n" +
 	"\bcolorStr\x18\t \x01(\tR\bcolorStr\x12\x14\n" +
 	"\x05offer\x18\n" +
@@ -1413,9 +1413,9 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\vdateStarted\x18\x01 \x01(\x04R\vdateStarted\x12\x1a\n" +
 	"\bdateEnds\x18\x02 \x01(\x04R\bdateEnds\x12 \n" +
 	"\visAutoRenew\x18\x03 \x01(\bR\visAutoRenew\x12\x1a\n" +
-	"\bisYearly\x18\x04 \x01(\bR\bisYearly\x1a\xc5\x02\n" +
-	"\rProductStatus\x129\n" +
-	"\x06status\x18\x01 \x01(\x0e2!.Membership2.ProductStatus.StatusR\x06status\x12(\n" +
+	"\bisYearly\x18\x04 \x01(\bR\bisYearly\x1a\xc6\x02\n" +
+	"\rProductStatus\x12:\n" +
+	"\x06status\x18\x01 \x01(\x0e2\".MembershipV2.ProductStatus.StatusR\x06status\x12(\n" +
 	"\x0fspaceAttachedTo\x18\x02 \x01(\tR\x0fspaceAttachedTo\x12:\n" +
 	"\x18isNeedsAttachmentToSpace\x18\x03 \x01(\bR\x18isNeedsAttachmentToSpace\x12*\n" +
 	"\x10isRenewalEnabled\x18\x04 \x01(\bR\x10isRenewalEnabled\"g\n" +
@@ -1423,51 +1423,51 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\rStatusUnknown\x10\x00\x12\x11\n" +
 	"\rStatusPending\x10\x01\x12\x10\n" +
 	"\fStatusActive\x10\x02\x12%\n" +
-	"!StatusPendingRequiresFinalization\x10\x03\x1a\xc3\x01\n" +
-	"\x10PurchasedProduct\x12.\n" +
-	"\aproduct\x18\x01 \x01(\v2\x14.Membership2.ProductR\aproduct\x12=\n" +
-	"\fpurchaseInfo\x18\x02 \x01(\v2\x19.Membership2.PurchaseInfoR\fpurchaseInfo\x12@\n" +
-	"\rproductStatus\x18\x03 \x01(\v2\x1a.Membership2.ProductStatusR\rproductStatus\x1aq\n" +
-	"\vCartProduct\x12.\n" +
-	"\aproduct\x18\x01 \x01(\v2\x14.Membership2.ProductR\aproduct\x12\x1a\n" +
+	"!StatusPendingRequiresFinalization\x10\x03\x1a\xc6\x01\n" +
+	"\x10PurchasedProduct\x12/\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.MembershipV2.ProductR\aproduct\x12>\n" +
+	"\fpurchaseInfo\x18\x02 \x01(\v2\x1a.MembershipV2.PurchaseInfoR\fpurchaseInfo\x12A\n" +
+	"\rproductStatus\x18\x03 \x01(\v2\x1b.MembershipV2.ProductStatusR\rproductStatus\x1ar\n" +
+	"\vCartProduct\x12/\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.MembershipV2.ProductR\aproduct\x12\x1a\n" +
 	"\bisYearly\x18\x02 \x01(\bR\bisYearly\x12\x16\n" +
-	"\x06remove\x18\x03 \x01(\bR\x06remove\x1a\xad\x01\n" +
+	"\x06remove\x18\x03 \x01(\bR\x06remove\x1a\xaf\x01\n" +
 	"\aInvoice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04date\x18\x02 \x01(\x04R\x04date\x12)\n" +
-	"\x05total\x18\x03 \x01(\v2\x13.Membership2.AmountR\x05total\x123\n" +
-	"\x06status\x18\x04 \x01(\x0e2\x1b.Membership2.Invoice.StatusR\x06status\"\x1e\n" +
+	"\x04date\x18\x02 \x01(\x04R\x04date\x12*\n" +
+	"\x05total\x18\x03 \x01(\v2\x14.MembershipV2.AmountR\x05total\x124\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1c.MembershipV2.Invoice.StatusR\x06status\"\x1e\n" +
 	"\x06Status\x12\n" +
 	"\n" +
 	"\x06Unpaid\x10\x00\x12\b\n" +
-	"\x04Paid\x10\x01\x1a\xd2\x01\n" +
-	"\x04Cart\x124\n" +
-	"\bproducts\x18\x01 \x03(\v2\x18.Membership2.CartProductR\bproducts\x12)\n" +
-	"\x05total\x18\x02 \x01(\v2\x13.Membership2.AmountR\x05total\x12?\n" +
-	"\x10totalNextInvoice\x18\x03 \x01(\v2\x13.Membership2.AmountR\x10totalNextInvoice\x12(\n" +
+	"\x04Paid\x10\x01\x1a\xd5\x01\n" +
+	"\x04Cart\x125\n" +
+	"\bproducts\x18\x01 \x03(\v2\x19.MembershipV2.CartProductR\bproducts\x12*\n" +
+	"\x05total\x18\x02 \x01(\v2\x14.MembershipV2.AmountR\x05total\x12@\n" +
+	"\x10totalNextInvoice\x18\x03 \x01(\v2\x14.MembershipV2.AmountR\x10totalNextInvoice\x12(\n" +
 	"\x0fnextInvoiceDate\x18\x04 \x01(\x04R\x0fnextInvoiceDate\x1a\x14\n" +
-	"\x12GetProductsRequest\x1aG\n" +
-	"\x13GetProductsResponse\x120\n" +
-	"\bproducts\x18\x01 \x03(\v2\x14.Membership2.ProductR\bproducts\x1a\x12\n" +
-	"\x10GetStatusRequest\x1a\x86\x01\n" +
-	"\x11GetStatusResponse\x129\n" +
-	"\bproducts\x18\x01 \x03(\v2\x1d.Membership2.PurchasedProductR\bproducts\x126\n" +
-	"\vnextInvoice\x18\x02 \x01(\v2\x14.Membership2.InvoiceR\vnextInvoice\x1a\x15\n" +
-	"\x13StoreCartGetRequest\x1a:\n" +
-	"\x11StoreCartResponse\x12%\n" +
-	"\x04cart\x18\x01 \x01(\v2\x11.Membership2.CartR\x04cart\x1a>\n" +
+	"\x12GetProductsRequest\x1aH\n" +
+	"\x13GetProductsResponse\x121\n" +
+	"\bproducts\x18\x01 \x03(\v2\x15.MembershipV2.ProductR\bproducts\x1a\x12\n" +
+	"\x10GetStatusRequest\x1a\x88\x01\n" +
+	"\x11GetStatusResponse\x12:\n" +
+	"\bproducts\x18\x01 \x03(\v2\x1e.MembershipV2.PurchasedProductR\bproducts\x127\n" +
+	"\vnextInvoice\x18\x02 \x01(\v2\x15.MembershipV2.InvoiceR\vnextInvoice\x1a\x15\n" +
+	"\x13StoreCartGetRequest\x1a;\n" +
+	"\x11StoreCartResponse\x12&\n" +
+	"\x04cart\x18\x01 \x01(\v2\x12.MembershipV2.CartR\x04cart\x1a>\n" +
 	"\x1eStoreCartPromocodeApplyRequest\x12\x1c\n" +
 	"\tpromocode\x18\x01 \x01(\tR\tpromocode\x1a\x1a\n" +
 	"\x18StoreCartCheckoutRequest\x1a;\n" +
 	"\x19StoreCartCheckoutResponse\x12\x1e\n" +
 	"\n" +
 	"paymentUrl\x18\x01 \x01(\tR\n" +
-	"paymentUrl\x1ax\n" +
-	"\x16StoreCartUpdateRequest\x124\n" +
-	"\bproducts\x18\x01 \x03(\v2\x18.Membership2.CartProductR\bproducts\x12(\n" +
-	"\x0fownerEthAddress\x18\x02 \x01(\tR\x0fownerEthAddress\x1a@\n" +
-	"\x17StoreCartUpdateResponse\x12%\n" +
-	"\x04cart\x18\x01 \x01(\v2\x11.Membership2.CartR\x04cart\x1a\x17\n" +
+	"paymentUrl\x1ay\n" +
+	"\x16StoreCartUpdateRequest\x125\n" +
+	"\bproducts\x18\x01 \x03(\v2\x19.MembershipV2.CartProductR\bproducts\x12(\n" +
+	"\x0fownerEthAddress\x18\x02 \x01(\tR\x0fownerEthAddress\x1aA\n" +
+	"\x17StoreCartUpdateResponse\x12&\n" +
+	"\x04cart\x18\x01 \x01(\v2\x12.MembershipV2.CartR\x04cart\x1a\x17\n" +
 	"\x15StoreCartClearRequest\x1a\x10\n" +
 	"\x0eWebAuthRequest\x1a5\n" +
 	"\x0fWebAuthResponse\x12\x10\n" +
@@ -1479,11 +1479,11 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\fMethodStripe\x10\x01\x12\x10\n" +
 	"\fMethodCrypto\x10\x02\x12\x14\n" +
 	"\x10MethodInappApple\x10\x03\x12\x15\n" +
-	"\x11MethodInappGoogle\x10\x042\xfb\x01\n" +
-	"\x15AnyPaymentProcessing2\x12P\n" +
-	"\vGetProducts\x12\x1f.Membership2.GetProductsRequest\x1a .Membership2.GetProductsResponse\x12J\n" +
-	"\tGetStatus\x12\x1d.Membership2.GetStatusRequest\x1a\x1e.Membership2.GetStatusResponse\x12D\n" +
-	"\aWebAuth\x12\x1b.Membership2.WebAuthRequest\x1a\x1c.Membership2.WebAuthResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
+	"\x11MethodInappGoogle\x10\x042\x82\x02\n" +
+	"\x16AnyPaymentProcessingV2\x12R\n" +
+	"\vGetProducts\x12 .MembershipV2.GetProductsRequest\x1a!.MembershipV2.GetProductsResponse\x12L\n" +
+	"\tGetStatus\x12\x1e.MembershipV2.GetStatusRequest\x1a\x1f.MembershipV2.GetStatusResponse\x12F\n" +
+	"\aWebAuth\x12\x1c.MembershipV2.WebAuthRequest\x1a\x1d.MembershipV2.WebAuthResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
 
 var (
 	file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescOnce sync.Once
@@ -1500,58 +1500,58 @@ func file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDes
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_goTypes = []any{
-	(Membership2_PaymentMethod)(0),                     // 0: Membership2.PaymentMethod
-	(Membership2_ProductStatus_Status)(0),              // 1: Membership2.ProductStatus.Status
-	(Membership2_Invoice_Status)(0),                    // 2: Membership2.Invoice.Status
-	(*Membership2)(nil),                                // 3: Membership2
-	(*Membership2_Amount)(nil),                         // 4: Membership2.Amount
-	(*Membership2_Product)(nil),                        // 5: Membership2.Product
-	(*Membership2_PurchaseInfo)(nil),                   // 6: Membership2.PurchaseInfo
-	(*Membership2_ProductStatus)(nil),                  // 7: Membership2.ProductStatus
-	(*Membership2_PurchasedProduct)(nil),               // 8: Membership2.PurchasedProduct
-	(*Membership2_CartProduct)(nil),                    // 9: Membership2.CartProduct
-	(*Membership2_Invoice)(nil),                        // 10: Membership2.Invoice
-	(*Membership2_Cart)(nil),                           // 11: Membership2.Cart
-	(*Membership2_GetProductsRequest)(nil),             // 12: Membership2.GetProductsRequest
-	(*Membership2_GetProductsResponse)(nil),            // 13: Membership2.GetProductsResponse
-	(*Membership2_GetStatusRequest)(nil),               // 14: Membership2.GetStatusRequest
-	(*Membership2_GetStatusResponse)(nil),              // 15: Membership2.GetStatusResponse
-	(*Membership2_StoreCartGetRequest)(nil),            // 16: Membership2.StoreCartGetRequest
-	(*Membership2_StoreCartResponse)(nil),              // 17: Membership2.StoreCartResponse
-	(*Membership2_StoreCartPromocodeApplyRequest)(nil), // 18: Membership2.StoreCartPromocodeApplyRequest
-	(*Membership2_StoreCartCheckoutRequest)(nil),       // 19: Membership2.StoreCartCheckoutRequest
-	(*Membership2_StoreCartCheckoutResponse)(nil),      // 20: Membership2.StoreCartCheckoutResponse
-	(*Membership2_StoreCartUpdateRequest)(nil),         // 21: Membership2.StoreCartUpdateRequest
-	(*Membership2_StoreCartUpdateResponse)(nil),        // 22: Membership2.StoreCartUpdateResponse
-	(*Membership2_StoreCartClearRequest)(nil),          // 23: Membership2.StoreCartClearRequest
-	(*Membership2_WebAuthRequest)(nil),                 // 24: Membership2.WebAuthRequest
-	(*Membership2_WebAuthResponse)(nil),                // 25: Membership2.WebAuthResponse
+	(MembershipV2_PaymentMethod)(0),                     // 0: MembershipV2.PaymentMethod
+	(MembershipV2_ProductStatus_Status)(0),              // 1: MembershipV2.ProductStatus.Status
+	(MembershipV2_Invoice_Status)(0),                    // 2: MembershipV2.Invoice.Status
+	(*MembershipV2)(nil),                                // 3: MembershipV2
+	(*MembershipV2_Amount)(nil),                         // 4: MembershipV2.Amount
+	(*MembershipV2_Product)(nil),                        // 5: MembershipV2.Product
+	(*MembershipV2_PurchaseInfo)(nil),                   // 6: MembershipV2.PurchaseInfo
+	(*MembershipV2_ProductStatus)(nil),                  // 7: MembershipV2.ProductStatus
+	(*MembershipV2_PurchasedProduct)(nil),               // 8: MembershipV2.PurchasedProduct
+	(*MembershipV2_CartProduct)(nil),                    // 9: MembershipV2.CartProduct
+	(*MembershipV2_Invoice)(nil),                        // 10: MembershipV2.Invoice
+	(*MembershipV2_Cart)(nil),                           // 11: MembershipV2.Cart
+	(*MembershipV2_GetProductsRequest)(nil),             // 12: MembershipV2.GetProductsRequest
+	(*MembershipV2_GetProductsResponse)(nil),            // 13: MembershipV2.GetProductsResponse
+	(*MembershipV2_GetStatusRequest)(nil),               // 14: MembershipV2.GetStatusRequest
+	(*MembershipV2_GetStatusResponse)(nil),              // 15: MembershipV2.GetStatusResponse
+	(*MembershipV2_StoreCartGetRequest)(nil),            // 16: MembershipV2.StoreCartGetRequest
+	(*MembershipV2_StoreCartResponse)(nil),              // 17: MembershipV2.StoreCartResponse
+	(*MembershipV2_StoreCartPromocodeApplyRequest)(nil), // 18: MembershipV2.StoreCartPromocodeApplyRequest
+	(*MembershipV2_StoreCartCheckoutRequest)(nil),       // 19: MembershipV2.StoreCartCheckoutRequest
+	(*MembershipV2_StoreCartCheckoutResponse)(nil),      // 20: MembershipV2.StoreCartCheckoutResponse
+	(*MembershipV2_StoreCartUpdateRequest)(nil),         // 21: MembershipV2.StoreCartUpdateRequest
+	(*MembershipV2_StoreCartUpdateResponse)(nil),        // 22: MembershipV2.StoreCartUpdateResponse
+	(*MembershipV2_StoreCartClearRequest)(nil),          // 23: MembershipV2.StoreCartClearRequest
+	(*MembershipV2_WebAuthRequest)(nil),                 // 24: MembershipV2.WebAuthRequest
+	(*MembershipV2_WebAuthResponse)(nil),                // 25: MembershipV2.WebAuthResponse
 }
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_depIdxs = []int32{
-	4,  // 0: Membership2.Product.pricesYearly:type_name -> Membership2.Amount
-	4,  // 1: Membership2.Product.pricesMonthly:type_name -> Membership2.Amount
-	1,  // 2: Membership2.ProductStatus.status:type_name -> Membership2.ProductStatus.Status
-	5,  // 3: Membership2.PurchasedProduct.product:type_name -> Membership2.Product
-	6,  // 4: Membership2.PurchasedProduct.purchaseInfo:type_name -> Membership2.PurchaseInfo
-	7,  // 5: Membership2.PurchasedProduct.productStatus:type_name -> Membership2.ProductStatus
-	5,  // 6: Membership2.CartProduct.product:type_name -> Membership2.Product
-	4,  // 7: Membership2.Invoice.total:type_name -> Membership2.Amount
-	2,  // 8: Membership2.Invoice.status:type_name -> Membership2.Invoice.Status
-	9,  // 9: Membership2.Cart.products:type_name -> Membership2.CartProduct
-	4,  // 10: Membership2.Cart.total:type_name -> Membership2.Amount
-	4,  // 11: Membership2.Cart.totalNextInvoice:type_name -> Membership2.Amount
-	5,  // 12: Membership2.GetProductsResponse.products:type_name -> Membership2.Product
-	8,  // 13: Membership2.GetStatusResponse.products:type_name -> Membership2.PurchasedProduct
-	10, // 14: Membership2.GetStatusResponse.nextInvoice:type_name -> Membership2.Invoice
-	11, // 15: Membership2.StoreCartResponse.cart:type_name -> Membership2.Cart
-	9,  // 16: Membership2.StoreCartUpdateRequest.products:type_name -> Membership2.CartProduct
-	11, // 17: Membership2.StoreCartUpdateResponse.cart:type_name -> Membership2.Cart
-	12, // 18: AnyPaymentProcessing2.GetProducts:input_type -> Membership2.GetProductsRequest
-	14, // 19: AnyPaymentProcessing2.GetStatus:input_type -> Membership2.GetStatusRequest
-	24, // 20: AnyPaymentProcessing2.WebAuth:input_type -> Membership2.WebAuthRequest
-	13, // 21: AnyPaymentProcessing2.GetProducts:output_type -> Membership2.GetProductsResponse
-	15, // 22: AnyPaymentProcessing2.GetStatus:output_type -> Membership2.GetStatusResponse
-	25, // 23: AnyPaymentProcessing2.WebAuth:output_type -> Membership2.WebAuthResponse
+	4,  // 0: MembershipV2.Product.pricesYearly:type_name -> MembershipV2.Amount
+	4,  // 1: MembershipV2.Product.pricesMonthly:type_name -> MembershipV2.Amount
+	1,  // 2: MembershipV2.ProductStatus.status:type_name -> MembershipV2.ProductStatus.Status
+	5,  // 3: MembershipV2.PurchasedProduct.product:type_name -> MembershipV2.Product
+	6,  // 4: MembershipV2.PurchasedProduct.purchaseInfo:type_name -> MembershipV2.PurchaseInfo
+	7,  // 5: MembershipV2.PurchasedProduct.productStatus:type_name -> MembershipV2.ProductStatus
+	5,  // 6: MembershipV2.CartProduct.product:type_name -> MembershipV2.Product
+	4,  // 7: MembershipV2.Invoice.total:type_name -> MembershipV2.Amount
+	2,  // 8: MembershipV2.Invoice.status:type_name -> MembershipV2.Invoice.Status
+	9,  // 9: MembershipV2.Cart.products:type_name -> MembershipV2.CartProduct
+	4,  // 10: MembershipV2.Cart.total:type_name -> MembershipV2.Amount
+	4,  // 11: MembershipV2.Cart.totalNextInvoice:type_name -> MembershipV2.Amount
+	5,  // 12: MembershipV2.GetProductsResponse.products:type_name -> MembershipV2.Product
+	8,  // 13: MembershipV2.GetStatusResponse.products:type_name -> MembershipV2.PurchasedProduct
+	10, // 14: MembershipV2.GetStatusResponse.nextInvoice:type_name -> MembershipV2.Invoice
+	11, // 15: MembershipV2.StoreCartResponse.cart:type_name -> MembershipV2.Cart
+	9,  // 16: MembershipV2.StoreCartUpdateRequest.products:type_name -> MembershipV2.CartProduct
+	11, // 17: MembershipV2.StoreCartUpdateResponse.cart:type_name -> MembershipV2.Cart
+	12, // 18: AnyPaymentProcessingV2.GetProducts:input_type -> MembershipV2.GetProductsRequest
+	14, // 19: AnyPaymentProcessingV2.GetStatus:input_type -> MembershipV2.GetStatusRequest
+	24, // 20: AnyPaymentProcessingV2.WebAuth:input_type -> MembershipV2.WebAuthRequest
+	13, // 21: AnyPaymentProcessingV2.GetProducts:output_type -> MembershipV2.GetProductsResponse
+	15, // 22: AnyPaymentProcessingV2.GetStatus:output_type -> MembershipV2.GetStatusResponse
+	25, // 23: AnyPaymentProcessingV2.WebAuth:output_type -> MembershipV2.WebAuthResponse
 	21, // [21:24] is the sub-list for method output_type
 	18, // [18:21] is the sub-list for method input_type
 	18, // [18:18] is the sub-list for extension type_name
