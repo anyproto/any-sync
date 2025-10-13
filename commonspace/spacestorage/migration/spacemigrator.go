@@ -201,5 +201,5 @@ func (s *spaceMigrator) setMigrated(ctx context.Context, anyStore anystore.DB) e
 	if err != nil {
 		return nil
 	}
-	return anyStore.Checkpoint(ctx, true)
+	return anyStore.Flush(ctx, 0, anystore.FlushModeCheckpointPassive)
 }
