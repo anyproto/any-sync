@@ -1,0 +1,176 @@
+syntax = "proto3";
+option go_package = "paymentservice/paymentserviceproto";
+
+message MembershipV2 {
+  enum PaymentMethod {
+    MethodNone = 0;
+    MethodStripe = 1;
+    MethodCrypto = 2;
+    MethodInappApple = 3;
+    MethodInappGoogle = 4;
+  }
+
+  message Amount {
+    string currency = 1;
+    // $0.01 = 1
+    // $1.00 = 100
+    // negative amounts 
+    int64 amountCents = 2;
+  }
+
+  message Product {
+    // this is a unique Payment Node ID
+    // adding 2 same products to a cart means we will have 2 items with same ID
+    string id = 1;
+    // is it a product that should be attached to a space
+    bool isAttachToSpace = 2;
+    // the price of a Package may not be equal to the sum of all underlying products
+    bool isPackage = 3;
+    // localized
+    string name = 4;
+    string description = 5;
+
+    repeated Amount pricesYearly = 6;
+    repeated Amount pricesMonthly = 7;
+    // localized strings for the features
+    repeated string features = 8;
+    // green, blue, red, purple, custom
+    string colorStr = 9;
+    // "limited offer"
+    string offer = 10;
+  }
+
+  message PurchaseInfo {
+    uint64 dateStarted = 1;
+    uint64 dateEnds = 2;
+    bool isAutoRenew = 3;
+    // otherwise - monthly
+    bool isYearly = 4;
+  }
+
+  message ProductStatus {
+    enum Status {
+      StatusUnknown = 0;
+      StatusPending = 1;
+      StatusActive = 2;
+      StatusPendingRequiresFinalization = 3;
+    }
+    Status status = 1;
+
+    string spaceAttachedTo = 2;
+    bool isNeedsAttachmentToSpace = 3;
+    bool isRenewalEnabled = 4;
+  }
+
+  message PurchasedProduct {
+    Product product = 1;
+    PurchaseInfo purchaseInfo = 2;
+    ProductStatus productStatus = 3;
+  }
+
+  message CartProduct {
+    Product product = 1;    
+    // otherwise - monthly
+    bool isYearly = 2;
+    // set to true if you want to remove this item from the customer
+    // it's like setting -1 to some product
+    bool remove = 3;
+  }
+
+  message Invoice {
+    enum Status {
+      Unpaid = 0;
+      Paid = 1;
+    }
+    
+    string id = 1;
+    uint64 date = 2;
+    Amount total = 3;
+    Status status = 4;
+  }
+
+  message Cart {
+    // if you add Nx the same product - it will be Nx in the 'products' array, i.e:
+    // each product instance has a unique index
+    repeated CartProduct products = 1;
+    // total amount of the cart (including discounts, etc)
+    Amount total = 2;
+
+    // in case you are paying in the middle of the period (for existing customers)
+    // the next invoice amount will also be generated
+    Amount totalNextInvoice = 3;
+    uint64 nextInvoiceDate = 4;
+  }
+
+  message GetProductsRequest {
+
+  }
+
+  message GetProductsResponse {
+    repeated Product products = 1;
+  }
+
+  message GetStatusRequest {
+
+  }
+
+  message GetStatusResponse {
+    repeated MembershipV2.PurchasedProduct products = 1;
+    MembershipV2.Invoice nextInvoice = 2;
+  }
+
+  message StoreCartGetRequest {
+
+  }
+
+  message StoreCartResponse {
+    MembershipV2.Cart cart = 1;
+  }
+
+  message StoreCartPromocodeApplyRequest {
+    string promocode = 1;
+  }
+
+  message StoreCartCheckoutRequest {
+
+  }
+
+  message StoreCartCheckoutResponse {
+    // for new customers - will contain a payment URL
+    // (new Stripe session)
+    //
+    // if this is empty - then this is existing customer
+    // and we are trying to process the payment
+    string paymentUrl = 1;
+  }
+
+  message StoreCartUpdateRequest {
+    repeated CartProduct products = 1;
+    string ownerEthAddress = 2;
+  }
+
+  message StoreCartUpdateResponse {
+    MembershipV2.Cart cart = 1;
+  }
+
+  message StoreCartClearRequest {
+
+  }
+
+  message WebAuthRequest {
+    
+  }
+
+  message WebAuthResponse {
+    string jwt = 1;
+
+    // (optional) redirect here after the auth
+    string url = 2;
+  }
+}
+
+service AnyPaymentProcessingV2 {
+  rpc GetProducts (MembershipV2.GetProductsRequest) returns (MembershipV2.GetProductsResponse);
+  rpc GetStatus (MembershipV2.GetStatusRequest) returns (MembershipV2.GetStatusResponse);
+  rpc WebAuth(MembershipV2.WebAuthRequest) returns (MembershipV2.WebAuthResponse); 
+}
