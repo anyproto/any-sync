@@ -94,6 +94,52 @@ func (ErrCodes) EnumDescriptor() ([]byte, []int) {
 	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{0}
 }
 
+type SpaceHeaderVersion int32
+
+const (
+	SpaceHeaderVersion_SpaceHeaderVersion0 SpaceHeaderVersion = 0
+	SpaceHeaderVersion_SpaceHeaderVersion1 SpaceHeaderVersion = 1
+)
+
+// Enum value maps for SpaceHeaderVersion.
+var (
+	SpaceHeaderVersion_name = map[int32]string{
+		0: "SpaceHeaderVersion0",
+		1: "SpaceHeaderVersion1",
+	}
+	SpaceHeaderVersion_value = map[string]int32{
+		"SpaceHeaderVersion0": 0,
+		"SpaceHeaderVersion1": 1,
+	}
+)
+
+func (x SpaceHeaderVersion) Enum() *SpaceHeaderVersion {
+	p := new(SpaceHeaderVersion)
+	*p = x
+	return p
+}
+
+func (x SpaceHeaderVersion) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SpaceHeaderVersion) Descriptor() protoreflect.EnumDescriptor {
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[1].Descriptor()
+}
+
+func (SpaceHeaderVersion) Type() protoreflect.EnumType {
+	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[1]
+}
+
+func (x SpaceHeaderVersion) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SpaceHeaderVersion.Descriptor instead.
+func (SpaceHeaderVersion) EnumDescriptor() ([]byte, []int) {
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{1}
+}
+
 // SpaceSubscription contains in ObjectSyncMessage.Payload and indicates that we need to subscribe or unsubscribe the current stream to this space
 type SpaceSubscriptionAction int32
 
@@ -125,11 +171,11 @@ func (x SpaceSubscriptionAction) String() string {
 }
 
 func (SpaceSubscriptionAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[1].Descriptor()
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[2].Descriptor()
 }
 
 func (SpaceSubscriptionAction) Type() protoreflect.EnumType {
-	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[1]
+	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[2]
 }
 
 func (x SpaceSubscriptionAction) Number() protoreflect.EnumNumber {
@@ -138,7 +184,7 @@ func (x SpaceSubscriptionAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SpaceSubscriptionAction.Descriptor instead.
 func (SpaceSubscriptionAction) EnumDescriptor() ([]byte, []int) {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{1}
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{2}
 }
 
 // DiffType is a type of diff
@@ -178,11 +224,11 @@ func (x DiffType) String() string {
 }
 
 func (DiffType) Descriptor() protoreflect.EnumDescriptor {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[2].Descriptor()
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[3].Descriptor()
 }
 
 func (DiffType) Type() protoreflect.EnumType {
-	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[2]
+	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[3]
 }
 
 func (x DiffType) Number() protoreflect.EnumNumber {
@@ -191,7 +237,7 @@ func (x DiffType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DiffType.Descriptor instead.
 func (DiffType) EnumDescriptor() ([]byte, []int) {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{2}
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{3}
 }
 
 // ObjectType is a type of object
@@ -228,11 +274,11 @@ func (x ObjectType) String() string {
 }
 
 func (ObjectType) Descriptor() protoreflect.EnumDescriptor {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[3].Descriptor()
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[4].Descriptor()
 }
 
 func (ObjectType) Type() protoreflect.EnumType {
-	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[3]
+	return &file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes[4]
 }
 
 func (x ObjectType) Number() protoreflect.EnumNumber {
@@ -241,7 +287,7 @@ func (x ObjectType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ObjectType.Descriptor instead.
 func (ObjectType) EnumDescriptor() ([]byte, []int) {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{3}
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{4}
 }
 
 // HeadSyncRange presenting a request for one range
@@ -952,8 +998,12 @@ type SpaceHeader struct {
 	ReplicationKey     uint64                 `protobuf:"varint,4,opt,name=replicationKey,proto3" json:"replicationKey,omitempty"`
 	Seed               []byte                 `protobuf:"bytes,5,opt,name=seed,proto3" json:"seed,omitempty"`
 	SpaceHeaderPayload []byte                 `protobuf:"bytes,6,opt,name=spaceHeaderPayload,proto3" json:"spaceHeaderPayload,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// since v1 fields
+	AclPayload     []byte             `protobuf:"bytes,7,opt,name=aclPayload,proto3" json:"aclPayload,omitempty"`
+	SettingPayload []byte             `protobuf:"bytes,8,opt,name=settingPayload,proto3" json:"settingPayload,omitempty"`
+	Version        SpaceHeaderVersion `protobuf:"varint,100,opt,name=version,proto3,enum=spacesync.SpaceHeaderVersion" json:"version,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SpaceHeader) Reset() {
@@ -1026,6 +1076,27 @@ func (x *SpaceHeader) GetSpaceHeaderPayload() []byte {
 		return x.SpaceHeaderPayload
 	}
 	return nil
+}
+
+func (x *SpaceHeader) GetAclPayload() []byte {
+	if x != nil {
+		return x.AclPayload
+	}
+	return nil
+}
+
+func (x *SpaceHeader) GetSettingPayload() []byte {
+	if x != nil {
+		return x.SettingPayload
+	}
+	return nil
+}
+
+func (x *SpaceHeader) GetVersion() SpaceHeaderVersion {
+	if x != nil {
+		return x.Version
+	}
+	return SpaceHeaderVersion_SpaceHeaderVersion0
 }
 
 // RawSpaceHeader is raw header for SpaceHeader
@@ -2133,14 +2204,19 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"aclPayload\x12\"\n" +
 	"\faclPayloadId\x18\x03 \x01(\tR\faclPayloadId\x122\n" +
 	"\x14spaceSettingsPayload\x18\x04 \x01(\fR\x14spaceSettingsPayload\x126\n" +
-	"\x16spaceSettingsPayloadId\x18\x05 \x01(\tR\x16spaceSettingsPayloadId\"\xd1\x01\n" +
+	"\x16spaceSettingsPayloadId\x18\x05 \x01(\tR\x16spaceSettingsPayloadId\"\xd2\x02\n" +
 	"\vSpaceHeader\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x1c\n" +
 	"\tspaceType\x18\x03 \x01(\tR\tspaceType\x12&\n" +
 	"\x0ereplicationKey\x18\x04 \x01(\x04R\x0ereplicationKey\x12\x12\n" +
 	"\x04seed\x18\x05 \x01(\fR\x04seed\x12.\n" +
-	"\x12spaceHeaderPayload\x18\x06 \x01(\fR\x12spaceHeaderPayload\"P\n" +
+	"\x12spaceHeaderPayload\x18\x06 \x01(\fR\x12spaceHeaderPayload\x12\x1e\n" +
+	"\n" +
+	"aclPayload\x18\a \x01(\fR\n" +
+	"aclPayload\x12&\n" +
+	"\x0esettingPayload\x18\b \x01(\fR\x0esettingPayload\x127\n" +
+	"\aversion\x18d \x01(\x0e2\x1d.spacesync.SpaceHeaderVersionR\aversion\"P\n" +
 	"\x0eRawSpaceHeader\x12 \n" +
 	"\vspaceHeader\x18\x01 \x01(\fR\vspaceHeader\x12\x1c\n" +
 	"\tsignature\x18\x02 \x01(\fR\tsignature\"D\n" +
@@ -2215,7 +2291,10 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\x0eInvalidPayload\x10\a\x12\x14\n" +
 	"\x10DuplicateRequest\x10\b\x12\x1b\n" +
 	"\x17TooManyRequestsFromPeer\x10\t\x12\x0f\n" +
-	"\vErrorOffset\x10d*9\n" +
+	"\vErrorOffset\x10d*F\n" +
+	"\x12SpaceHeaderVersion\x12\x17\n" +
+	"\x13SpaceHeaderVersion0\x10\x00\x12\x17\n" +
+	"\x13SpaceHeaderVersion1\x10\x01*9\n" +
 	"\x17SpaceSubscriptionAction\x12\r\n" +
 	"\tSubscribe\x10\x00\x12\x0f\n" +
 	"\vUnsubscribe\x10\x01*/\n" +
@@ -2254,90 +2333,92 @@ func file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP() []byte
 	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescData
 }
 
-var file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_commonspace_spacesyncproto_protos_spacesync_proto_goTypes = []any{
 	(ErrCodes)(0),                 // 0: spacesync.ErrCodes
-	(SpaceSubscriptionAction)(0),  // 1: spacesync.SpaceSubscriptionAction
-	(DiffType)(0),                 // 2: spacesync.DiffType
-	(ObjectType)(0),               // 3: spacesync.ObjectType
-	(*HeadSyncRange)(nil),         // 4: spacesync.HeadSyncRange
-	(*HeadSyncResult)(nil),        // 5: spacesync.HeadSyncResult
-	(*HeadSyncResultElement)(nil), // 6: spacesync.HeadSyncResultElement
-	(*HeadSyncRequest)(nil),       // 7: spacesync.HeadSyncRequest
-	(*HeadSyncResponse)(nil),      // 8: spacesync.HeadSyncResponse
-	(*ObjectSyncMessage)(nil),     // 9: spacesync.ObjectSyncMessage
-	(*SpacePushRequest)(nil),      // 10: spacesync.SpacePushRequest
-	(*SpacePushResponse)(nil),     // 11: spacesync.SpacePushResponse
-	(*SpacePullRequest)(nil),      // 12: spacesync.SpacePullRequest
-	(*SpacePullResponse)(nil),     // 13: spacesync.SpacePullResponse
-	(*AclRecord)(nil),             // 14: spacesync.AclRecord
-	(*SpacePayload)(nil),          // 15: spacesync.SpacePayload
-	(*SpaceHeader)(nil),           // 16: spacesync.SpaceHeader
-	(*RawSpaceHeader)(nil),        // 17: spacesync.RawSpaceHeader
-	(*RawSpaceHeaderWithId)(nil),  // 18: spacesync.RawSpaceHeaderWithId
-	(*SpaceSettingsContent)(nil),  // 19: spacesync.SpaceSettingsContent
-	(*ObjectDelete)(nil),          // 20: spacesync.ObjectDelete
-	(*StoreHeader)(nil),           // 21: spacesync.StoreHeader
-	(*SpaceDelete)(nil),           // 22: spacesync.SpaceDelete
-	(*SpaceSettingsSnapshot)(nil), // 23: spacesync.SpaceSettingsSnapshot
-	(*SettingsData)(nil),          // 24: spacesync.SettingsData
-	(*SpaceSubscription)(nil),     // 25: spacesync.SpaceSubscription
-	(*AclAddRecordRequest)(nil),   // 26: spacesync.AclAddRecordRequest
-	(*AclAddRecordResponse)(nil),  // 27: spacesync.AclAddRecordResponse
-	(*AclGetRecordsRequest)(nil),  // 28: spacesync.AclGetRecordsRequest
-	(*AclGetRecordsResponse)(nil), // 29: spacesync.AclGetRecordsResponse
-	(*StoreDiffRequest)(nil),      // 30: spacesync.StoreDiffRequest
-	(*StoreDiffResponse)(nil),     // 31: spacesync.StoreDiffResponse
-	(*StoreKeyValue)(nil),         // 32: spacesync.StoreKeyValue
-	(*StoreKeyValues)(nil),        // 33: spacesync.StoreKeyValues
-	(*StoreKeyInner)(nil),         // 34: spacesync.StoreKeyInner
-	(*StorageHeader)(nil),         // 35: spacesync.StorageHeader
+	(SpaceHeaderVersion)(0),       // 1: spacesync.SpaceHeaderVersion
+	(SpaceSubscriptionAction)(0),  // 2: spacesync.SpaceSubscriptionAction
+	(DiffType)(0),                 // 3: spacesync.DiffType
+	(ObjectType)(0),               // 4: spacesync.ObjectType
+	(*HeadSyncRange)(nil),         // 5: spacesync.HeadSyncRange
+	(*HeadSyncResult)(nil),        // 6: spacesync.HeadSyncResult
+	(*HeadSyncResultElement)(nil), // 7: spacesync.HeadSyncResultElement
+	(*HeadSyncRequest)(nil),       // 8: spacesync.HeadSyncRequest
+	(*HeadSyncResponse)(nil),      // 9: spacesync.HeadSyncResponse
+	(*ObjectSyncMessage)(nil),     // 10: spacesync.ObjectSyncMessage
+	(*SpacePushRequest)(nil),      // 11: spacesync.SpacePushRequest
+	(*SpacePushResponse)(nil),     // 12: spacesync.SpacePushResponse
+	(*SpacePullRequest)(nil),      // 13: spacesync.SpacePullRequest
+	(*SpacePullResponse)(nil),     // 14: spacesync.SpacePullResponse
+	(*AclRecord)(nil),             // 15: spacesync.AclRecord
+	(*SpacePayload)(nil),          // 16: spacesync.SpacePayload
+	(*SpaceHeader)(nil),           // 17: spacesync.SpaceHeader
+	(*RawSpaceHeader)(nil),        // 18: spacesync.RawSpaceHeader
+	(*RawSpaceHeaderWithId)(nil),  // 19: spacesync.RawSpaceHeaderWithId
+	(*SpaceSettingsContent)(nil),  // 20: spacesync.SpaceSettingsContent
+	(*ObjectDelete)(nil),          // 21: spacesync.ObjectDelete
+	(*StoreHeader)(nil),           // 22: spacesync.StoreHeader
+	(*SpaceDelete)(nil),           // 23: spacesync.SpaceDelete
+	(*SpaceSettingsSnapshot)(nil), // 24: spacesync.SpaceSettingsSnapshot
+	(*SettingsData)(nil),          // 25: spacesync.SettingsData
+	(*SpaceSubscription)(nil),     // 26: spacesync.SpaceSubscription
+	(*AclAddRecordRequest)(nil),   // 27: spacesync.AclAddRecordRequest
+	(*AclAddRecordResponse)(nil),  // 28: spacesync.AclAddRecordResponse
+	(*AclGetRecordsRequest)(nil),  // 29: spacesync.AclGetRecordsRequest
+	(*AclGetRecordsResponse)(nil), // 30: spacesync.AclGetRecordsResponse
+	(*StoreDiffRequest)(nil),      // 31: spacesync.StoreDiffRequest
+	(*StoreDiffResponse)(nil),     // 32: spacesync.StoreDiffResponse
+	(*StoreKeyValue)(nil),         // 33: spacesync.StoreKeyValue
+	(*StoreKeyValues)(nil),        // 34: spacesync.StoreKeyValues
+	(*StoreKeyInner)(nil),         // 35: spacesync.StoreKeyInner
+	(*StorageHeader)(nil),         // 36: spacesync.StorageHeader
 }
 var file_commonspace_spacesyncproto_protos_spacesync_proto_depIdxs = []int32{
-	6,  // 0: spacesync.HeadSyncResult.elements:type_name -> spacesync.HeadSyncResultElement
-	4,  // 1: spacesync.HeadSyncRequest.ranges:type_name -> spacesync.HeadSyncRange
-	2,  // 2: spacesync.HeadSyncRequest.diffType:type_name -> spacesync.DiffType
-	5,  // 3: spacesync.HeadSyncResponse.results:type_name -> spacesync.HeadSyncResult
-	2,  // 4: spacesync.HeadSyncResponse.diffType:type_name -> spacesync.DiffType
-	3,  // 5: spacesync.ObjectSyncMessage.objectType:type_name -> spacesync.ObjectType
-	15, // 6: spacesync.SpacePushRequest.payload:type_name -> spacesync.SpacePayload
-	15, // 7: spacesync.SpacePullResponse.payload:type_name -> spacesync.SpacePayload
-	14, // 8: spacesync.SpacePullResponse.aclRecords:type_name -> spacesync.AclRecord
-	18, // 9: spacesync.SpacePayload.spaceHeader:type_name -> spacesync.RawSpaceHeaderWithId
-	20, // 10: spacesync.SpaceSettingsContent.objectDelete:type_name -> spacesync.ObjectDelete
-	22, // 11: spacesync.SpaceSettingsContent.spaceDelete:type_name -> spacesync.SpaceDelete
-	19, // 12: spacesync.SettingsData.content:type_name -> spacesync.SpaceSettingsContent
-	23, // 13: spacesync.SettingsData.snapshot:type_name -> spacesync.SpaceSettingsSnapshot
-	1,  // 14: spacesync.SpaceSubscription.action:type_name -> spacesync.SpaceSubscriptionAction
-	4,  // 15: spacesync.StoreDiffRequest.ranges:type_name -> spacesync.HeadSyncRange
-	5,  // 16: spacesync.StoreDiffResponse.results:type_name -> spacesync.HeadSyncResult
-	32, // 17: spacesync.StoreKeyValues.keyValues:type_name -> spacesync.StoreKeyValue
-	7,  // 18: spacesync.SpaceSync.HeadSync:input_type -> spacesync.HeadSyncRequest
-	30, // 19: spacesync.SpaceSync.StoreDiff:input_type -> spacesync.StoreDiffRequest
-	32, // 20: spacesync.SpaceSync.StoreElements:input_type -> spacesync.StoreKeyValue
-	10, // 21: spacesync.SpaceSync.SpacePush:input_type -> spacesync.SpacePushRequest
-	12, // 22: spacesync.SpaceSync.SpacePull:input_type -> spacesync.SpacePullRequest
-	9,  // 23: spacesync.SpaceSync.ObjectSyncStream:input_type -> spacesync.ObjectSyncMessage
-	9,  // 24: spacesync.SpaceSync.ObjectSync:input_type -> spacesync.ObjectSyncMessage
-	9,  // 25: spacesync.SpaceSync.ObjectSyncRequestStream:input_type -> spacesync.ObjectSyncMessage
-	26, // 26: spacesync.SpaceSync.AclAddRecord:input_type -> spacesync.AclAddRecordRequest
-	28, // 27: spacesync.SpaceSync.AclGetRecords:input_type -> spacesync.AclGetRecordsRequest
-	8,  // 28: spacesync.SpaceSync.HeadSync:output_type -> spacesync.HeadSyncResponse
-	31, // 29: spacesync.SpaceSync.StoreDiff:output_type -> spacesync.StoreDiffResponse
-	32, // 30: spacesync.SpaceSync.StoreElements:output_type -> spacesync.StoreKeyValue
-	11, // 31: spacesync.SpaceSync.SpacePush:output_type -> spacesync.SpacePushResponse
-	13, // 32: spacesync.SpaceSync.SpacePull:output_type -> spacesync.SpacePullResponse
-	9,  // 33: spacesync.SpaceSync.ObjectSyncStream:output_type -> spacesync.ObjectSyncMessage
-	9,  // 34: spacesync.SpaceSync.ObjectSync:output_type -> spacesync.ObjectSyncMessage
-	9,  // 35: spacesync.SpaceSync.ObjectSyncRequestStream:output_type -> spacesync.ObjectSyncMessage
-	27, // 36: spacesync.SpaceSync.AclAddRecord:output_type -> spacesync.AclAddRecordResponse
-	29, // 37: spacesync.SpaceSync.AclGetRecords:output_type -> spacesync.AclGetRecordsResponse
-	28, // [28:38] is the sub-list for method output_type
-	18, // [18:28] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	7,  // 0: spacesync.HeadSyncResult.elements:type_name -> spacesync.HeadSyncResultElement
+	5,  // 1: spacesync.HeadSyncRequest.ranges:type_name -> spacesync.HeadSyncRange
+	3,  // 2: spacesync.HeadSyncRequest.diffType:type_name -> spacesync.DiffType
+	6,  // 3: spacesync.HeadSyncResponse.results:type_name -> spacesync.HeadSyncResult
+	3,  // 4: spacesync.HeadSyncResponse.diffType:type_name -> spacesync.DiffType
+	4,  // 5: spacesync.ObjectSyncMessage.objectType:type_name -> spacesync.ObjectType
+	16, // 6: spacesync.SpacePushRequest.payload:type_name -> spacesync.SpacePayload
+	16, // 7: spacesync.SpacePullResponse.payload:type_name -> spacesync.SpacePayload
+	15, // 8: spacesync.SpacePullResponse.aclRecords:type_name -> spacesync.AclRecord
+	19, // 9: spacesync.SpacePayload.spaceHeader:type_name -> spacesync.RawSpaceHeaderWithId
+	1,  // 10: spacesync.SpaceHeader.version:type_name -> spacesync.SpaceHeaderVersion
+	21, // 11: spacesync.SpaceSettingsContent.objectDelete:type_name -> spacesync.ObjectDelete
+	23, // 12: spacesync.SpaceSettingsContent.spaceDelete:type_name -> spacesync.SpaceDelete
+	20, // 13: spacesync.SettingsData.content:type_name -> spacesync.SpaceSettingsContent
+	24, // 14: spacesync.SettingsData.snapshot:type_name -> spacesync.SpaceSettingsSnapshot
+	2,  // 15: spacesync.SpaceSubscription.action:type_name -> spacesync.SpaceSubscriptionAction
+	5,  // 16: spacesync.StoreDiffRequest.ranges:type_name -> spacesync.HeadSyncRange
+	6,  // 17: spacesync.StoreDiffResponse.results:type_name -> spacesync.HeadSyncResult
+	33, // 18: spacesync.StoreKeyValues.keyValues:type_name -> spacesync.StoreKeyValue
+	8,  // 19: spacesync.SpaceSync.HeadSync:input_type -> spacesync.HeadSyncRequest
+	31, // 20: spacesync.SpaceSync.StoreDiff:input_type -> spacesync.StoreDiffRequest
+	33, // 21: spacesync.SpaceSync.StoreElements:input_type -> spacesync.StoreKeyValue
+	11, // 22: spacesync.SpaceSync.SpacePush:input_type -> spacesync.SpacePushRequest
+	13, // 23: spacesync.SpaceSync.SpacePull:input_type -> spacesync.SpacePullRequest
+	10, // 24: spacesync.SpaceSync.ObjectSyncStream:input_type -> spacesync.ObjectSyncMessage
+	10, // 25: spacesync.SpaceSync.ObjectSync:input_type -> spacesync.ObjectSyncMessage
+	10, // 26: spacesync.SpaceSync.ObjectSyncRequestStream:input_type -> spacesync.ObjectSyncMessage
+	27, // 27: spacesync.SpaceSync.AclAddRecord:input_type -> spacesync.AclAddRecordRequest
+	29, // 28: spacesync.SpaceSync.AclGetRecords:input_type -> spacesync.AclGetRecordsRequest
+	9,  // 29: spacesync.SpaceSync.HeadSync:output_type -> spacesync.HeadSyncResponse
+	32, // 30: spacesync.SpaceSync.StoreDiff:output_type -> spacesync.StoreDiffResponse
+	33, // 31: spacesync.SpaceSync.StoreElements:output_type -> spacesync.StoreKeyValue
+	12, // 32: spacesync.SpaceSync.SpacePush:output_type -> spacesync.SpacePushResponse
+	14, // 33: spacesync.SpaceSync.SpacePull:output_type -> spacesync.SpacePullResponse
+	10, // 34: spacesync.SpaceSync.ObjectSyncStream:output_type -> spacesync.ObjectSyncMessage
+	10, // 35: spacesync.SpaceSync.ObjectSync:output_type -> spacesync.ObjectSyncMessage
+	10, // 36: spacesync.SpaceSync.ObjectSyncRequestStream:output_type -> spacesync.ObjectSyncMessage
+	28, // 37: spacesync.SpaceSync.AclAddRecord:output_type -> spacesync.AclAddRecordResponse
+	30, // 38: spacesync.SpaceSync.AclGetRecords:output_type -> spacesync.AclGetRecordsResponse
+	29, // [29:39] is the sub-list for method output_type
+	19, // [19:29] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_commonspace_spacesyncproto_protos_spacesync_proto_init() }
@@ -2354,7 +2435,7 @@ func file_commonspace_spacesyncproto_protos_spacesync_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc), len(file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,

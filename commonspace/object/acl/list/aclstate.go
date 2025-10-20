@@ -37,6 +37,7 @@ var (
 	ErrIncorrectRecordSequence   = errors.New("incorrect prev id of a record")
 	ErrMetadataTooLarge          = errors.New("metadata size too large")
 	ErrOwnerNotFound             = errors.New("owner not found")
+	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
 )
 
 const MaxMetadataLen = 1024
@@ -90,6 +91,8 @@ type AclState struct {
 	lastRecordId     string
 	contentValidator ContentValidator
 	list             *aclList
+
+	isOneToOne bool
 }
 
 func newAclStateWithKeys(
@@ -273,6 +276,10 @@ func (st *AclState) decryptReadKeyFromInviteWithoutApprove(invitePk crypto.PrivK
 }
 
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
+	if st.IsOneToOne() {
+		return ErrAddRecordOneToOne
+	}
+
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
 		return
@@ -290,11 +297,6 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	err = st.applyChangeData(record)
 	if err != nil {
 		return
-	}
-	// getting all states for users at record and saving them
-	var states []AccountState
-	for _, state := range st.accountStates {
-		states = append(states, state)
 	}
 	st.lastRecordId = record.Id
 	return
@@ -315,6 +317,11 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	if !ok {
 		return ErrIncorrectRoot
 	}
+
+	if root.OneToOneInfo != nil {
+		return st.setOneToOneAcl(record.Id, root)
+	}
+
 	if root.EncryptedReadKey != nil {
 		mkPubKey, err := st.keyStore.PubKeyFromProto(root.MetadataPubKey)
 		if err != nil {
@@ -944,7 +951,7 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !exists {
 		return nil, ErrNoSuchAccount
 	}
-	if !decrypt {
+	if !decrypt || st.IsOneToOne() {
 		return state.RequestMetadata, nil
 	}
 	aclKeys := st.keys[state.KeyRecordId]
@@ -1032,6 +1039,10 @@ func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 		}
 	}
 	return nil, ErrOwnerNotFound
+}
+
+func (st *AclState) IsOneToOne() bool {
+	return st.isOneToOne
 }
 
 func (st *AclState) deriveKey() (crypto.SymKey, error) {
