@@ -56,7 +56,8 @@ type AccountState struct {
 	Status      AclStatus
 
 	// RequestMetadata contains the metadata for the join request. For example, it could be an encryption key used
-	// to decrypt the name and icon of the requestor
+	// to decrypt the name and icon of the requestor.
+	// RequestMetadata is empty in case of one-to-one spaces.
 	// TODO It might be or might be not encrypted, so it's not clear what is the current state of this field.
 	RequestMetadata   []byte
 	KeyRecordId       string
