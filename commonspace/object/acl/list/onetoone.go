@@ -162,10 +162,10 @@ func (st *AclState) deriveOneToOneKeys(rootId string, root *aclrecordproto.AclRo
 	}
 
 	st.keys[rootId] = AclKeys{
-		ReadKey:         readKey,
-		MetadataPrivKey: metadataSharedKey,
-		MetadataPubKey:  metadataSharedKey.GetPublic(),
-		encMetadatKey:   encMetadatKey,
+		ReadKey:              readKey,
+		MetadataPrivKey:      metadataSharedKey,
+		MetadataPubKey:       metadataSharedKey.GetPublic(),
+		encryptedMetadataKey: encMetadatKey,
 	}
 
 	return

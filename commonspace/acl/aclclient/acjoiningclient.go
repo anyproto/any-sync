@@ -114,7 +114,7 @@ func (c *aclJoiningClient) InviteJoin(ctx context.Context, spaceId string, paylo
 	if err != nil {
 		return
 	}
-	rec, err := acl.RecordBuilder().BuildInviteJoin(payload)
+	rec, err := acl.RecordBuilder().BuildInviteJoinWithoutApprove(payload)
 	if err != nil {
 		return
 	}
