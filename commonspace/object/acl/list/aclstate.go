@@ -913,7 +913,6 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !exists {
 		return nil, ErrNoSuchAccount
 	}
-	// TODO
 	if !decrypt {
 		return state.RequestMetadata, nil
 	}
