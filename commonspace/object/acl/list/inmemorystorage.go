@@ -86,7 +86,7 @@ func (t *inMemoryStorage) Get(ctx context.Context, id string) (StorageRecord, er
 func (t *inMemoryStorage) GetAfterOrder(ctx context.Context, order int, iter StorageIterator) error {
 	t.RLock()
 	defer t.RUnlock()
-	if order > len(t.records) {
+	if order > len(t.records) || order < 1 {
 		return nil
 	}
 	for i := order - 1; i < len(t.records); i++ {
