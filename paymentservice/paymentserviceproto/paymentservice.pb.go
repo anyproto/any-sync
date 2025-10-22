@@ -498,7 +498,9 @@ type GetSubscriptionResponse struct {
 	UserEmail             string `protobuf:"bytes,8,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
 	SubscribeToNewsletter bool   `protobuf:"varint,9,opt,name=subscribeToNewsletter,proto3" json:"subscribeToNewsletter,omitempty"`
 	// for tiers that support yearly/monthly only
-	IsMonthly     bool `protobuf:"varint,10,opt,name=isMonthly,proto3" json:"isMonthly,omitempty"`
+	IsMonthly bool `protobuf:"varint,10,opt,name=isMonthly,proto3" json:"isMonthly,omitempty"`
+	// if you are in the team
+	TeamOwner     string `protobuf:"bytes,11,opt,name=teamOwner,proto3" json:"teamOwner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -601,6 +603,13 @@ func (x *GetSubscriptionResponse) GetIsMonthly() bool {
 		return x.IsMonthly
 	}
 	return false
+}
+
+func (x *GetSubscriptionResponse) GetTeamOwner() string {
+	if x != nil {
+		return x.TeamOwner
+	}
+	return ""
 }
 
 type BuySubscriptionRequest struct {
@@ -2051,7 +2060,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_proto_rawDes
 	"ownerAnyID\"V\n" +
 	"\x1cGetSubscriptionRequestSigned\x12\x18\n" +
 	"\apayload\x18\x01 \x01(\fR\apayload\x12\x1c\n" +
-	"\tsignature\x18\x02 \x01(\fR\tsignature\"\x8e\x03\n" +
+	"\tsignature\x18\x02 \x01(\fR\tsignature\"\xac\x03\n" +
 	"\x17GetSubscriptionResponse\x12\x12\n" +
 	"\x04tier\x18\x01 \x01(\rR\x04tier\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.SubscriptionStatusR\x06status\x12 \n" +
@@ -2063,7 +2072,8 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_proto_rawDes
 	"\tuserEmail\x18\b \x01(\tR\tuserEmail\x124\n" +
 	"\x15subscribeToNewsletter\x18\t \x01(\bR\x15subscribeToNewsletter\x12\x1c\n" +
 	"\tisMonthly\x18\n" +
-	" \x01(\bR\tisMonthly\"\xa6\x02\n" +
+	" \x01(\bR\tisMonthly\x12\x1c\n" +
+	"\tteamOwner\x18\v \x01(\tR\tteamOwner\"\xa6\x02\n" +
 	"\x16BuySubscriptionRequest\x12\x1e\n" +
 	"\n" +
 	"ownerAnyId\x18\x01 \x01(\tR\n" +

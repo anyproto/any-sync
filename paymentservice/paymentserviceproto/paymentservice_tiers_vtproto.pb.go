@@ -189,6 +189,30 @@ func (m *TierData) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.IsUpgradeable {
+		i--
+		if m.IsUpgradeable {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xb8
+	}
+	if m.IsIntroPlan {
+		i--
+		if m.IsIntroPlan {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xb0
+	}
 	if m.PriceStripeUsdCentsMonthly != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PriceStripeUsdCentsMonthly))
 		i--
@@ -531,6 +555,12 @@ func (m *TierData) SizeVT() (n int) {
 	}
 	if m.PriceStripeUsdCentsMonthly != 0 {
 		n += 2 + protohelpers.SizeOfVarint(uint64(m.PriceStripeUsdCentsMonthly))
+	}
+	if m.IsIntroPlan {
+		n += 3
+	}
+	if m.IsUpgradeable {
+		n += 3
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1477,6 +1507,46 @@ func (m *TierData) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
+		case 22:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsIntroPlan", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsIntroPlan = bool(v != 0)
+		case 23:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsUpgradeable", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsUpgradeable = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
