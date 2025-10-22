@@ -27,11 +27,10 @@ func (st *AclState) setOneToOneAcl(rootId string, root *aclrecordproto.AclRoot) 
 	}
 
 	st.accountStates[string(sharedPk.Storage())] = AccountState{
-		PubKey:          sharedPk,
-		Permissions:     AclPermissionsOwner,
-		Status:          StatusActive,
-		RequestMetadata: []byte{},
-		KeyRecordId:     rootId,
+		PubKey:      sharedPk,
+		Permissions: AclPermissionsOwner,
+		Status:      StatusActive,
+		KeyRecordId: rootId,
 		PermissionChanges: []PermissionChange{
 			{
 				RecordId:   rootId,
@@ -48,11 +47,10 @@ func (st *AclState) setOneToOneAcl(rootId string, root *aclrecordproto.AclRoot) 
 		}
 
 		st.accountStates[string(writerPk.Storage())] = AccountState{
-			PubKey:          writerPk,
-			Permissions:     AclPermissionsWriter,
-			Status:          StatusActive,
-			RequestMetadata: []byte{},
-			KeyRecordId:     rootId,
+			PubKey:      writerPk,
+			Permissions: AclPermissionsWriter,
+			Status:      StatusActive,
+			KeyRecordId: rootId,
 			PermissionChanges: []PermissionChange{
 				{
 					RecordId:   rootId,
