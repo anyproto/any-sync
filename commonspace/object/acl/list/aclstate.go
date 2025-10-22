@@ -951,7 +951,7 @@ func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byt
 	if !exists {
 		return nil, ErrNoSuchAccount
 	}
-	if !decrypt || st.IsOneToOne() {
+	if !decrypt {
 		return state.RequestMetadata, nil
 	}
 	aclKeys := st.keys[state.KeyRecordId]
