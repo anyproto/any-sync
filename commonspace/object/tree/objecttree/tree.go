@@ -291,7 +291,6 @@ func (t *Tree) attach(c *Change, newEl bool) {
 		// prev id must already be attached if we attach this id, so we don't need to check if it exists
 		prev := t.attached[id]
 		c.Previous = append(c.Previous, prev)
-		// TODO Use binary search to insert to the correct position
 		// appending c to next changes of all previous changes
 		if len(prev.Next) == 0 || prev.Next[len(prev.Next)-1].Id <= c.Id {
 			prev.Next = append(prev.Next, c)
