@@ -26,9 +26,12 @@ type Tree struct {
 	root               *Change
 	headIds            []string
 	lastIteratedHeadId string
-	attached           map[string]*Change
-	unAttached         map[string]*Change
-	// missed id -> list of dependency ids
+	// attached is a set of all Changes that have been successfully handled and added (attached) to the tree
+	attached map[string]*Change
+	// unAttached is a set of pending Changes that wait for all their dependencies (previous changes) to be attached to the tree
+	unAttached map[string]*Change
+	// waitList is a set of all changes that wait for a previous change with id as a key to be attached.
+	// previous change id => list of dependent change ids
 	waitList       map[string][]string
 	invalidChanges map[string]struct{}
 	possibleRoots  []*Change
@@ -238,19 +241,17 @@ func (t *Tree) add(c *Change) bool {
 	return attach
 }
 
+// canAttachOrRemoves returns attach=true if all previous changes are already present in a tree.
+// If some previous change is not yet in the tree and addToWait is true, then add the current change to the wait list for
+// this previous change.
+// TODO Research how `remove` flag is used
 func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool) {
 	if c == nil {
 		return false, false
 	}
 	attach = true
-	prevSnapshots := make([]string, 0, len(c.PreviousIds))
 	for _, pid := range c.PreviousIds {
-		if prev, ok := t.attached[pid]; ok {
-			if prev.IsSnapshot && len(c.PreviousIds) == 1 {
-				prevSnapshots = append(prevSnapshots, prev.Id)
-			} else {
-				prevSnapshots = append(prevSnapshots, prev.SnapshotId)
-			}
+		if _, ok := t.attached[pid]; ok {
 			continue
 		}
 		attach = false
@@ -279,6 +280,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	if !newEl {
 		delete(t.unAttached, c.Id)
 	}
+	// Update snapshot counter. It could be 0 if it's the first snapshot of a tree
 	if c.SnapshotCounter == 0 {
 		t.possibleRoots = append(t.possibleRoots, c)
 		c.SnapshotCounter = t.attached[c.SnapshotId].SnapshotCounter + 1
@@ -289,6 +291,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 		// prev id must already be attached if we attach this id, so we don't need to check if it exists
 		prev := t.attached[id]
 		c.Previous = append(c.Previous, prev)
+		// TODO Use binary search to insert to the correct position
 		// appending c to next changes of all previous changes
 		if len(prev.Next) == 0 || prev.Next[len(prev.Next)-1].Id <= c.Id {
 			prev.Next = append(prev.Next, c)
@@ -307,7 +310,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	}
 	// TODO: as a future optimization we can actually sort next later after we finished building the tree
 
-	// clearing wait list
+	// Check the wait list
 	if waitIds, ok := t.waitList[c.Id]; ok {
 		for _, wid := range waitIds {
 			// next can only be in unAttached, because if next is attached then previous (we) are attached
@@ -315,12 +318,13 @@ func (t *Tree) attach(c *Change, newEl bool) {
 			next := t.unAttached[wid]
 			attach, remove := t.canAttachOrRemove(next, false)
 			if attach {
+				// All previous changes are attached for a waiting change, so we can attach it now.
 				t.attach(next, false)
 			} else if remove {
 				delete(t.unAttached, next.Id)
 			}
-			// if we can't attach next that means that some other change will trigger attachment later,
-			// so we don't care about those changes
+			// If we can't still attach it, it means that we don't have all dependencies (previous changes) attached.
+			// Just wait and eventually all previous changes should be added to the tree.
 		}
 		delete(t.waitList, c.Id)
 	}

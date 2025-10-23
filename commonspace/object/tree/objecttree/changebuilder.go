@@ -11,6 +11,7 @@ import (
 var ErrEmptyChange = errors.New("change payload should not be empty")
 
 type BuilderContent struct {
+	// TreeHeadsIds are current heads in the tree. They become PreviousIds in the new change
 	TreeHeadIds    []string
 	AclHeadId      string
 	SnapshotBaseId string

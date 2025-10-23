@@ -25,13 +25,16 @@ type Change struct {
 	Identity    crypto.PubKey
 	Data        []byte
 	// TODO: add call one time comment
-	Model           interface{}
-	Signature       []byte
-	DataType        string
-	IsSnapshot      bool
-	IsDerived       bool
-	IsNew           bool
-	OrderId         string
+	Model      interface{}
+	Signature  []byte
+	DataType   string
+	IsSnapshot bool
+	IsDerived  bool
+	IsNew      bool
+	OrderId    string
+
+	// SnapshotCounter is the number of previous snapshots in the current branch. For the first snapshot it's zero, for all next changes
+	// it increases every time a new snapshot is created. You can think of it as depth of the node in a snapshots tree.
 	SnapshotCounter int
 
 	// using this on build stage
