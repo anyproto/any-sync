@@ -105,42 +105,40 @@ func buildSortedContext(a, b []byte) []byte {
 	return append(append([]byte{}, label...), append(b, a...)...)
 }
 
-func GenerateSharedKey(aSk PrivKey, bPk PubKey, derivePath string) (PrivKey, error) {
+// GenerateSharedKey derives an asymmetric key from a private key A (Alice), a public key B (Bob) and a derivation path.
+// It uses X25519 key exchange to derive a shared secret. Resulting key pair is identical both for Alice and for Bob.
+func GenerateSharedKey(aPrivKey PrivKey, bPubKey PubKey, derivePath string) (PrivKey, error) {
 	if derivePath == "" {
 		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be not empty")
 	} else if !slip21.IsValidPath(derivePath) {
 		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be valid slip21 path, but got: %s", derivePath)
 	}
 
-	skRaw, err := aSk.Raw()
+	aPrivKeyRaw, err := aPrivKey.Raw()
 	if err != nil {
 		return nil, err
 	}
-	skCurve := Ed25519PrivateKeyToCurve25519(ed25519.PrivateKey(skRaw))
+	aPrivKeyCurve := Ed25519PrivateKeyToCurve25519(aPrivKeyRaw)
 
-	pkRaw, err := bPk.Raw()
-	if err != nil {
-		return nil, err
-	}
-
-	pkCurve := Ed25519PublicKeyToCurve25519(pkRaw)
-
-	shared, err := curve25519.X25519(skCurve, pkCurve[:])
+	bPubKeyRaw, err := bPubKey.Raw()
 	if err != nil {
 		return nil, err
 	}
 
-	aPkRaw, err := aSk.GetPublic().Raw()
+	bPubKeyCurve := Ed25519PublicKeyToCurve25519(bPubKeyRaw)
+
+	shared, err := curve25519.X25519(aPrivKeyCurve, bPubKeyCurve[:])
 	if err != nil {
 		return nil, err
 	}
 
-	bPkRaw, err := bPk.Raw()
+	aPubKeyRaw, err := aPrivKey.GetPublic().Raw()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := buildSortedContext(aPkRaw, bPkRaw)
+	// build the stable context information for key derivation
+	ctx := buildSortedContext(aPubKeyRaw, bPubKeyRaw)
 	h := hkdf.New(sha256.New, shared, nil, ctx)
 	var seed [32]byte
 	if _, err := io.ReadFull(h, seed[:]); err != nil {

@@ -255,9 +255,11 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 	}
 	st, err = s.createSpaceStorage(ctx, payload)
 	if err != nil {
-		err = spacesyncproto.ErrUnexpected
+
 		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			err = spacesyncproto.ErrSpaceExists
+		} else {
+			err = spacesyncproto.ErrUnexpected
 		}
 		return
 	}

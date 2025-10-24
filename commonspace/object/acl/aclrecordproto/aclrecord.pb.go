@@ -298,11 +298,14 @@ func (x *AclOneToOneInfo) GetWriters() [][]byte {
 
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 type AclAccountInvite struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	InviteKey        []byte                 `protobuf:"bytes,1,opt,name=inviteKey,proto3" json:"inviteKey,omitempty"`
-	InviteType       AclInviteType          `protobuf:"varint,2,opt,name=inviteType,proto3,enum=aclrecord.AclInviteType" json:"inviteType,omitempty"`
-	Permissions      AclUserPermissions     `protobuf:"varint,3,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
-	EncryptedReadKey []byte                 `protobuf:"bytes,4,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	InviteKey  []byte                 `protobuf:"bytes,1,opt,name=inviteKey,proto3" json:"inviteKey,omitempty"`
+	InviteType AclInviteType          `protobuf:"varint,2,opt,name=inviteType,proto3,enum=aclrecord.AclInviteType" json:"inviteType,omitempty"`
+	// permissions tells with which permissions the user joins the space. Used only for invites without approve.
+	Permissions AclUserPermissions `protobuf:"varint,3,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
+	// encryptedReadKey is used when the user creates an invite without approve. So everyone having the invite
+	// can join the space immediately. The key could only be decrypted using the inviteKey
+	EncryptedReadKey []byte `protobuf:"bytes,4,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -548,7 +551,8 @@ type AclAccountInviteJoin struct {
 	InviteRecordId          string                 `protobuf:"bytes,2,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
 	InviteIdentitySignature []byte                 `protobuf:"bytes,3,opt,name=inviteIdentitySignature,proto3" json:"inviteIdentitySignature,omitempty"`
 	// Metadata is encrypted with metadata key of the space
-	Metadata         []byte             `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Metadata []byte `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// encryptedReadKey is the read key of a space encrypted using person's public key
 	EncryptedReadKey []byte             `protobuf:"bytes,5,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 	Permissions      AclUserPermissions `protobuf:"varint,6,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
 	unknownFields    protoimpl.UnknownFields

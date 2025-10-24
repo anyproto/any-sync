@@ -111,7 +111,7 @@ type AclRecordBuilder interface {
 	BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error)
 	BuildInviteChange(inviteChange InviteChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInviteRevoke(inviteRecordId string) (rawRecord *consensusproto.RawRecord, err error)
-	BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildInviteJoinWithoutApprove(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
@@ -407,7 +407,10 @@ func (a *aclRecordBuilder) buildInvite() (invKey crypto.PrivKey, content *aclrec
 	if err != nil {
 		return
 	}
-	inviteRec := &aclrecordproto.AclAccountInvite{InviteKey: invitePubKey}
+	inviteRec := &aclrecordproto.AclAccountInvite{
+		InviteKey:  invitePubKey,
+		InviteType: aclrecordproto.AclInviteType_RequestToJoin,
+	}
 	content = &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}
 	invKey = privKey
 	return
@@ -434,6 +437,8 @@ func (a *aclRecordBuilder) buildInviteChange(inviteChange InviteChangePayload) (
 	return
 }
 
+// BuildInviteAnyone creates such an invite, so anyone who has an invitation link can join a space without approve.
+// To do so, we distribute the read key, encrypted by the public part of the invite key, directly in the invite data.
 func (a *aclRecordBuilder) BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error) {
 	privKey, content, err := a.buildInviteAnyone(permissions)
 	if err != nil {
@@ -559,7 +564,10 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
+// BuildInviteJoinWithoutApprove creates a join without approve request. To do so, the current account decrypts
+// the space read key and encrypts it using the account public key. This scheme with re-encrypting the read key
+// ensures that no one except the joining account can see the read key.
+func (a *aclRecordBuilder) BuildInviteJoinWithoutApprove(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
 	var inviteId string
 	for id, inv := range a.state.invites {
 		if inv.Key.Equals(payload.InviteKey.GetPublic()) && inv.Type == aclrecordproto.AclInviteType_AnyoneCanJoin {
@@ -572,12 +580,10 @@ func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord
 		return
 	}
 	if !payload.InviteKey.GetPublic().Equals(invite.Key) {
-		err = ErrIncorrectInviteKey
-		return
+		return nil, ErrIncorrectInviteKey
 	}
 	if !a.state.Permissions(a.accountKeys.SignKey.GetPublic()).NoPermissions() {
-		err = ErrInsufficientPermissions
-		return
+		return nil, ErrInsufficientPermissions
 	}
 	mkKey, err := a.state.CurrentMetadataKey()
 	if err != nil {
@@ -598,7 +604,8 @@ func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord
 	if err != nil {
 		return
 	}
-	key, err := a.state.DecryptInvite(payload.InviteKey)
+
+	key, err := a.state.decryptReadKeyFromInviteWithoutApprove(payload.InviteKey)
 	if err != nil {
 		return
 	}
@@ -606,6 +613,8 @@ func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord
 	if err != nil {
 		return
 	}
+
+	// Re-encrypt the read key
 	encReadKey, err := a.accountKeys.SignKey.GetPublic().Encrypt(readKey)
 	if err != nil {
 		return
@@ -634,6 +643,8 @@ func (a *aclRecordBuilder) BuildRequestAccept(payload RequestAcceptPayload) (raw
 	return a.buildRecord(content)
 }
 
+// buildRequestAccept encrypts the current read key for a space using the public key (Identity) of the joining account.
+// After the record is added to ACL, the joining account can decrypt the read key using its own private key.
 func (a *aclRecordBuilder) buildRequestAccept(payload RequestAcceptPayload, readKey crypto.SymKey) (value *aclrecordproto.AclContentValue, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
@@ -654,6 +665,8 @@ func (a *aclRecordBuilder) buildRequestAccept(payload RequestAcceptPayload, read
 	if err != nil {
 		return nil, err
 	}
+
+	// Encrypt the read key using the public key of the joining account
 	enc, err := request.RequestIdentity.Encrypt(protoKey)
 	if err != nil {
 		return nil, err
