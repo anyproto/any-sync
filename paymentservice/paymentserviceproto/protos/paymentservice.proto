@@ -74,6 +74,8 @@ message GetSubscriptionResponse {
   bool subscribeToNewsletter = 9;
   // for tiers that support yearly/monthly only
   bool isMonthly = 10;
+  // if you are in the team
+  string teamOwner = 11;
 }
 
 message BuySubscriptionRequest {
