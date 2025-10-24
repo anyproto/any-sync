@@ -34,8 +34,8 @@ var (
 	// ProtoVersion 7 - sync with new invites
 	// ProtoVersion 8 - acl: transfer ownership feature
 	// ProtoVersion 9 - space header V1
-	CompatibleVersion = uint32(8)
-	ProtoVersion      = uint32(9)
+	CompatibleVersion = uint32(9)
+	ProtoVersion      = uint32(8)
 )
 
 var (
