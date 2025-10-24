@@ -28,7 +28,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/streampool"
 )
 
 type SpaceDescription struct {
@@ -81,7 +80,6 @@ type space struct {
 	peerManager  peermanager.PeerManager
 	headSync     headsync.HeadSync
 	syncService  syncservice.SyncService
-	streamPool   streampool.StreamPool
 	syncStatus   syncstatus.StatusUpdater
 	settings     settings.Settings
 	storage      spacestorage.SpaceStorage
@@ -209,7 +207,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
-	s.streamPool = s.app.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
 	s.keyValue = s.app.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)

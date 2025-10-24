@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
@@ -127,16 +128,13 @@ func build(deps internalDeps) (list AclList, err error) {
 		records = append(records, record)
 	}
 
-	indexes := make(map[string]int)
-	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
-		records[i], records[j] = records[j], records[i]
-		indexes[records[i].Id] = i
-		indexes[records[j].Id] = j
+	// Reverse records so the first record goes first
+	slices.Reverse(records)
+	indexes := make(map[string]int, len(records))
+	for i, rec := range records {
+		indexes[rec.Id] = i
 	}
-	// adding missed index if needed
-	if len(records)%2 != 0 {
-		indexes[records[len(records)/2].Id] = len(records) / 2
-	}
+
 	// TODO: check if this is correct (raw model instead of unmarshalled)
 	rootWithId, err := storage.Root(ctx)
 	if err != nil {
