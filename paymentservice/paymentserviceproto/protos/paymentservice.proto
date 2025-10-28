@@ -72,6 +72,10 @@ message GetSubscriptionResponse {
   // if user verified her email OR provided it while buying a subscription, it will be here
   string userEmail = 8;
   bool subscribeToNewsletter = 9;
+  // for tiers that support yearly/monthly only
+  bool isMonthly = 10;
+  // if you are in the team
+  string teamOwner = 11;
 }
 
 message BuySubscriptionRequest {
@@ -91,6 +95,11 @@ message BuySubscriptionRequest {
   string requestedAnyName = 5;
   // for some payment methods we need to know the user's email
   string userEmail = 6;
+
+  // some tiers provide a monthly price also (see priceStripeUsdCentsMonthly field)
+  // pass <true> here if you want to buy monthly version of some tier
+  // will be ignored if the tier has no yearly/monthly switch
+  bool isMonthly = 7;
 }
 
 message BuySubscriptionRequestSigned {

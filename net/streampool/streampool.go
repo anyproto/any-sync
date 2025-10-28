@@ -45,12 +45,14 @@ type MessageQueueId interface {
 	DrpcMessage() drpc.Message
 }
 
-// StreamPool keeps and read streams
+// StreamPool stores opened streams, and it processes them using StreamHandler
+// It opens a stream using StreamHandler.OpenStream method, if needed.
+// Also, it could send requests to tagged streams or just to specific peers. For example, a stream could be tagged with a specific spaceId.
 type StreamPool interface {
 	app.ComponentRunnable
 	// AddStream adds new outgoing stream into the pool
 	AddStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
-	// ReadStream adds new incoming stream and synchronously read it
+	// ReadStream adds new incoming stream and synchronously reads it
 	ReadStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)

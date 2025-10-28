@@ -588,7 +588,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			}
 		}
 		invite := a.invites[inviteParts[0]]
-		inviteJoin, err := acl.RecordBuilder().BuildInviteJoin(InviteJoinPayload{
+		inviteJoin, err := acl.RecordBuilder().BuildInviteJoinWithoutApprove(InviteJoinPayload{
 			InviteKey:   invite,
 			Metadata:    []byte(account),
 			Permissions: permissions,

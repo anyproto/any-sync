@@ -28,6 +28,8 @@ func (t *Tree) makeRootAndRemove(start *Change) {
 			return true
 		},
 		func(changes []*Change) {
+			// TODO Although changes are removed from the attached set, they are all still in memory.
+			// TODO If prev changes are still in memory, looks like we don't need to load changes for reduced tree (if we require them) from the store.
 			for _, ch := range changes {
 				delete(t.attached, ch.Id)
 			}
@@ -39,7 +41,43 @@ func (t *Tree) makeRootAndRemove(start *Change) {
 	t.root = start
 }
 
-// reduceTree tries to reduce the tree to one of possible tree roots
+// reduceTree tries to reduce the tree to one of possible tree roots. If we need to add change to the truncated tree,
+// we have to rebuild tree starting from the snapshot of the added change.
+/* Let's see an example. For clarity, let's look only on snapshots, just imagine that after each snapshot we have a lot of changes.
+Let's reduce this tree with heads [sn 5, sn 3, sn 4]:
+          ┌────┐
+          │sn 1│
+          └──┬─┘
+             │
+          ┌──▼─┐
+          │sn 2├──────┐
+          └──┬─┘      │
+             │        │
+          ┌──▼─┐   ┌──▼─┐
+      ┌───│sn 3│   │sn 4│
+      │   └────┘   └────┘
+   ┌──▼─┐
+   │sn 5│
+   └────┘
+
+The snapshots path from the first head (sn 5 here) to the root is: sn 5 -> sn 3 -> sn 2 -> sn 1
+For head sn 3 it's: sn 3 -> sn 2 -> sn 1
+For head sn 4 it's: sn 4 -> sn 2 -> sn 1
+
+All these paths intersect at snapshot sn 2, so we can now assign sn 2 as the new root of the tree:
+
+          ┌────┐
+          │sn 2├──────┐
+          └──┬─┘      │
+             │        │
+          ┌──▼─┐   ┌──▼─┐
+      ┌───│sn 3│   │sn 4│
+      │   └────┘   └────┘
+   ┌──▼─┐
+   │sn 5│
+   └────┘
+
+*/
 func (t *Tree) reduceTree() (res bool) {
 	if len(t.possibleRoots) == 0 {
 		return
@@ -50,30 +88,31 @@ func (t *Tree) reduceTree() (res bool) {
 		t.makeRootAndRemove(firstHead)
 		return true
 	}
-	cur, ok := t.attached[firstHead.SnapshotId]
+	curSnapshot, ok := t.attached[firstHead.SnapshotId]
 	if !ok {
 		log.Error("snapshot not found in tree", zap.String("snapshotId", t.attached[t.headIds[0]].SnapshotId))
 		return false
 	}
 	if len(t.headIds) == 1 {
 		t.clearPossibleRoots()
-		t.makeRootAndRemove(cur)
+		t.makeRootAndRemove(curSnapshot)
 		return true
 	}
-	// gathering snapshots from first head to root
+	// Gather snapshots from first head to root
 	var path []*Change
-	for cur.Id != t.root.Id {
-		cur.visited = true
-		path = append(path, cur)
-		cur, ok = t.attached[cur.SnapshotId]
+	for curSnapshot.Id != t.root.Id {
+		curSnapshot.visited = true
+		path = append(path, curSnapshot)
+		curSnapshot, ok = t.attached[curSnapshot.SnapshotId]
 		if !ok {
-			log.Error("snapshot not found in tree", zap.String("snapshotId", cur.SnapshotId))
+			log.Error("snapshot not found in tree", zap.String("snapshotId", curSnapshot.SnapshotId))
 			return false
 		}
 	}
 	path = append(path, t.root)
 	t.root.visited = true
-	// checking where paths from other heads intersect path
+
+	// Find the intersection point for snapshot paths of all heads. It will be the latest common snapshot for all those heads
 	maxIdx := 0
 	for i := 1; i < len(t.headIds); i++ {
 		headSnapshot := t.attached[t.headIds[i]].SnapshotId

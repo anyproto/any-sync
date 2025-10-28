@@ -1,13 +1,20 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
+	"fmt"
+	"io"
+
 	"filippo.io/edwards25519"
+	"github.com/anyproto/go-slip21"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -85,4 +92,67 @@ func DecryptX25519(privKey, pubKey *[32]byte, encrypted []byte) ([]byte, error) 
 		return nil, ErrX25519DecryptionFailed
 	}
 	return decrypted, nil
+}
+
+//
+
+func buildSortedContext(a, b []byte) []byte {
+	// add label here so that we can distinguish from other potential implementations
+	label := []byte("joined-identity-v1")
+	if bytes.Compare(a, b) <= 0 {
+		return append(append([]byte{}, label...), append(a, b...)...)
+	}
+	return append(append([]byte{}, label...), append(b, a...)...)
+}
+
+// GenerateSharedKey derives an asymmetric key from a private key A (Alice), a public key B (Bob) and a derivation path.
+// It uses X25519 key exchange to derive a shared secret. Resulting key pair is identical both for Alice and for Bob.
+func GenerateSharedKey(aPrivKey PrivKey, bPubKey PubKey, derivePath string) (PrivKey, error) {
+	if derivePath == "" {
+		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be not empty")
+	} else if !slip21.IsValidPath(derivePath) {
+		return nil, fmt.Errorf("GenerateSharedKey: derivePath must be valid slip21 path, but got: %s", derivePath)
+	}
+
+	aPrivKeyRaw, err := aPrivKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+	aPrivKeyCurve := Ed25519PrivateKeyToCurve25519(aPrivKeyRaw)
+
+	bPubKeyRaw, err := bPubKey.Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	bPubKeyCurve := Ed25519PublicKeyToCurve25519(bPubKeyRaw)
+
+	shared, err := curve25519.X25519(aPrivKeyCurve, bPubKeyCurve[:])
+	if err != nil {
+		return nil, err
+	}
+
+	aPubKeyRaw, err := aPrivKey.GetPublic().Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	// build the stable context information for key derivation
+	ctx := buildSortedContext(aPubKeyRaw, bPubKeyRaw)
+	h := hkdf.New(sha256.New, shared, nil, ctx)
+	var seed [32]byte
+	if _, err := io.ReadFull(h, seed[:]); err != nil {
+		return nil, err
+	}
+
+	node, err := slip21.DeriveForPath(derivePath, seed[:])
+	if err != nil {
+		return nil, err
+	}
+	child := node.SymmetricKey()
+	copy(seed[:], child)
+
+	jointPriv := ed25519.NewKeyFromSeed(seed[:])
+
+	return NewEd25519PrivKey(jointPriv), nil
 }

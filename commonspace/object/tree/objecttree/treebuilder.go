@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -50,12 +49,6 @@ func newTreeBuilder(storage Storage, builder ChangeBuilder) *treeBuilder {
 func (tb *treeBuilder) BuildFull() (*Tree, error) {
 	return tb.build(treeBuilderOpts{full: true})
 }
-
-var (
-	totalSnapshots atomic.Int32
-	totalCommon    atomic.Int32
-	totalLowest    atomic.Int32
-)
 
 func (tb *treeBuilder) buildWithAdded(opts treeBuilderOpts) (*Tree, []*Change, error) {
 	cache := make(map[string]*Change)
@@ -118,7 +111,6 @@ func (tb *treeBuilder) buildWithAdded(opts treeBuilderOpts) (*Tree, []*Change, e
 	} else {
 		snapshot = tb.storage.Id()
 	}
-	totalSnapshots.Store(totalSnapshots.Load() + 1)
 	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get common snapshot %s: %w", snapshot, err)
@@ -199,7 +191,6 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 		}
 	} else {
 		for _, head := range heads {
-			totalLowest.Store(totalLowest.Load() + 1)
 			ch, err := tb.storage.Get(tb.ctx, head)
 			if err != nil {
 				return "", nil, err
@@ -207,6 +198,7 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			if ch.OrderId > maxOrder {
 				maxOrder = ch.OrderId
 			}
+			// TODO This is probably a bug, we might need to use next slice instead of snapshots
 			if ch.SnapshotId != "" {
 				snapshots = append(snapshots, ch.SnapshotId)
 			} else if len(ch.PrevIds) == 0 && ch.Id == tb.storage.Id() { // this is a root change
@@ -249,6 +241,25 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 	return maxOrder, snapshots, nil
 }
 
+// commonSnapshot returns the id of a snapshot where all other branches intersect
+/*
+For example, in this tree we starts from snapshots [sn 8, sn 6, sn 7] and get sn 2 as the common snapshot.
+     ┌────┐
+     │sn 1│
+     └┬───┘
+     ┌▽──────┐
+     │sn 2   │
+     └┬─────┬┘
+     ┌▽───┐┌▽──────┐
+     │sn 3││sn 4   │
+     └┬───┘└┬─────┬┘
+     ┌▽───┐┌▽───┐┌▽───┐
+     │sn 5││sn 6││sn 7│
+     └┬───┘└────┘└────┘
+     ┌▽───┐
+     │sn 8│
+     └────┘
+*/
 func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err error) {
 	var (
 		current       []StorageChange
@@ -257,7 +268,6 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 	// TODO: we should actually check for all changes if they have valid snapshots
 	// getting actual snapshots
 	for _, id := range snapshots {
-		totalCommon.Store(totalCommon.Load() + 1)
 		ch, err := tb.storage.Get(tb.ctx, id)
 		if err != nil {
 			log.Error("failed to get snapshot", zap.String("id", id), zap.Error(err))
@@ -268,10 +278,11 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 			lowestCounter = ch.SnapshotCounter
 		}
 	}
-	// equalizing counters for each snapshot branch
+	// Equalizing depths for each snapshot branch
+	// The result of this operation for example tree is [sn 5, sn 6, sn 7]
 	for i, ch := range current {
+		// Go down the tree to the older snapshots until all current snapshot branches don't have the same level
 		for ch.SnapshotCounter > lowestCounter {
-			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", fmt.Errorf("failed to get snapshot: %w", err)
@@ -279,7 +290,16 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 		}
 		current[i] = ch
 	}
-	// finding common snapshot
+
+	// Find the common snapshot by gradually going down the tree for each snapshot until we find a single intersection point
+	// This point is the common snapshot.
+	// Step-by-step example:
+	// 1. We start from [sn 5, sn 6, sn 7]
+	// 2. No duplicates, so proceed to going down the tree: [sn 3, sn 4, sn 4]
+	// 3. Remove duplicates: [sn 3, sn 4]
+	// 4. Go down the tree: [sn 2, sn 2]
+	// 5. Remove duplicates: [sn 2]
+	// 6. sn 2 is the only snapshot left, it's the common snapshot
 	for {
 		slices.SortFunc(current, func(a, b StorageChange) int {
 			if a.SnapshotId < b.SnapshotId {
@@ -290,7 +310,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 			}
 			return 0
 		})
-		// removing same snapshots
+		// Remove duplicated snapshots. Duplicated snapshots mean that multiple branches converged to a single branch
 		current = slice.DiscardDuplicatesSortedFunc(current, func(a, b StorageChange) bool {
 			return a.SnapshotId == b.SnapshotId
 		})
@@ -298,9 +318,8 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 		if len(current) == 1 {
 			return current[0].Id, nil
 		}
-		// go down one counter
+		// go down one level
 		for i, ch := range current {
-			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", fmt.Errorf("failed to get snapshot: %w", err)
