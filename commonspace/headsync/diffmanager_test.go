@@ -201,7 +201,7 @@ func TestDiffManager_FillDiff(t *testing.T) {
 		headEntries := []headstorage.HeadsEntry{
 			{
 				Id:             "id1",
-				Heads:          []string{"id1"},  // Singular root
+				Heads:          []string{"id1"}, // Singular root
 				CommonSnapshot: "snapshot1",
 				IsDerived:      false,
 			},
@@ -282,7 +282,7 @@ func TestDiffManager_FillDiff(t *testing.T) {
 		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().Return("oldHash")
 		fx.diffMock.EXPECT().Hash().Return("newHash")
-		
+
 		expectedErr := fmt.Errorf("hash error")
 		fx.stateStorage.EXPECT().SetHash(ctx, "oldHash", "newHash").Return(expectedErr)
 
@@ -321,7 +321,7 @@ func TestDiffManager_TryDiff(t *testing.T) {
 
 		fx.diffContainerMock.EXPECT().DiffTypeCheck(ctx, remoteDiff).Return(false, nil, nil)
 
-		newIds, changedIds, removedIds,  err := fx.diffManager.TryDiff(ctx, remoteDiff)
+		newIds, changedIds, removedIds, err := fx.diffManager.TryDiff(ctx, remoteDiff)
 		require.NoError(t, err)
 		require.Nil(t, newIds)
 		require.Nil(t, changedIds)
@@ -335,9 +335,9 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		defer fx.stop()
 
 		deleteStatus := headstorage.DeletedStatusDeleted
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:            "id1",
-			DeletedStatus: &deleteStatus,
+			DeletedStatus: deleteStatus,
 		}
 
 		fx.diffContainerMock.EXPECT().RemoveId("id1").Return(nil)
@@ -353,13 +353,13 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "store",
 			Heads: []string{"head1"},
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("store").Return(false)
-		
+
 		hasher := ldiff.NewHasher()
 		hash := hasher.HashId("head1")
 		ldiff.ReleaseHasher(hasher)
@@ -386,13 +386,13 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "id1",
 			Heads: []string{"head1", "head2"},
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
-		
+
 		hasher := ldiff.NewHasher()
 		hash := hasher.HashId("head1head2")
 		ldiff.ReleaseHasher(hasher)
@@ -419,7 +419,7 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "id1",
 			Heads: []string{"head1"},
 		}
@@ -433,11 +433,10 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		isDerived := true
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:        "id1",
 			Heads:     []string{"id1"},
-			IsDerived: &isDerived,
+			IsDerived: true,
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
@@ -449,13 +448,13 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "id1",
-			Heads: []string{"id1"},  // Singular root
+			Heads: []string{"id1"}, // Singular root
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
-		
+
 		hasher := ldiff.NewHasher()
 		hash := hasher.HashId("id1")
 		ldiff.ReleaseHasher(hasher)
@@ -475,13 +474,13 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "id1",
-			Heads: []string{},  // Empty heads
+			Heads: []string{}, // Empty heads
 		}
 
 		fx.deletionStateMock.EXPECT().Exists("id1").Return(false)
-		
+
 		hasher := ldiff.NewHasher()
 		hash := hasher.HashId("")
 		ldiff.ReleaseHasher(hasher)
@@ -508,7 +507,7 @@ func TestDiffManager_UpdateHeads(t *testing.T) {
 		fx := newDiffManagerFixture(t)
 		defer fx.stop()
 
-		update := headstorage.HeadsUpdate{
+		update := headstorage.HeadsEntry{
 			Id:    "id1",
 			Heads: []string{"head1"},
 		}
@@ -602,4 +601,3 @@ func TestDiffManager_AllIds(t *testing.T) {
 		require.Equal(t, expectedIds, ids)
 	})
 }
-

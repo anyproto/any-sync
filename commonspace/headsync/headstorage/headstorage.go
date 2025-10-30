@@ -61,7 +61,7 @@ type HeadStorage interface {
 }
 
 type Observer interface {
-	OnUpdate(update HeadsUpdate)
+	OnUpdate(update HeadsEntry)
 }
 
 type headStorage struct {
@@ -112,7 +112,7 @@ func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIt
 		if err != nil {
 			return fmt.Errorf("doc not found: %w", err)
 		}
-		cont, err := entryIter(h.entryFromDoc(doc))
+		cont, err := entryIter(entryFromVal(doc.Value()))
 		if !cont {
 			return err
 		}
@@ -125,7 +125,7 @@ func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, erro
 	if err != nil {
 		return HeadsEntry{}, err
 	}
-	return h.entryFromDoc(doc), nil
+	return entryFromVal(doc.Value()), nil
 }
 
 func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err error) {
@@ -142,10 +142,11 @@ func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err 
 }
 
 func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (err error) {
+	var resultEntry HeadsEntry
 	defer func() {
 		if err == nil {
 			for _, observer := range h.observers {
-				observer.OnUpdate(update)
+				observer.OnUpdate(resultEntry)
 			}
 		}
 	}()
@@ -166,6 +167,7 @@ func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (er
 				v.Set(derivedStatusKey, a.NewFalse())
 			}
 		}
+		resultEntry = entryFromVal(v)
 		return v, true, nil
 	})
 	_, err = h.headsColl.UpsertId(ctx, update.Id, mod)
@@ -176,12 +178,12 @@ func (h *headStorage) DeleteEntryTx(ctx context.Context, id string) error {
 	return h.headsColl.DeleteId(ctx, id)
 }
 
-func (h *headStorage) entryFromDoc(doc anystore.Doc) HeadsEntry {
+func entryFromVal(val *anyenc.Value) HeadsEntry {
 	return HeadsEntry{
-		Id:             doc.Value().GetString(idKey),
-		Heads:          storeutil.StringsFromArrayValue(doc.Value(), headsKey),
-		CommonSnapshot: doc.Value().GetString(commonSnapshotKey),
-		DeletedStatus:  DeletedStatus(doc.Value().GetInt(DeletedStatusKey)),
-		IsDerived:      doc.Value().GetBool(derivedStatusKey),
+		Id:             val.GetString(idKey),
+		Heads:          storeutil.StringsFromArrayValue(val, headsKey),
+		CommonSnapshot: val.GetString(commonSnapshotKey),
+		DeletedStatus:  DeletedStatus(val.GetInt(DeletedStatusKey)),
+		IsDerived:      val.GetBool(derivedStatusKey),
 	}
 }

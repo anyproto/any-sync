@@ -134,15 +134,15 @@ func (dm *DiffManager) TryDiff(ctx context.Context, rdiff RemoteDiff) (newIds, c
 	return newIds, changedIds, removedIds, nil
 }
 
-func (dm *DiffManager) UpdateHeads(update headstorage.HeadsUpdate) {
-	if update.DeletedStatus != nil {
+func (dm *DiffManager) UpdateHeads(update headstorage.HeadsEntry) {
+	if update.DeletedStatus != headstorage.DeletedStatusNotDeleted {
 		_ = dm.diffContainer.RemoveId(update.Id)
 	} else {
 		if dm.deletionState.Exists(update.Id) {
 			return
 		}
 		// don't update for derived in both cases
-		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
+		if update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}
 		hasher := ldiff.NewHasher()
