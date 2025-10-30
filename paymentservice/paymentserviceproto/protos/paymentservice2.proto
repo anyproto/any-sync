@@ -18,26 +18,30 @@ message MembershipV2 {
     int64 amountCents = 2;
   }
 
+  message Features {
+    uint64 storageBytes = 1;
+    uint32 spaceReaders = 2;
+    uint32 spaceWriters = 3;
+    uint32 sharedSpaces = 4;
+    uint32 teamSeats = 5;
+    uint32 anyNameCount = 6;
+    uint32 anyNameMinLen = 7; 
+  }
+
   message Product {
     // this is a unique Payment Node ID
     // adding 2 same products to a cart means we will have 2 items with same ID
     string id = 1;
-    // is it a product that should be attached to a space
-    bool isAttachToSpace = 2;
-    // the price of a Package may not be equal to the sum of all underlying products
-    bool isPackage = 3;
-    // localized
-    string name = 4;
-    string description = 5;
-
+    string name = 2;
+    string description = 3;
+    bool isTopLevel = 4;
+    bool isHidden = 5;
     repeated Amount pricesYearly = 6;
     repeated Amount pricesMonthly = 7;
-    // localized strings for the features
-    repeated string features = 8;
-    // green, blue, red, purple, custom
-    string colorStr = 9;
-    // "limited offer"
-    string offer = 10;
+    // green, blue, red, purple, custom, etc
+    string colorStr = 8;
+    string offer = 9;
+    Features features = 10;
   }
 
   message PurchaseInfo {
@@ -56,10 +60,6 @@ message MembershipV2 {
       StatusPendingRequiresFinalization = 3;
     }
     Status status = 1;
-
-    string spaceAttachedTo = 2;
-    bool isNeedsAttachmentToSpace = 3;
-    bool isRenewalEnabled = 4;
   }
 
   message PurchasedProduct {

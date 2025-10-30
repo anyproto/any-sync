@@ -63,6 +63,74 @@ func (m *MembershipV2_Amount) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *MembershipV2_Features) MarshalVT() (dAtA []byte, err error) {
+	if m == nil {
+		return nil, nil
+	}
+	size := m.SizeVT()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MembershipV2_Features) MarshalToVT(dAtA []byte) (int, error) {
+	size := m.SizeVT()
+	return m.MarshalToSizedBufferVT(dAtA[:size])
+}
+
+func (m *MembershipV2_Features) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.unknownFields != nil {
+		i -= len(m.unknownFields)
+		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.AnyNameMinLen != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.AnyNameMinLen))
+		i--
+		dAtA[i] = 0x38
+	}
+	if m.AnyNameCount != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.AnyNameCount))
+		i--
+		dAtA[i] = 0x30
+	}
+	if m.TeamSeats != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.TeamSeats))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.SharedSpaces != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.SharedSpaces))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.SpaceWriters != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.SpaceWriters))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.SpaceReaders != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.SpaceReaders))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.StorageBytes != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.StorageBytes))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *MembershipV2_Product) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
@@ -93,28 +161,29 @@ func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.Features != nil {
+		size, err := m.Features.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x52
+	}
 	if len(m.Offer) > 0 {
 		i -= len(m.Offer)
 		copy(dAtA[i:], m.Offer)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Offer)))
 		i--
-		dAtA[i] = 0x52
+		dAtA[i] = 0x4a
 	}
 	if len(m.ColorStr) > 0 {
 		i -= len(m.ColorStr)
 		copy(dAtA[i:], m.ColorStr)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.ColorStr)))
 		i--
-		dAtA[i] = 0x4a
-	}
-	if len(m.Features) > 0 {
-		for iNdEx := len(m.Features) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Features[iNdEx])
-			copy(dAtA[i:], m.Features[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Features[iNdEx])))
-			i--
-			dAtA[i] = 0x42
-		}
+		dAtA[i] = 0x42
 	}
 	if len(m.PricesMonthly) > 0 {
 		for iNdEx := len(m.PricesMonthly) - 1; iNdEx >= 0; iNdEx-- {
@@ -140,39 +209,39 @@ func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 			dAtA[i] = 0x32
 		}
 	}
+	if m.IsHidden {
+		i--
+		if m.IsHidden {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.IsTopLevel {
+		i--
+		if m.IsTopLevel {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x20
+	}
 	if len(m.Description) > 0 {
 		i -= len(m.Description)
 		copy(dAtA[i:], m.Description)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Description)))
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x1a
 	}
 	if len(m.Name) > 0 {
 		i -= len(m.Name)
 		copy(dAtA[i:], m.Name)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Name)))
 		i--
-		dAtA[i] = 0x22
-	}
-	if m.IsPackage {
-		i--
-		if m.IsPackage {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.IsAttachToSpace {
-		i--
-		if m.IsAttachToSpace {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x10
+		dAtA[i] = 0x12
 	}
 	if len(m.Id) > 0 {
 		i -= len(m.Id)
@@ -276,33 +345,6 @@ func (m *MembershipV2_ProductStatus) MarshalToSizedBufferVT(dAtA []byte) (int, e
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
-	}
-	if m.IsRenewalEnabled {
-		i--
-		if m.IsRenewalEnabled {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.IsNeedsAttachmentToSpace {
-		i--
-		if m.IsNeedsAttachmentToSpace {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.SpaceAttachedTo) > 0 {
-		i -= len(m.SpaceAttachedTo)
-		copy(dAtA[i:], m.SpaceAttachedTo)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.SpaceAttachedTo)))
-		i--
-		dAtA[i] = 0x12
 	}
 	if m.Status != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Status))
@@ -1181,6 +1223,37 @@ func (m *MembershipV2_Amount) SizeVT() (n int) {
 	return n
 }
 
+func (m *MembershipV2_Features) SizeVT() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.StorageBytes != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.StorageBytes))
+	}
+	if m.SpaceReaders != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.SpaceReaders))
+	}
+	if m.SpaceWriters != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.SpaceWriters))
+	}
+	if m.SharedSpaces != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.SharedSpaces))
+	}
+	if m.TeamSeats != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.TeamSeats))
+	}
+	if m.AnyNameCount != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.AnyNameCount))
+	}
+	if m.AnyNameMinLen != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.AnyNameMinLen))
+	}
+	n += len(m.unknownFields)
+	return n
+}
+
 func (m *MembershipV2_Product) SizeVT() (n int) {
 	if m == nil {
 		return 0
@@ -1191,12 +1264,6 @@ func (m *MembershipV2_Product) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	if m.IsAttachToSpace {
-		n += 2
-	}
-	if m.IsPackage {
-		n += 2
-	}
 	l = len(m.Name)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
@@ -1204,6 +1271,12 @@ func (m *MembershipV2_Product) SizeVT() (n int) {
 	l = len(m.Description)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.IsTopLevel {
+		n += 2
+	}
+	if m.IsHidden {
+		n += 2
 	}
 	if len(m.PricesYearly) > 0 {
 		for _, e := range m.PricesYearly {
@@ -1217,18 +1290,16 @@ func (m *MembershipV2_Product) SizeVT() (n int) {
 			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 		}
 	}
-	if len(m.Features) > 0 {
-		for _, s := range m.Features {
-			l = len(s)
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
-	}
 	l = len(m.ColorStr)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	l = len(m.Offer)
 	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.Features != nil {
+		l = m.Features.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	n += len(m.unknownFields)
@@ -1265,16 +1336,6 @@ func (m *MembershipV2_ProductStatus) SizeVT() (n int) {
 	_ = l
 	if m.Status != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.Status))
-	}
-	l = len(m.SpaceAttachedTo)
-	if l > 0 {
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	if m.IsNeedsAttachmentToSpace {
-		n += 2
-	}
-	if m.IsRenewalEnabled {
-		n += 2
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1675,6 +1736,190 @@ func (m *MembershipV2_Amount) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *MembershipV2_Features) UnmarshalVT(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MembershipV2_Features: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MembershipV2_Features: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StorageBytes", wireType)
+			}
+			m.StorageBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.StorageBytes |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceReaders", wireType)
+			}
+			m.SpaceReaders = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SpaceReaders |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceWriters", wireType)
+			}
+			m.SpaceWriters = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SpaceWriters |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SharedSpaces", wireType)
+			}
+			m.SharedSpaces = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SharedSpaces |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TeamSeats", wireType)
+			}
+			m.TeamSeats = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TeamSeats |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AnyNameCount", wireType)
+			}
+			m.AnyNameCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AnyNameCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AnyNameMinLen", wireType)
+			}
+			m.AnyNameMinLen = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AnyNameMinLen |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1737,46 +1982,6 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			m.Id = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsAttachToSpace", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsAttachToSpace = bool(v != 0)
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsPackage", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsPackage = bool(v != 0)
-		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
 			}
@@ -1808,7 +2013,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Name = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
 			}
@@ -1840,6 +2045,46 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Description = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsTopLevel", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsTopLevel = bool(v != 0)
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsHidden", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsHidden = bool(v != 0)
 		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PricesYearly", wireType)
@@ -1910,38 +2155,6 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			iNdEx = postIndex
 		case 8:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Features", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Features = append(m.Features, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ColorStr", wireType)
 			}
 			var stringLen uint64
@@ -1972,7 +2185,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.ColorStr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Offer", wireType)
 			}
@@ -2003,6 +2216,42 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Offer = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Features", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Features == nil {
+				m.Features = &MembershipV2_Features{}
+			}
+			if err := m.Features.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2203,78 +2452,6 @@ func (m *MembershipV2_ProductStatus) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceAttachedTo", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SpaceAttachedTo = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsNeedsAttachmentToSpace", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsNeedsAttachmentToSpace = bool(v != 0)
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsRenewalEnabled", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsRenewalEnabled = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
