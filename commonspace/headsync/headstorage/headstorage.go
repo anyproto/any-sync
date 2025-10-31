@@ -166,7 +166,9 @@ func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err 
 			} else {
 				val = a.NewFalse()
 			}
-			modified = modified || storeutil.ModifyKey(v, derivedStatusKey, val)
+			if storeutil.ModifyKey(v, derivedStatusKey, val) {
+				modified = true
+			}
 		}
 
 		resultEntry = entryFromVal(v)
