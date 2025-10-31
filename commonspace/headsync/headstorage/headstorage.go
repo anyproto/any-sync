@@ -55,8 +55,7 @@ type HeadStorage interface {
 	AddObserver(observer Observer)
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
-	DeleteEntryTx(txCtx context.Context, id string) error
-	UpdateEntryTx(txCtx context.Context, update HeadsUpdate) error
+	DeleteEntry(ctx context.Context, id string) error
 	UpdateEntry(ctx context.Context, update HeadsUpdate) error
 }
 
@@ -129,52 +128,55 @@ func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, erro
 }
 
 func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err error) {
-	tx, err := h.headsColl.WriteTx(ctx)
-	if err != nil {
-		return
-	}
-	err = h.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-	return tx.Commit()
-}
-
-func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (err error) {
-	var resultEntry HeadsEntry
+	var (
+		resultEntry HeadsEntry
+		modResult   anystore.ModifyResult
+	)
 	defer func() {
-		if err == nil {
+		if err == nil && modResult.Modified > 0 {
 			for _, observer := range h.observers {
 				observer.OnUpdate(resultEntry)
 			}
 		}
 	}()
+
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		if update.DeletedStatus != nil {
-			v.Set(DeletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus)))
-		}
-		if update.CommonSnapshot != nil {
-			v.Set(commonSnapshotKey, a.NewString(*update.CommonSnapshot))
-		}
-		if update.Heads != nil {
-			v.Set(headsKey, storeutil.NewStringArrayValue(update.Heads, a))
-		}
-		if update.IsDerived != nil {
-			if *update.IsDerived {
-				v.Set(derivedStatusKey, a.NewTrue())
-			} else {
-				v.Set(derivedStatusKey, a.NewFalse())
+			if storeutil.ModifyKey(v, DeletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus))) {
+				modified = true
 			}
 		}
+
+		if update.CommonSnapshot != nil {
+			if storeutil.ModifyKey(v, commonSnapshotKey, a.NewString(*update.CommonSnapshot)) {
+				modified = true
+			}
+		}
+
+		if update.Heads != nil {
+			if storeutil.ModifyKey(v, headsKey, storeutil.NewStringArrayValue(update.Heads, a)) {
+				modified = true
+			}
+		}
+
+		if update.IsDerived != nil {
+			var val *anyenc.Value
+			if *update.IsDerived {
+				val = a.NewTrue()
+			} else {
+				val = a.NewFalse()
+			}
+			modified = modified || storeutil.ModifyKey(v, derivedStatusKey, val)
+		}
+
 		resultEntry = entryFromVal(v)
-		return v, true, nil
+		return v, modified, nil
 	})
-	_, err = h.headsColl.UpsertId(ctx, update.Id, mod)
+	modResult, err = h.headsColl.UpsertId(ctx, update.Id, mod)
 	return
 }
 
-func (h *headStorage) DeleteEntryTx(ctx context.Context, id string) error {
+func (h *headStorage) DeleteEntry(ctx context.Context, id string) error {
 	return h.headsColl.DeleteId(ctx, id)
 }
 
