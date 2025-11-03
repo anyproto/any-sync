@@ -169,21 +169,21 @@ func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 		i -= size
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		i--
-		dAtA[i] = 0x52
+		dAtA[i] = 0x62
 	}
 	if len(m.Offer) > 0 {
 		i -= len(m.Offer)
 		copy(dAtA[i:], m.Offer)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Offer)))
 		i--
-		dAtA[i] = 0x4a
+		dAtA[i] = 0x5a
 	}
 	if len(m.ColorStr) > 0 {
 		i -= len(m.ColorStr)
 		copy(dAtA[i:], m.ColorStr)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.ColorStr)))
 		i--
-		dAtA[i] = 0x42
+		dAtA[i] = 0x52
 	}
 	if len(m.PricesMonthly) > 0 {
 		for iNdEx := len(m.PricesMonthly) - 1; iNdEx >= 0; iNdEx-- {
@@ -194,7 +194,7 @@ func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x3a
+			dAtA[i] = 0x4a
 		}
 	}
 	if len(m.PricesYearly) > 0 {
@@ -206,8 +206,28 @@ func (m *MembershipV2_Product) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x32
+			dAtA[i] = 0x42
 		}
+	}
+	if m.IsUpgradeable {
+		i--
+		if m.IsUpgradeable {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x38
+	}
+	if m.IsIntro {
+		i--
+		if m.IsIntro {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x30
 	}
 	if m.IsHidden {
 		i--
@@ -1278,6 +1298,12 @@ func (m *MembershipV2_Product) SizeVT() (n int) {
 	if m.IsHidden {
 		n += 2
 	}
+	if m.IsIntro {
+		n += 2
+	}
+	if m.IsUpgradeable {
+		n += 2
+	}
 	if len(m.PricesYearly) > 0 {
 		for _, e := range m.PricesYearly {
 			l = e.SizeVT()
@@ -2086,6 +2112,46 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.IsHidden = bool(v != 0)
 		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsIntro", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsIntro = bool(v != 0)
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsUpgradeable", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsUpgradeable = bool(v != 0)
+		case 8:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PricesYearly", wireType)
 			}
@@ -2119,7 +2185,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 7:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PricesMonthly", wireType)
 			}
@@ -2153,7 +2219,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 8:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ColorStr", wireType)
 			}
@@ -2185,7 +2251,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.ColorStr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 9:
+		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Offer", wireType)
 			}
@@ -2217,7 +2283,7 @@ func (m *MembershipV2_Product) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Offer = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 12:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Features", wireType)
 			}

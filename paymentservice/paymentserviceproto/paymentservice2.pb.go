@@ -361,17 +361,31 @@ type MembershipV2_Product struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// this is a unique Payment Node ID
 	// adding 2 same products to a cart means we will have 2 items with same ID
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	IsTopLevel    bool                   `protobuf:"varint,4,opt,name=isTopLevel,proto3" json:"isTopLevel,omitempty"`
-	IsHidden      bool                   `protobuf:"varint,5,opt,name=isHidden,proto3" json:"isHidden,omitempty"`
-	PricesYearly  []*MembershipV2_Amount `protobuf:"bytes,6,rep,name=pricesYearly,proto3" json:"pricesYearly,omitempty"`
-	PricesMonthly []*MembershipV2_Amount `protobuf:"bytes,7,rep,name=pricesMonthly,proto3" json:"pricesMonthly,omitempty"`
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	IsTopLevel  bool   `protobuf:"varint,4,opt,name=isTopLevel,proto3" json:"isTopLevel,omitempty"`
+	IsHidden    bool   `protobuf:"varint,5,opt,name=isHidden,proto3" json:"isHidden,omitempty"`
+	// isIntro flag can be used as follows:
+	//
+	// 1. if current user's top level product has isIntro flag ->
+	// then you'd rather show a FULL list of all products
+	// to enable upgrading from CURRENT product
+	// 2. but if current user's top level product has no isIntro flag ->
+	// then it means that this plan was aquired and user need to control it.
+	// then show "second screen" to control that product instead
+	IsIntro bool `protobuf:"varint,6,opt,name=isIntro,proto3" json:"isIntro,omitempty"`
+	// isUpgradeable can be used as follows:
+	//
+	// if current user's top level product has isUpgradeable flag ->
+	// show incentives to buy something else
+	IsUpgradeable bool                   `protobuf:"varint,7,opt,name=isUpgradeable,proto3" json:"isUpgradeable,omitempty"`
+	PricesYearly  []*MembershipV2_Amount `protobuf:"bytes,8,rep,name=pricesYearly,proto3" json:"pricesYearly,omitempty"`
+	PricesMonthly []*MembershipV2_Amount `protobuf:"bytes,9,rep,name=pricesMonthly,proto3" json:"pricesMonthly,omitempty"`
 	// green, blue, red, purple, custom, etc
-	ColorStr      string                 `protobuf:"bytes,8,opt,name=colorStr,proto3" json:"colorStr,omitempty"`
-	Offer         string                 `protobuf:"bytes,9,opt,name=offer,proto3" json:"offer,omitempty"`
-	Features      *MembershipV2_Features `protobuf:"bytes,10,opt,name=features,proto3" json:"features,omitempty"`
+	ColorStr      string                 `protobuf:"bytes,10,opt,name=colorStr,proto3" json:"colorStr,omitempty"`
+	Offer         string                 `protobuf:"bytes,11,opt,name=offer,proto3" json:"offer,omitempty"`
+	Features      *MembershipV2_Features `protobuf:"bytes,12,opt,name=features,proto3" json:"features,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -437,6 +451,20 @@ func (x *MembershipV2_Product) GetIsTopLevel() bool {
 func (x *MembershipV2_Product) GetIsHidden() bool {
 	if x != nil {
 		return x.IsHidden
+	}
+	return false
+}
+
+func (x *MembershipV2_Product) GetIsIntro() bool {
+	if x != nil {
+		return x.IsIntro
+	}
+	return false
+}
+
+func (x *MembershipV2_Product) GetIsUpgradeable() bool {
+	if x != nil {
+		return x.IsUpgradeable
 	}
 	return false
 }
@@ -1455,7 +1483,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xce\x14\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\x8e\x15\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -1467,7 +1495,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\fsharedSpaces\x18\x04 \x01(\rR\fsharedSpaces\x12\x1c\n" +
 	"\tteamSeats\x18\x05 \x01(\rR\tteamSeats\x12\"\n" +
 	"\fanyNameCount\x18\x06 \x01(\rR\fanyNameCount\x12$\n" +
-	"\ranyNameMinLen\x18\a \x01(\rR\ranyNameMinLen\x1a\xe7\x02\n" +
+	"\ranyNameMinLen\x18\a \x01(\rR\ranyNameMinLen\x1a\xa7\x03\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1475,13 +1503,15 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\n" +
 	"isTopLevel\x18\x04 \x01(\bR\n" +
 	"isTopLevel\x12\x1a\n" +
-	"\bisHidden\x18\x05 \x01(\bR\bisHidden\x128\n" +
-	"\fpricesYearly\x18\x06 \x03(\v2\x14.MembershipV2.AmountR\fpricesYearly\x12:\n" +
-	"\rpricesMonthly\x18\a \x03(\v2\x14.MembershipV2.AmountR\rpricesMonthly\x12\x1a\n" +
-	"\bcolorStr\x18\b \x01(\tR\bcolorStr\x12\x14\n" +
-	"\x05offer\x18\t \x01(\tR\x05offer\x122\n" +
-	"\bfeatures\x18\n" +
-	" \x01(\v2\x16.MembershipV2.FeaturesR\bfeatures\x1a\x8a\x01\n" +
+	"\bisHidden\x18\x05 \x01(\bR\bisHidden\x12\x18\n" +
+	"\aisIntro\x18\x06 \x01(\bR\aisIntro\x12$\n" +
+	"\risUpgradeable\x18\a \x01(\bR\risUpgradeable\x128\n" +
+	"\fpricesYearly\x18\b \x03(\v2\x14.MembershipV2.AmountR\fpricesYearly\x12:\n" +
+	"\rpricesMonthly\x18\t \x03(\v2\x14.MembershipV2.AmountR\rpricesMonthly\x12\x1a\n" +
+	"\bcolorStr\x18\n" +
+	" \x01(\tR\bcolorStr\x12\x14\n" +
+	"\x05offer\x18\v \x01(\tR\x05offer\x122\n" +
+	"\bfeatures\x18\f \x01(\v2\x16.MembershipV2.FeaturesR\bfeatures\x1a\x8a\x01\n" +
 	"\fPurchaseInfo\x12 \n" +
 	"\vdateStarted\x18\x01 \x01(\x04R\vdateStarted\x12\x1a\n" +
 	"\bdateEnds\x18\x02 \x01(\x04R\bdateEnds\x12 \n" +

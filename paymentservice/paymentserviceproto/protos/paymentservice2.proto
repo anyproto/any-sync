@@ -36,12 +36,29 @@ message MembershipV2 {
     string description = 3;
     bool isTopLevel = 4;
     bool isHidden = 5;
-    repeated Amount pricesYearly = 6;
-    repeated Amount pricesMonthly = 7;
+
+    // isIntro flag can be used as follows:
+    // 
+    // 1. if current user's top level product has isIntro flag -> 
+    // then you'd rather show a FULL list of all products 
+    // to enable upgrading from CURRENT product
+    // 2. but if current user's top level product has no isIntro flag ->
+    // then it means that this plan was aquired and user need to control it. 
+    // then show "second screen" to control that product instead
+    bool isIntro = 6;
+    
+    // isUpgradeable can be used as follows:
+    // 
+    // if current user's top level product has isUpgradeable flag ->
+    // show incentives to buy something else
+    bool isUpgradeable = 7;
+
+    repeated Amount pricesYearly = 8;
+    repeated Amount pricesMonthly = 9;
     // green, blue, red, purple, custom, etc
-    string colorStr = 8;
-    string offer = 9;
-    Features features = 10;
+    string colorStr = 10;
+    string offer = 11;
+    Features features = 12;
   }
 
   message PurchaseInfo {
