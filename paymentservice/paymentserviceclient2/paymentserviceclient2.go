@@ -25,6 +25,11 @@ type AnyPpClientServiceV2 interface {
 	GetStatus(ctx context.Context, in *pp.MembershipV2_GetStatusRequest) (out *pp.MembershipV2_GetStatusResponse, err error)
 
 	WebAuth(ctx context.Context, in *pp.MembershipV2_WebAuthRequest) (out *pp.MembershipV2_WebAuthResponse, err error)
+
+	AnyNameIsValid(ctx context.Context, in *pp.MembershipV2_AnyNameIsValidRequest) (out *pp.MembershipV2_AnyNameIsValidResponse, err error)
+
+	AnyNameAllocate(ctx context.Context, in *pp.MembershipV2_AnyNameAllocateRequest) (out *pp.MembershipV2_AnyNameAllocateResponse, err error)
+
 	app.Component
 }
 
@@ -96,6 +101,26 @@ func (s *service) GetStatus(ctx context.Context, in *pp.MembershipV2_GetStatusRe
 func (s *service) WebAuth(ctx context.Context, in *pp.MembershipV2_WebAuthRequest) (out *pp.MembershipV2_WebAuthResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.WebAuth(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) AnyNameIsValid(ctx context.Context, in *pp.MembershipV2_AnyNameIsValidRequest) (out *pp.MembershipV2_AnyNameIsValidResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
+		if out, err = cl.AnyNameIsValid(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) AnyNameAllocate(ctx context.Context, in *pp.MembershipV2_AnyNameAllocateRequest) (out *pp.MembershipV2_AnyNameAllocateResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
+		if out, err = cl.AnyNameAllocate(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

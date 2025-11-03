@@ -174,6 +174,67 @@ func (MembershipV2_Invoice_Status) EnumDescriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 7, 0}
 }
 
+type MembershipV2_AnyNameIsValidResponse_Code int32
+
+const (
+	MembershipV2_AnyNameIsValidResponse_Valid            MembershipV2_AnyNameIsValidResponse_Code = 0
+	MembershipV2_AnyNameIsValidResponse_NoDotAny         MembershipV2_AnyNameIsValidResponse_Code = 1
+	MembershipV2_AnyNameIsValidResponse_TooShort         MembershipV2_AnyNameIsValidResponse_Code = 2
+	MembershipV2_AnyNameIsValidResponse_TooLong          MembershipV2_AnyNameIsValidResponse_Code = 3
+	MembershipV2_AnyNameIsValidResponse_HasInvalidChars  MembershipV2_AnyNameIsValidResponse_Code = 4
+	MembershipV2_AnyNameIsValidResponse_AccountHasNoName MembershipV2_AnyNameIsValidResponse_Code = 5
+	MembershipV2_AnyNameIsValidResponse_CanNotReserve    MembershipV2_AnyNameIsValidResponse_Code = 6
+)
+
+// Enum value maps for MembershipV2_AnyNameIsValidResponse_Code.
+var (
+	MembershipV2_AnyNameIsValidResponse_Code_name = map[int32]string{
+		0: "Valid",
+		1: "NoDotAny",
+		2: "TooShort",
+		3: "TooLong",
+		4: "HasInvalidChars",
+		5: "AccountHasNoName",
+		6: "CanNotReserve",
+	}
+	MembershipV2_AnyNameIsValidResponse_Code_value = map[string]int32{
+		"Valid":            0,
+		"NoDotAny":         1,
+		"TooShort":         2,
+		"TooLong":          3,
+		"HasInvalidChars":  4,
+		"AccountHasNoName": 5,
+		"CanNotReserve":    6,
+	}
+)
+
+func (x MembershipV2_AnyNameIsValidResponse_Code) Enum() *MembershipV2_AnyNameIsValidResponse_Code {
+	p := new(MembershipV2_AnyNameIsValidResponse_Code)
+	*p = x
+	return p
+}
+
+func (x MembershipV2_AnyNameIsValidResponse_Code) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MembershipV2_AnyNameIsValidResponse_Code) Descriptor() protoreflect.EnumDescriptor {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[3].Descriptor()
+}
+
+func (MembershipV2_AnyNameIsValidResponse_Code) Type() protoreflect.EnumType {
+	return &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes[3]
+}
+
+func (x MembershipV2_AnyNameIsValidResponse_Code) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MembershipV2_AnyNameIsValidResponse_Code.Descriptor instead.
+func (MembershipV2_AnyNameIsValidResponse_Code) EnumDescriptor() ([]byte, []int) {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 24, 0}
+}
+
 type MembershipV2 struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1479,11 +1540,187 @@ func (x *MembershipV2_WebAuthResponse) GetUrl() string {
 	return ""
 }
 
+type MembershipV2_AnyNameIsValidRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RequestedAnyName string                 `protobuf:"bytes,1,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *MembershipV2_AnyNameIsValidRequest) Reset() {
+	*x = MembershipV2_AnyNameIsValidRequest{}
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MembershipV2_AnyNameIsValidRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MembershipV2_AnyNameIsValidRequest) ProtoMessage() {}
+
+func (x *MembershipV2_AnyNameIsValidRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MembershipV2_AnyNameIsValidRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_AnyNameIsValidRequest) Descriptor() ([]byte, []int) {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 23}
+}
+
+func (x *MembershipV2_AnyNameIsValidRequest) GetRequestedAnyName() string {
+	if x != nil {
+		return x.RequestedAnyName
+	}
+	return ""
+}
+
+type MembershipV2_AnyNameIsValidResponse struct {
+	state         protoimpl.MessageState                   `protogen:"open.v1"`
+	Code          MembershipV2_AnyNameIsValidResponse_Code `protobuf:"varint,1,opt,name=code,proto3,enum=MembershipV2_AnyNameIsValidResponse_Code" json:"code,omitempty"`
+	Description   string                                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MembershipV2_AnyNameIsValidResponse) Reset() {
+	*x = MembershipV2_AnyNameIsValidResponse{}
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MembershipV2_AnyNameIsValidResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MembershipV2_AnyNameIsValidResponse) ProtoMessage() {}
+
+func (x *MembershipV2_AnyNameIsValidResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MembershipV2_AnyNameIsValidResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_AnyNameIsValidResponse) Descriptor() ([]byte, []int) {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 24}
+}
+
+func (x *MembershipV2_AnyNameIsValidResponse) GetCode() MembershipV2_AnyNameIsValidResponse_Code {
+	if x != nil {
+		return x.Code
+	}
+	return MembershipV2_AnyNameIsValidResponse_Valid
+}
+
+func (x *MembershipV2_AnyNameIsValidResponse) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type MembershipV2_AnyNameAllocateRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RequestedAnyName string                 `protobuf:"bytes,1,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *MembershipV2_AnyNameAllocateRequest) Reset() {
+	*x = MembershipV2_AnyNameAllocateRequest{}
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MembershipV2_AnyNameAllocateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MembershipV2_AnyNameAllocateRequest) ProtoMessage() {}
+
+func (x *MembershipV2_AnyNameAllocateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MembershipV2_AnyNameAllocateRequest.ProtoReflect.Descriptor instead.
+func (*MembershipV2_AnyNameAllocateRequest) Descriptor() ([]byte, []int) {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 25}
+}
+
+func (x *MembershipV2_AnyNameAllocateRequest) GetRequestedAnyName() string {
+	if x != nil {
+		return x.RequestedAnyName
+	}
+	return ""
+}
+
+type MembershipV2_AnyNameAllocateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MembershipV2_AnyNameAllocateResponse) Reset() {
+	*x = MembershipV2_AnyNameAllocateResponse{}
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MembershipV2_AnyNameAllocateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MembershipV2_AnyNameAllocateResponse) ProtoMessage() {}
+
+func (x *MembershipV2_AnyNameAllocateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MembershipV2_AnyNameAllocateResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_AnyNameAllocateResponse) Descriptor() ([]byte, []int) {
+	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 26}
+}
+
 var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protoreflect.FileDescriptor
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\x8e\x15\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xaa\x18\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -1572,18 +1809,36 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x0eWebAuthRequest\x1a5\n" +
 	"\x0fWebAuthResponse\x12\x10\n" +
 	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\"p\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x1aC\n" +
+	"\x15AnyNameIsValidRequest\x12*\n" +
+	"\x10requestedAnyName\x18\x01 \x01(\tR\x10requestedAnyName\x1a\xf3\x01\n" +
+	"\x16AnyNameIsValidResponse\x12=\n" +
+	"\x04code\x18\x01 \x01(\x0e2).MembershipV2.AnyNameIsValidResponse.CodeR\x04code\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"x\n" +
+	"\x04Code\x12\t\n" +
+	"\x05Valid\x10\x00\x12\f\n" +
+	"\bNoDotAny\x10\x01\x12\f\n" +
+	"\bTooShort\x10\x02\x12\v\n" +
+	"\aTooLong\x10\x03\x12\x13\n" +
+	"\x0fHasInvalidChars\x10\x04\x12\x14\n" +
+	"\x10AccountHasNoName\x10\x05\x12\x11\n" +
+	"\rCanNotReserve\x10\x06\x1aD\n" +
+	"\x16AnyNameAllocateRequest\x12*\n" +
+	"\x10requestedAnyName\x18\x01 \x01(\tR\x10requestedAnyName\x1a\x19\n" +
+	"\x17AnyNameAllocateResponse\"p\n" +
 	"\rPaymentMethod\x12\x0e\n" +
 	"\n" +
 	"MethodNone\x10\x00\x12\x10\n" +
 	"\fMethodStripe\x10\x01\x12\x10\n" +
 	"\fMethodCrypto\x10\x02\x12\x14\n" +
 	"\x10MethodInappApple\x10\x03\x12\x15\n" +
-	"\x11MethodInappGoogle\x10\x042\x82\x02\n" +
+	"\x11MethodInappGoogle\x10\x042\xbf\x03\n" +
 	"\x16AnyPaymentProcessingV2\x12R\n" +
 	"\vGetProducts\x12 .MembershipV2.GetProductsRequest\x1a!.MembershipV2.GetProductsResponse\x12L\n" +
 	"\tGetStatus\x12\x1e.MembershipV2.GetStatusRequest\x1a\x1f.MembershipV2.GetStatusResponse\x12F\n" +
-	"\aWebAuth\x12\x1c.MembershipV2.WebAuthRequest\x1a\x1d.MembershipV2.WebAuthResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
+	"\aWebAuth\x12\x1c.MembershipV2.WebAuthRequest\x1a\x1d.MembershipV2.WebAuthResponse\x12[\n" +
+	"\x0eAnyNameIsValid\x12#.MembershipV2.AnyNameIsValidRequest\x1a$.MembershipV2.AnyNameIsValidResponse\x12^\n" +
+	"\x0fAnyNameAllocate\x12$.MembershipV2.AnyNameAllocateRequest\x1a%.MembershipV2.AnyNameAllocateResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
 
 var (
 	file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescOnce sync.Once
@@ -1597,68 +1852,78 @@ func file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDes
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescData
 }
 
-var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_goTypes = []any{
 	(MembershipV2_PaymentMethod)(0),                     // 0: MembershipV2.PaymentMethod
 	(MembershipV2_ProductStatus_Status)(0),              // 1: MembershipV2.ProductStatus.Status
 	(MembershipV2_Invoice_Status)(0),                    // 2: MembershipV2.Invoice.Status
-	(*MembershipV2)(nil),                                // 3: MembershipV2
-	(*MembershipV2_Amount)(nil),                         // 4: MembershipV2.Amount
-	(*MembershipV2_Features)(nil),                       // 5: MembershipV2.Features
-	(*MembershipV2_Product)(nil),                        // 6: MembershipV2.Product
-	(*MembershipV2_PurchaseInfo)(nil),                   // 7: MembershipV2.PurchaseInfo
-	(*MembershipV2_ProductStatus)(nil),                  // 8: MembershipV2.ProductStatus
-	(*MembershipV2_PurchasedProduct)(nil),               // 9: MembershipV2.PurchasedProduct
-	(*MembershipV2_CartProduct)(nil),                    // 10: MembershipV2.CartProduct
-	(*MembershipV2_Invoice)(nil),                        // 11: MembershipV2.Invoice
-	(*MembershipV2_Cart)(nil),                           // 12: MembershipV2.Cart
-	(*MembershipV2_GetProductsRequest)(nil),             // 13: MembershipV2.GetProductsRequest
-	(*MembershipV2_GetProductsResponse)(nil),            // 14: MembershipV2.GetProductsResponse
-	(*MembershipV2_GetStatusRequest)(nil),               // 15: MembershipV2.GetStatusRequest
-	(*MembershipV2_GetStatusResponse)(nil),              // 16: MembershipV2.GetStatusResponse
-	(*MembershipV2_StoreCartGetRequest)(nil),            // 17: MembershipV2.StoreCartGetRequest
-	(*MembershipV2_StoreCartResponse)(nil),              // 18: MembershipV2.StoreCartResponse
-	(*MembershipV2_StoreCartPromocodeApplyRequest)(nil), // 19: MembershipV2.StoreCartPromocodeApplyRequest
-	(*MembershipV2_StoreCartCheckoutRequest)(nil),       // 20: MembershipV2.StoreCartCheckoutRequest
-	(*MembershipV2_StoreCartCheckoutResponse)(nil),      // 21: MembershipV2.StoreCartCheckoutResponse
-	(*MembershipV2_StoreCartUpdateRequest)(nil),         // 22: MembershipV2.StoreCartUpdateRequest
-	(*MembershipV2_StoreCartUpdateResponse)(nil),        // 23: MembershipV2.StoreCartUpdateResponse
-	(*MembershipV2_StoreCartClearRequest)(nil),          // 24: MembershipV2.StoreCartClearRequest
-	(*MembershipV2_WebAuthRequest)(nil),                 // 25: MembershipV2.WebAuthRequest
-	(*MembershipV2_WebAuthResponse)(nil),                // 26: MembershipV2.WebAuthResponse
+	(MembershipV2_AnyNameIsValidResponse_Code)(0),       // 3: MembershipV2.AnyNameIsValidResponse.Code
+	(*MembershipV2)(nil),                                // 4: MembershipV2
+	(*MembershipV2_Amount)(nil),                         // 5: MembershipV2.Amount
+	(*MembershipV2_Features)(nil),                       // 6: MembershipV2.Features
+	(*MembershipV2_Product)(nil),                        // 7: MembershipV2.Product
+	(*MembershipV2_PurchaseInfo)(nil),                   // 8: MembershipV2.PurchaseInfo
+	(*MembershipV2_ProductStatus)(nil),                  // 9: MembershipV2.ProductStatus
+	(*MembershipV2_PurchasedProduct)(nil),               // 10: MembershipV2.PurchasedProduct
+	(*MembershipV2_CartProduct)(nil),                    // 11: MembershipV2.CartProduct
+	(*MembershipV2_Invoice)(nil),                        // 12: MembershipV2.Invoice
+	(*MembershipV2_Cart)(nil),                           // 13: MembershipV2.Cart
+	(*MembershipV2_GetProductsRequest)(nil),             // 14: MembershipV2.GetProductsRequest
+	(*MembershipV2_GetProductsResponse)(nil),            // 15: MembershipV2.GetProductsResponse
+	(*MembershipV2_GetStatusRequest)(nil),               // 16: MembershipV2.GetStatusRequest
+	(*MembershipV2_GetStatusResponse)(nil),              // 17: MembershipV2.GetStatusResponse
+	(*MembershipV2_StoreCartGetRequest)(nil),            // 18: MembershipV2.StoreCartGetRequest
+	(*MembershipV2_StoreCartResponse)(nil),              // 19: MembershipV2.StoreCartResponse
+	(*MembershipV2_StoreCartPromocodeApplyRequest)(nil), // 20: MembershipV2.StoreCartPromocodeApplyRequest
+	(*MembershipV2_StoreCartCheckoutRequest)(nil),       // 21: MembershipV2.StoreCartCheckoutRequest
+	(*MembershipV2_StoreCartCheckoutResponse)(nil),      // 22: MembershipV2.StoreCartCheckoutResponse
+	(*MembershipV2_StoreCartUpdateRequest)(nil),         // 23: MembershipV2.StoreCartUpdateRequest
+	(*MembershipV2_StoreCartUpdateResponse)(nil),        // 24: MembershipV2.StoreCartUpdateResponse
+	(*MembershipV2_StoreCartClearRequest)(nil),          // 25: MembershipV2.StoreCartClearRequest
+	(*MembershipV2_WebAuthRequest)(nil),                 // 26: MembershipV2.WebAuthRequest
+	(*MembershipV2_WebAuthResponse)(nil),                // 27: MembershipV2.WebAuthResponse
+	(*MembershipV2_AnyNameIsValidRequest)(nil),          // 28: MembershipV2.AnyNameIsValidRequest
+	(*MembershipV2_AnyNameIsValidResponse)(nil),         // 29: MembershipV2.AnyNameIsValidResponse
+	(*MembershipV2_AnyNameAllocateRequest)(nil),         // 30: MembershipV2.AnyNameAllocateRequest
+	(*MembershipV2_AnyNameAllocateResponse)(nil),        // 31: MembershipV2.AnyNameAllocateResponse
 }
 var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_depIdxs = []int32{
-	4,  // 0: MembershipV2.Product.pricesYearly:type_name -> MembershipV2.Amount
-	4,  // 1: MembershipV2.Product.pricesMonthly:type_name -> MembershipV2.Amount
-	5,  // 2: MembershipV2.Product.features:type_name -> MembershipV2.Features
+	5,  // 0: MembershipV2.Product.pricesYearly:type_name -> MembershipV2.Amount
+	5,  // 1: MembershipV2.Product.pricesMonthly:type_name -> MembershipV2.Amount
+	6,  // 2: MembershipV2.Product.features:type_name -> MembershipV2.Features
 	1,  // 3: MembershipV2.ProductStatus.status:type_name -> MembershipV2.ProductStatus.Status
-	6,  // 4: MembershipV2.PurchasedProduct.product:type_name -> MembershipV2.Product
-	7,  // 5: MembershipV2.PurchasedProduct.purchaseInfo:type_name -> MembershipV2.PurchaseInfo
-	8,  // 6: MembershipV2.PurchasedProduct.productStatus:type_name -> MembershipV2.ProductStatus
-	6,  // 7: MembershipV2.CartProduct.product:type_name -> MembershipV2.Product
-	4,  // 8: MembershipV2.Invoice.total:type_name -> MembershipV2.Amount
+	7,  // 4: MembershipV2.PurchasedProduct.product:type_name -> MembershipV2.Product
+	8,  // 5: MembershipV2.PurchasedProduct.purchaseInfo:type_name -> MembershipV2.PurchaseInfo
+	9,  // 6: MembershipV2.PurchasedProduct.productStatus:type_name -> MembershipV2.ProductStatus
+	7,  // 7: MembershipV2.CartProduct.product:type_name -> MembershipV2.Product
+	5,  // 8: MembershipV2.Invoice.total:type_name -> MembershipV2.Amount
 	2,  // 9: MembershipV2.Invoice.status:type_name -> MembershipV2.Invoice.Status
-	10, // 10: MembershipV2.Cart.products:type_name -> MembershipV2.CartProduct
-	4,  // 11: MembershipV2.Cart.total:type_name -> MembershipV2.Amount
-	4,  // 12: MembershipV2.Cart.totalNextInvoice:type_name -> MembershipV2.Amount
-	6,  // 13: MembershipV2.GetProductsResponse.products:type_name -> MembershipV2.Product
-	9,  // 14: MembershipV2.GetStatusResponse.products:type_name -> MembershipV2.PurchasedProduct
-	11, // 15: MembershipV2.GetStatusResponse.nextInvoice:type_name -> MembershipV2.Invoice
-	12, // 16: MembershipV2.StoreCartResponse.cart:type_name -> MembershipV2.Cart
-	10, // 17: MembershipV2.StoreCartUpdateRequest.products:type_name -> MembershipV2.CartProduct
-	12, // 18: MembershipV2.StoreCartUpdateResponse.cart:type_name -> MembershipV2.Cart
-	13, // 19: AnyPaymentProcessingV2.GetProducts:input_type -> MembershipV2.GetProductsRequest
-	15, // 20: AnyPaymentProcessingV2.GetStatus:input_type -> MembershipV2.GetStatusRequest
-	25, // 21: AnyPaymentProcessingV2.WebAuth:input_type -> MembershipV2.WebAuthRequest
-	14, // 22: AnyPaymentProcessingV2.GetProducts:output_type -> MembershipV2.GetProductsResponse
-	16, // 23: AnyPaymentProcessingV2.GetStatus:output_type -> MembershipV2.GetStatusResponse
-	26, // 24: AnyPaymentProcessingV2.WebAuth:output_type -> MembershipV2.WebAuthResponse
-	22, // [22:25] is the sub-list for method output_type
-	19, // [19:22] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	11, // 10: MembershipV2.Cart.products:type_name -> MembershipV2.CartProduct
+	5,  // 11: MembershipV2.Cart.total:type_name -> MembershipV2.Amount
+	5,  // 12: MembershipV2.Cart.totalNextInvoice:type_name -> MembershipV2.Amount
+	7,  // 13: MembershipV2.GetProductsResponse.products:type_name -> MembershipV2.Product
+	10, // 14: MembershipV2.GetStatusResponse.products:type_name -> MembershipV2.PurchasedProduct
+	12, // 15: MembershipV2.GetStatusResponse.nextInvoice:type_name -> MembershipV2.Invoice
+	13, // 16: MembershipV2.StoreCartResponse.cart:type_name -> MembershipV2.Cart
+	11, // 17: MembershipV2.StoreCartUpdateRequest.products:type_name -> MembershipV2.CartProduct
+	13, // 18: MembershipV2.StoreCartUpdateResponse.cart:type_name -> MembershipV2.Cart
+	3,  // 19: MembershipV2.AnyNameIsValidResponse.code:type_name -> MembershipV2.AnyNameIsValidResponse.Code
+	14, // 20: AnyPaymentProcessingV2.GetProducts:input_type -> MembershipV2.GetProductsRequest
+	16, // 21: AnyPaymentProcessingV2.GetStatus:input_type -> MembershipV2.GetStatusRequest
+	26, // 22: AnyPaymentProcessingV2.WebAuth:input_type -> MembershipV2.WebAuthRequest
+	28, // 23: AnyPaymentProcessingV2.AnyNameIsValid:input_type -> MembershipV2.AnyNameIsValidRequest
+	30, // 24: AnyPaymentProcessingV2.AnyNameAllocate:input_type -> MembershipV2.AnyNameAllocateRequest
+	15, // 25: AnyPaymentProcessingV2.GetProducts:output_type -> MembershipV2.GetProductsResponse
+	17, // 26: AnyPaymentProcessingV2.GetStatus:output_type -> MembershipV2.GetStatusResponse
+	27, // 27: AnyPaymentProcessingV2.WebAuth:output_type -> MembershipV2.WebAuthResponse
+	29, // 28: AnyPaymentProcessingV2.AnyNameIsValid:output_type -> MembershipV2.AnyNameIsValidResponse
+	31, // 29: AnyPaymentProcessingV2.AnyNameAllocate:output_type -> MembershipV2.AnyNameAllocateResponse
+	25, // [25:30] is the sub-list for method output_type
+	20, // [20:25] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_init() }
@@ -1671,8 +1936,8 @@ func file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_init()
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc), len(file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   24,
+			NumEnums:      4,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

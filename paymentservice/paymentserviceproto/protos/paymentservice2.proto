@@ -184,10 +184,42 @@ message MembershipV2 {
     // (optional) redirect here after the auth
     string url = 2;
   }
+
+  message AnyNameIsValidRequest {
+    string requestedAnyName = 1;
+  }
+
+  message AnyNameIsValidResponse {
+    Code code = 1;
+    string description = 2;
+
+    enum Code {
+        Valid = 0;
+        NoDotAny = 1;
+        TooShort = 2;
+        TooLong = 3;
+        HasInvalidChars = 4;
+        AccountHasNoName = 5;
+        CanNotReserve = 6;
+        // if everything is fine - "name is already taken" check should be done in the NS
+        // see IsNameAvailable()
+    }
+  }
+
+  message AnyNameAllocateRequest {
+    string requestedAnyName = 1;
+  }
+
+  message AnyNameAllocateResponse {
+    
+  }
 }
 
 service AnyPaymentProcessingV2 {
   rpc GetProducts (MembershipV2.GetProductsRequest) returns (MembershipV2.GetProductsResponse);
   rpc GetStatus (MembershipV2.GetStatusRequest) returns (MembershipV2.GetStatusResponse);
   rpc WebAuth(MembershipV2.WebAuthRequest) returns (MembershipV2.WebAuthResponse); 
+
+  rpc AnyNameIsValid(MembershipV2.AnyNameIsValidRequest) returns (MembershipV2.AnyNameIsValidResponse);
+  rpc AnyNameAllocate(MembershipV2.AnyNameAllocateRequest) returns (MembershipV2.AnyNameAllocateResponse);
 }

@@ -42,6 +42,36 @@ func (m *MockAnyPpClientServiceV2) EXPECT() *MockAnyPpClientServiceV2MockRecorde
 	return m.recorder
 }
 
+// AnyNameAllocate mocks base method.
+func (m *MockAnyPpClientServiceV2) AnyNameAllocate(ctx context.Context, in *paymentserviceproto.MembershipV2_AnyNameAllocateRequest) (*paymentserviceproto.MembershipV2_AnyNameAllocateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnyNameAllocate", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.MembershipV2_AnyNameAllocateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AnyNameAllocate indicates an expected call of AnyNameAllocate.
+func (mr *MockAnyPpClientServiceV2MockRecorder) AnyNameAllocate(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnyNameAllocate", reflect.TypeOf((*MockAnyPpClientServiceV2)(nil).AnyNameAllocate), ctx, in)
+}
+
+// AnyNameIsValid mocks base method.
+func (m *MockAnyPpClientServiceV2) AnyNameIsValid(ctx context.Context, in *paymentserviceproto.MembershipV2_AnyNameIsValidRequest) (*paymentserviceproto.MembershipV2_AnyNameIsValidResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AnyNameIsValid", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.MembershipV2_AnyNameIsValidResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AnyNameIsValid indicates an expected call of AnyNameIsValid.
+func (mr *MockAnyPpClientServiceV2MockRecorder) AnyNameIsValid(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnyNameIsValid", reflect.TypeOf((*MockAnyPpClientServiceV2)(nil).AnyNameIsValid), ctx, in)
+}
+
 // GetProducts mocks base method.
 func (m *MockAnyPpClientServiceV2) GetProducts(ctx context.Context, in *paymentserviceproto.MembershipV2_GetProductsRequest) (*paymentserviceproto.MembershipV2_GetProductsResponse, error) {
 	m.ctrl.T.Helper()
