@@ -55,13 +55,12 @@ type HeadStorage interface {
 	AddObserver(observer Observer)
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
-	DeleteEntryTx(txCtx context.Context, id string) error
-	UpdateEntryTx(txCtx context.Context, update HeadsUpdate) error
+	DeleteEntry(ctx context.Context, id string) error
 	UpdateEntry(ctx context.Context, update HeadsUpdate) error
 }
 
 type Observer interface {
-	OnUpdate(update HeadsUpdate)
+	OnUpdate(update HeadsEntry)
 }
 
 type headStorage struct {
@@ -112,7 +111,7 @@ func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIt
 		if err != nil {
 			return fmt.Errorf("doc not found: %w", err)
 		}
-		cont, err := entryIter(h.entryFromDoc(doc))
+		cont, err := entryIter(entryFromVal(doc.Value()))
 		if !cont {
 			return err
 		}
@@ -125,63 +124,70 @@ func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, erro
 	if err != nil {
 		return HeadsEntry{}, err
 	}
-	return h.entryFromDoc(doc), nil
+	return entryFromVal(doc.Value()), nil
 }
 
 func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err error) {
-	tx, err := h.headsColl.WriteTx(ctx)
-	if err != nil {
-		return
-	}
-	err = h.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return
-	}
-	return tx.Commit()
-}
-
-func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (err error) {
+	var (
+		resultEntry HeadsEntry
+		modResult   anystore.ModifyResult
+	)
 	defer func() {
-		if err == nil {
+		if err == nil && modResult.Modified > 0 {
 			for _, observer := range h.observers {
-				observer.OnUpdate(update)
+				observer.OnUpdate(resultEntry)
 			}
 		}
 	}()
+
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		if update.DeletedStatus != nil {
-			v.Set(DeletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus)))
-		}
-		if update.CommonSnapshot != nil {
-			v.Set(commonSnapshotKey, a.NewString(*update.CommonSnapshot))
-		}
-		if update.Heads != nil {
-			v.Set(headsKey, storeutil.NewStringArrayValue(update.Heads, a))
-		}
-		if update.IsDerived != nil {
-			if *update.IsDerived {
-				v.Set(derivedStatusKey, a.NewTrue())
-			} else {
-				v.Set(derivedStatusKey, a.NewFalse())
+			if storeutil.ModifyKey(v, DeletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus))) {
+				modified = true
 			}
 		}
-		return v, true, nil
+
+		if update.CommonSnapshot != nil {
+			if storeutil.ModifyKey(v, commonSnapshotKey, a.NewString(*update.CommonSnapshot)) {
+				modified = true
+			}
+		}
+
+		if update.Heads != nil {
+			if storeutil.ModifyKey(v, headsKey, storeutil.NewStringArrayValue(update.Heads, a)) {
+				modified = true
+			}
+		}
+
+		if update.IsDerived != nil {
+			var val *anyenc.Value
+			if *update.IsDerived {
+				val = a.NewTrue()
+			} else {
+				val = a.NewFalse()
+			}
+			if storeutil.ModifyKey(v, derivedStatusKey, val) {
+				modified = true
+			}
+		}
+
+		resultEntry = entryFromVal(v)
+		return v, modified, nil
 	})
-	_, err = h.headsColl.UpsertId(ctx, update.Id, mod)
+	modResult, err = h.headsColl.UpsertId(ctx, update.Id, mod)
 	return
 }
 
-func (h *headStorage) DeleteEntryTx(ctx context.Context, id string) error {
+func (h *headStorage) DeleteEntry(ctx context.Context, id string) error {
 	return h.headsColl.DeleteId(ctx, id)
 }
 
-func (h *headStorage) entryFromDoc(doc anystore.Doc) HeadsEntry {
+func entryFromVal(val *anyenc.Value) HeadsEntry {
 	return HeadsEntry{
-		Id:             doc.Value().GetString(idKey),
-		Heads:          storeutil.StringsFromArrayValue(doc.Value(), headsKey),
-		CommonSnapshot: doc.Value().GetString(commonSnapshotKey),
-		DeletedStatus:  DeletedStatus(doc.Value().GetInt(DeletedStatusKey)),
-		IsDerived:      doc.Value().GetBool(derivedStatusKey),
+		Id:             val.GetString(idKey),
+		Heads:          storeutil.StringsFromArrayValue(val, headsKey),
+		CommonSnapshot: val.GetString(commonSnapshotKey),
+		DeletedStatus:  DeletedStatus(val.GetInt(DeletedStatusKey)),
+		IsDerived:      val.GetBool(derivedStatusKey),
 	}
 }

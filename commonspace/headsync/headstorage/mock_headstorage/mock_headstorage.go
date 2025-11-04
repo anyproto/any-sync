@@ -53,18 +53,18 @@ func (mr *MockHeadStorageMockRecorder) AddObserver(observer any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddObserver", reflect.TypeOf((*MockHeadStorage)(nil).AddObserver), observer)
 }
 
-// DeleteEntryTx mocks base method.
-func (m *MockHeadStorage) DeleteEntryTx(txCtx context.Context, id string) error {
+// DeleteEntry mocks base method.
+func (m *MockHeadStorage) DeleteEntry(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEntryTx", txCtx, id)
+	ret := m.ctrl.Call(m, "DeleteEntry", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteEntryTx indicates an expected call of DeleteEntryTx.
-func (mr *MockHeadStorageMockRecorder) DeleteEntryTx(txCtx, id any) *gomock.Call {
+// DeleteEntry indicates an expected call of DeleteEntry.
+func (mr *MockHeadStorageMockRecorder) DeleteEntry(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntryTx), txCtx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntry", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntry), ctx, id)
 }
 
 // GetEntry mocks base method.
@@ -108,18 +108,4 @@ func (m *MockHeadStorage) UpdateEntry(ctx context.Context, update headstorage.He
 func (mr *MockHeadStorageMockRecorder) UpdateEntry(ctx, update any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntry", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntry), ctx, update)
-}
-
-// UpdateEntryTx mocks base method.
-func (m *MockHeadStorage) UpdateEntryTx(txCtx context.Context, update headstorage.HeadsUpdate) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEntryTx", txCtx, update)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateEntryTx indicates an expected call of UpdateEntryTx.
-func (mr *MockHeadStorageMockRecorder) UpdateEntryTx(txCtx, update any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntryTx), txCtx, update)
 }

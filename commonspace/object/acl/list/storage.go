@@ -106,7 +106,7 @@ func CreateStorageTx(ctx context.Context, root *consensusproto.RawRecordWithId, 
 	if err != nil {
 		return nil, err
 	}
-	err = st.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
+	err = st.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
 		Id:    root.Id,
 		Heads: []string{root.Id},
 	})
@@ -227,7 +227,7 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 		Id:    s.id,
 		Heads: []string{head},
 	}
-	return s.headStorage.UpdateEntryTx(tx.Context(), update)
+	return s.headStorage.UpdateEntry(tx.Context(), update)
 }
 
 func (s *storage) Id() string {
