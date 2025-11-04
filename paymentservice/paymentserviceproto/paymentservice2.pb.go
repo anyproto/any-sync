@@ -1639,8 +1639,13 @@ func (x *MembershipV2_AnyNameIsValidResponse) GetDescription() string {
 type MembershipV2_AnyNameAllocateRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	RequestedAnyName string                 `protobuf:"bytes,1,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// this is the owner's main EOA (Externally Owned Account) address
+	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
+	// this is required to reserve a name for the owner (later that is done by user)
+	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+	OwnerEthAddress string `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MembershipV2_AnyNameAllocateRequest) Reset() {
@@ -1676,6 +1681,13 @@ func (*MembershipV2_AnyNameAllocateRequest) Descriptor() ([]byte, []int) {
 func (x *MembershipV2_AnyNameAllocateRequest) GetRequestedAnyName() string {
 	if x != nil {
 		return x.RequestedAnyName
+	}
+	return ""
+}
+
+func (x *MembershipV2_AnyNameAllocateRequest) GetOwnerEthAddress() string {
+	if x != nil {
+		return x.OwnerEthAddress
 	}
 	return ""
 }
@@ -1720,7 +1732,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xaa\x18\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xd4\x18\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -1822,9 +1834,10 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\aTooLong\x10\x03\x12\x13\n" +
 	"\x0fHasInvalidChars\x10\x04\x12\x14\n" +
 	"\x10AccountHasNoName\x10\x05\x12\x11\n" +
-	"\rCanNotReserve\x10\x06\x1aD\n" +
+	"\rCanNotReserve\x10\x06\x1an\n" +
 	"\x16AnyNameAllocateRequest\x12*\n" +
-	"\x10requestedAnyName\x18\x01 \x01(\tR\x10requestedAnyName\x1a\x19\n" +
+	"\x10requestedAnyName\x18\x01 \x01(\tR\x10requestedAnyName\x12(\n" +
+	"\x0fownerEthAddress\x18\x02 \x01(\tR\x0fownerEthAddress\x1a\x19\n" +
 	"\x17AnyNameAllocateResponse\"p\n" +
 	"\rPaymentMethod\x12\x0e\n" +
 	"\n" +

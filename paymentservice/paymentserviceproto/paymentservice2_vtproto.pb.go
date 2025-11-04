@@ -1308,6 +1308,13 @@ func (m *MembershipV2_AnyNameAllocateRequest) MarshalToSizedBufferVT(dAtA []byte
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.OwnerEthAddress) > 0 {
+		i -= len(m.OwnerEthAddress)
+		copy(dAtA[i:], m.OwnerEthAddress)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.OwnerEthAddress)))
+		i--
+		dAtA[i] = 0x12
+	}
 	if len(m.RequestedAnyName) > 0 {
 		i -= len(m.RequestedAnyName)
 		copy(dAtA[i:], m.RequestedAnyName)
@@ -1846,6 +1853,10 @@ func (m *MembershipV2_AnyNameAllocateRequest) SizeVT() (n int) {
 	var l int
 	_ = l
 	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.OwnerEthAddress)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
@@ -4701,6 +4712,38 @@ func (m *MembershipV2_AnyNameAllocateRequest) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

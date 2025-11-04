@@ -208,6 +208,12 @@ message MembershipV2 {
 
   message AnyNameAllocateRequest {
     string requestedAnyName = 1;
+
+    // this is the owner's main EOA (Externally Owned Account) address
+    // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+    // this is required to reserve a name for the owner (later that is done by user)
+    // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+    string ownerEthAddress = 2;
   }
 
   message AnyNameAllocateResponse {
