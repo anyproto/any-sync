@@ -53,13 +53,13 @@ type DerivationResult struct {
 // The master node should be at path m/44'/2046'/index'
 func DeriveKeysFromMasterNode(masterNode slip10.Node) (res DerivationResult, err error) {
 	res.MasterNode = masterNode
-	
+
 	// Derive master key from the node
 	res.MasterKey, err = genKey(masterNode)
 	if err != nil {
 		return
 	}
-	
+
 	// Derive identity at m/44'/2046'/index'/0'
 	identityNode, err := masterNode.Derive(slip10.FirstHardenedIndex)
 	if err != nil {
@@ -77,12 +77,12 @@ func (m Mnemonic) DeriveMasterNode(index uint32) (masterNode slip10.Node, err er
 	if err != nil {
 		return
 	}
-	
+
 	prefixNode, err := slip10.DeriveForPath(anytypeAccountNewPrefix, seed)
 	if err != nil {
 		return
 	}
-	
+
 	// m/44'/2046'/index'
 	masterNode, err = prefixNode.Derive(slip10.FirstHardenedIndex + index)
 	return
@@ -95,7 +95,7 @@ func DeriveMasterNodeFromSeed(seed []byte, index uint32) (masterNode slip10.Node
 	if err != nil {
 		return
 	}
-	
+
 	// m/44'/2046'/index'
 	masterNode, err = prefixNode.Derive(slip10.FirstHardenedIndex + index)
 	return
@@ -164,13 +164,13 @@ func (m Mnemonic) deriveForPath(onlyMaster bool, index uint32, path string) (res
 	if err != nil {
 		return
 	}
-	
+
 	if onlyMaster {
 		// Only derive the master key
 		res.MasterKey, err = genKey(res.MasterNode)
 		return
 	}
-	
+
 	// Use the public method to derive both master key and identity
 	return DeriveKeysFromMasterNode(res.MasterNode)
 }
@@ -181,19 +181,19 @@ func (m Mnemonic) DeriveKeys(index uint32) (res DerivationResult, err error) {
 	if err != nil {
 		return
 	}
-	
+
 	// Derive master node using the new public method
 	masterNode, err := m.DeriveMasterNode(index)
 	if err != nil {
 		return
 	}
-	
+
 	// Derive keys from master node using the public method
 	res, err = DeriveKeysFromMasterNode(masterNode)
 	if err != nil {
 		return
 	}
-	
+
 	// Add old account key for backward compatibility
 	res.OldAccountKey = oldRes.MasterKey
 
