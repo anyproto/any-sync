@@ -1146,27 +1146,27 @@ func (*MembershipV2_StoreCartGetRequest) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 13}
 }
 
-type MembershipV2_StoreCartResponse struct {
+type MembershipV2_StoreCartGetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cart          *MembershipV2_Cart     `protobuf:"bytes,1,opt,name=cart,proto3" json:"cart,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MembershipV2_StoreCartResponse) Reset() {
-	*x = MembershipV2_StoreCartResponse{}
+func (x *MembershipV2_StoreCartGetResponse) Reset() {
+	*x = MembershipV2_StoreCartGetResponse{}
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MembershipV2_StoreCartResponse) String() string {
+func (x *MembershipV2_StoreCartGetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MembershipV2_StoreCartResponse) ProtoMessage() {}
+func (*MembershipV2_StoreCartGetResponse) ProtoMessage() {}
 
-func (x *MembershipV2_StoreCartResponse) ProtoReflect() protoreflect.Message {
+func (x *MembershipV2_StoreCartGetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1178,12 +1178,12 @@ func (x *MembershipV2_StoreCartResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MembershipV2_StoreCartResponse.ProtoReflect.Descriptor instead.
-func (*MembershipV2_StoreCartResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use MembershipV2_StoreCartGetResponse.ProtoReflect.Descriptor instead.
+func (*MembershipV2_StoreCartGetResponse) Descriptor() ([]byte, []int) {
 	return file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescGZIP(), []int{0, 14}
 }
 
-func (x *MembershipV2_StoreCartResponse) GetCart() *MembershipV2_Cart {
+func (x *MembershipV2_StoreCartGetResponse) GetCart() *MembershipV2_Cart {
 	if x != nil {
 		return x.Cart
 	}
@@ -1732,7 +1732,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xd4\x18\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xd7\x18\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -1802,8 +1802,8 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x11GetStatusResponse\x12:\n" +
 	"\bproducts\x18\x01 \x03(\v2\x1e.MembershipV2.PurchasedProductR\bproducts\x127\n" +
 	"\vnextInvoice\x18\x02 \x01(\v2\x15.MembershipV2.InvoiceR\vnextInvoice\x1a\x15\n" +
-	"\x13StoreCartGetRequest\x1a;\n" +
-	"\x11StoreCartResponse\x12&\n" +
+	"\x13StoreCartGetRequest\x1a>\n" +
+	"\x14StoreCartGetResponse\x12&\n" +
 	"\x04cart\x18\x01 \x01(\v2\x12.MembershipV2.CartR\x04cart\x1a>\n" +
 	"\x1eStoreCartPromocodeApplyRequest\x12\x1c\n" +
 	"\tpromocode\x18\x01 \x01(\tR\tpromocode\x1a\x1a\n" +
@@ -1845,13 +1845,15 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\fMethodStripe\x10\x01\x12\x10\n" +
 	"\fMethodCrypto\x10\x02\x12\x14\n" +
 	"\x10MethodInappApple\x10\x03\x12\x15\n" +
-	"\x11MethodInappGoogle\x10\x042\xbf\x03\n" +
+	"\x11MethodInappGoogle\x10\x042\xf6\x04\n" +
 	"\x16AnyPaymentProcessingV2\x12R\n" +
 	"\vGetProducts\x12 .MembershipV2.GetProductsRequest\x1a!.MembershipV2.GetProductsResponse\x12L\n" +
 	"\tGetStatus\x12\x1e.MembershipV2.GetStatusRequest\x1a\x1f.MembershipV2.GetStatusResponse\x12F\n" +
 	"\aWebAuth\x12\x1c.MembershipV2.WebAuthRequest\x1a\x1d.MembershipV2.WebAuthResponse\x12[\n" +
 	"\x0eAnyNameIsValid\x12#.MembershipV2.AnyNameIsValidRequest\x1a$.MembershipV2.AnyNameIsValidResponse\x12^\n" +
-	"\x0fAnyNameAllocate\x12$.MembershipV2.AnyNameAllocateRequest\x1a%.MembershipV2.AnyNameAllocateResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
+	"\x0fAnyNameAllocate\x12$.MembershipV2.AnyNameAllocateRequest\x1a%.MembershipV2.AnyNameAllocateResponse\x12U\n" +
+	"\fStoreCartGet\x12!.MembershipV2.StoreCartGetRequest\x1a\".MembershipV2.StoreCartGetResponse\x12^\n" +
+	"\x0fStoreCartUpdate\x12$.MembershipV2.StoreCartUpdateRequest\x1a%.MembershipV2.StoreCartUpdateResponseB$Z\"paymentservice/paymentserviceprotob\x06proto3"
 
 var (
 	file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDescOnce sync.Once
@@ -1887,7 +1889,7 @@ var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_goTypes
 	(*MembershipV2_GetStatusRequest)(nil),               // 16: MembershipV2.GetStatusRequest
 	(*MembershipV2_GetStatusResponse)(nil),              // 17: MembershipV2.GetStatusResponse
 	(*MembershipV2_StoreCartGetRequest)(nil),            // 18: MembershipV2.StoreCartGetRequest
-	(*MembershipV2_StoreCartResponse)(nil),              // 19: MembershipV2.StoreCartResponse
+	(*MembershipV2_StoreCartGetResponse)(nil),           // 19: MembershipV2.StoreCartGetResponse
 	(*MembershipV2_StoreCartPromocodeApplyRequest)(nil), // 20: MembershipV2.StoreCartPromocodeApplyRequest
 	(*MembershipV2_StoreCartCheckoutRequest)(nil),       // 21: MembershipV2.StoreCartCheckoutRequest
 	(*MembershipV2_StoreCartCheckoutResponse)(nil),      // 22: MembershipV2.StoreCartCheckoutResponse
@@ -1918,7 +1920,7 @@ var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_depIdxs
 	7,  // 13: MembershipV2.GetProductsResponse.products:type_name -> MembershipV2.Product
 	10, // 14: MembershipV2.GetStatusResponse.products:type_name -> MembershipV2.PurchasedProduct
 	12, // 15: MembershipV2.GetStatusResponse.nextInvoice:type_name -> MembershipV2.Invoice
-	13, // 16: MembershipV2.StoreCartResponse.cart:type_name -> MembershipV2.Cart
+	13, // 16: MembershipV2.StoreCartGetResponse.cart:type_name -> MembershipV2.Cart
 	11, // 17: MembershipV2.StoreCartUpdateRequest.products:type_name -> MembershipV2.CartProduct
 	13, // 18: MembershipV2.StoreCartUpdateResponse.cart:type_name -> MembershipV2.Cart
 	3,  // 19: MembershipV2.AnyNameIsValidResponse.code:type_name -> MembershipV2.AnyNameIsValidResponse.Code
@@ -1927,13 +1929,17 @@ var file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_depIdxs
 	26, // 22: AnyPaymentProcessingV2.WebAuth:input_type -> MembershipV2.WebAuthRequest
 	28, // 23: AnyPaymentProcessingV2.AnyNameIsValid:input_type -> MembershipV2.AnyNameIsValidRequest
 	30, // 24: AnyPaymentProcessingV2.AnyNameAllocate:input_type -> MembershipV2.AnyNameAllocateRequest
-	15, // 25: AnyPaymentProcessingV2.GetProducts:output_type -> MembershipV2.GetProductsResponse
-	17, // 26: AnyPaymentProcessingV2.GetStatus:output_type -> MembershipV2.GetStatusResponse
-	27, // 27: AnyPaymentProcessingV2.WebAuth:output_type -> MembershipV2.WebAuthResponse
-	29, // 28: AnyPaymentProcessingV2.AnyNameIsValid:output_type -> MembershipV2.AnyNameIsValidResponse
-	31, // 29: AnyPaymentProcessingV2.AnyNameAllocate:output_type -> MembershipV2.AnyNameAllocateResponse
-	25, // [25:30] is the sub-list for method output_type
-	20, // [20:25] is the sub-list for method input_type
+	18, // 25: AnyPaymentProcessingV2.StoreCartGet:input_type -> MembershipV2.StoreCartGetRequest
+	23, // 26: AnyPaymentProcessingV2.StoreCartUpdate:input_type -> MembershipV2.StoreCartUpdateRequest
+	15, // 27: AnyPaymentProcessingV2.GetProducts:output_type -> MembershipV2.GetProductsResponse
+	17, // 28: AnyPaymentProcessingV2.GetStatus:output_type -> MembershipV2.GetStatusResponse
+	27, // 29: AnyPaymentProcessingV2.WebAuth:output_type -> MembershipV2.WebAuthResponse
+	29, // 30: AnyPaymentProcessingV2.AnyNameIsValid:output_type -> MembershipV2.AnyNameIsValidResponse
+	31, // 31: AnyPaymentProcessingV2.AnyNameAllocate:output_type -> MembershipV2.AnyNameAllocateResponse
+	19, // 32: AnyPaymentProcessingV2.StoreCartGet:output_type -> MembershipV2.StoreCartGetResponse
+	24, // 33: AnyPaymentProcessingV2.StoreCartUpdate:output_type -> MembershipV2.StoreCartUpdateResponse
+	27, // [27:34] is the sub-list for method output_type
+	20, // [20:27] is the sub-list for method input_type
 	20, // [20:20] is the sub-list for extension type_name
 	20, // [20:20] is the sub-list for extension extendee
 	0,  // [0:20] is the sub-list for field type_name

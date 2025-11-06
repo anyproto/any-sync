@@ -140,7 +140,7 @@ message MembershipV2 {
 
   }
 
-  message StoreCartResponse {
+  message StoreCartGetResponse {
     MembershipV2.Cart cart = 1;
   }
 
@@ -228,4 +228,7 @@ service AnyPaymentProcessingV2 {
 
   rpc AnyNameIsValid(MembershipV2.AnyNameIsValidRequest) returns (MembershipV2.AnyNameIsValidResponse);
   rpc AnyNameAllocate(MembershipV2.AnyNameAllocateRequest) returns (MembershipV2.AnyNameAllocateResponse);
+
+  rpc StoreCartGet(MembershipV2.StoreCartGetRequest) returns (MembershipV2.StoreCartGetResponse);
+  rpc StoreCartUpdate(MembershipV2.StoreCartUpdateRequest) returns (MembershipV2.StoreCartUpdateResponse);
 }

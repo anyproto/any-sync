@@ -30,6 +30,9 @@ type AnyPpClientServiceV2 interface {
 
 	AnyNameAllocate(ctx context.Context, in *pp.MembershipV2_AnyNameAllocateRequest) (out *pp.MembershipV2_AnyNameAllocateResponse, err error)
 
+	StoreCartGet(ctx context.Context, in *pp.MembershipV2_StoreCartGetRequest) (out *pp.MembershipV2_StoreCartGetResponse, err error)
+	StoreCartUpdate(ctx context.Context, in *pp.MembershipV2_StoreCartUpdateRequest) (out *pp.MembershipV2_StoreCartUpdateResponse, err error)
+
 	app.Component
 }
 
@@ -121,6 +124,26 @@ func (s *service) AnyNameIsValid(ctx context.Context, in *pp.MembershipV2_AnyNam
 func (s *service) AnyNameAllocate(ctx context.Context, in *pp.MembershipV2_AnyNameAllocateRequest) (out *pp.MembershipV2_AnyNameAllocateResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.AnyNameAllocate(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) StoreCartGet(ctx context.Context, in *pp.MembershipV2_StoreCartGetRequest) (out *pp.MembershipV2_StoreCartGetResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
+		if out, err = cl.StoreCartGet(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) StoreCartUpdate(ctx context.Context, in *pp.MembershipV2_StoreCartUpdateRequest) (out *pp.MembershipV2_StoreCartUpdateResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
+		if out, err = cl.StoreCartUpdate(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
