@@ -393,6 +393,35 @@ func TestAclBuild_OneToOne(t *testing.T) {
 
 }
 
+func TestAclState_OneToOneDsl(t *testing.T) {
+	t.Run("create onetone acl", func(t *testing.T) {
+		a := NewAclExecutor("spaceId")
+		cmds := []string{
+			"a;b.init-onetoone::a;b",
+		}
+		for _, cmd := range cmds {
+			err := a.Execute(cmd)
+			require.NoError(t, err)
+		}
+		accA := a.ActualAccounts()["a"]
+		accB := a.ActualAccounts()["b"]
+		require.True(t, accA.Acl.AclState().IsOneToOne())
+		require.True(t, accB.Acl.AclState().IsOneToOne())
+		require.Equal(t, AclPermissionsWriter, accA.Acl.AclState().Permissions(accA.Keys.SignKey.GetPublic()))
+		require.Equal(t, AclPermissionsWriter, accB.Acl.AclState().Permissions(accB.Keys.SignKey.GetPublic()))
+		require.Equal(t, AclPermissionsWriter, accA.Acl.AclState().Permissions(accB.Keys.SignKey.GetPublic()))
+		require.Equal(t, AclPermissionsWriter, accB.Acl.AclState().Permissions(accA.Keys.SignKey.GetPublic()))
+		a.verify(t)
+	})
+	t.Run("add record to onetone returns error", func(t *testing.T) {
+		a := NewAclExecutor("spaceId")
+		require.NoError(t, a.Execute("a;b.init-onetoone::a;b"))
+		err := a.Execute("a.add::c,r,meta")
+		require.ErrorIs(t, err, ErrAddRecordOneToOne)
+	})
+
+}
+
 func newTestAclStateWithKey(key crypto.PrivKey) *AclState {
 	return &AclState{
 		id:              "id1",

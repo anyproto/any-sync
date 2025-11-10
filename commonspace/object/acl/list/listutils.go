@@ -81,19 +81,19 @@ func NewTestAclStateWithUsers(numWriters, numReaders, numInvites int) *AclState 
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
-	for i := 0; i < numWriters; i++ {
+	for i := range numWriters {
 		st.accountStates[fmt.Sprint("w", i)] = AccountState{
 			Permissions: AclPermissionsWriter,
 			Status:      StatusActive,
 		}
 	}
-	for i := 0; i < numReaders; i++ {
+	for i := range numReaders {
 		st.accountStates[fmt.Sprint("r", i)] = AccountState{
 			Permissions: AclPermissionsReader,
 			Status:      StatusActive,
 		}
 	}
-	for i := 0; i < numInvites; i++ {
+	for i := range numInvites {
 		st.invites[fmt.Sprint("r", i)] = Invite{}
 	}
 	return st
