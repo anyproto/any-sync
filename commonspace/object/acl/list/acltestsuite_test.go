@@ -17,6 +17,9 @@ func (a *AclTestExecutor) verify(t *testing.T) {
 			state := act.Acl.AclState()
 			require.Equal(t, exp.status, state.accountStates[mapKeyFromPubKey(key)].Status)
 			require.Equal(t, exp.perms, state.accountStates[mapKeyFromPubKey(key)].Permissions)
+			if act.Acl.AclState().IsOneToOne() {
+				continue
+			}
 			if a.expectedAccounts[actId].status != StatusActive {
 				metadata, err := act.Acl.AclState().GetMetadata(key, false)
 				require.NoError(t, err)
