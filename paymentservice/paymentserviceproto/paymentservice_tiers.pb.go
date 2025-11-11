@@ -281,14 +281,9 @@ type TierData struct {
 	AndroidProductId string `protobuf:"bytes,18,opt,name=androidProductId,proto3" json:"androidProductId,omitempty"`
 	AndroidManageUrl string `protobuf:"bytes,19,opt,name=androidManageUrl,proto3" json:"androidManageUrl,omitempty"`
 	// something like "limited offer", etc
-	Offer string `protobuf:"bytes,20,opt,name=offer,proto3" json:"offer,omitempty"`
-	// version 2 only fields (specify version in GetTiersRequest request first):
-	// if the tier is yearly (periodType above is PeriodTypeYears) - then also we provide a monthly price here
-	PriceStripeUsdCentsMonthly uint32 `protobuf:"varint,21,opt,name=priceStripeUsdCentsMonthly,proto3" json:"priceStripeUsdCentsMonthly,omitempty"`
-	IsIntroPlan                bool   `protobuf:"varint,22,opt,name=isIntroPlan,proto3" json:"isIntroPlan,omitempty"`
-	IsUpgradeable              bool   `protobuf:"varint,23,opt,name=isUpgradeable,proto3" json:"isUpgradeable,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	Offer         string `protobuf:"bytes,20,opt,name=offer,proto3" json:"offer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TierData) Reset() {
@@ -461,27 +456,6 @@ func (x *TierData) GetOffer() string {
 	return ""
 }
 
-func (x *TierData) GetPriceStripeUsdCentsMonthly() uint32 {
-	if x != nil {
-		return x.PriceStripeUsdCentsMonthly
-	}
-	return 0
-}
-
-func (x *TierData) GetIsIntroPlan() bool {
-	if x != nil {
-		return x.IsIntroPlan
-	}
-	return false
-}
-
-func (x *TierData) GetIsUpgradeable() bool {
-	if x != nil {
-		return x.IsUpgradeable
-	}
-	return false
-}
-
 type GetTiersResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// list of all available tiers
@@ -542,7 +516,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_tiers_proto_
 	"\aversion\x18\x03 \x01(\tR\aversion\"O\n" +
 	"\x15GetTiersRequestSigned\x12\x18\n" +
 	"\apayload\x18\x01 \x01(\fR\apayload\x12\x1c\n" +
-	"\tsignature\x18\x02 \x01(\fR\tsignature\"\xdf\x06\n" +
+	"\tsignature\x18\x02 \x01(\fR\tsignature\"\xd7\x05\n" +
 	"\bTierData\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\rR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -566,10 +540,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice_tiers_proto_
 	"\fiosManageUrl\x18\x11 \x01(\tR\fiosManageUrl\x12*\n" +
 	"\x10androidProductId\x18\x12 \x01(\tR\x10androidProductId\x12*\n" +
 	"\x10androidManageUrl\x18\x13 \x01(\tR\x10androidManageUrl\x12\x14\n" +
-	"\x05offer\x18\x14 \x01(\tR\x05offer\x12>\n" +
-	"\x1apriceStripeUsdCentsMonthly\x18\x15 \x01(\rR\x1apriceStripeUsdCentsMonthly\x12 \n" +
-	"\visIntroPlan\x18\x16 \x01(\bR\visIntroPlan\x12$\n" +
-	"\risUpgradeable\x18\x17 \x01(\bR\risUpgradeable\"3\n" +
+	"\x05offer\x18\x14 \x01(\tR\x05offer\"3\n" +
 	"\x10GetTiersResponse\x12\x1f\n" +
 	"\x05tiers\x18\x01 \x03(\v2\t.TierDataR\x05tiers*\x90\x01\n" +
 	"\n" +
