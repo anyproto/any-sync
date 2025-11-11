@@ -135,23 +135,6 @@ func (m *GetSubscriptionResponse) MarshalToSizedBufferVT(dAtA []byte) (int, erro
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.TeamOwner) > 0 {
-		i -= len(m.TeamOwner)
-		copy(dAtA[i:], m.TeamOwner)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.TeamOwner)))
-		i--
-		dAtA[i] = 0x5a
-	}
-	if m.IsMonthly {
-		i--
-		if m.IsMonthly {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x50
-	}
 	if m.SubscribeToNewsletter {
 		i--
 		if m.SubscribeToNewsletter {
@@ -243,16 +226,6 @@ func (m *BuySubscriptionRequest) MarshalToSizedBufferVT(dAtA []byte) (int, error
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
-	}
-	if m.IsMonthly {
-		i--
-		if m.IsMonthly {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x38
 	}
 	if len(m.UserEmail) > 0 {
 		i -= len(m.UserEmail)
@@ -1525,13 +1498,6 @@ func (m *GetSubscriptionResponse) SizeVT() (n int) {
 	if m.SubscribeToNewsletter {
 		n += 2
 	}
-	if m.IsMonthly {
-		n += 2
-	}
-	l = len(m.TeamOwner)
-	if l > 0 {
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
 	n += len(m.unknownFields)
 	return n
 }
@@ -1563,9 +1529,6 @@ func (m *BuySubscriptionRequest) SizeVT() (n int) {
 	l = len(m.UserEmail)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	if m.IsMonthly {
-		n += 2
 	}
 	n += len(m.unknownFields)
 	return n
@@ -2431,58 +2394,6 @@ func (m *GetSubscriptionResponse) UnmarshalVT(dAtA []byte) error {
 				}
 			}
 			m.SubscribeToNewsletter = bool(v != 0)
-		case 10:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsMonthly", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsMonthly = bool(v != 0)
-		case 11:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TeamOwner", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TeamOwner = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -2700,26 +2611,6 @@ func (m *BuySubscriptionRequest) UnmarshalVT(dAtA []byte) error {
 			}
 			m.UserEmail = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsMonthly", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.IsMonthly = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])

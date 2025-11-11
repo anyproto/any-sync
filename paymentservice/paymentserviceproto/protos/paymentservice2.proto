@@ -2,12 +2,20 @@ syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
 message MembershipV2 {
-  enum PaymentMethod {
-    MethodNone = 0;
-    MethodStripe = 1;
-    MethodCrypto = 2;
-    MethodInappApple = 3;
-    MethodInappGoogle = 4;
+  enum PaymentProvider {
+    None = 0;
+    Stripe = 1;
+    Crypto = 2;
+    BillingPortal = 3;
+    AppStore = 4;
+    GooglePlay = 5;
+  }
+
+  enum Period {
+    Unlimited = 0;
+    Monthly = 1;
+    Yearly = 2;
+    ThreeYears = 3;
   }
 
   message Amount {
@@ -65,8 +73,7 @@ message MembershipV2 {
     uint64 dateStarted = 1;
     uint64 dateEnds = 2;
     bool isAutoRenew = 3;
-    // otherwise - monthly
-    bool isYearly = 4;
+    Period period = 4;
   }
 
   message ProductStatus {
@@ -134,6 +141,8 @@ message MembershipV2 {
   message GetStatusResponse {
     repeated MembershipV2.PurchasedProduct products = 1;
     MembershipV2.Invoice nextInvoice = 2;
+    string teamOwnerID = 3;
+    MembershipV2.PaymentProvider paymentProvider = 4;
   }
 
   message StoreCartGetRequest {

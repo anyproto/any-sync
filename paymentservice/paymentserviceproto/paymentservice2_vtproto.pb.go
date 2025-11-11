@@ -303,13 +303,8 @@ func (m *MembershipV2_PurchaseInfo) MarshalToSizedBufferVT(dAtA []byte) (int, er
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.IsYearly {
-		i--
-		if m.IsYearly {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
+	if m.Period != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Period))
 		i--
 		dAtA[i] = 0x20
 	}
@@ -770,6 +765,18 @@ func (m *MembershipV2_GetStatusResponse) MarshalToSizedBufferVT(dAtA []byte) (in
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.PaymentProvider != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PaymentProvider))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.TeamOwnerID) > 0 {
+		i -= len(m.TeamOwnerID)
+		copy(dAtA[i:], m.TeamOwnerID)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.TeamOwnerID)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.NextInvoice != nil {
 		size, err := m.NextInvoice.MarshalToSizedBufferVT(dAtA[:i])
@@ -1512,8 +1519,8 @@ func (m *MembershipV2_PurchaseInfo) SizeVT() (n int) {
 	if m.IsAutoRenew {
 		n += 2
 	}
-	if m.IsYearly {
-		n += 2
+	if m.Period != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.Period))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1676,6 +1683,13 @@ func (m *MembershipV2_GetStatusResponse) SizeVT() (n int) {
 	if m.NextInvoice != nil {
 		l = m.NextInvoice.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.TeamOwnerID)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.PaymentProvider != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.PaymentProvider))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -2654,9 +2668,9 @@ func (m *MembershipV2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 			m.IsAutoRenew = bool(v != 0)
 		case 4:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field IsYearly", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Period", wireType)
 			}
-			var v int
+			m.Period = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -2666,12 +2680,11 @@ func (m *MembershipV2_PurchaseInfo) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				v |= int(b&0x7F) << shift
+				m.Period |= MembershipV2_Period(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			m.IsYearly = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -3669,6 +3682,57 @@ func (m *MembershipV2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TeamOwnerID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TeamOwnerID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PaymentProvider", wireType)
+			}
+			m.PaymentProvider = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PaymentProvider |= MembershipV2_PaymentProvider(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
