@@ -48,6 +48,9 @@ type DRPCCoordinatorClient interface {
 	AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(ctx context.Context, in *AclEventLogRequest) (*AclEventLogResponse, error)
+	InboxFetch(ctx context.Context, in *InboxFetchRequest) (*InboxFetchResponse, error)
+	InboxAddMessage(ctx context.Context, in *InboxAddMessageRequest) (*InboxAddMessageResponse, error)
+	NotifySubscribe(ctx context.Context, in *NotifySubscribeRequest) (DRPCCoordinator_NotifySubscribeClient, error)
 	AclUploadInvite(ctx context.Context, in *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 }
 
@@ -196,6 +199,64 @@ func (c *drpcCoordinatorClient) AclEventLog(ctx context.Context, in *AclEventLog
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) InboxFetch(ctx context.Context, in *InboxFetchRequest) (*InboxFetchResponse, error) {
+	out := new(InboxFetchResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/InboxFetch", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) InboxAddMessage(ctx context.Context, in *InboxAddMessageRequest) (*InboxAddMessageResponse, error) {
+	out := new(InboxAddMessageResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/InboxAddMessage", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) NotifySubscribe(ctx context.Context, in *NotifySubscribeRequest) (DRPCCoordinator_NotifySubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, "/coordinator.Coordinator/NotifySubscribe", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
+	if err != nil {
+		return nil, err
+	}
+	x := &drpcCoordinator_NotifySubscribeClient{stream}
+	if err := x.MsgSend(in, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return nil, err
+	}
+	if err := x.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type DRPCCoordinator_NotifySubscribeClient interface {
+	drpc.Stream
+	Recv() (*NotifySubscribeEvent, error)
+}
+
+type drpcCoordinator_NotifySubscribeClient struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_NotifySubscribeClient) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcCoordinator_NotifySubscribeClient) Recv() (*NotifySubscribeEvent, error) {
+	m := new(NotifySubscribeEvent)
+	if err := x.MsgRecv(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (x *drpcCoordinator_NotifySubscribeClient) RecvMsg(m *NotifySubscribeEvent) error {
+	return x.MsgRecv(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
+}
+
 func (c *drpcCoordinatorClient) AclUploadInvite(ctx context.Context, in *AclUploadInviteRequest) (*AclUploadInviteResponse, error) {
 	out := new(AclUploadInviteResponse)
 	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/AclUploadInvite", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
@@ -221,6 +282,9 @@ type DRPCCoordinatorServer interface {
 	AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(context.Context, *AclEventLogRequest) (*AclEventLogResponse, error)
+	InboxFetch(context.Context, *InboxFetchRequest) (*InboxFetchResponse, error)
+	InboxAddMessage(context.Context, *InboxAddMessageRequest) (*InboxAddMessageResponse, error)
+	NotifySubscribe(*NotifySubscribeRequest, DRPCCoordinator_NotifySubscribeStream) error
 	AclUploadInvite(context.Context, *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 }
 
@@ -286,13 +350,25 @@ func (s *DRPCCoordinatorUnimplementedServer) AclEventLog(context.Context, *AclEv
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) InboxFetch(context.Context, *InboxFetchRequest) (*InboxFetchResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) InboxAddMessage(context.Context, *InboxAddMessageRequest) (*InboxAddMessageResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) NotifySubscribe(*NotifySubscribeRequest, DRPCCoordinator_NotifySubscribeStream) error {
+	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCCoordinatorUnimplementedServer) AclUploadInvite(context.Context, *AclUploadInviteRequest) (*AclUploadInviteResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 16 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 19 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -432,6 +508,33 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 					)
 			}, DRPCCoordinatorServer.AclEventLog, true
 	case 15:
+		return "/coordinator.Coordinator/InboxFetch", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					InboxFetch(
+						ctx,
+						in1.(*InboxFetchRequest),
+					)
+			}, DRPCCoordinatorServer.InboxFetch, true
+	case 16:
+		return "/coordinator.Coordinator/InboxAddMessage", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					InboxAddMessage(
+						ctx,
+						in1.(*InboxAddMessageRequest),
+					)
+			}, DRPCCoordinatorServer.InboxAddMessage, true
+	case 17:
+		return "/coordinator.Coordinator/NotifySubscribe", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return nil, srv.(DRPCCoordinatorServer).
+					NotifySubscribe(
+						in1.(*NotifySubscribeRequest),
+						&drpcCoordinator_NotifySubscribeStream{in2.(drpc.Stream)},
+					)
+			}, DRPCCoordinatorServer.NotifySubscribe, true
+	case 18:
 		return "/coordinator.Coordinator/AclUploadInvite", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -687,6 +790,51 @@ func (x *drpcCoordinator_AclEventLogStream) SendAndClose(m *AclEventLogResponse)
 		return err
 	}
 	return x.CloseSend()
+}
+
+type DRPCCoordinator_InboxFetchStream interface {
+	drpc.Stream
+	SendAndClose(*InboxFetchResponse) error
+}
+
+type drpcCoordinator_InboxFetchStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_InboxFetchStream) SendAndClose(m *InboxFetchResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_InboxAddMessageStream interface {
+	drpc.Stream
+	SendAndClose(*InboxAddMessageResponse) error
+}
+
+type drpcCoordinator_InboxAddMessageStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_InboxAddMessageStream) SendAndClose(m *InboxAddMessageResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_NotifySubscribeStream interface {
+	drpc.Stream
+	Send(*NotifySubscribeEvent) error
+}
+
+type drpcCoordinator_NotifySubscribeStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_NotifySubscribeStream) Send(m *NotifySubscribeEvent) error {
+	return x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
 }
 
 type DRPCCoordinator_AclUploadInviteStream interface {

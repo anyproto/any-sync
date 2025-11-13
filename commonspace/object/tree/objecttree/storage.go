@@ -127,7 +127,7 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 		}
 		return nil, err
 	}
-	err = st.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
+	err = st.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
 		Id:             root.Id,
 		Heads:          []string{root.Id},
 		CommonSnapshot: &root.Id,
@@ -242,7 +242,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	return s.headStorage.UpdateEntryTx(tx.Context(), update)
+	return s.headStorage.UpdateEntry(tx.Context(), update)
 }
 
 func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
@@ -273,7 +273,7 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	return s.headStorage.UpdateEntryTx(tx.Context(), update)
+	return s.headStorage.UpdateEntry(tx.Context(), update)
 }
 
 func (s *storage) Delete(ctx context.Context) error {

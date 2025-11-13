@@ -77,7 +77,7 @@ func New(ctx context.Context, storageName string, headStorage headstorage.HeadSt
 	}
 	storage.diff.Set(elements...)
 	hash := storage.diff.Hash()
-	err = headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
+	err = headStorage.UpdateEntry(tx.Context(), headstorage.HeadsUpdate{
 		Id:    storageName,
 		Heads: []string{hash},
 	})
@@ -203,7 +203,7 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 		return
 	}
 	s.diff.Set(elements...)
-	err = s.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
+	err = s.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
 		Id:    s.storageName,
 		Heads: []string{s.diff.Hash()},
 	})

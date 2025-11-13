@@ -167,9 +167,9 @@ func TestDiffSyncer(t *testing.T) {
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 
 		upd := headstorage.DeletedStatusDeleted
-		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
+		fx.diffSyncer.updateHeads(headstorage.HeadsEntry{
 			Id:            "id",
-			DeletedStatus: &upd,
+			DeletedStatus: upd,
 		})
 	})
 
@@ -179,7 +179,7 @@ func TestDiffSyncer(t *testing.T) {
 		defer fx.stop()
 		updatedId := "id"
 		fx.deletionStateMock.EXPECT().Exists(updatedId).Return(false)
-		
+
 		hasher := ldiff.NewHasher()
 		hash := hasher.HashId("head")
 		ldiff.ReleaseHasher(hasher)
@@ -193,12 +193,12 @@ func TestDiffSyncer(t *testing.T) {
 			Id:   updatedId,
 			Head: hash,
 		})
-		
+
 		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
 		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
-		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
+		fx.diffSyncer.updateHeads(headstorage.HeadsEntry{
 			Id:    "id",
 			Heads: []string{"head"},
 		})

@@ -74,14 +74,14 @@ func (d *diffSyncer) Init() {
 	d.headUpdater.Run()
 }
 
-func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsUpdate) {
+func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsEntry) {
 	err := d.headUpdater.Add(headsUpdate)
 	if err != nil {
 		d.log.Warn("failed to add heads update", zap.Error(err))
 	}
 }
 
-func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
+func (d *diffSyncer) updateHeads(update headstorage.HeadsEntry) {
 	d.diffManager.UpdateHeads(update)
 }
 

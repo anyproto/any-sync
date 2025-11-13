@@ -37,6 +37,13 @@ type AclTestExecutor struct {
 	expectedPermissions map[string][]accountExpectedState
 }
 
+type ParsedArgs struct {
+	Cmd     string
+	Account string
+	Command string
+	Args    []string
+}
+
 func NewAclExecutor(spaceId string) *AclTestExecutor {
 	return &AclTestExecutor{
 		spaceId:             spaceId,
@@ -241,30 +248,135 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 	return afterAll, addRec(WrapAclRecord(res.Rec))
 }
 
-func (a *AclTestExecutor) Execute(cmd string) (err error) {
+func (a *AclTestExecutor) initOneToOne(parsedArgs *ParsedArgs) error {
+	if len(parsedArgs.Args) != 2 {
+		return errIncorrectParts
+	}
+	if len(a.actualAccounts) != 0 {
+		return fmt.Errorf("init-onetoone must be the first command")
+	}
+	type accSpec struct {
+		name string
+	}
+	specs := make([]accSpec, len(parsedArgs.Args))
+	for i, raw := range parsedArgs.Args {
+		parts := strings.SplitN(raw, ",", 2)
+		name := strings.TrimSpace(parts[0])
+		if name == "" {
+			return errIncorrectParts
+		}
+		if len(parts) == 2 && strings.TrimSpace(parts[1]) != "" {
+			return fmt.Errorf("init-onetoone does not support metadata")
+		}
+		specs[i].name = name
+	}
+	if specs[0].name == specs[1].name {
+		return ErrDuplicateAccounts
+	}
+	accountKeys := make([]*accountdata.AccountKeys, len(specs))
+	writerBytes := make([][]byte, len(specs))
+	for i := range specs {
+		keys, err := accountdata.NewRandom()
+		if err != nil {
+			return err
+		}
+		accountKeys[i] = keys
+		writerBytes[i], err = keys.SignKey.GetPublic().Marshall()
+		if err != nil {
+			return err
+		}
+	}
+	sharedKey, err := crypto.GenerateSharedKey(accountKeys[0].SignKey, accountKeys[1].SignKey.GetPublic(), crypto.AnysyncOneToOneSpacePath)
+	if err != nil {
+		return err
+	}
+	sharedPubBytes, err := sharedKey.GetPublic().Marshall()
+	if err != nil {
+		return err
+	}
+	recBuilder := NewAclRecordBuilder("", crypto.NewKeyStorage(), nil, recordverifier.NewValidateFull())
+	root, err := recBuilder.BuildOneToOneRoot(RootContent{
+		PrivKey:   sharedKey,
+		MasterKey: sharedKey,
+	}, &aclrecordproto.AclOneToOneInfo{
+		Owner:   sharedPubBytes,
+		Writers: writerBytes,
+	})
+	if err != nil {
+		return err
+	}
+	for i, spec := range specs {
+		aclList, err := newInMemoryAclWithRoot(accountKeys[i], root)
+		if err != nil {
+			return err
+		}
+		a.actualAccounts[spec.name] = &TestAclState{
+			Keys: accountKeys[i],
+			Acl:  aclList,
+		}
+		a.expectedAccounts[spec.name] = &accountExpectedState{
+			perms:    AclPermissions(aclrecordproto.AclUserPermissions_Writer),
+			status:   StatusActive,
+			pseudoId: spec.name,
+		}
+	}
+	a.owner = specs[0].name
+	head := a.actualAccounts[a.owner].Acl.Head().Id
+	var states []accountExpectedState
+	for _, state := range a.expectedAccounts {
+		cp := *state
+		cp.recCmd = parsedArgs.Cmd
+		states = append(states, cp)
+	}
+	a.expectedPermissions[head] = states
+	return nil
+}
+
+func (a *AclTestExecutor) parseArgs(cmd string) (*ParsedArgs, error) {
 	parts := strings.Split(cmd, "::")
 	if len(parts) != 2 {
-		return errIncorrectParts
+		return nil, errIncorrectParts
 	}
 	commandParts := strings.Split(parts[0], ".")
 	if len(commandParts) != 2 {
-		return errIncorrectParts
+		return nil, errIncorrectParts
 	}
 	account := commandParts[0]
 	command := commandParts[1]
 	args := strings.Split(parts[1], ";")
 	if len(args) == 0 {
-		return errIncorrectParts
+		return nil, errIncorrectParts
 	}
+	return &ParsedArgs{
+		Cmd:     cmd,
+		Account: account,
+		Command: command,
+		Args:    args,
+	}, nil
+}
+
+func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
+	parsedArgs, err := a.parseArgs(cmdStr)
+
+	if parsedArgs.Command == "init-onetoone" {
+		return a.initOneToOne(parsedArgs)
+	}
+
 	var isNewAccount bool
-	if _, exists := a.actualAccounts[account]; !exists {
+	if _, exists := a.actualAccounts[parsedArgs.Account]; !exists {
+		if len(a.actualAccounts) > 0 {
+			rootAccount := a.actualAccounts[a.owner]
+			if rootAccount != nil && rootAccount.Acl.AclState().IsOneToOne() {
+				return ErrAddRecordOneToOne
+			}
+		}
 		isNewAccount = true
 		keys, err := accountdata.NewRandom()
 		if err != nil {
 			return err
 		}
 		if len(a.expectedAccounts) == 0 {
-			meta := []byte(account)
+			meta := []byte(parsedArgs.Account)
 			var acl AclList
 			if a.ownerKeys == nil {
 				acl, err = newInMemoryDerivedAclMetadata(a.spaceId, keys, meta)
@@ -283,14 +395,14 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 				Keys: keys,
 				Acl:  acl,
 			}
-			a.actualAccounts[account] = state
-			a.expectedAccounts[account] = &accountExpectedState{
+			a.actualAccounts[parsedArgs.Account] = state
+			a.expectedAccounts[parsedArgs.Account] = &accountExpectedState{
 				perms:    AclPermissions(aclrecordproto.AclUserPermissions_Owner),
 				status:   StatusActive,
 				metadata: meta,
-				pseudoId: account,
+				pseudoId: parsedArgs.Account,
 			}
-			a.owner = account
+			a.owner = parsedArgs.Account
 			return nil
 		} else {
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
@@ -303,31 +415,34 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 				Keys: keys,
 				Acl:  accountAcl,
 			}
-			a.actualAccounts[account] = state
-			a.expectedAccounts[account] = &accountExpectedState{
-				metadata: []byte(account),
-				pseudoId: account,
+			a.actualAccounts[parsedArgs.Account] = state
+			a.expectedAccounts[parsedArgs.Account] = &accountExpectedState{
+				metadata: []byte(parsedArgs.Account),
+				pseudoId: parsedArgs.Account,
 			}
 		}
-	} else if a.expectedAccounts[account].status == StatusRemoved {
-		keys := a.actualAccounts[account].Keys
+	} else if a.expectedAccounts[parsedArgs.Account].status == StatusRemoved {
+		keys := a.actualAccounts[parsedArgs.Account].Keys
 		ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
 		copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
 		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, recordverifier.NewValidateFull())
 		if err != nil {
 			return err
 		}
-		a.actualAccounts[account].Acl = accountAcl
+		a.actualAccounts[parsedArgs.Account].Acl = accountAcl
 	}
-	acl := a.actualAccounts[account].Acl
+	acl := a.actualAccounts[parsedArgs.Account].Acl
+	if acl.AclState().IsOneToOne() {
+		return ErrAddRecordOneToOne
+	}
 	var afterAll []func()
 	defer func() {
 		if err != nil {
 			if !isNewAccount {
 				return
 			}
-			delete(a.expectedAccounts, account)
-			delete(a.actualAccounts, account)
+			delete(a.expectedAccounts, parsedArgs.Account)
+			delete(a.actualAccounts, parsedArgs.Account)
 		} else {
 			for _, f := range afterAll {
 				f()
@@ -336,7 +451,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			var states []accountExpectedState
 			for _, state := range a.expectedAccounts {
 				cp := *state
-				cp.recCmd = cmd
+				cp.recCmd = parsedArgs.Cmd
 				states = append(states, cp)
 			}
 			a.expectedPermissions[head] = states
@@ -369,12 +484,12 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		return AclPermissions(aclPerm)
 	}
-	switch command {
+	switch parsedArgs.Command {
 	case "join":
-		invite := a.invites[args[0]]
+		invite := a.invites[parsedArgs.Args[0]]
 		requestJoin, err := acl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
 			InviteKey: invite,
-			Metadata:  []byte(account),
+			Metadata:  []byte(parsedArgs.Account),
 		})
 		if err != nil {
 			return err
@@ -383,20 +498,20 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
-		a.expectedAccounts[account].status = StatusJoining
+		a.expectedAccounts[parsedArgs.Account].status = StatusJoining
 	case "invite":
 		res, err := acl.RecordBuilder().BuildInvite()
 		if err != nil {
 			return err
 		}
-		a.invites[args[0]] = res.InviteKey
+		a.invites[parsedArgs.Args[0]] = res.InviteKey
 		err = addRec(WrapAclRecord(res.InviteRec))
 		if err != nil {
 			return err
 		}
 	case "invite_change":
 		var permissions AclPermissions
-		inviteParts := strings.Split(args[0], ",")
+		inviteParts := strings.Split(parsedArgs.Args[0], ",")
 		if inviteParts[1] == "r" {
 			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
 		} else if inviteParts[1] == "rw" {
@@ -422,7 +537,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 	case "invite_anyone":
 		var permissions AclPermissions
-		inviteParts := strings.Split(args[0], ",")
+		inviteParts := strings.Split(parsedArgs.Args[0], ",")
 		if inviteParts[1] == "r" {
 			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
 		} else if inviteParts[1] == "rw" {
@@ -440,7 +555,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return err
 		}
 	case "batch":
-		afterAll, err = a.buildBatchRequest(args, acl, getPerm, addRec)
+		afterAll, err = a.buildBatchRequest(parsedArgs.Args, acl, getPerm, addRec)
 		if err != nil {
 			return err
 		}
@@ -449,7 +564,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
-		argParts := strings.Split(args[0], ",")
+		argParts := strings.Split(parsedArgs.Args[0], ",")
 		if len(argParts) != 2 {
 			return errIncorrectParts
 		}
@@ -478,7 +593,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		a.expectedAccounts[argParts[0]].status = StatusActive
 		a.expectedAccounts[argParts[0]].perms = perms
 	case "ownership_change":
-		argParts := strings.Split(args[0], ",")
+		argParts := strings.Split(parsedArgs.Args[0], ",")
 		newOwner := a.actualAccounts[argParts[0]].Keys.SignKey.GetPublic()
 		perms := getPerm(argParts[1])
 		ownershipChange := OwnershipChangePayload{
@@ -487,7 +602,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		afterAll = append(afterAll, func() {
 			a.expectedAccounts[argParts[0]].perms = AclPermissionsOwner
-			a.expectedAccounts[account].perms = perms
+			a.expectedAccounts[parsedArgs.Account].perms = perms
 		})
 		res, err := acl.RecordBuilder().BuildOwnershipChange(ownershipChange)
 		if err != nil {
@@ -499,7 +614,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 	case "changes":
 		var payloads []PermissionChangePayload
-		for _, arg := range args {
+		for _, arg := range parsedArgs.Args {
 			argParts := strings.Split(arg, ",")
 			if len(argParts) != 2 {
 				return errIncorrectParts
@@ -525,7 +640,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 	case "add":
 		var payloads []AccountAdd
-		for _, arg := range args {
+		for _, arg := range parsedArgs.Args {
 			argParts := strings.Split(arg, ",")
 			if len(argParts) != 3 {
 				return errIncorrectParts
@@ -543,13 +658,13 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 				Keys: keys,
 				Acl:  accountAcl,
 			}
-			account = argParts[0]
-			a.actualAccounts[account] = state
-			a.expectedAccounts[account] = &accountExpectedState{
+			parsedArgs.Account = argParts[0]
+			a.actualAccounts[parsedArgs.Account] = state
+			a.expectedAccounts[parsedArgs.Account] = &accountExpectedState{
 				perms:    getPerm(argParts[1]),
 				status:   StatusActive,
 				metadata: []byte(argParts[2]),
-				pseudoId: account,
+				pseudoId: parsedArgs.Account,
 			}
 			payloads = append(payloads, AccountAdd{
 				Identity:    keys.SignKey.GetPublic(),
@@ -559,7 +674,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		defer func() {
 			if err != nil {
-				for _, arg := range args {
+				for _, arg := range parsedArgs.Args {
 					argParts := strings.Split(arg, ",")
 					account := argParts[0]
 					delete(a.expectedAccounts, account)
@@ -577,7 +692,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 	case "invite_join":
 		var permissions AclPermissions
-		inviteParts := strings.Split(args[0], ",")
+		inviteParts := strings.Split(parsedArgs.Args[0], ",")
 		if len(inviteParts) > 1 {
 			if inviteParts[1] == "r" {
 				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
@@ -588,9 +703,9 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			}
 		}
 		invite := a.invites[inviteParts[0]]
-		inviteJoin, err := acl.RecordBuilder().BuildInviteJoin(InviteJoinPayload{
+		inviteJoin, err := acl.RecordBuilder().BuildInviteJoinWithoutApprove(InviteJoinPayload{
 			InviteKey:   invite,
-			Metadata:    []byte(account),
+			Metadata:    []byte(parsedArgs.Account),
 			Permissions: permissions,
 		})
 		if err != nil {
@@ -604,14 +719,14 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
-		a.expectedAccounts[account].status = StatusActive
+		a.expectedAccounts[parsedArgs.Account].status = StatusActive
 		if permissions == AclPermissionsNone {
-			a.expectedAccounts[account].perms = acl.AclState().invites[invId].Permissions
+			a.expectedAccounts[parsedArgs.Account].perms = acl.AclState().invites[invId].Permissions
 		} else {
-			a.expectedAccounts[account].perms = permissions
+			a.expectedAccounts[parsedArgs.Account].perms = permissions
 		}
 	case "remove":
-		identities := strings.Split(args[0], ",")
+		identities := strings.Split(parsedArgs.Args[0], ",")
 		var pubKeys []crypto.PubKey
 		for _, id := range identities {
 			pk := a.actualAccounts[id].Keys.SignKey.GetPublic()
@@ -641,7 +756,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			a.expectedAccounts[id].perms = AclPermissionsNone
 		}
 	case "request_remove":
-		id := args[0]
+		id := parsedArgs.Args[0]
 		res, err := acl.RecordBuilder().BuildRequestRemove()
 		if err != nil {
 			return err
@@ -652,7 +767,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		a.expectedAccounts[id].status = StatusRemoving
 	case "decline":
-		id := args[0]
+		id := parsedArgs.Args[0]
 		pk := a.actualAccounts[id].Keys.SignKey.GetPublic()
 		rec, err := acl.AclState().JoinRecord(pk, false)
 		if err != nil {
@@ -668,7 +783,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		a.expectedAccounts[id].status = StatusDeclined
 	case "cancel":
-		id := args[0]
+		id := parsedArgs.Args[0]
 		pk := a.actualAccounts[id].Keys.SignKey.GetPublic()
 		rec, err := acl.AclState().Record(pk)
 		if err != nil {
@@ -688,7 +803,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			a.expectedAccounts[id].status = StatusActive
 		}
 	case "revoke":
-		invite := a.invites[args[0]]
+		invite := a.invites[parsedArgs.Args[0]]
 		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
 		if err != nil {
 			return err
