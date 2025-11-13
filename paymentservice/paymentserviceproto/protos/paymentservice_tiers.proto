@@ -78,14 +78,6 @@ message TierData {
 
   // something like "limited offer", etc
   string offer = 20;
-
-// version 2 only fields (specify version in GetTiersRequest request first):
-  // if the tier is yearly (periodType above is PeriodTypeYears) - then also we provide a monthly price here
-  uint32 priceStripeUsdCentsMonthly = 21;
-
-  bool isIntroPlan = 22;
-
-  bool isUpgradeable = 23;
 }
 
 message GetTiersResponse {

@@ -2,12 +2,20 @@ syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
 message MembershipV2 {
-  enum PaymentMethod {
-    MethodNone = 0;
-    MethodStripe = 1;
-    MethodCrypto = 2;
-    MethodInappApple = 3;
-    MethodInappGoogle = 4;
+  enum PaymentProvider {
+    None = 0;
+    Stripe = 1;
+    Crypto = 2;
+    BillingPortal = 3;
+    AppStore = 4;
+    GooglePlay = 5;
+  }
+
+  enum Period {
+    Unlimited = 0;
+    Monthly = 1;
+    Yearly = 2;
+    ThreeYears = 3;
   }
 
   message Amount {
@@ -18,34 +26,54 @@ message MembershipV2 {
     int64 amountCents = 2;
   }
 
+  message Features {
+    uint64 storageBytes = 1;
+    uint32 spaceReaders = 2;
+    uint32 spaceWriters = 3;
+    uint32 sharedSpaces = 4;
+    uint32 teamSeats = 5;
+    uint32 anyNameCount = 6;
+    uint32 anyNameMinLen = 7; 
+  }
+
   message Product {
     // this is a unique Payment Node ID
     // adding 2 same products to a cart means we will have 2 items with same ID
     string id = 1;
-    // is it a product that should be attached to a space
-    bool isAttachToSpace = 2;
-    // the price of a Package may not be equal to the sum of all underlying products
-    bool isPackage = 3;
-    // localized
-    string name = 4;
-    string description = 5;
+    string name = 2;
+    string description = 3;
+    bool isTopLevel = 4;
+    bool isHidden = 5;
 
-    repeated Amount pricesYearly = 6;
-    repeated Amount pricesMonthly = 7;
-    // localized strings for the features
-    repeated string features = 8;
-    // green, blue, red, purple, custom
-    string colorStr = 9;
-    // "limited offer"
-    string offer = 10;
+    // isIntro flag can be used as follows:
+    // 
+    // 1. if current user's top level product has isIntro flag -> 
+    // then you'd rather show a FULL list of all products 
+    // to enable upgrading from CURRENT product
+    // 2. but if current user's top level product has no isIntro flag ->
+    // then it means that this plan was aquired and user need to control it. 
+    // then show "second screen" to control that product instead
+    bool isIntro = 6;
+    
+    // isUpgradeable can be used as follows:
+    // 
+    // if current user's top level product has isUpgradeable flag ->
+    // show incentives to buy something else
+    bool isUpgradeable = 7;
+
+    repeated Amount pricesYearly = 8;
+    repeated Amount pricesMonthly = 9;
+    // green, blue, red, purple, custom, etc
+    string colorStr = 10;
+    string offer = 11;
+    Features features = 12;
   }
 
   message PurchaseInfo {
     uint64 dateStarted = 1;
     uint64 dateEnds = 2;
     bool isAutoRenew = 3;
-    // otherwise - monthly
-    bool isYearly = 4;
+    Period period = 4;
   }
 
   message ProductStatus {
@@ -56,10 +84,6 @@ message MembershipV2 {
       StatusPendingRequiresFinalization = 3;
     }
     Status status = 1;
-
-    string spaceAttachedTo = 2;
-    bool isNeedsAttachmentToSpace = 3;
-    bool isRenewalEnabled = 4;
   }
 
   message PurchasedProduct {
@@ -117,13 +141,15 @@ message MembershipV2 {
   message GetStatusResponse {
     repeated MembershipV2.PurchasedProduct products = 1;
     MembershipV2.Invoice nextInvoice = 2;
+    string teamOwnerID = 3;
+    MembershipV2.PaymentProvider paymentProvider = 4;
   }
 
   message StoreCartGetRequest {
 
   }
 
-  message StoreCartResponse {
+  message StoreCartGetResponse {
     MembershipV2.Cart cart = 1;
   }
 
@@ -167,10 +193,51 @@ message MembershipV2 {
     // (optional) redirect here after the auth
     string url = 2;
   }
+
+  message AnyNameIsValidRequest {
+    string requestedAnyName = 1;
+  }
+
+  message AnyNameIsValidResponse {
+    Code code = 1;
+    string description = 2;
+
+    enum Code {
+        Valid = 0;
+        NoDotAny = 1;
+        TooShort = 2;
+        TooLong = 3;
+        HasInvalidChars = 4;
+        AccountHasNoName = 5;
+        CanNotReserve = 6;
+        // if everything is fine - "name is already taken" check should be done in the NS
+        // see IsNameAvailable()
+    }
+  }
+
+  message AnyNameAllocateRequest {
+    string requestedAnyName = 1;
+
+    // this is the owner's main EOA (Externally Owned Account) address
+    // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+    // this is required to reserve a name for the owner (later that is done by user)
+    // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+    string ownerEthAddress = 2;
+  }
+
+  message AnyNameAllocateResponse {
+    
+  }
 }
 
 service AnyPaymentProcessingV2 {
   rpc GetProducts (MembershipV2.GetProductsRequest) returns (MembershipV2.GetProductsResponse);
   rpc GetStatus (MembershipV2.GetStatusRequest) returns (MembershipV2.GetStatusResponse);
   rpc WebAuth(MembershipV2.WebAuthRequest) returns (MembershipV2.WebAuthResponse); 
+
+  rpc AnyNameIsValid(MembershipV2.AnyNameIsValidRequest) returns (MembershipV2.AnyNameIsValidResponse);
+  rpc AnyNameAllocate(MembershipV2.AnyNameAllocateRequest) returns (MembershipV2.AnyNameAllocateResponse);
+
+  rpc StoreCartGet(MembershipV2.StoreCartGetRequest) returns (MembershipV2.StoreCartGetResponse);
+  rpc StoreCartUpdate(MembershipV2.StoreCartUpdateRequest) returns (MembershipV2.StoreCartUpdateResponse);
 }
