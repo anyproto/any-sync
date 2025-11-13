@@ -357,6 +357,9 @@ func (a *AclTestExecutor) parseArgs(cmd string) (*ParsedArgs, error) {
 
 func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 	parsedArgs, err := a.parseArgs(cmdStr)
+	if err != nil {
+		return
+	}
 
 	if parsedArgs.Command == "init-onetoone" {
 		return a.initOneToOne(parsedArgs)
