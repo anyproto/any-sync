@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -64,10 +63,8 @@ func runAnalyzer() error {
 		trees = trees[:topN]
 	}
 
-	// Display results
-	displayResults(trees)
-
-	return nil
+	// Display results with interactive Bubble Tea UI
+	return runInteractiveUI(ctx, trees, rootPath)
 }
 
 func analyzeSpaces(ctx context.Context, rootPath string, afterTime time.Time, filterSpaceID string) ([]TreeInfo, error) {
@@ -229,70 +226,14 @@ func processSpace(ctx context.Context, db anystore.DB, spaceIDFromDir string, af
 	return results, nil
 }
 
-func displayResults(trees []TreeInfo) {
-	if len(trees) == 0 {
-		fmt.Println("No trees found matching the criteria.")
-		return
-	}
-
-	// Check if time filter was used
-	hasTimeFilter := len(trees) > 0 && trees[0].HasTimeFilter
-
-	// Create table writer
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	defer w.Flush()
-
-	// Print header
-	if hasTimeFilter {
-		fmt.Fprintf(w, "RANK\tSPACE ID\tTREE ID\tTOTAL CHANGES\tRECENT CHANGES\tLAST MODIFIED\n")
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			strings.Repeat("-", 4),
-			strings.Repeat("-", 8),
-			strings.Repeat("-", 7),
-			strings.Repeat("-", 13),
-			strings.Repeat("-", 14),
-			strings.Repeat("-", 13))
-	} else {
-		fmt.Fprintf(w, "RANK\tSPACE ID\tTREE ID\tCHANGES\tLAST MODIFIED\n")
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			strings.Repeat("-", 4),
-			strings.Repeat("-", 8),
-			strings.Repeat("-", 7),
-			strings.Repeat("-", 7),
-			strings.Repeat("-", 13))
-	}
-
-	// Print rows
-	for i, tree := range trees {
-		lastModifiedStr := formatTimestamp(tree.LastModified)
-
-		if hasTimeFilter {
-			fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%d\t%s\n",
-				i+1,
-				tree.SpaceID,
-				tree.TreeID,
-				tree.ChangeCount,
-				tree.RecentChanges,
-				lastModifiedStr)
-		} else {
-			fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%s\n",
-				i+1,
-				tree.SpaceID,
-				tree.TreeID,
-				tree.ChangeCount,
-				lastModifiedStr)
-		}
-	}
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
+func truncateID(id string, maxLen int) string {
+	if len(id) <= maxLen {
+		return id
 	}
 	if maxLen <= 3 {
-		return s[:maxLen]
+		return id[:maxLen]
 	}
-	return s[:maxLen-3] + "..."
+	return id[:maxLen-3] + "..."
 }
 
 func formatTimestamp(t time.Time) string {

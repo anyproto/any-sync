@@ -16,10 +16,10 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "spacetop",
-	Short: "Analyze spacestore databases and find top trees by change count",
-	Long: `Spacetop iterates through spacestore databases and analyzes trees.
+	Short: "Interactive TUI for analyzing spacestore databases",
+	Long: `Spacetop is an interactive TUI tool for analyzing spacestore databases.
 It shows the top N trees by number of changes across all spaces, with filtering
-options by time and space ID.`,
+options by time and space ID. Navigate with arrow keys and view object details.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runAnalyzer()
 	},
