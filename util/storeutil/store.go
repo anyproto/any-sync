@@ -1,6 +1,9 @@
 package storeutil
 
-import "github.com/anyproto/any-store/anyenc"
+import (
+	"github.com/anyproto/any-store/anyenc"
+	"github.com/anyproto/any-store/anyenc/anyencutil"
+)
 
 func NewStringArrayValue(strings []string, arena *anyenc.Arena) *anyenc.Value {
 	val := arena.NewArray()
@@ -17,4 +20,12 @@ func StringsFromArrayValue(val *anyenc.Value, key string) (res []string) {
 		res = append(res, item.GetString())
 	}
 	return res
+}
+
+func ModifyKey(doc *anyenc.Value, key string, val *anyenc.Value) (modified bool) {
+	if anyencutil.Equal(doc.Get(key), val) {
+		return false
+	}
+	doc.Set(key, val)
+	return true
 }

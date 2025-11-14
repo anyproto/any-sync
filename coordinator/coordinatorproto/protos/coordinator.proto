@@ -43,13 +43,22 @@ service Coordinator {
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
   // AccountLimitsSet sets limits to the account. Can be used only by a network config member
   rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
-  
+
   // EventLog gets the latest event log records
   rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
 
+  // InboxFetch returns a set of (new) messages starting from a given offset
+  rpc InboxFetch(InboxFetchRequest) returns (InboxFetchResponse);
+
+  // InboxFetch returns a set of (new) messages starting from a given offset
+  rpc InboxAddMessage(InboxAddMessageRequest) returns (InboxAddMessageResponse);
+
+  // NotifySubscribe returns a subscription to new inbox msg
+  rpc NotifySubscribe(NotifySubscribeRequest) returns (stream NotifySubscribeEvent);
   // AclUploadInvite uploads invite binary data to the filenodes
   rpc AclUploadInvite(AclUploadInviteRequest) returns (AclUploadInviteResponse);
 }
+
 
 message SpaceSignRequest {
   // SpaceId is the id of the signed space
@@ -76,6 +85,8 @@ enum ErrorCodes {
   AclHeadIsMissing = 8;
   AclNonEmpty = 9;
   SpaceNotShareable = 10;
+  InboxMessageVerifyFailed = 11;
+  SubscribePeerAlreadySubscribed = 12;
   ErrorOffset = 300;
 }
 
@@ -404,7 +415,73 @@ message AclEventLogRecord {
   // Type of current event
   AclEventLogRecordType type = 4;
   // only for RecordTypeSpaceAclAddRecord
-  string aclChangeId = 5; 
+  string aclChangeId = 5;
+}
+
+// Inbox Message
+enum InboxPacketType {
+  Default = 0;
+}
+
+enum InboxKeyType {
+  ed25519 = 0;
+}
+
+message InboxMessage {
+  string id = 1;
+  InboxPacketType packetType = 2;
+  InboxPacket packet = 3;
+}
+
+message InboxPacket {
+  InboxKeyType keyType = 1;
+  string senderIdentity = 2;
+  string receiverIdentity = 3;
+  bytes senderSignature = 4;
+  InboxPayload payload = 5;
+}
+
+enum InboxPayloadType {
+  InboxPayloadOneToOneInvite = 0;
+}
+
+message InboxPayload {
+  InboxPayloadType payloadType = 1;
+  int64 timestamp = 2;
+  bytes body = 3;
+}
+
+message InboxFetchRequest {
+  string offset = 1;
+}
+
+message InboxFetchResponse {
+  repeated InboxMessage messages = 1;
+  bool hasMore = 2;
+}
+
+message InboxAddMessageRequest {
+  InboxMessage message = 1;
+}
+
+message InboxAddMessageResponse {
+}
+
+// Request to subscribe to notifications
+message NotifySubscribeRequest {
+  NotifyEventType eventType = 1; // Subscribe to multiple event types
+}
+
+// Enum for event types
+enum NotifyEventType {
+  UnspecifiedEvent = 0;
+  InboxNewMessageEvent = 1;
+  NetworkConfigChangedEvent = 2;
+}
+
+message NotifySubscribeEvent {
+  NotifyEventType eventType = 1;
+  bytes payload = 2;
 }
 
 message AclUploadInviteRequest {

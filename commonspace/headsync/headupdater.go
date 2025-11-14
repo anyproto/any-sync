@@ -9,18 +9,18 @@ import (
 )
 
 type headUpdater struct {
-	updateFunc func(update headstorage.HeadsUpdate)
-	batcher    *mb.MB[headstorage.HeadsUpdate]
+	updateFunc func(update headstorage.HeadsEntry)
+	batcher    *mb.MB[headstorage.HeadsEntry]
 }
 
-func newHeadUpdater(update func(update headstorage.HeadsUpdate)) *headUpdater {
+func newHeadUpdater(update func(update headstorage.HeadsEntry)) *headUpdater {
 	return &headUpdater{
-		batcher:    mb.New[headstorage.HeadsUpdate](0),
+		batcher:    mb.New[headstorage.HeadsEntry](0),
 		updateFunc: update,
 	}
 }
 
-func (hu *headUpdater) Add(update headstorage.HeadsUpdate) error {
+func (hu *headUpdater) Add(update headstorage.HeadsEntry) error {
 	return hu.batcher.Add(context.Background(), update)
 }
 

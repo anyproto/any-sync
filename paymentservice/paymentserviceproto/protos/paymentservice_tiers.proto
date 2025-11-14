@@ -21,6 +21,8 @@ message GetTiersRequest {
   string ownerAnyId = 1;
 
   string locale = 2;
+
+  string version = 3;
 }
 
 message GetTiersRequestSigned {

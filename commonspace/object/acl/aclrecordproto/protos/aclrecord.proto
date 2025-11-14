@@ -13,13 +13,23 @@ message AclRoot {
     bytes metadataPubKey = 7;
     bytes encryptedMetadataPrivKey = 8;
     bytes encryptedOwnerMetadata = 9;
+    AclOneToOneInfo oneToOneInfo = 10;
 }
 
+// AclOneToOneInfo exists if its one-to-one space acl record
+message AclOneToOneInfo {
+    bytes owner = 1;
+    repeated bytes writers = 2;
+}
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 message AclAccountInvite {
     bytes inviteKey = 1;
     AclInviteType inviteType = 2;
+
+    // permissions tells with which permissions the user joins the space. Used only for invites without approve.
     AclUserPermissions permissions = 3;
+    // encryptedReadKey is used when the user creates an invite without approve. So everyone having the invite
+    // can join the space immediately. The key could only be decrypted using the inviteKey
     bytes encryptedReadKey = 4;
 }
 
@@ -56,6 +66,7 @@ message AclAccountInviteJoin {
     bytes inviteIdentitySignature = 3;
     // Metadata is encrypted with metadata key of the space
     bytes metadata = 4;
+    // encryptedReadKey is the read key of a space encrypted using person's public key
     bytes encryptedReadKey = 5;
     AclUserPermissions permissions = 6;
 }

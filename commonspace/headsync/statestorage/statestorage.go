@@ -5,6 +5,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
+	"github.com/anyproto/any-sync/util/storeutil"
 	"golang.org/x/net/context"
 )
 
@@ -62,26 +63,27 @@ func (s *stateStorage) SetObserver(observer Observer) {
 }
 
 func (s *stateStorage) SetHash(ctx context.Context, oldHash, newHash string) (err error) {
+	var modifyResult anystore.ModifyResult
 	defer func() {
-		if s.observer != nil && err == nil {
+		if s.observer != nil && err == nil && modifyResult.Modified > 0 {
 			s.observer.OnHashChange(oldHash, newHash)
 		}
 	}()
-	tx, err := s.stateColl.WriteTx(ctx)
-	if err != nil {
-		return err
-	}
+
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(oldHashKey, a.NewString(oldHash))
-		v.Set(newHashKey, a.NewString(newHash))
-		return v, true, nil
+		if storeutil.ModifyKey(v, oldHashKey, a.NewString(oldHash)) {
+			modified = true
+		}
+
+		if storeutil.ModifyKey(v, newHashKey, a.NewString(newHash)) {
+			modified = true
+		}
+
+		return v, modified, nil
 	})
-	_, err = s.stateColl.UpsertId(tx.Context(), s.spaceId, mod)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	modifyResult, err = s.stateColl.UpsertId(ctx, s.spaceId, mod)
+
+	return err
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, error) {

@@ -49,6 +49,58 @@ type DerivationResult struct {
 	EthereumIdentity ecdsa.PrivateKey
 }
 
+// DeriveKeysFromMasterNode derives master key and identity from a master node
+// The master node should be at path m/44'/2046'/index'
+func DeriveKeysFromMasterNode(masterNode slip10.Node) (res DerivationResult, err error) {
+	res.MasterNode = masterNode
+
+	// Derive master key from the node
+	res.MasterKey, err = genKey(masterNode)
+	if err != nil {
+		return
+	}
+
+	// Derive identity at m/44'/2046'/index'/0'
+	identityNode, err := masterNode.Derive(slip10.FirstHardenedIndex)
+	if err != nil {
+		return
+	}
+	res.Identity, err = genKey(identityNode)
+	
+	return
+}
+
+// DeriveMasterNode derives a master node at the specified index
+// Returns the node at path m/44'/2046'/index'
+func (m Mnemonic) DeriveMasterNode(index uint32) (masterNode slip10.Node, err error) {
+	seed, err := m.Seed()
+	if err != nil {
+		return
+	}
+
+	prefixNode, err := slip10.DeriveForPath(anytypeAccountNewPrefix, seed)
+	if err != nil {
+		return
+	}
+
+	// m/44'/2046'/index'
+	masterNode, err = prefixNode.Derive(slip10.FirstHardenedIndex + index)
+	return
+}
+
+// DeriveMasterNodeFromSeed derives a master node from a seed at the specified index
+// This creates a node at path m/44'/2046'/index'
+func DeriveMasterNodeFromSeed(seed []byte, index uint32) (masterNode slip10.Node, err error) {
+	prefixNode, err := slip10.DeriveForPath(anytypeAccountNewPrefix, seed)
+	if err != nil {
+		return
+	}
+
+	// m/44'/2046'/index'
+	masterNode, err = prefixNode.Derive(slip10.FirstHardenedIndex + index)
+	return
+}
+
 type MnemonicGenerator struct {
 	mnemonic string
 }
@@ -112,31 +164,40 @@ func (m Mnemonic) deriveForPath(onlyMaster bool, index uint32, path string) (res
 	if err != nil {
 		return
 	}
-	res.MasterKey, err = genKey(res.MasterNode)
-	if err != nil || onlyMaster {
+
+	if onlyMaster {
+		// Only derive the master key
+		res.MasterKey, err = genKey(res.MasterNode)
 		return
 	}
-	// m/44'/code'/index'/0'
-	identityNode, err := res.MasterNode.Derive(slip10.FirstHardenedIndex)
-	if err != nil {
-		return
-	}
-	res.Identity, err = genKey(identityNode)
-	return
+
+	// Use the public method to derive both master key and identity
+	return DeriveKeysFromMasterNode(res.MasterNode)
 }
 
 func (m Mnemonic) DeriveKeys(index uint32) (res DerivationResult, err error) {
+	// Derive old account key for backward compatibility
 	oldRes, err := m.deriveForPath(true, index, anytypeAccountOldPrefix)
 	if err != nil {
 		return
 	}
-	res, err = m.deriveForPath(false, index, anytypeAccountNewPrefix)
+
+	// Derive master node using the new public method
+	masterNode, err := m.DeriveMasterNode(index)
 	if err != nil {
 		return
 	}
+
+	// Derive keys from master node using the public method
+	res, err = DeriveKeysFromMasterNode(masterNode)
+	if err != nil {
+		return
+	}
+
+	// Add old account key for backward compatibility
 	res.OldAccountKey = oldRes.MasterKey
 
-	// now derive ethereum key
+	// Derive ethereum key
 	pk, err := m.ethereumKeyFromMnemonic(index, defaultEthereumDerivation)
 	if err != nil {
 		return
