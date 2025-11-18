@@ -42,6 +42,7 @@ type AclList interface {
 	RecordsBefore(ctx context.Context, headId string) (records []*consensusproto.RawRecordWithId, err error)
 	Get(id string) (*AclRecord, error)
 	GetIndex(idx int) (*AclRecord, error)
+	GetRecordIndex(recordId string) (idx int)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
 
@@ -276,6 +277,14 @@ func (a *aclList) GetIndex(idx int) (*AclRecord, error) {
 		return nil, ErrNoSuchRecord
 	}
 	return a.records[idx], nil
+}
+
+func (a *aclList) GetRecordIndex(recordId string) (idx int) {
+	idx, ok := a.indexes[recordId]
+	if !ok {
+		return -1
+	}
+	return idx
 }
 
 func (a *aclList) Iterate(iterFunc IterFunc) {

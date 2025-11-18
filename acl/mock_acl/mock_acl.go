@@ -147,6 +147,20 @@ func (mr *MockAclServiceMockRecorder) Permissions(ctx, identity, spaceId any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Permissions", reflect.TypeOf((*MockAclService)(nil).Permissions), ctx, identity, spaceId)
 }
 
+// ReadList mocks base method.
+func (m *MockAclService) ReadList(ctx context.Context, spaceId string, f func(list.AclList) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadList", ctx, spaceId, f)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReadList indicates an expected call of ReadList.
+func (mr *MockAclServiceMockRecorder) ReadList(ctx, spaceId, f any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadList", reflect.TypeOf((*MockAclService)(nil).ReadList), ctx, spaceId, f)
+}
+
 // ReadState mocks base method.
 func (m *MockAclService) ReadState(ctx context.Context, spaceId string, f func(*list.AclState) error) error {
 	m.ctrl.T.Helper()

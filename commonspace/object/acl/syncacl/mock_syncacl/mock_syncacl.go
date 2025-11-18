@@ -234,6 +234,20 @@ func (mr *MockSyncAclMockRecorder) GetIndex(idx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockSyncAcl)(nil).GetIndex), idx)
 }
 
+// GetRecordIndex mocks base method.
+func (m *MockSyncAcl) GetRecordIndex(recordId string) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRecordIndex", recordId)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetRecordIndex indicates an expected call of GetRecordIndex.
+func (mr *MockSyncAclMockRecorder) GetRecordIndex(recordId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordIndex", reflect.TypeOf((*MockSyncAcl)(nil).GetRecordIndex), recordId)
+}
+
 // HandleHeadUpdate mocks base method.
 func (m *MockSyncAcl) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
