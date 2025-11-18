@@ -149,7 +149,7 @@ func TestAclService(t *testing.T) {
 	})
 }
 
-func TestAclService_ReadState(t *testing.T) {
+func TestAclService_ReadList(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
@@ -169,7 +169,7 @@ func TestAclService_ReadState(t *testing.T) {
 	})
 	fx.consCl.EXPECT().UnWatch(spaceId)
 
-	require.NoError(t, fx.ReadState(ctx, spaceId, func(s *list.AclState) error {
+	require.NoError(t, fx.ReadList(ctx, spaceId, func(s list.AclList) error {
 		assert.NotNil(t, s)
 		return nil
 	}))
