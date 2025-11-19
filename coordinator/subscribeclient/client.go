@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_subscribeclient/mock_subscribeclient.go github.com/anyproto/any-sync/coordinator/subscribeclient SubscribeClientService
 package subscribeclient
 
 import (
