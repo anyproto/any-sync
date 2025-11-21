@@ -1033,12 +1033,17 @@ func (st *AclState) LastRecordId() string {
 }
 
 func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
+	ownerIdentity, _, err = st.OwnerPubKeyWithRecordId()
+	return
+}
+
+func (st *AclState) OwnerPubKeyWithRecordId() (ownerIdentity crypto.PubKey, recordId string, err error) {
 	for _, aState := range st.accountStates {
 		if aState.Permissions.IsOwner() {
-			return aState.PubKey, nil
+			return aState.PubKey, aState.KeyRecordId, nil
 		}
 	}
-	return nil, ErrOwnerNotFound
+	return nil, "", ErrOwnerNotFound
 }
 
 func (st *AclState) IsOneToOne() bool {

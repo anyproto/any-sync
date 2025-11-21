@@ -40,6 +40,7 @@ type AclService interface {
 	Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error)
 	OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error)
 	ReadState(ctx context.Context, spaceId string, f func(s *list.AclState) error) (err error)
+	ReadList(ctx context.Context, spaceId string, f func(s list.AclList) error) (err error)
 	HasRecord(ctx context.Context, spaceId, recordId string) (has bool, err error)
 	app.ComponentRunnable
 }
@@ -163,13 +164,17 @@ func (as *aclService) Permissions(ctx context.Context, identity crypto.PubKey, s
 }
 
 func (as *aclService) ReadState(ctx context.Context, spaceId string, f func(s *list.AclState) error) (err error) {
+	return as.ReadList(ctx, spaceId, func(s list.AclList) error { return f(s.AclState()) })
+}
+
+func (as *aclService) ReadList(ctx context.Context, spaceId string, f func(s list.AclList) error) (err error) {
 	acl, err := as.get(ctx, spaceId)
 	if err != nil {
 		return
 	}
 	acl.RLock()
 	defer acl.RUnlock()
-	return f(acl.AclState())
+	return f(acl)
 }
 
 func (as *aclService) HasRecord(ctx context.Context, spaceId, recordId string) (has bool, err error) {
