@@ -44,6 +44,11 @@ func TestEd25519PublicKeyToCurve25519(t *testing.T) {
 		pub := []byte{0, 1, 1, 0}
 		_, err := Ed25519PublicKeyToCurve25519(pub)
 		require.Error(t, err)
+
+		pub = []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+		_, err = Ed25519PublicKeyToCurve25519(pub)
+		require.Error(t, err)
+
 	})
 
 }
