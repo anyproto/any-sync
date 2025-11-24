@@ -21,6 +21,7 @@ type Ed25519PrivKey struct {
 	privCurve *[32]byte
 	pubCurve  *[32]byte
 	once      sync.Once
+	err       error
 }
 
 // Ed25519PubKey is an ed25519 public key.
@@ -143,14 +144,14 @@ func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
 		privCurve := Ed25519PrivateKeyToCurve25519(k.privKey)
 		pubCurve, perr := Ed25519PublicKeyToCurve25519(pubKey)
 		if perr != nil {
-			err = perr
+			k.err = perr
 			return
 		}
 
 		k.pubCurve = (*[32]byte)(pubCurve)
 		k.privCurve = (*[32]byte)(privCurve)
 	})
-	if err != nil {
+	if k.err != nil {
 		return nil, err
 	}
 
