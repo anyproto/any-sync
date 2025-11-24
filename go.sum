@@ -10,8 +10,8 @@ github.com/anyproto/any-store v0.4.3 h1:8H5TXPhlgGnUIOVNtLXFE2Dy2tYvLQCQuEYPSymM
 github.com/anyproto/any-store v0.4.3/go.mod h1:P9CnoL9Q06eh051DwtcvCiiWCwdXO7AbEILcnD6yrss=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
-github.com/anyproto/go-slip10 v1.0.1-0.20250818123350-f910c27dd080 h1:bbHmaibcUbctrXG6LT6136H0oDlBUDoDANX2qBpqhkU=
-github.com/anyproto/go-slip10 v1.0.1-0.20250818123350-f910c27dd080/go.mod h1:BCmIlM1KB8wX6K4/8pOvxPl9oVKfEvZ5vsmO5rkK6vg=
+github.com/anyproto/go-slip10 v1.0.1 h1:Pa/OpYoOE668fip4ygAd4T07chLBx4XoBa5fwnGq0/M=
+github.com/anyproto/go-slip10 v1.0.1/go.mod h1:BCmIlM1KB8wX6K4/8pOvxPl9oVKfEvZ5vsmO5rkK6vg=
 github.com/anyproto/go-slip21 v1.0.0 h1:CI7lUqTIwmPOEGVAj4jyNLoICvueh++0U2HoAi3m2ZY=
 github.com/anyproto/go-slip21 v1.0.0/go.mod h1:gbIJt7HAdr5DuT4f2pFTKCBSUWYsm/fysHBNqgsuxT0=
 github.com/anyproto/go-sqlite v1.4.2-any h1:ZTIcq/u2mYYJ6rJB4I3Ds5QH/7IlONebMiG14FyZcD4=
