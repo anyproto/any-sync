@@ -61,8 +61,7 @@ func Test_InvalidDecrypt(t *testing.T) {
 	assert.Equal(t, 64, len(withCorruptedPub))
 
 	corruptedPriv := NewEd25519PrivKey(withCorruptedPub)
-	dec, err := corruptedPriv.Decrypt([]byte{1, 2, 3, 4, 5, 6})
-	assert.Equal(t, "", dec)
-	require.NoError(t, err)
+	_, err := corruptedPriv.Decrypt([]byte{1, 2, 3, 4, 5, 6})
+	require.Error(t, err)
 
 }
