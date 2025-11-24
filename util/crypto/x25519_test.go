@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
 	"testing"
@@ -58,4 +59,18 @@ func TestGenerateSharedKey(t *testing.T) {
 		_, err = sharedSkC.Decrypt(encryptedA)
 		require.Error(t, err)
 	})
+}
+
+func TestEd25519PublicKeyToCurve25519(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		pub, _, _ := ed25519.GenerateKey(rand.Reader)
+		_, err := Ed25519PublicKeyToCurve25519(pub)
+		require.NoError(t, err)
+	})
+	t.Run("returns errors for arbitary bytes", func(t *testing.T) {
+		pub := []byte{0, 1, 1, 0}
+		_, err := Ed25519PublicKeyToCurve25519(pub)
+		require.Error(t, err)
+	})
+
 }

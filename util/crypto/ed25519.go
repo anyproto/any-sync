@@ -7,11 +7,12 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
+
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
 	"github.com/anyproto/any-sync/util/strkey"
 	"github.com/libp2p/go-libp2p/core/crypto"
-	"io"
-	"sync"
 )
 
 // Ed25519PrivKey is an ed25519 private key.
@@ -136,13 +137,23 @@ func (k *Ed25519PrivKey) Marshall() ([]byte, error) {
 
 // Decrypt decrypts the message
 func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
+	var err error
 	k.once.Do(func() {
 		pubKey := k.pubKeyBytes()
 		privCurve := Ed25519PrivateKeyToCurve25519(k.privKey)
-		pubCurve := Ed25519PublicKeyToCurve25519(pubKey)
+		pubCurve, perr := Ed25519PublicKeyToCurve25519(pubKey)
+		if perr != nil {
+			err = perr
+			return
+		}
+
 		k.pubCurve = (*[32]byte)(pubCurve)
 		k.privCurve = (*[32]byte)(privCurve)
 	})
+	if err != nil {
+		return nil, err
+	}
+
 	return DecryptX25519(k.privCurve, k.pubCurve, msg)
 }
 
@@ -176,7 +187,12 @@ func (k *Ed25519PubKey) Raw() ([]byte, error) {
 // Encrypt message
 func (k *Ed25519PubKey) Encrypt(msg []byte) (data []byte, err error) {
 	k.curveOnce.Do(func() {
-		pubCurve := Ed25519PublicKeyToCurve25519(k.pubKey)
+		pubCurve, perr := Ed25519PublicKeyToCurve25519(k.pubKey)
+		if perr != nil {
+			err = perr
+			return
+		}
+
 		k.pubCurve = (*[32]byte)(pubCurve)
 	})
 	data = EncryptX25519(k.pubCurve, msg)
