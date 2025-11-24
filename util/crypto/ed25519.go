@@ -138,7 +138,6 @@ func (k *Ed25519PrivKey) Marshall() ([]byte, error) {
 
 // Decrypt decrypts the message
 func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
-	var err error
 	k.once.Do(func() {
 		pubKey := k.pubKeyBytes()
 		privCurve := Ed25519PrivateKeyToCurve25519(k.privKey)
@@ -152,7 +151,7 @@ func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
 		k.privCurve = (*[32]byte)(privCurve)
 	})
 	if k.err != nil {
-		return nil, err
+		return nil, k.err
 	}
 
 	return DecryptX25519(k.privCurve, k.pubCurve, msg)

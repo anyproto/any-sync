@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,5 +51,18 @@ func TestEd25519PublicKeyToCurve25519(t *testing.T) {
 		require.Error(t, err)
 
 	})
+
+}
+
+func Test_InvalidDecrypt(t *testing.T) {
+	corruptedKey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+	_, priv, _ := ed25519.GenerateKey(rand.Reader)
+	withCorruptedPub := append(priv[:32], corruptedKey...)
+	assert.Equal(t, 64, len(withCorruptedPub))
+
+	corruptedPriv := NewEd25519PrivKey(withCorruptedPub)
+	dec, err := corruptedPriv.Decrypt([]byte{1, 2, 3, 4, 5, 6})
+	assert.Equal(t, "", dec)
+	require.NoError(t, err)
 
 }
