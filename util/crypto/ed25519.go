@@ -30,6 +30,7 @@ type Ed25519PubKey struct {
 
 	pubCurve  *[32]byte
 	curveOnce sync.Once
+	err       error
 
 	marshallOnce sync.Once
 	marshalled   []byte
@@ -141,9 +142,9 @@ func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
 	k.once.Do(func() {
 		pubKey := k.pubKeyBytes()
 		privCurve := Ed25519PrivateKeyToCurve25519(k.privKey)
-		pubCurve, perr := Ed25519PublicKeyToCurve25519(pubKey)
-		if perr != nil {
-			k.err = perr
+		pubCurve, err := Ed25519PublicKeyToCurve25519(pubKey)
+		if err != nil {
+			k.err = err
 			return
 		}
 
@@ -187,14 +188,18 @@ func (k *Ed25519PubKey) Raw() ([]byte, error) {
 // Encrypt message
 func (k *Ed25519PubKey) Encrypt(msg []byte) (data []byte, err error) {
 	k.curveOnce.Do(func() {
-		pubCurve, perr := Ed25519PublicKeyToCurve25519(k.pubKey)
-		if perr != nil {
-			err = perr
+		pubCurve, err := Ed25519PublicKeyToCurve25519(k.pubKey)
+		if err != nil {
+			k.err = err
 			return
 		}
 
 		k.pubCurve = (*[32]byte)(pubCurve)
 	})
+	if k.err != nil {
+		return nil, k.err
+	}
+
 	data = EncryptX25519(k.pubCurve, msg)
 	return
 }

@@ -54,14 +54,23 @@ func TestEd25519PublicKeyToCurve25519(t *testing.T) {
 
 }
 
-func Test_InvalidDecrypt(t *testing.T) {
+func Test_InvalidKey(t *testing.T) {
 	corruptedKey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	withCorruptedPub := append(priv[:32], corruptedKey...)
-	assert.Equal(t, 64, len(withCorruptedPub))
+	t.Run("decrypt", func(t *testing.T) {
+		_, priv, _ := ed25519.GenerateKey(rand.Reader)
+		withCorruptedPub := append(priv[:32], corruptedKey...)
+		assert.Equal(t, 64, len(withCorruptedPub))
 
-	corruptedPriv := NewEd25519PrivKey(withCorruptedPub)
-	_, err := corruptedPriv.Decrypt([]byte{1, 2, 3, 4, 5, 6})
-	require.Error(t, err)
+		corruptedPriv := NewEd25519PrivKey(withCorruptedPub)
+		_, err := corruptedPriv.Decrypt([]byte{1, 2, 3, 4, 5, 6})
+		require.Error(t, err)
+	})
+
+	t.Run("encrypt", func(t *testing.T) {
+		corruptedPub := NewEd25519PubKey(corruptedKey)
+		_, err := corruptedPub.Encrypt([]byte{1, 2, 3, 4, 5, 6})
+		require.Error(t, err)
+
+	})
 
 }
