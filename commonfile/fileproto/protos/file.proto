@@ -41,6 +41,8 @@ service File {
     rpc AccountLimitSet(AccountLimitSetRequest) returns (Ok);
     // SpaceLimitSet sets the space limit. Limit 0 means space will use account limits.
     rpc SpaceLimitSet(SpaceLimitSetRequest) returns (Ok);
+    // OwnershipTransfer initiate the ownership transfer process
+    rpc OwnershipTransfer(OwnershipTransferRequest) returns (Ok);
 }
 
 message Ok {}
@@ -179,4 +181,9 @@ message AccountLimitSetRequest {
 message SpaceLimitSetRequest {
     string spaceId = 1;
     uint64 limit = 2;
+}
+
+message OwnershipTransferRequest {
+    string spaceId = 1;
+    string aclRecordId = 2;
 }
