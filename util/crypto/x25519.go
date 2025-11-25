@@ -21,14 +21,14 @@ import (
 var ErrX25519DecryptionFailed = errors.New("failed decryption with x25519 key")
 
 // Ed25519PublicKeyToCurve25519 converts an Ed25519 public key to a Curve25519 public key
-func Ed25519PublicKeyToCurve25519(pk ed25519.PublicKey) []byte {
+func Ed25519PublicKeyToCurve25519(pk ed25519.PublicKey) ([]byte, error) {
 	// Unmarshalling public key into edwards curve point
 	epk, err := (&edwards25519.Point{}).SetBytes(pk)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	// converting to curve25519 (see here for more details https://github.com/golang/go/issues/20504)
-	return epk.BytesMontgomery()
+	return epk.BytesMontgomery(), nil
 }
 
 // ISC License
@@ -125,7 +125,10 @@ func GenerateSharedKey(aPrivKey PrivKey, bPubKey PubKey, derivePath string) (Pri
 		return nil, err
 	}
 
-	bPubKeyCurve := Ed25519PublicKeyToCurve25519(bPubKeyRaw)
+	bPubKeyCurve, err := Ed25519PublicKeyToCurve25519(bPubKeyRaw)
+	if err != nil {
+		return nil, err
+	}
 
 	shared, err := curve25519.X25519(aPrivKeyCurve, bPubKeyCurve[:])
 	if err != nil {
