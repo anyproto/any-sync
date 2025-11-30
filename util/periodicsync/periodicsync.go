@@ -33,7 +33,7 @@ func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller
 		loopCtx:    ctx,
 		loopCancel: cancel,
 		loopDone:   make(chan struct{}),
-		loopKick: make(chan bool), 
+		loopKick:   make(chan bool),
 		period:     periodicLoopInterval,
 		timeout:    timeout,
 	}
@@ -89,10 +89,13 @@ func (p *periodicCall) loop(period time.Duration) {
 	}
 }
 
+// Runs the scheduled function once, without
+// interrupting the schedule.
 func (p *periodicCall) Kick() {
 	p.loopKick <- false
 }
 
+// Runs the scheduled function and resets the scheduler
 func (p *periodicCall) Reset() {
 	p.loopKick <- true
 }
