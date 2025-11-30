@@ -30,6 +30,18 @@ func TestPeriodicSync_Run(t *testing.T) {
 		pSync.Close()
 		require.Equal(t, int32(1), times.Load())
 	})
+	t.Run("loop kick", func(t *testing.T) {
+		times := atomic.Int32{}
+		diffSyncer := func(ctx context.Context) (err error) {
+			times.Add(1)
+			return nil
+		}
+		pSync := NewPeriodicSyncDuration(time.Second, 0, diffSyncer, l)
+		pSync.Run()
+		pSync.Kick()
+		pSync.Close()
+		require.Equal(t, int32(2), times.Load())
+	})
 
 	t.Run("loop call 2 times", func(t *testing.T) {
 		var neededTimes int32 = 2
