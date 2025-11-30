@@ -12,6 +12,8 @@ import (
 )
 
 type PeriodicSync interface {
+	Kick()
+	Reset()
 	Run()
 	Close()
 }
@@ -31,6 +33,7 @@ func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller
 		loopCtx:    ctx,
 		loopCancel: cancel,
 		loopDone:   make(chan struct{}),
+		loopKick: make(chan bool), 
 		period:     periodicLoopInterval,
 		timeout:    timeout,
 	}
@@ -42,6 +45,7 @@ type periodicCall struct {
 	loopCtx    context.Context
 	loopCancel context.CancelFunc
 	loopDone   chan struct{}
+	loopKick   chan bool
 	period     time.Duration
 	timeout    time.Duration
 	isRunning  atomic.Bool
@@ -73,11 +77,24 @@ func (p *periodicCall) loop(period time.Duration) {
 			select {
 			case <-p.loopCtx.Done():
 				return
+			case kickReset := <-p.loopKick:
+				if kickReset {
+					ticker = time.NewTicker(period)
+				}
+				doCall()
 			case <-ticker.C:
 				doCall()
 			}
 		}
 	}
+}
+
+func (p *periodicCall) Kick() {
+	p.loopKick <- false
+}
+
+func (p *periodicCall) Reset() {
+	p.loopKick <- true
 }
 
 func (p *periodicCall) Close() {
