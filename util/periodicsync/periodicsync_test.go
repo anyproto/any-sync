@@ -2,6 +2,7 @@ package periodicsync
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -140,6 +141,37 @@ func TestPeriodicSync_Run(t *testing.T) {
 		pSync.Run()
 		waitForCall(t, calls)
 		require.Equal(t, int32(1), times.Load())
+		pSync.Close()
+	})
+
+	t.Run("loop caller returns error", func(t *testing.T) {
+		times := atomic.Int32{}
+		calls := make(chan struct{}, 10)
+		testErr := fmt.Errorf("test error")
+		diffSyncer := func(ctx context.Context) error {
+			times.Add(1)
+			calls <- struct{}{}
+			return testErr
+		}
+		pSync := NewPeriodicSyncDuration(time.Minute, 0, diffSyncer, l).(*periodicCall)
+		tickerCh := make(chan *fakeTicker, 1)
+		pSync.newTicker = func(d time.Duration) ticker {
+			ft := newFakeTicker()
+			tickerCh <- ft
+			return ft
+		}
+		pSync.Run()
+		firstTicker := <-tickerCh
+		waitForCall(t, calls)
+		require.Equal(t, int32(1), times.Load())
+		// trigger another call via ticker to ensure loop continues after error
+		firstTicker.Tick()
+		waitForCall(t, calls)
+		require.Equal(t, int32(2), times.Load())
+		// trigger another call via kick to ensure it still works after error
+		pSync.Kick()
+		waitForCall(t, calls)
+		require.Equal(t, int32(3), times.Load())
 		pSync.Close()
 	})
 }
