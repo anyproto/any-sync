@@ -12,8 +12,8 @@ import (
 )
 
 type PeriodicSync interface {
-	Kick()
-	Reset()
+	Kick(ctx context.Context) error
+	Reset(ctx context.Context) error
 	Run()
 	Close()
 }
@@ -107,15 +107,25 @@ func (p *periodicCall) loop(period time.Duration) {
 	}
 }
 
-// Runs the scheduled function once, without
+// Kick runs the scheduled function once, without
 // interrupting the schedule.
-func (p *periodicCall) Kick() {
-	p.loopKick <- false
+func (p *periodicCall) Kick(ctx context.Context) error {
+	select {
+	case p.loopKick <- false:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
-// Runs the scheduled function and resets the scheduler
-func (p *periodicCall) Reset() {
-	p.loopKick <- true
+// Reset runs the scheduled function and resets the scheduler
+func (p *periodicCall) Reset(ctx context.Context) error {
+	select {
+	case p.loopKick <- true:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (p *periodicCall) Close() {

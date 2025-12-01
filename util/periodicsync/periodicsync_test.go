@@ -50,7 +50,8 @@ func TestPeriodicSync_Run(t *testing.T) {
 		<-tickerCh // ensure ticker created so we can control ticks if needed
 		waitForCall(t, calls)
 		require.Equal(t, int32(1), times.Load())
-		pSync.Kick()
+		err := pSync.Kick(context.Background())
+		require.NoError(t, err)
 		waitForCall(t, calls)
 		require.Equal(t, int32(2), times.Load())
 		pSync.Close()
@@ -77,7 +78,8 @@ func TestPeriodicSync_Run(t *testing.T) {
 		firstTicker.Tick()
 		waitForCall(t, calls)
 		require.Equal(t, int32(2), times.Load())
-		pSync.Reset()
+		err := pSync.Reset(context.Background())
+		require.NoError(t, err)
 		waitForCall(t, calls)
 		require.Equal(t, int32(3), times.Load())
 		require.True(t, firstTicker.Stopped())
@@ -169,9 +171,58 @@ func TestPeriodicSync_Run(t *testing.T) {
 		waitForCall(t, calls)
 		require.Equal(t, int32(2), times.Load())
 		// trigger another call via kick to ensure it still works after error
-		pSync.Kick()
+		err := pSync.Kick(context.Background())
+		require.NoError(t, err)
 		waitForCall(t, calls)
 		require.Equal(t, int32(3), times.Load())
+		pSync.Close()
+	})
+
+	t.Run("kick context cancelled", func(t *testing.T) {
+		times := atomic.Int32{}
+		diffSyncer := func(ctx context.Context) error {
+			times.Add(1)
+			// block forever to simulate slow processing
+			<-ctx.Done()
+			return nil
+		}
+		pSync := NewPeriodicSyncDuration(time.Minute, 0, diffSyncer, l).(*periodicCall)
+		pSync.newTicker = func(d time.Duration) ticker {
+			return newFakeTicker()
+		}
+		pSync.Run()
+		// wait for initial call to start (it will block)
+		time.Sleep(10 * time.Millisecond)
+		// try to kick with already cancelled context
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := pSync.Kick(ctx)
+		require.ErrorIs(t, err, context.Canceled)
+		require.Equal(t, int32(1), times.Load())
+		pSync.Close()
+	})
+
+	t.Run("reset context cancelled", func(t *testing.T) {
+		times := atomic.Int32{}
+		diffSyncer := func(ctx context.Context) error {
+			times.Add(1)
+			// block forever to simulate slow processing
+			<-ctx.Done()
+			return nil
+		}
+		pSync := NewPeriodicSyncDuration(time.Minute, 0, diffSyncer, l).(*periodicCall)
+		pSync.newTicker = func(d time.Duration) ticker {
+			return newFakeTicker()
+		}
+		pSync.Run()
+		// wait for initial call to start (it will block)
+		time.Sleep(10 * time.Millisecond)
+		// try to reset with already cancelled context
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := pSync.Reset(ctx)
+		require.ErrorIs(t, err, context.Canceled)
+		require.Equal(t, int32(1), times.Load())
 		pSync.Close()
 	})
 }
