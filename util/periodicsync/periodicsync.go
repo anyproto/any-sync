@@ -12,6 +12,8 @@ import (
 )
 
 type PeriodicSync interface {
+	Kick(ctx context.Context) error
+	Reset(ctx context.Context) error
 	Run()
 	Close()
 }
@@ -31,6 +33,7 @@ func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller
 		loopCtx:    ctx,
 		loopCancel: cancel,
 		loopDone:   make(chan struct{}),
+		loopKick:   make(chan bool),
 		period:     periodicLoopInterval,
 		timeout:    timeout,
 	}
@@ -42,6 +45,7 @@ type periodicCall struct {
 	loopCtx    context.Context
 	loopCancel context.CancelFunc
 	loopDone   chan struct{}
+	loopKick   chan bool
 	period     time.Duration
 	timeout    time.Duration
 	isRunning  atomic.Bool
@@ -73,10 +77,36 @@ func (p *periodicCall) loop(period time.Duration) {
 			select {
 			case <-p.loopCtx.Done():
 				return
+			case kickReset := <-p.loopKick:
+				if kickReset {
+					ticker.Reset(period)
+				}
+				doCall()
 			case <-ticker.C:
 				doCall()
 			}
 		}
+	}
+}
+
+// Kick runs the scheduled function once, without
+// interrupting the schedule.
+func (p *periodicCall) Kick(ctx context.Context) error {
+	select {
+	case p.loopKick <- false:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Reset runs the scheduled function and resets the scheduler
+func (p *periodicCall) Reset(ctx context.Context) error {
+	select {
+	case p.loopKick <- true:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
