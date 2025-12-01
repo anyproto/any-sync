@@ -20,19 +20,6 @@ type PeriodicSync interface {
 
 type SyncerFunc func(ctx context.Context) error
 
-type ticker interface {
-	C() <-chan time.Time
-	Stop()
-}
-
-type timeTicker struct {
-	*time.Ticker
-}
-
-func (t *timeTicker) C() <-chan time.Time {
-	return t.Ticker.C
-}
-
 func NewPeriodicSync(periodSeconds int, timeout time.Duration, caller SyncerFunc, l logger.CtxLogger) PeriodicSync {
 	return NewPeriodicSyncDuration(time.Duration(periodSeconds)*time.Second, timeout, caller, l)
 }
@@ -49,9 +36,6 @@ func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller
 		loopKick:   make(chan bool),
 		period:     periodicLoopInterval,
 		timeout:    timeout,
-		newTicker: func(d time.Duration) ticker {
-			return &timeTicker{time.NewTicker(d)}
-		},
 	}
 }
 
@@ -65,7 +49,6 @@ type periodicCall struct {
 	period     time.Duration
 	timeout    time.Duration
 	isRunning  atomic.Bool
-	newTicker  func(time.Duration) ticker
 }
 
 func (p *periodicCall) Run() {
@@ -88,7 +71,7 @@ func (p *periodicCall) loop(period time.Duration) {
 	}
 	doCall()
 	if period > 0 {
-		ticker := p.newTicker(period)
+		ticker := time.NewTicker(period)
 		defer ticker.Stop()
 		for {
 			select {
@@ -96,11 +79,10 @@ func (p *periodicCall) loop(period time.Duration) {
 				return
 			case kickReset := <-p.loopKick:
 				if kickReset {
-					ticker.Stop()
-					ticker = p.newTicker(period)
+					ticker.Reset(period)
 				}
 				doCall()
-			case <-ticker.C():
+			case <-ticker.C:
 				doCall()
 			}
 		}
