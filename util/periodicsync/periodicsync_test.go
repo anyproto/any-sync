@@ -123,6 +123,25 @@ func TestPeriodicSync_Run(t *testing.T) {
 		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
 		pSync.Close()
 	})
+
+	t.Run("loop with timeout", func(t *testing.T) {
+		times := atomic.Int32{}
+		calls := make(chan struct{}, 10)
+		timeout := 100 * time.Millisecond
+		diffSyncer := func(ctx context.Context) error {
+			times.Add(1)
+			deadline, ok := ctx.Deadline()
+			require.True(t, ok, "context should have deadline when timeout is set")
+			require.WithinDuration(t, time.Now().Add(timeout), deadline, 10*time.Millisecond)
+			calls <- struct{}{}
+			return nil
+		}
+		pSync := NewPeriodicSyncDuration(time.Minute, timeout, diffSyncer, l)
+		pSync.Run()
+		waitForCall(t, calls)
+		require.Equal(t, int32(1), times.Load())
+		pSync.Close()
+	})
 }
 
 func waitForCall(t *testing.T, ch <-chan struct{}) {
