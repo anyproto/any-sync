@@ -11,6 +11,19 @@ import (
 
 const testDerivePath = "m/SLIP-0021/anysync/test"
 
+func TestInvalidSharedKey(t *testing.T) {
+	t.Run("fails with invalid pkey with error", func(t *testing.T) {
+		privKeyA, _, _ := GenerateEd25519Key(rand.Reader)
+		pubKeyB := NewEd25519PubKey([]byte{1, 2, 3})
+		_, err := GenerateSharedKey(privKeyA, pubKeyB, testDerivePath)
+		require.Error(t, err)
+
+		pubKeyB = NewEd25519PubKey([]byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8})
+		_, err = GenerateSharedKey(privKeyA, pubKeyB, testDerivePath)
+		require.Error(t, err)
+	})
+}
+
 func TestGenerateSharedKey(t *testing.T) {
 	privKeyA, pubKeyA, _ := GenerateEd25519Key(rand.Reader)
 	privKeyB, pubKeyB, _ := GenerateEd25519Key(rand.Reader)
