@@ -108,7 +108,7 @@ func (q *quicMultiConn) Close() error {
 			isTimeout.Store(true)
 			if q.udpConn != nil {
 				err := q.udpConn.Close()
-				if err != nil {
+				if err != nil && !errors.Is(err, net.ErrClosed) {
 					log.Error("udp conn closed with error", zap.Error(err))
 				}
 			}
@@ -121,8 +121,8 @@ func (q *quicMultiConn) Close() error {
 		}
 		if !isTimeout.Load() && q.udpConn != nil {
 			err := q.udpConn.Close()
-			if err != nil {
-				log.Error("upd conn closed with error", zap.Error(err))
+			if err != nil && !errors.Is(err, net.ErrClosed) {
+				log.Error("udp conn closed with error", zap.Error(err))
 			}
 		}
 		close(closeWait)
