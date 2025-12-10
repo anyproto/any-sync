@@ -87,6 +87,9 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	// TODO: put it in one transaction
 	stateStorage, err := statestorage.CreateTx(tx.Context(), state, store)
 	if err != nil {
+		if errors.Is(err, anystore.ErrDocExists) {
+			return nil, ErrSpaceStorageExists
+		}
 		return nil, err
 	}
 	headStorage, err := headstorage.New(tx.Context(), store)
