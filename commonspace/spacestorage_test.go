@@ -51,3 +51,18 @@ func TestCreateSpaceStorageFailed_EmptyStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, collNames)
 }
+
+func TestCreate_ReturnsErrSpaceStorageExists_WhenStorageAlreadyExists(t *testing.T) {
+	payload := newStorageCreatePayload(t)
+	store, err := anystore.Open(ctx, filepath.Join(t.TempDir(), "store.db"), nil)
+	require.NoError(t, err)
+	defer store.Close()
+
+	// First creation should succeed
+	_, err = spacestorage.Create(ctx, store, payload)
+	require.NoError(t, err)
+
+	// Second creation with the same payload should return ErrSpaceStorageExists
+	_, err = spacestorage.Create(ctx, store, payload)
+	require.ErrorIs(t, err, spacestorage.ErrSpaceStorageExists)
+}
