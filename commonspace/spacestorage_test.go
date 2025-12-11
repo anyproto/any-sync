@@ -58,11 +58,8 @@ func TestCreate_ReturnsErrSpaceStorageExists_WhenStorageAlreadyExists(t *testing
 	require.NoError(t, err)
 	defer store.Close()
 
-	// First creation should succeed
 	_, err = spacestorage.Create(ctx, store, payload)
 	require.NoError(t, err)
-
-	// Second creation with the same payload should return ErrSpaceStorageExists
 	_, err = spacestorage.Create(ctx, store, payload)
 	require.ErrorIs(t, err, spacestorage.ErrSpaceStorageExists)
 }
