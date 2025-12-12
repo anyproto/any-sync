@@ -285,18 +285,31 @@ func TestAclList_FixAcceptPanic(t *testing.T) {
 }
 
 func TestAclList_KeyChangeInvite(t *testing.T) {
-	fx := newFixture(t)
-	newReadKey := crypto.NewAES()
-	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
-		MetadataKey: privKey,
-		ReadKey:     newReadKey,
+	t.Run("success", func(t *testing.T) {
+		fx := newFixture(t)
+		newReadKey := crypto.NewAES()
+		privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		})
+		require.NoError(t, err)
+		readKeyRec := WrapAclRecord(readKeyChange)
+		fx.addRec(t, readKeyRec)
+		fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 	})
-	require.NoError(t, err)
-	readKeyRec := WrapAclRecord(readKeyChange)
-	fx.addRec(t, readKeyRec)
-	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+	t.Run("insufficient permissions", func(t *testing.T) {
+		fx := newFixture(t)
+		newReadKey := crypto.NewAES()
+		privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		_, err = fx.accountAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		})
+		require.ErrorIs(t, err, ErrInsufficientPermissions)
+	})
 }
 
 func TestAclList_MetadataDecrypt(t *testing.T) {
