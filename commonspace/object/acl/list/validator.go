@@ -448,6 +448,9 @@ func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
 	return c.validateReadKeyChange(ch, nil)
 }
 
