@@ -332,44 +332,68 @@ func TestAclList_ValidateUsesCorrectVerifier(t *testing.T) {
 }
 
 func TestAclList_ReadKeyChange(t *testing.T) {
-	fx := newFixture(t)
-	var (
-		ownerAcl   = fx.ownerAcl
-		ownerState = func() *AclState {
-			return ownerAcl.aclState
-		}
-		accountAcl   = fx.accountAcl
-		accountState = func() *AclState {
-			return accountAcl.aclState
-		}
-	)
-	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
+	t.Run("success", func(t *testing.T) {
+		fx := newFixture(t)
+		var (
+			ownerAcl   = fx.ownerAcl
+			ownerState = func() *AclState {
+				return ownerAcl.aclState
+			}
+			accountAcl   = fx.accountAcl
+			accountState = func() *AclState {
+				return accountAcl.aclState
+			}
+		)
+		fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
 
-	newReadKey := crypto.NewAES()
-	privKey, pubKey, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
-		MetadataKey: privKey,
-		ReadKey:     newReadKey,
+		newReadKey := crypto.NewAES()
+		privKey, pubKey, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		})
+		require.NoError(t, err)
+		readKeyRec := WrapAclRecord(readKeyChange)
+		fx.addRec(t, readKeyRec)
+
+		// checking acl state
+		require.True(t, ownerState().Permissions(ownerState().pubKey).IsOwner())
+		require.True(t, ownerState().Permissions(accountState().pubKey).CanManageAccounts())
+		require.True(t, ownerState().keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
+		require.True(t, ownerState().keys[readKeyRec.Id].MetadataPrivKey.Equals(privKey))
+		require.True(t, ownerState().keys[readKeyRec.Id].MetadataPubKey.Equals(pubKey))
+		require.True(t, accountState().keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
+		require.NotEmpty(t, ownerState().keys[fx.ownerAcl.Id()])
+		require.NotEmpty(t, accountState().keys[fx.ownerAcl.Id()])
+		readKey, err := ownerState().CurrentReadKey()
+		require.NoError(t, err)
+		require.True(t, newReadKey.Equals(readKey))
+		require.Equal(t, 0, len(ownerState().pendingRequests))
+		require.Equal(t, 0, len(accountState().pendingRequests))
 	})
-	require.NoError(t, err)
-	readKeyRec := WrapAclRecord(readKeyChange)
-	fx.addRec(t, readKeyRec)
+	t.Run("insufficient permissions", func(t *testing.T) {
+		fx := newFixture(t)
+		var (
+			accountAcl = fx.accountAcl
+		)
+		fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 
-	// checking acl state
-	require.True(t, ownerState().Permissions(ownerState().pubKey).IsOwner())
-	require.True(t, ownerState().Permissions(accountState().pubKey).CanManageAccounts())
-	require.True(t, ownerState().keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
-	require.True(t, ownerState().keys[readKeyRec.Id].MetadataPrivKey.Equals(privKey))
-	require.True(t, ownerState().keys[readKeyRec.Id].MetadataPubKey.Equals(pubKey))
-	require.True(t, accountState().keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
-	require.NotEmpty(t, ownerState().keys[fx.ownerAcl.Id()])
-	require.NotEmpty(t, accountState().keys[fx.ownerAcl.Id()])
-	readKey, err := ownerState().CurrentReadKey()
-	require.NoError(t, err)
-	require.True(t, newReadKey.Equals(readKey))
-	require.Equal(t, 0, len(ownerState().pendingRequests))
-	require.Equal(t, 0, len(accountState().pendingRequests))
+		newReadKey := crypto.NewAES()
+		privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+
+		accRecBuilder := accountAcl.RecordBuilder().(*aclRecordBuilder)
+		rkChange, err := accRecBuilder.buildReadKeyChange(ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		}, nil)
+		require.NoError(t, err)
+		content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_ReadKeyChange{ReadKeyChange: rkChange}}
+		_, err = accRecBuilder.buildRecord(content)
+		assert.ErrorIs(t, err, ErrInsufficientPermissions)
+
+	})
 }
 
 func TestAclList_PermissionChange(t *testing.T) {

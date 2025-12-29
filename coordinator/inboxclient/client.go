@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_inboxclient/mock_inboxclient.go github.com/anyproto/any-sync/coordinator/inboxclient InboxClient
 package inboxclient
 
 import (

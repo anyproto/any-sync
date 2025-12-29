@@ -72,4 +72,5 @@ mocks:
 	go generate ./...
 
 test:
-	go test ./... --cover
+	# TODO: remove GOEXPERIMENT when go 1.25
+	GOEXPERIMENT=synctest go test ./... --cover
