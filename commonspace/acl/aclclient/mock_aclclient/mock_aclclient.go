@@ -310,6 +310,20 @@ func (mr *MockAclSpaceClientMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAclSpaceClient)(nil).Name))
 }
 
+// OwnershipChange mocks base method.
+func (m *MockAclSpaceClient) OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OwnershipChange", ctx, identity, oldOwnerPermissions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// OwnershipChange indicates an expected call of OwnershipChange.
+func (mr *MockAclSpaceClientMockRecorder) OwnershipChange(ctx, identity, oldOwnerPermissions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OwnershipChange", reflect.TypeOf((*MockAclSpaceClient)(nil).OwnershipChange), ctx, identity, oldOwnerPermissions)
+}
+
 // RemoveAccounts mocks base method.
 func (m *MockAclSpaceClient) RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error {
 	m.ctrl.T.Helper()
