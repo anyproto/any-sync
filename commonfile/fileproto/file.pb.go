@@ -1648,7 +1648,7 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\tNotExists\x10\x00\x12\n" +
 	"\n" +
 	"\x06Exists\x10\x01\x12\x11\n" +
-	"\rExistsInSpace\x10\x022\xb0\a\n" +
+	"\rExistsInSpace\x10\x022\xe9\x06\n" +
 	"\x04File\x12A\n" +
 	"\bBlockGet\x12\x19.filesync.BlockGetRequest\x1a\x1a.filesync.BlockGetResponse\x125\n" +
 	"\tBlockPush\x12\x1a.filesync.BlockPushRequest\x1a\f.filesync.Ok\x12=\n" +
@@ -1663,8 +1663,7 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\tSpaceInfo\x12\x1a.filesync.SpaceInfoRequest\x1a\x1b.filesync.SpaceInfoResponse\x12J\n" +
 	"\vAccountInfo\x12\x1c.filesync.AccountInfoRequest\x1a\x1d.filesync.AccountInfoResponse\x12A\n" +
 	"\x0fAccountLimitSet\x12 .filesync.AccountLimitSetRequest\x1a\f.filesync.Ok\x12=\n" +
-	"\rSpaceLimitSet\x12\x1e.filesync.SpaceLimitSetRequest\x1a\f.filesync.Ok\x12E\n" +
-	"\x11OwnershipTransfer\x12\".filesync.OwnershipTransferRequest\x1a\f.filesync.OkB\x16Z\x14commonfile/fileprotob\x06proto3"
+	"\rSpaceLimitSet\x12\x1e.filesync.SpaceLimitSetRequest\x1a\f.filesync.OkB\x16Z\x14commonfile/fileprotob\x06proto3"
 
 var (
 	file_commonfile_fileproto_protos_file_proto_rawDescOnce sync.Once
@@ -1731,23 +1730,21 @@ var file_commonfile_fileproto_protos_file_proto_depIdxs = []int32{
 	24, // 16: filesync.File.AccountInfo:input_type -> filesync.AccountInfoRequest
 	26, // 17: filesync.File.AccountLimitSet:input_type -> filesync.AccountLimitSetRequest
 	27, // 18: filesync.File.SpaceLimitSet:input_type -> filesync.SpaceLimitSetRequest
-	28, // 19: filesync.File.OwnershipTransfer:input_type -> filesync.OwnershipTransferRequest
-	4,  // 20: filesync.File.BlockGet:output_type -> filesync.BlockGetResponse
-	2,  // 21: filesync.File.BlockPush:output_type -> filesync.Ok
-	2,  // 22: filesync.File.BlockPushMany:output_type -> filesync.Ok
-	10, // 23: filesync.File.BlocksCheck:output_type -> filesync.BlocksCheckResponse
-	2,  // 24: filesync.File.BlocksBind:output_type -> filesync.Ok
-	14, // 25: filesync.File.FilesDelete:output_type -> filesync.FilesDeleteResponse
-	16, // 26: filesync.File.FilesInfo:output_type -> filesync.FilesInfoResponse
-	19, // 27: filesync.File.FilesGet:output_type -> filesync.FilesGetResponse
-	21, // 28: filesync.File.Check:output_type -> filesync.CheckResponse
-	23, // 29: filesync.File.SpaceInfo:output_type -> filesync.SpaceInfoResponse
-	25, // 30: filesync.File.AccountInfo:output_type -> filesync.AccountInfoResponse
-	2,  // 31: filesync.File.AccountLimitSet:output_type -> filesync.Ok
-	2,  // 32: filesync.File.SpaceLimitSet:output_type -> filesync.Ok
-	2,  // 33: filesync.File.OwnershipTransfer:output_type -> filesync.Ok
-	20, // [20:34] is the sub-list for method output_type
-	6,  // [6:20] is the sub-list for method input_type
+	4,  // 19: filesync.File.BlockGet:output_type -> filesync.BlockGetResponse
+	2,  // 20: filesync.File.BlockPush:output_type -> filesync.Ok
+	2,  // 21: filesync.File.BlockPushMany:output_type -> filesync.Ok
+	10, // 22: filesync.File.BlocksCheck:output_type -> filesync.BlocksCheckResponse
+	2,  // 23: filesync.File.BlocksBind:output_type -> filesync.Ok
+	14, // 24: filesync.File.FilesDelete:output_type -> filesync.FilesDeleteResponse
+	16, // 25: filesync.File.FilesInfo:output_type -> filesync.FilesInfoResponse
+	19, // 26: filesync.File.FilesGet:output_type -> filesync.FilesGetResponse
+	21, // 27: filesync.File.Check:output_type -> filesync.CheckResponse
+	23, // 28: filesync.File.SpaceInfo:output_type -> filesync.SpaceInfoResponse
+	25, // 29: filesync.File.AccountInfo:output_type -> filesync.AccountInfoResponse
+	2,  // 30: filesync.File.AccountLimitSet:output_type -> filesync.Ok
+	2,  // 31: filesync.File.SpaceLimitSet:output_type -> filesync.Ok
+	19, // [19:32] is the sub-list for method output_type
+	6,  // [6:19] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
 	6,  // [6:6] is the sub-list for extension extendee
 	0,  // [0:6] is the sub-list for field type_name

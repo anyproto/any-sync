@@ -46,7 +46,6 @@ type DRPCFileClient interface {
 	AccountInfo(ctx context.Context, in *AccountInfoRequest) (*AccountInfoResponse, error)
 	AccountLimitSet(ctx context.Context, in *AccountLimitSetRequest) (*Ok, error)
 	SpaceLimitSet(ctx context.Context, in *SpaceLimitSetRequest) (*Ok, error)
-	OwnershipTransfer(ctx context.Context, in *OwnershipTransferRequest) (*Ok, error)
 }
 
 type drpcFileClient struct {
@@ -207,15 +206,6 @@ func (c *drpcFileClient) SpaceLimitSet(ctx context.Context, in *SpaceLimitSetReq
 	return out, nil
 }
 
-func (c *drpcFileClient) OwnershipTransfer(ctx context.Context, in *OwnershipTransferRequest) (*Ok, error) {
-	out := new(Ok)
-	err := c.cc.Invoke(ctx, "/filesync.File/OwnershipTransfer", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 type DRPCFileServer interface {
 	BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(context.Context, *BlockPushRequest) (*Ok, error)
@@ -230,7 +220,6 @@ type DRPCFileServer interface {
 	AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error)
 	AccountLimitSet(context.Context, *AccountLimitSetRequest) (*Ok, error)
 	SpaceLimitSet(context.Context, *SpaceLimitSetRequest) (*Ok, error)
-	OwnershipTransfer(context.Context, *OwnershipTransferRequest) (*Ok, error)
 }
 
 type DRPCFileUnimplementedServer struct{}
@@ -287,13 +276,9 @@ func (s *DRPCFileUnimplementedServer) SpaceLimitSet(context.Context, *SpaceLimit
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCFileUnimplementedServer) OwnershipTransfer(context.Context, *OwnershipTransferRequest) (*Ok, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 14 }
+func (DRPCFileDescription) NumMethods() int { return 13 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -414,15 +399,6 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*SpaceLimitSetRequest),
 					)
 			}, DRPCFileServer.SpaceLimitSet, true
-	case 13:
-		return "/filesync.File/OwnershipTransfer", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCFileServer).
-					OwnershipTransfer(
-						ctx,
-						in1.(*OwnershipTransferRequest),
-					)
-			}, DRPCFileServer.OwnershipTransfer, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -631,22 +607,6 @@ type drpcFile_SpaceLimitSetStream struct {
 }
 
 func (x *drpcFile_SpaceLimitSetStream) SendAndClose(m *Ok) error {
-	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCFile_OwnershipTransferStream interface {
-	drpc.Stream
-	SendAndClose(*Ok) error
-}
-
-type drpcFile_OwnershipTransferStream struct {
-	drpc.Stream
-}
-
-func (x *drpcFile_OwnershipTransferStream) SendAndClose(m *Ok) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
