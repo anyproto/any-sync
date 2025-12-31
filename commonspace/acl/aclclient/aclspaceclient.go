@@ -43,6 +43,7 @@ type AclSpaceClient interface {
 	RevokeInvite(ctx context.Context, inviteRecordId string) (err error)
 	RevokeAllInvites(ctx context.Context) (err error)
 	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
+	OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) (err error)
 }
 
 func NewAclSpaceClient() AclSpaceClient {

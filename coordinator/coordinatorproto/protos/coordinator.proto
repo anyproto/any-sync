@@ -293,6 +293,8 @@ message DeletionLogRecord {
   int64 timestamp = 4;
   // FileGroup is a key of group for file nodes
   string fileGroup = 5;
+  // AclRecordId (optional)
+  string aclRecordId = 6;
 }
 
 enum DeletionLogRecordStatus {
@@ -302,6 +304,8 @@ enum DeletionLogRecordStatus {
   RemovePrepare = 1;
   // Remove means space should be removed
   Remove = 2;
+  // OwnershipChange
+  OwnershipChange = 3;
 }
 
 // SpaceDeleteRequest contains the deletion confirmation for the space to be deleted
