@@ -1246,6 +1246,13 @@ func (m *DeletionLogRecord) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.AclRecordId) > 0 {
+		i -= len(m.AclRecordId)
+		copy(dAtA[i:], m.AclRecordId)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AclRecordId)))
+		i--
+		dAtA[i] = 0x32
+	}
 	if len(m.FileGroup) > 0 {
 		i -= len(m.FileGroup)
 		copy(dAtA[i:], m.FileGroup)
@@ -3021,6 +3028,10 @@ func (m *DeletionLogRecord) SizeVT() (n int) {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.Timestamp))
 	}
 	l = len(m.FileGroup)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.AclRecordId)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
@@ -6491,6 +6502,38 @@ func (m *DeletionLogRecord) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.FileGroup = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclRecordId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

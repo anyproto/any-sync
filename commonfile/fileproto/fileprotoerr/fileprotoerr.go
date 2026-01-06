@@ -16,4 +16,5 @@ var (
 	ErrQuerySizeExceeded  = errGroup.Register(fmt.Errorf("query size exceeded"), uint64(fileproto.ErrCodes_QuerySizeExceeded))
 	ErrNotEnoughSpace     = errGroup.Register(fmt.Errorf("not enough space"), uint64(fileproto.ErrCodes_NotEnoughSpace))
 	ErrWrongHash          = errGroup.Register(fmt.Errorf("wrong block hash"), uint64(fileproto.ErrCodes_WrongHash))
+	ErrAclRecordNotFound  = errGroup.Register(fmt.Errorf("acl record not found"), uint64(fileproto.ErrCodes_AclRecordNotFound))
 )

@@ -11,6 +11,7 @@ enum ErrCodes {
     QuerySizeExceeded = 4;
     WrongHash = 5;
     NotEnoughSpace = 6;
+    AclRecordNotFound = 7;
     ErrorOffset = 200;
 }
 
@@ -179,4 +180,9 @@ message AccountLimitSetRequest {
 message SpaceLimitSetRequest {
     string spaceId = 1;
     uint64 limit = 2;
+}
+
+message OwnershipTransferRequest {
+    string spaceId = 1;
+    string aclRecordId = 2;
 }

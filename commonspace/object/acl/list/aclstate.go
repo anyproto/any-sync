@@ -1040,7 +1040,15 @@ func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
 func (st *AclState) OwnerPubKeyWithRecordId() (ownerIdentity crypto.PubKey, recordId string, err error) {
 	for _, aState := range st.accountStates {
 		if aState.Permissions.IsOwner() {
-			return aState.PubKey, aState.KeyRecordId, nil
+			for _, permChange := range aState.PermissionChanges {
+				if permChange.Permission.IsOwner() {
+					recordId = permChange.RecordId
+				}
+			}
+			if recordId == "" {
+				recordId = aState.KeyRecordId
+			}
+			return aState.PubKey, recordId, nil
 		}
 	}
 	return nil, "", ErrOwnerNotFound
