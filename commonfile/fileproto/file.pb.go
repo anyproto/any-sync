@@ -1483,58 +1483,6 @@ func (x *SpaceLimitSetRequest) GetLimit() uint64 {
 	return 0
 }
 
-type OwnershipTransferRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SpaceId       string                 `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	AclRecordId   string                 `protobuf:"bytes,2,opt,name=aclRecordId,proto3" json:"aclRecordId,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *OwnershipTransferRequest) Reset() {
-	*x = OwnershipTransferRequest{}
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[26]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *OwnershipTransferRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OwnershipTransferRequest) ProtoMessage() {}
-
-func (x *OwnershipTransferRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_commonfile_fileproto_protos_file_proto_msgTypes[26]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OwnershipTransferRequest.ProtoReflect.Descriptor instead.
-func (*OwnershipTransferRequest) Descriptor() ([]byte, []int) {
-	return file_commonfile_fileproto_protos_file_proto_rawDescGZIP(), []int{26}
-}
-
-func (x *OwnershipTransferRequest) GetSpaceId() string {
-	if x != nil {
-		return x.SpaceId
-	}
-	return ""
-}
-
-func (x *OwnershipTransferRequest) GetAclRecordId() string {
-	if x != nil {
-		return x.AclRecordId
-	}
-	return ""
-}
-
 var File_commonfile_fileproto_protos_file_proto protoreflect.FileDescriptor
 
 const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
@@ -1629,10 +1577,7 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\x05limit\x18\x02 \x01(\x04R\x05limit\"F\n" +
 	"\x14SpaceLimitSetRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x04R\x05limit\"V\n" +
-	"\x18OwnershipTransferRequest\x12\x18\n" +
-	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12 \n" +
-	"\vaclRecordId\x18\x02 \x01(\tR\vaclRecordId*\xb0\x01\n" +
+	"\x05limit\x18\x02 \x01(\x04R\x05limit*\xb0\x01\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\x0f\n" +
@@ -1678,37 +1623,36 @@ func file_commonfile_fileproto_protos_file_proto_rawDescGZIP() []byte {
 }
 
 var file_commonfile_fileproto_protos_file_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_commonfile_fileproto_protos_file_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_commonfile_fileproto_protos_file_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_commonfile_fileproto_protos_file_proto_goTypes = []any{
-	(ErrCodes)(0),                    // 0: filesync.ErrCodes
-	(AvailabilityStatus)(0),          // 1: filesync.AvailabilityStatus
-	(*Ok)(nil),                       // 2: filesync.Ok
-	(*BlockGetRequest)(nil),          // 3: filesync.BlockGetRequest
-	(*BlockGetResponse)(nil),         // 4: filesync.BlockGetResponse
-	(*BlockPushRequest)(nil),         // 5: filesync.BlockPushRequest
-	(*BlockPushManyRequest)(nil),     // 6: filesync.BlockPushManyRequest
-	(*FileBlocks)(nil),               // 7: filesync.FileBlocks
-	(*Block)(nil),                    // 8: filesync.Block
-	(*BlocksCheckRequest)(nil),       // 9: filesync.BlocksCheckRequest
-	(*BlocksCheckResponse)(nil),      // 10: filesync.BlocksCheckResponse
-	(*BlockAvailability)(nil),        // 11: filesync.BlockAvailability
-	(*BlocksBindRequest)(nil),        // 12: filesync.BlocksBindRequest
-	(*FilesDeleteRequest)(nil),       // 13: filesync.FilesDeleteRequest
-	(*FilesDeleteResponse)(nil),      // 14: filesync.FilesDeleteResponse
-	(*FilesInfoRequest)(nil),         // 15: filesync.FilesInfoRequest
-	(*FilesInfoResponse)(nil),        // 16: filesync.FilesInfoResponse
-	(*FileInfo)(nil),                 // 17: filesync.FileInfo
-	(*FilesGetRequest)(nil),          // 18: filesync.FilesGetRequest
-	(*FilesGetResponse)(nil),         // 19: filesync.FilesGetResponse
-	(*CheckRequest)(nil),             // 20: filesync.CheckRequest
-	(*CheckResponse)(nil),            // 21: filesync.CheckResponse
-	(*SpaceInfoRequest)(nil),         // 22: filesync.SpaceInfoRequest
-	(*SpaceInfoResponse)(nil),        // 23: filesync.SpaceInfoResponse
-	(*AccountInfoRequest)(nil),       // 24: filesync.AccountInfoRequest
-	(*AccountInfoResponse)(nil),      // 25: filesync.AccountInfoResponse
-	(*AccountLimitSetRequest)(nil),   // 26: filesync.AccountLimitSetRequest
-	(*SpaceLimitSetRequest)(nil),     // 27: filesync.SpaceLimitSetRequest
-	(*OwnershipTransferRequest)(nil), // 28: filesync.OwnershipTransferRequest
+	(ErrCodes)(0),                  // 0: filesync.ErrCodes
+	(AvailabilityStatus)(0),        // 1: filesync.AvailabilityStatus
+	(*Ok)(nil),                     // 2: filesync.Ok
+	(*BlockGetRequest)(nil),        // 3: filesync.BlockGetRequest
+	(*BlockGetResponse)(nil),       // 4: filesync.BlockGetResponse
+	(*BlockPushRequest)(nil),       // 5: filesync.BlockPushRequest
+	(*BlockPushManyRequest)(nil),   // 6: filesync.BlockPushManyRequest
+	(*FileBlocks)(nil),             // 7: filesync.FileBlocks
+	(*Block)(nil),                  // 8: filesync.Block
+	(*BlocksCheckRequest)(nil),     // 9: filesync.BlocksCheckRequest
+	(*BlocksCheckResponse)(nil),    // 10: filesync.BlocksCheckResponse
+	(*BlockAvailability)(nil),      // 11: filesync.BlockAvailability
+	(*BlocksBindRequest)(nil),      // 12: filesync.BlocksBindRequest
+	(*FilesDeleteRequest)(nil),     // 13: filesync.FilesDeleteRequest
+	(*FilesDeleteResponse)(nil),    // 14: filesync.FilesDeleteResponse
+	(*FilesInfoRequest)(nil),       // 15: filesync.FilesInfoRequest
+	(*FilesInfoResponse)(nil),      // 16: filesync.FilesInfoResponse
+	(*FileInfo)(nil),               // 17: filesync.FileInfo
+	(*FilesGetRequest)(nil),        // 18: filesync.FilesGetRequest
+	(*FilesGetResponse)(nil),       // 19: filesync.FilesGetResponse
+	(*CheckRequest)(nil),           // 20: filesync.CheckRequest
+	(*CheckResponse)(nil),          // 21: filesync.CheckResponse
+	(*SpaceInfoRequest)(nil),       // 22: filesync.SpaceInfoRequest
+	(*SpaceInfoResponse)(nil),      // 23: filesync.SpaceInfoResponse
+	(*AccountInfoRequest)(nil),     // 24: filesync.AccountInfoRequest
+	(*AccountInfoResponse)(nil),    // 25: filesync.AccountInfoResponse
+	(*AccountLimitSetRequest)(nil), // 26: filesync.AccountLimitSetRequest
+	(*SpaceLimitSetRequest)(nil),   // 27: filesync.SpaceLimitSetRequest
 }
 var file_commonfile_fileproto_protos_file_proto_depIdxs = []int32{
 	7,  // 0: filesync.BlockPushManyRequest.fileBlocks:type_name -> filesync.FileBlocks
@@ -1761,7 +1705,7 @@ func file_commonfile_fileproto_protos_file_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonfile_fileproto_protos_file_proto_rawDesc), len(file_commonfile_fileproto_protos_file_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   27,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

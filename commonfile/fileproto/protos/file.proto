@@ -182,7 +182,3 @@ message SpaceLimitSetRequest {
     uint64 limit = 2;
 }
 
-message OwnershipTransferRequest {
-    string spaceId = 1;
-    string aclRecordId = 2;
-}
