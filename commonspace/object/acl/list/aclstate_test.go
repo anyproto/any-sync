@@ -111,3 +111,77 @@ func TestAclState_FirstMetadataKey(t *testing.T) {
 		require.ErrorIs(t, err, ErrNoMetadataKey)
 	})
 }
+
+func TestAclState_OwnerPubKeyWithRecordId(t *testing.T) {
+	t.Run("owner found with PermissionChanges", func(t *testing.T) {
+		privKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+		require.NoError(t, err)
+		pubKey := privKey.GetPublic()
+		pubKeyStr := string(pubKey.Storage())
+
+		state := &AclState{
+			accountStates: map[string]AccountState{
+				pubKeyStr: {
+					PubKey:      pubKey,
+					Permissions: AclPermissionsOwner,
+					PermissionChanges: []PermissionChange{
+						{
+							RecordId:   "record1",
+							Permission: AclPermissionsAdmin,
+						},
+						{
+							RecordId:   "record2",
+							Permission: AclPermissionsOwner,
+						},
+					},
+				},
+			},
+		}
+
+		ownerPubKey, recordId, err := state.OwnerPubKeyWithRecordId()
+		require.NoError(t, err)
+		require.Equal(t, pubKey, ownerPubKey)
+		require.Equal(t, "record2", recordId)
+	})
+
+	t.Run("owner found with KeyRecordId", func(t *testing.T) {
+		privKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+		require.NoError(t, err)
+		pubKey := privKey.GetPublic()
+		pubKeyStr := string(pubKey.Storage())
+
+		state := &AclState{
+			accountStates: map[string]AccountState{
+				pubKeyStr: {
+					PubKey:      pubKey,
+					Permissions: AclPermissionsOwner,
+					KeyRecordId: "initialRecord",
+				},
+			},
+		}
+
+		ownerPubKey, recordId, err := state.OwnerPubKeyWithRecordId()
+		require.NoError(t, err)
+		require.Equal(t, pubKey, ownerPubKey)
+		require.Equal(t, "initialRecord", recordId)
+	})
+
+	t.Run("owner not found", func(t *testing.T) {
+		privKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+		require.NoError(t, err)
+		pubKey := privKey.GetPublic()
+		pubKeyStr := string(pubKey.Storage())
+
+		state := &AclState{
+			accountStates: map[string]AccountState{
+				pubKeyStr: {
+					PubKey:      pubKey,
+					Permissions: AclPermissionsAdmin,
+				},
+			},
+		}
+
+		_, _, err = state.OwnerPubKeyWithRecordId()
+		require.ErrorIs(t, err, ErrOwnerNotFound)
+	})
+}

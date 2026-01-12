@@ -10,6 +10,7 @@
 package mock_periodicsync
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -49,6 +50,34 @@ func (m *MockPeriodicSync) Close() {
 func (mr *MockPeriodicSyncMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockPeriodicSync)(nil).Close))
+}
+
+// Kick mocks base method.
+func (m *MockPeriodicSync) Kick(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Kick", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Kick indicates an expected call of Kick.
+func (mr *MockPeriodicSyncMockRecorder) Kick(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kick", reflect.TypeOf((*MockPeriodicSync)(nil).Kick), ctx)
+}
+
+// Reset mocks base method.
+func (m *MockPeriodicSync) Reset(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reset", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Reset indicates an expected call of Reset.
+func (mr *MockPeriodicSyncMockRecorder) Reset(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockPeriodicSync)(nil).Reset), ctx)
 }
 
 // Run mocks base method.
