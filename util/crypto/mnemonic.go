@@ -20,8 +20,6 @@ var (
 )
 
 const (
-	anytypeAccountOldPrefix = "m/44'/607'"
-
 	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 	anytypeAccountNewPrefix = "m/44'/2046'"
 
@@ -36,9 +34,8 @@ type DerivationResult struct {
 	// m/44'/code'/index'
 	MasterKey PrivKey
 	// m/44'/code'/index'/0'
-	Identity      PrivKey
-	OldAccountKey PrivKey
-	MasterNode    slip10.Node
+	Identity   PrivKey
+	MasterNode slip10.Node
 
 	// Anytype uses ED25519
 	// Ethereum and Bitcoin use ECDSA secp256k1 elliptic curves
@@ -66,7 +63,7 @@ func DeriveKeysFromMasterNode(masterNode slip10.Node) (res DerivationResult, err
 		return
 	}
 	res.Identity, err = genKey(identityNode)
-	
+
 	return
 }
 
@@ -176,12 +173,6 @@ func (m Mnemonic) deriveForPath(onlyMaster bool, index uint32, path string) (res
 }
 
 func (m Mnemonic) DeriveKeys(index uint32) (res DerivationResult, err error) {
-	// Derive old account key for backward compatibility
-	oldRes, err := m.deriveForPath(true, index, anytypeAccountOldPrefix)
-	if err != nil {
-		return
-	}
-
 	// Derive master node using the new public method
 	masterNode, err := m.DeriveMasterNode(index)
 	if err != nil {
@@ -193,9 +184,6 @@ func (m Mnemonic) DeriveKeys(index uint32) (res DerivationResult, err error) {
 	if err != nil {
 		return
 	}
-
-	// Add old account key for backward compatibility
-	res.OldAccountKey = oldRes.MasterKey
 
 	// Derive ethereum key
 	pk, err := m.ethereumKeyFromMnemonic(index, defaultEthereumDerivation)
