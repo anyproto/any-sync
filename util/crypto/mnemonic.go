@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/anyproto/go-bip39"
 	"github.com/anyproto/go-slip10"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/tyler-smith/go-bip39"
 
 	"github.com/anyproto/any-sync/util/ethereum/accounts"
 )
@@ -66,7 +66,7 @@ func DeriveKeysFromMasterNode(masterNode slip10.Node) (res DerivationResult, err
 		return
 	}
 	res.Identity, err = genKey(identityNode)
-	
+
 	return
 }
 
