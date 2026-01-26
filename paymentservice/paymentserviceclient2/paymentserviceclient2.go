@@ -33,6 +33,8 @@ type AnyPpClientServiceV2 interface {
 	StoreCartGet(ctx context.Context, in *pp.MembershipV2_StoreCartGetRequest) (out *pp.MembershipV2_StoreCartGetResponse, err error)
 	StoreCartUpdate(ctx context.Context, in *pp.MembershipV2_StoreCartUpdateRequest) (out *pp.MembershipV2_StoreCartUpdateResponse, err error)
 
+	SubscribeToUpdates(ctx context.Context, in *pp.MembershipV2_SubscribeToUpdatesRequest) (out *pp.MembershipV2_SubscribeToUpdatesResponse, err error)
+
 	app.Component
 }
 
@@ -144,6 +146,16 @@ func (s *service) StoreCartGet(ctx context.Context, in *pp.MembershipV2_StoreCar
 func (s *service) StoreCartUpdate(ctx context.Context, in *pp.MembershipV2_StoreCartUpdateRequest) (out *pp.MembershipV2_StoreCartUpdateResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
 		if out, err = cl.StoreCartUpdate(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) SubscribeToUpdates(ctx context.Context, in *pp.MembershipV2_SubscribeToUpdatesRequest) (out *pp.MembershipV2_SubscribeToUpdatesResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingV2Client) error {
+		if out, err = cl.SubscribeToUpdates(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

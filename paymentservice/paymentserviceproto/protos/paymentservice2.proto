@@ -18,6 +18,14 @@ message MembershipV2 {
     ThreeYears = 3;
   }
 
+  enum Platform {
+    Unknown = 0;
+    Desktop = 1;
+    MobileIOS = 2;
+    MobileAndroid = 3;
+    Web = 4;
+  }
+
   message Amount {
     string currency = 1;
     // $0.01 = 1
@@ -228,9 +236,24 @@ message MembershipV2 {
   message AnyNameAllocateResponse {
     
   }
+
+  message SubscribeToUpdatesRequest {
+    string email = 1;
+    Platform platform = 2;
+    // if false - unsubscribe
+    bool subscribe = 3;
+    // additional data
+    string context = 4;
+  }
+
+  message SubscribeToUpdatesResponse {
+
+  }
 }
 
 service AnyPaymentProcessingV2 {
+  rpc SubscribeToUpdates(MembershipV2.SubscribeToUpdatesRequest) returns (MembershipV2.SubscribeToUpdatesResponse);
+
   rpc GetProducts (MembershipV2.GetProductsRequest) returns (MembershipV2.GetProductsResponse);
   rpc GetStatus (MembershipV2.GetStatusRequest) returns (MembershipV2.GetStatusResponse);
   rpc WebAuth(MembershipV2.WebAuthRequest) returns (MembershipV2.WebAuthResponse); 
