@@ -160,6 +160,21 @@ func (mr *MockAnyPpClientServiceV2MockRecorder) StoreCartUpdate(ctx, in any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreCartUpdate", reflect.TypeOf((*MockAnyPpClientServiceV2)(nil).StoreCartUpdate), ctx, in)
 }
 
+// SubscribeToUpdates mocks base method.
+func (m *MockAnyPpClientServiceV2) SubscribeToUpdates(ctx context.Context, in *paymentserviceproto.MembershipV2_SubscribeToUpdatesRequest) (*paymentserviceproto.MembershipV2_SubscribeToUpdatesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeToUpdates", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.MembershipV2_SubscribeToUpdatesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubscribeToUpdates indicates an expected call of SubscribeToUpdates.
+func (mr *MockAnyPpClientServiceV2MockRecorder) SubscribeToUpdates(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeToUpdates", reflect.TypeOf((*MockAnyPpClientServiceV2)(nil).SubscribeToUpdates), ctx, in)
+}
+
 // WebAuth mocks base method.
 func (m *MockAnyPpClientServiceV2) WebAuth(ctx context.Context, in *paymentserviceproto.MembershipV2_WebAuthRequest) (*paymentserviceproto.MembershipV2_WebAuthResponse, error) {
 	m.ctrl.T.Helper()

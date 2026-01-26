@@ -33,6 +33,7 @@ func (drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice
 type DRPCAnyPaymentProcessingV2Client interface {
 	DRPCConn() drpc.Conn
 
+	SubscribeToUpdates(ctx context.Context, in *MembershipV2_SubscribeToUpdatesRequest) (*MembershipV2_SubscribeToUpdatesResponse, error)
 	GetProducts(ctx context.Context, in *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error)
 	GetStatus(ctx context.Context, in *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error)
 	WebAuth(ctx context.Context, in *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error)
@@ -51,6 +52,15 @@ func NewDRPCAnyPaymentProcessingV2Client(cc drpc.Conn) DRPCAnyPaymentProcessingV
 }
 
 func (c *drpcAnyPaymentProcessingV2Client) DRPCConn() drpc.Conn { return c.cc }
+
+func (c *drpcAnyPaymentProcessingV2Client) SubscribeToUpdates(ctx context.Context, in *MembershipV2_SubscribeToUpdatesRequest) (*MembershipV2_SubscribeToUpdatesResponse, error) {
+	out := new(MembershipV2_SubscribeToUpdatesResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessingV2/SubscribeToUpdates", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 func (c *drpcAnyPaymentProcessingV2Client) GetProducts(ctx context.Context, in *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error) {
 	out := new(MembershipV2_GetProductsResponse)
@@ -116,6 +126,7 @@ func (c *drpcAnyPaymentProcessingV2Client) StoreCartUpdate(ctx context.Context, 
 }
 
 type DRPCAnyPaymentProcessingV2Server interface {
+	SubscribeToUpdates(context.Context, *MembershipV2_SubscribeToUpdatesRequest) (*MembershipV2_SubscribeToUpdatesResponse, error)
 	GetProducts(context.Context, *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error)
 	GetStatus(context.Context, *MembershipV2_GetStatusRequest) (*MembershipV2_GetStatusResponse, error)
 	WebAuth(context.Context, *MembershipV2_WebAuthRequest) (*MembershipV2_WebAuthResponse, error)
@@ -126,6 +137,10 @@ type DRPCAnyPaymentProcessingV2Server interface {
 }
 
 type DRPCAnyPaymentProcessingV2UnimplementedServer struct{}
+
+func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) SubscribeToUpdates(context.Context, *MembershipV2_SubscribeToUpdatesRequest) (*MembershipV2_SubscribeToUpdatesResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
 
 func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) GetProducts(context.Context, *MembershipV2_GetProductsRequest) (*MembershipV2_GetProductsResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
@@ -157,11 +172,20 @@ func (s *DRPCAnyPaymentProcessingV2UnimplementedServer) StoreCartUpdate(context.
 
 type DRPCAnyPaymentProcessingV2Description struct{}
 
-func (DRPCAnyPaymentProcessingV2Description) NumMethods() int { return 7 }
+func (DRPCAnyPaymentProcessingV2Description) NumMethods() int { return 8 }
 
 func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
+		return "/AnyPaymentProcessingV2/SubscribeToUpdates", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingV2Server).
+					SubscribeToUpdates(
+						ctx,
+						in1.(*MembershipV2_SubscribeToUpdatesRequest),
+					)
+			}, DRPCAnyPaymentProcessingV2Server.SubscribeToUpdates, true
+	case 1:
 		return "/AnyPaymentProcessingV2/GetProducts", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -170,7 +194,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_GetProductsRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.GetProducts, true
-	case 1:
+	case 2:
 		return "/AnyPaymentProcessingV2/GetStatus", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -179,7 +203,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_GetStatusRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.GetStatus, true
-	case 2:
+	case 3:
 		return "/AnyPaymentProcessingV2/WebAuth", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -188,7 +212,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_WebAuthRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.WebAuth, true
-	case 3:
+	case 4:
 		return "/AnyPaymentProcessingV2/AnyNameIsValid", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -197,7 +221,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_AnyNameIsValidRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.AnyNameIsValid, true
-	case 4:
+	case 5:
 		return "/AnyPaymentProcessingV2/AnyNameAllocate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -206,7 +230,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_AnyNameAllocateRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.AnyNameAllocate, true
-	case 5:
+	case 6:
 		return "/AnyPaymentProcessingV2/StoreCartGet", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -215,7 +239,7 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 						in1.(*MembershipV2_StoreCartGetRequest),
 					)
 			}, DRPCAnyPaymentProcessingV2Server.StoreCartGet, true
-	case 6:
+	case 7:
 		return "/AnyPaymentProcessingV2/StoreCartUpdate", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnyPaymentProcessingV2Server).
@@ -231,6 +255,22 @@ func (DRPCAnyPaymentProcessingV2Description) Method(n int) (string, drpc.Encodin
 
 func DRPCRegisterAnyPaymentProcessingV2(mux drpc.Mux, impl DRPCAnyPaymentProcessingV2Server) error {
 	return mux.Register(impl, DRPCAnyPaymentProcessingV2Description{})
+}
+
+type DRPCAnyPaymentProcessingV2_SubscribeToUpdatesStream interface {
+	drpc.Stream
+	SendAndClose(*MembershipV2_SubscribeToUpdatesResponse) error
+}
+
+type drpcAnyPaymentProcessingV2_SubscribeToUpdatesStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessingV2_SubscribeToUpdatesStream) SendAndClose(m *MembershipV2_SubscribeToUpdatesResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
 }
 
 type DRPCAnyPaymentProcessingV2_GetProductsStream interface {
