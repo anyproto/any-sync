@@ -18,7 +18,6 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/cidutil"
-	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "common.coordinator.coordinatorclient"
@@ -63,8 +62,6 @@ type CoordinatorClient interface {
 type SpaceSignPayload struct {
 	SpaceId      string
 	SpaceHeader  []byte
-	OldAccount   crypto.PrivKey
-	Identity     crypto.PrivKey
 	ForceRequest bool
 }
 
@@ -190,28 +187,11 @@ func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (st
 }
 
 func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
-	if err != nil {
-		return
-	}
-	newRaw, err := payload.Identity.GetPublic().Raw()
-	if err != nil {
-		return
-	}
-	newSignature, err := payload.OldAccount.Sign(newRaw)
-	if err != nil {
-		return
-	}
-	oldIdentity, err := payload.OldAccount.GetPublic().Marshall()
-	if err != nil {
-		return
-	}
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceSign(ctx, &coordinatorproto.SpaceSignRequest{
-			SpaceId:              payload.SpaceId,
-			Header:               payload.SpaceHeader,
-			OldIdentity:          oldIdentity,
-			NewIdentitySignature: newSignature,
-			ForceRequest:         payload.ForceRequest,
+			SpaceId:      payload.SpaceId,
+			Header:       payload.SpaceHeader,
+			ForceRequest: payload.ForceRequest,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
