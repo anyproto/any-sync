@@ -107,7 +107,20 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 		}
 	}
 
+	currentOwner, err := acl.AclState().OwnerPubKey()
+	if err != nil {
+		return nil, err
+	}
+
 	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
+		newOwner, err := state.OwnerPubKey()
+		if err != nil {
+			return err
+		}
+		if !newOwner.Equals(currentOwner) {
+			// if the owner is changing - skip limits checking
+			return nil
+		}
 		var readers, writers int
 		for _, acc := range state.CurrentAccounts() {
 			if acc.Permissions.NoPermissions() {
