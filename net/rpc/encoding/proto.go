@@ -10,6 +10,8 @@ var (
 	defaultProtoEncoding = protoEncoding{}
 )
 
+const maxBufSizeToReuse = 256 * 1024 // 256 KB
+
 type protoEncoding struct{}
 
 func (b protoEncoding) Marshal(msg drpc.Message) ([]byte, error) {
@@ -27,6 +29,9 @@ func (b protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, 
 		} else {
 			return nil, ErrNotAProtoMessage
 		}
+	}
+	if cap(buf) > maxBufSizeToReuse {
+		buf = make([]byte, 0, protoMessage.SizeVT())
 	}
 	return protobuf.MarshalAppend(buf, protoMessage)
 }
