@@ -4,7 +4,7 @@ go 1.24.6
 
 require (
 	filippo.io/edwards25519 v1.1.0
-	github.com/anyproto/any-store v0.4.4
+	github.com/anyproto/any-store v0.4.6
 	github.com/anyproto/go-bip39 v1.0.0
 	github.com/anyproto/go-chash v0.1.0
 	github.com/anyproto/go-slip10 v1.0.1
