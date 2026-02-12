@@ -86,6 +86,10 @@ func (p AclPermissions) NoPermissions() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_None
 }
 
+func (p AclPermissions) CanRead() bool {
+	return !p.NoPermissions()
+}
+
 func (p AclPermissions) IsOwner() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Owner
 }

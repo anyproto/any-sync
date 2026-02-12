@@ -14,6 +14,7 @@ enum ErrCodes {
     InvalidPayload = 7;
     DuplicateRequest = 8;
     TooManyRequestsFromPeer = 9;
+    Forbidden = 10;
     ErrorOffset = 100;
 }
 

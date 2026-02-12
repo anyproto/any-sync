@@ -18,4 +18,5 @@ var (
 	ErrReceiptInvalid          = errGroup.Register(errors.New("space receipt is not valid"), uint64(ErrCodes_ReceiptIsInvalid))
 	ErrDuplicateRequest        = errGroup.Register(errors.New("duplicate request"), uint64(ErrCodes_DuplicateRequest))
 	ErrTooManyRequestsFromPeer = errGroup.Register(errors.New("too many requests from peer"), uint64(ErrCodes_TooManyRequestsFromPeer))
+	ErrForbidden               = errGroup.Register(errors.New("forbidden"), uint64(ErrCodes_Forbidden))
 )
