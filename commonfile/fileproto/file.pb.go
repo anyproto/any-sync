@@ -24,16 +24,15 @@ const (
 type ErrCodes int32
 
 const (
-	ErrCodes_Unexpected               ErrCodes = 0
-	ErrCodes_CIDNotFound              ErrCodes = 1
-	ErrCodes_Forbidden                ErrCodes = 2
-	ErrCodes__DeprecatedLimitExceeded ErrCodes = 3
-	ErrCodes_QuerySizeExceeded        ErrCodes = 4
-	ErrCodes_WrongHash                ErrCodes = 5
-	ErrCodes_NotEnoughSpace           ErrCodes = 6
-	ErrCodes_AclRecordNotFound        ErrCodes = 7
-	ErrCodes_LimitExceeded            ErrCodes = 8
-	ErrCodes_ErrorOffset              ErrCodes = 200
+	ErrCodes_Unexpected        ErrCodes = 0
+	ErrCodes_CIDNotFound       ErrCodes = 1
+	ErrCodes_Forbidden         ErrCodes = 2
+	ErrCodes_LimitExceeded     ErrCodes = 3
+	ErrCodes_QuerySizeExceeded ErrCodes = 4
+	ErrCodes_WrongHash         ErrCodes = 5
+	ErrCodes_NotEnoughSpace    ErrCodes = 6
+	ErrCodes_AclRecordNotFound ErrCodes = 7
+	ErrCodes_ErrorOffset       ErrCodes = 200
 )
 
 // Enum value maps for ErrCodes.
@@ -42,25 +41,23 @@ var (
 		0:   "Unexpected",
 		1:   "CIDNotFound",
 		2:   "Forbidden",
-		3:   "_DeprecatedLimitExceeded",
+		3:   "LimitExceeded",
 		4:   "QuerySizeExceeded",
 		5:   "WrongHash",
 		6:   "NotEnoughSpace",
 		7:   "AclRecordNotFound",
-		8:   "LimitExceeded",
 		200: "ErrorOffset",
 	}
 	ErrCodes_value = map[string]int32{
-		"Unexpected":               0,
-		"CIDNotFound":              1,
-		"Forbidden":                2,
-		"_DeprecatedLimitExceeded": 3,
-		"QuerySizeExceeded":        4,
-		"WrongHash":                5,
-		"NotEnoughSpace":           6,
-		"AclRecordNotFound":        7,
-		"LimitExceeded":            8,
-		"ErrorOffset":              200,
+		"Unexpected":        0,
+		"CIDNotFound":       1,
+		"Forbidden":         2,
+		"LimitExceeded":     3,
+		"QuerySizeExceeded": 4,
+		"WrongHash":         5,
+		"NotEnoughSpace":    6,
+		"AclRecordNotFound": 7,
+		"ErrorOffset":       200,
 	}
 )
 
@@ -1580,18 +1577,17 @@ const file_commonfile_fileproto_protos_file_proto_rawDesc = "" +
 	"\x05limit\x18\x02 \x01(\x04R\x05limit\"F\n" +
 	"\x14SpaceLimitSetRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x04R\x05limit*\xce\x01\n" +
+	"\x05limit\x18\x02 \x01(\x04R\x05limit*\xb0\x01\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\x0f\n" +
 	"\vCIDNotFound\x10\x01\x12\r\n" +
-	"\tForbidden\x10\x02\x12\x1c\n" +
-	"\x18_DeprecatedLimitExceeded\x10\x03\x12\x15\n" +
+	"\tForbidden\x10\x02\x12\x11\n" +
+	"\rLimitExceeded\x10\x03\x12\x15\n" +
 	"\x11QuerySizeExceeded\x10\x04\x12\r\n" +
 	"\tWrongHash\x10\x05\x12\x12\n" +
 	"\x0eNotEnoughSpace\x10\x06\x12\x15\n" +
-	"\x11AclRecordNotFound\x10\a\x12\x11\n" +
-	"\rLimitExceeded\x10\b\x12\x10\n" +
+	"\x11AclRecordNotFound\x10\a\x12\x10\n" +
 	"\vErrorOffset\x10\xc8\x01*B\n" +
 	"\x12AvailabilityStatus\x12\r\n" +
 	"\tNotExists\x10\x00\x12\n" +

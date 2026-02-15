@@ -7,12 +7,11 @@ enum ErrCodes {
     Unexpected = 0;
     CIDNotFound = 1;
     Forbidden = 2;
-    _DeprecatedLimitExceeded = 3;
+    LimitExceeded = 3;
     QuerySizeExceeded = 4;
     WrongHash = 5;
     NotEnoughSpace = 6;
     AclRecordNotFound = 7;
-    LimitExceeded = 8;
     ErrorOffset = 200;
 }
 
