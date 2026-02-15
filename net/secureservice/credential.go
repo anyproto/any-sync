@@ -32,15 +32,22 @@ func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Cr
 	return n.cred
 }
 
+var bannedVersions = []string{
+	"middle:v0.36.6",
+	"middle:v0.44.0-nightly.20251220.1",
+}
+
 func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if !slices.Contains(n.compatibleVersions, cred.Version) {
 		err = handshake.ErrIncompatibleVersion
 		return
 	}
 	// Hotfix for a bad version
-	if strings.Contains(cred.ClientVersion, "middle:v0.36.6") {
-		err = handshake.ErrIncompatibleVersion
-		return
+	for _, bannedVersion := range bannedVersions {
+		if strings.Contains(cred.ClientVersion, bannedVersion) {
+			err = handshake.ErrIncompatibleVersion
+			return
+		}
 	}
 	return handshake.Result{
 		ProtoVersion:  cred.Version,
@@ -111,11 +118,13 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 		err = handshake.ErrInvalidCredentials
 		return
 	}
-	// Hotfix for a bad version
-	if strings.Contains(cred.ClientVersion, "middle:v0.36.6") {
-		err = handshake.ErrIncompatibleVersion
-		return
+	for _, bannedVersion := range bannedVersions {
+		if strings.Contains(cred.ClientVersion, bannedVersion) {
+			err = handshake.ErrIncompatibleVersion
+			return
+		}
 	}
+
 	return handshake.Result{
 		Identity:      msg.Identity,
 		ProtoVersion:  cred.Version,
