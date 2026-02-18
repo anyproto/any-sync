@@ -33,7 +33,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.quic.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -61,8 +61,8 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.quic.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1112").Return(nil, fmt.Errorf("test"))
-		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(nil, fmt.Errorf("test"))
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(fx.mockMC(peerId+"not valid"), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId+"not valid"), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		assert.EqualError(t, err, ErrPeerIdMismatched.Error())
@@ -91,7 +91,7 @@ func TestPeerService_Dial(t *testing.T) {
 		fx.SetPeerAddrs(peerId, addrs)
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(nil, false)
 
-		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"127.0.0.1:1111"}, true)
 
-		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)

@@ -182,11 +182,7 @@ func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncp
 		return err
 	}
 	// in case space is missing on peer, we should send push request
-	err = d.sendPushSpaceRequest(ctx, p.Id(), cl)
-	if err != nil {
-		return err
-	}
-	return nil
+	return d.sendPushSpaceRequest(ctx, p.Id(), cl)
 }
 
 func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
@@ -235,22 +231,5 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		return
 	}
 	d.log.InfoCtx(ctx, "space push completed successfully")
-	if e := d.subscribe(ctx, peerId); e != nil {
-		d.log.WarnCtx(ctx, "error subscribing for space", zap.Error(e))
-	}
 	return
-}
-
-func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
-	var msg = &spacesyncproto.SpaceSubscription{
-		SpaceIds: []string{d.spaceId},
-		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
-	}
-	payload, err := msg.MarshalVT()
-	if err != nil {
-		return
-	}
-	return d.peerManager.SendMessage(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
-		Payload: payload,
-	})
 }
