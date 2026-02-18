@@ -15,6 +15,10 @@ type StubConf struct {
 	id            string
 	networkId     string
 	configuration nodeconf.Configuration
+
+	// AdditionalNodes are extra nodes to register in the configuration
+	// (in addition to the account's own node). Set before Init() is called.
+	AdditionalNodes []nodeconf.Node
 }
 
 func (m *StubConf) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
@@ -31,10 +35,11 @@ func (m *StubConf) Init(a *app.App) (err error) {
 	}
 	m.id = networkId
 	m.networkId = networkId
+	nodes := append([]nodeconf.Node{node}, m.AdditionalNodes...)
 	m.configuration = nodeconf.Configuration{
 		Id:           networkId,
 		NetworkId:    networkId,
-		Nodes:        []nodeconf.Node{node},
+		Nodes:        nodes,
 		CreationTime: time.Now(),
 	}
 	return nil
@@ -93,8 +98,10 @@ func (m *StubConf) PaymentProcessingNodePeers() []string {
 }
 
 func (m *StubConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
-	if peerId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Addresses, true
+	for _, node := range m.configuration.Nodes {
+		if node.PeerId == peerId {
+			return node.Addresses, true
+		}
 	}
 	return nil, false
 }
@@ -108,8 +115,10 @@ func (m *StubConf) Partition(spaceId string) (part int) {
 }
 
 func (m *StubConf) NodeTypes(nodeId string) []nodeconf.NodeType {
-	if nodeId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Types
+	for _, node := range m.configuration.Nodes {
+		if node.PeerId == nodeId {
+			return node.Types
+		}
 	}
 	return nil
 }

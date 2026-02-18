@@ -601,15 +601,23 @@ func Test(t *testing.T) {
 	defer fx.app.Close(context.Background())
 }
 
-func newPeerFixture(t *testing.T, spaceId string, onlyCreate bool, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
+func newPeerFixture(t *testing.T, spaceId string, onlyCreate bool, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider, additionalPeerIds ...string) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	var additionalNodes []nodeconf.Node
+	for _, pid := range additionalPeerIds {
+		additionalNodes = append(additionalNodes, nodeconf.Node{
+			PeerId:    pid,
+			Addresses: []string{"127.0.0.1:4430"},
+			Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},
+		})
+	}
 	fx := &spaceFixture{
 		ctx:                  ctx,
 		cancelFunc:           cancel,
 		app:                  &app.App{},
 		config:               &mockConfig{},
 		account:              accounttest.NewWithAcc(keys),
-		configurationService: &testconf.StubConf{},
+		configurationService: &testconf.StubConf{AdditionalNodes: additionalNodes},
 		storageProvider:      provider,
 		streamOpener:         newStreamOpener(spaceId),
 		peerManagerProvider:  &testPeerManagerProvider{},
@@ -725,7 +733,15 @@ func newMultiPeerFixture(t *testing.T, peerNum int, onlyCreate bool) *multiPeerF
 	peerPool.MakePeers()
 	var peerFixtures []*spaceFixture
 	for i := 0; i < peerNum; i++ {
-		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, onlyCreate, allKeys[i], peerPool, providers[i])
+		// Pass all other peer IDs as additional nodes so that each peer's
+		// nodeconf recognizes incoming connections from other peers
+		var otherPeerIds []string
+		for j := 0; j < peerNum; j++ {
+			if j != i {
+				otherPeerIds = append(otherPeerIds, peerIds[j])
+			}
+		}
+		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, onlyCreate, allKeys[i], peerPool, providers[i], otherPeerIds...)
 		peerFixtures = append(peerFixtures, fx)
 	}
 	return &multiPeerFixture{peerFixtures: peerFixtures}

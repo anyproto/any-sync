@@ -33,7 +33,10 @@ func TestSpaceService_SpacePull(t *testing.T) {
 		fxC = newSpacePullFixture(t)
 		fxS = newSpacePullFixture(t)
 		peerId = "peer"
-		mcS, mcC := rpctest.MultiConnPair(peerId, peerId+"client")
+		// Use the server account's peerId as the client connection peerId
+		// so the server's nodeconf recognizes the client as a known network node
+		clientPeerId := fxS.account.Account().PeerId
+		mcS, mcC := rpctest.MultiConnPair(peerId, clientPeerId)
 		pS, err := peer.NewPeer(mcS, fxC.ts)
 		require.NoError(t, err)
 		fxC.tp.AddPeer(ctx, pS)

@@ -28,6 +28,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/nodeconf"
 )
 
 type SpaceDescription struct {
@@ -86,10 +87,35 @@ type space struct {
 	aclClient    aclclient.AclSpaceClient
 	keyValue     kvinterfaces.KeyValueService
 	aclList      list.AclList
+	nodeConf     nodeconf.NodeConf
 	creationTime time.Time
 }
 
+func (s *space) checkReadAccess(ctx context.Context) error {
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return spacesyncproto.ErrForbidden
+	}
+	if s.nodeConf != nil && len(s.nodeConf.NodeTypes(peerId)) > 0 {
+		return nil
+	}
+	pubKey, err := peer.CtxPubKey(ctx)
+	if err != nil {
+		return spacesyncproto.ErrForbidden
+	}
+	s.aclList.RLock()
+	perm := s.aclList.AclState().Permissions(pubKey)
+	s.aclList.RUnlock()
+	if !perm.CanRead() {
+		return spacesyncproto.ErrForbidden
+	}
+	return nil
+}
+
 func (s *space) Description(ctx context.Context) (desc SpaceDescription, err error) {
+	if err = s.checkReadAccess(ctx); err != nil {
+		return
+	}
 	state, err := s.storage.StateStorage().GetState(ctx)
 	if err != nil {
 		return
@@ -153,10 +179,16 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 }
 
 func (s *space) HandleMessage(peerCtx context.Context, msg *objectmessages.HeadUpdate) (err error) {
+	if err = s.checkReadAccess(peerCtx); err != nil {
+		return
+	}
 	return s.syncService.HandleMessage(peerCtx, msg)
 }
 
 func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error) {
+	if err = s.checkReadAccess(ctx); err != nil {
+		return
+	}
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
 		return
@@ -210,6 +242,9 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
 	s.keyValue = s.app.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
+	if nc := s.app.Component(nodeconf.CName); nc != nil {
+		s.nodeConf = nc.(nodeconf.NodeConf)
+	}
 	return
 }
 

@@ -34,6 +34,7 @@ const (
 	ErrCodes_InvalidPayload          ErrCodes = 7
 	ErrCodes_DuplicateRequest        ErrCodes = 8
 	ErrCodes_TooManyRequestsFromPeer ErrCodes = 9
+	ErrCodes_Forbidden               ErrCodes = 10
 	ErrCodes_ErrorOffset             ErrCodes = 100
 )
 
@@ -50,6 +51,7 @@ var (
 		7:   "InvalidPayload",
 		8:   "DuplicateRequest",
 		9:   "TooManyRequestsFromPeer",
+		10:  "Forbidden",
 		100: "ErrorOffset",
 	}
 	ErrCodes_value = map[string]int32{
@@ -63,6 +65,7 @@ var (
 		"InvalidPayload":          7,
 		"DuplicateRequest":        8,
 		"TooManyRequestsFromPeer": 9,
+		"Forbidden":               10,
 		"ErrorOffset":             100,
 	}
 )
@@ -2278,7 +2281,7 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\x03key\x18\x06 \x01(\tR\x03key\"K\n" +
 	"\rStorageHeader\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12 \n" +
-	"\vstorageName\x18\x02 \x01(\tR\vstorageName*\xee\x01\n" +
+	"\vstorageName\x18\x02 \x01(\tR\vstorageName*\xfd\x01\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\x10\n" +
@@ -2290,7 +2293,9 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\x10ReceiptIsInvalid\x10\x06\x12\x12\n" +
 	"\x0eInvalidPayload\x10\a\x12\x14\n" +
 	"\x10DuplicateRequest\x10\b\x12\x1b\n" +
-	"\x17TooManyRequestsFromPeer\x10\t\x12\x0f\n" +
+	"\x17TooManyRequestsFromPeer\x10\t\x12\r\n" +
+	"\tForbidden\x10\n" +
+	"\x12\x0f\n" +
 	"\vErrorOffset\x10d*F\n" +
 	"\x12SpaceHeaderVersion\x12\x17\n" +
 	"\x13SpaceHeaderVersion0\x10\x00\x12\x17\n" +

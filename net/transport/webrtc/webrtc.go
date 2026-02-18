@@ -1,6 +1,7 @@
 package webrtc
 
 import (
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/transport"
 )
 
@@ -16,4 +17,5 @@ const handshakeDCPrefix = "hs:"
 // On WASM it is Dial-only.
 type WebRTC interface {
 	transport.Transport
+	app.ComponentRunnable
 }
