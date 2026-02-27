@@ -10,4 +10,7 @@ type Config struct {
 	WriteTimeoutSec int      `yaml:"writeTimeoutSec"`
 	DialTimeoutSec  int      `yaml:"dialTimeoutSec"`
 	CloseTimeoutSec int      `yaml:"closeTimeoutSec"`
+	// ICEServers is a list of STUN/TURN server URLs for ICE gathering.
+	// Example: ["stun:stun.l.google.com:19302"]
+	ICEServers []string `yaml:"iceServers"`
 }

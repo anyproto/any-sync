@@ -47,8 +47,12 @@ func (t *webrtcTransportJS) SetAccepter(accepter transport.Accepter) {
 	t.accepter = accepter
 }
 
+func (t *webrtcTransportJS) Run(ctx context.Context) error { return nil }
+
+func (t *webrtcTransportJS) Close(ctx context.Context) error { return nil }
+
 func (t *webrtcTransportJS) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
-	signalURL := "http://" + addr + signalPath
+	signalURL := buildSignalURL(addr)
 
 	expectedPeerId, err := netpeer.CtxExpectedPeerId(ctx)
 	if err != nil {

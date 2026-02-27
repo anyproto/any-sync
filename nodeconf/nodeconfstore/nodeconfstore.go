@@ -8,6 +8,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/osfuncs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +32,7 @@ type configGetter interface {
 
 func (n *nodeConfStore) Init(a *app.App) (err error) {
 	n.path = a.MustComponent("config").(configGetter).GetNodeConfStorePath()
-	if e := os.MkdirAll(n.path, 0o755); e != nil && !os.IsExist(e) {
+	if e := osfuncs.MkdirAll(n.path, 0o755); e != nil && !os.IsExist(e) {
 		return e
 	}
 	return
@@ -45,7 +46,7 @@ func (n *nodeConfStore) GetLast(ctx context.Context, netId string) (c nodeconf.C
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	path := filepath.Join(n.path, netId+".yml")
-	data, err := os.ReadFile(path)
+	data, err := osfuncs.ReadFile(path)
 	if os.IsNotExist(err) {
 		err = nodeconf.ErrConfigurationNotFound
 		return
@@ -62,5 +63,5 @@ func (n *nodeConfStore) SaveLast(ctx context.Context, c nodeconf.Configuration) 
 	if err != nil {
 		return
 	}
-	return os.WriteFile(path, data, 0o644)
+	return osfuncs.WriteFile(path, data, 0o644)
 }

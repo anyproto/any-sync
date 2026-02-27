@@ -85,7 +85,13 @@ func (t *webrtcTransport) newPeerConnection() (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
 	se.DetachDataChannels()
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
-	return api.NewPeerConnection(webrtc.Configuration{})
+	var iceServers []webrtc.ICEServer
+	for _, url := range t.conf.ICEServers {
+		iceServers = append(iceServers, webrtc.ICEServer{URLs: []string{url}})
+	}
+	return api.NewPeerConnection(webrtc.Configuration{
+		ICEServers: iceServers,
+	})
 }
 
 func (t *webrtcTransport) listenAddr(addr string) error {
@@ -224,10 +230,9 @@ func (t *webrtcTransport) acceptPeerConnection(pc *webrtc.PeerConnection, dcCh <
 }
 
 func (t *webrtcTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
-	// addr format: host:signalPort
-	signalURL := "http://" + addr + signalPath
+	// addr format: host:signalPort or hostname/path
+	signalURL := buildSignalURL(addr)
 	if idx := strings.Index(addr, "/certhash/"); idx != -1 {
-		signalURL = "http://" + addr[:idx] + signalPath
 		addr = addr[:idx]
 	}
 

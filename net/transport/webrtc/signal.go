@@ -7,9 +7,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 const signalPath = "/webrtc/signal"
+
+// buildSignalURL constructs the signaling URL from a WebRTC address.
+// For path-based addresses (e.g. "example.com/signal/node") it uses https.
+// For host:port addresses (e.g. "127.0.0.1:5301") it uses http.
+func buildSignalURL(addr string) string {
+	addr = strings.TrimRight(addr, "/")
+	scheme := "http"
+	if strings.Contains(addr, "/") {
+		scheme = "https"
+	}
+	return scheme + "://" + addr + signalPath
+}
 
 // signalMessage carries an SDP offer or answer between client and server.
 // No identity information travels through signaling — identity is verified
