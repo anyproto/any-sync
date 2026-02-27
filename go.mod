@@ -2,8 +2,6 @@ module github.com/anyproto/any-sync
 
 go 1.24.6
 
-replace github.com/anyproto/any-store => ../any-store
-
 require (
 	filippo.io/edwards25519 v1.1.0
 	github.com/anyproto/any-store v0.4.6

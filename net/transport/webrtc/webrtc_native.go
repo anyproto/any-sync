@@ -84,6 +84,24 @@ func (t *webrtcTransport) Run(ctx context.Context) (err error) {
 func (t *webrtcTransport) newPeerConnection() (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
 	se.DetachDataChannels()
+	if t.conf.SignalPort > 0 {
+		se.SetEphemeralUDPPortRange(uint16(t.conf.SignalPort), uint16(t.conf.SignalPort))
+	}
+	if t.conf.ExternalIP != "" {
+		ip := t.conf.ExternalIP
+		if net.ParseIP(ip) == nil {
+			addrs, err := net.LookupHost(ip)
+			if err != nil {
+				return nil, fmt.Errorf("resolve externalIP %q: %w", ip, err)
+			}
+			if len(addrs) == 0 {
+				return nil, fmt.Errorf("resolve externalIP %q: no addresses found", ip)
+			}
+			ip = addrs[0]
+			log.Info("resolved externalIP", zap.String("domain", t.conf.ExternalIP), zap.String("ip", ip))
+		}
+		se.SetNAT1To1IPs([]string{ip}, webrtc.ICECandidateTypeHost)
+	}
 	api := webrtc.NewAPI(webrtc.WithSettingEngine(se))
 	var iceServers []webrtc.ICEServer
 	for _, url := range t.conf.ICEServers {
