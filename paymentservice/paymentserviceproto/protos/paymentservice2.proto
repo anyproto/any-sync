@@ -151,6 +151,7 @@ message MembershipV2 {
     MembershipV2.Invoice nextInvoice = 2;
     string teamOwnerID = 3;
     MembershipV2.PaymentProvider paymentProvider = 4;
+    repeated string appliedPromocodes = 5;
   }
 
   message StoreCartGetRequest {
