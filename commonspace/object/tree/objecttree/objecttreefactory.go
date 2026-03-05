@@ -198,7 +198,18 @@ func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error
 	if err != nil {
 		return nil, err
 	}
-	deps := nonVerifiableTreeDeps(rootChange.RawTreeChangeWithId(), params.Storage, params.AclList)
+	root := rootChange.RawTreeChangeWithId()
+	// Use real key storage to preserve actual identities, but skip verification
+	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(crypto.NewKeyStorage(), root)}
+	treeBuilder := newTreeBuilder(params.Storage, changeBuilder)
+	deps := objectTreeDeps{
+		changeBuilder: changeBuilder,
+		treeBuilder:   treeBuilder,
+		storage:       params.Storage,
+		validator:     &noOpTreeValidator{},
+		aclList:       params.AclList,
+		flusher:       &defaultFlusher{},
+	}
 	return buildHistoryTree(deps, params)
 }
 
