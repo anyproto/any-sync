@@ -129,7 +129,7 @@
 - [x] Run project tests — must pass before next task
 
 ### Task 5: Implement WASM/browser client (`webtransport_js.go`)
-- [ ] Create `net/transport/webtransport/webtransport_js.go` (build tag `//go:build js`):
+- [x] Create `net/transport/webtransport/webtransport_js.go` (build tag `//go:build js`):
   - Dial-only transport (no Run/Close/listener)
   - `Init(app)` — get secureservice, localPeerId, config
   - `Dial(ctx, addr)`:
@@ -141,8 +141,8 @@
     - Return MultiConn wrapping the WebTransport session
   - `SetAccepter` — no-op (dial-only)
   - `Run` / `Close` — no-op
-- [ ] Verify WASM build: `GOOS=js GOARCH=wasm go build ./net/transport/webtransport/...`
-- [ ] Run project tests (native) — must pass before next task
+- [x] Verify WASM build: `GOOS=js GOARCH=wasm go build ./net/transport/webtransport/...`
+- [x] Run project tests (native) — must pass before next task
 
 ### Task 6: PeerService integration
 - [ ] Modify `net/peerservice/peerservice.go`:

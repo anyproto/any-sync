@@ -1,8 +1,6 @@
 package webtransport
 
 import (
-	_ "github.com/quic-go/webtransport-go"
-
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/transport"
 )
