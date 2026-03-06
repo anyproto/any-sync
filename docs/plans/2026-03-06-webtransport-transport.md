@@ -161,14 +161,14 @@
 - [x] Run project tests — must pass before next task
 
 ### Task 7: Verify acceptance criteria
-- [ ] Verify Go-to-Go dial/accept works end-to-end (test with self-signed certs)
-- [ ] Verify stream multiplexing (open multiple streams, exchange data)
-- [ ] Verify handshake identity verification (correct peerId, mismatched peerId rejected)
-- [ ] Verify WASM builds (`GOOS=js GOARCH=wasm go build ./net/transport/webtransport/...`)
-- [ ] Verify CORS headers present on server responses
-- [ ] Run full test suite: `GOEXPERIMENT=synctest go test ./... --cover`
-- [ ] Run linter — all issues must be fixed
-- [ ] Verify no regressions in existing QUIC/WebRTC/Yamux transports
+- [x] Verify Go-to-Go dial/accept works end-to-end (test with self-signed certs)
+- [x] Verify stream multiplexing (open multiple streams, exchange data)
+- [x] Verify handshake identity verification (correct peerId, mismatched peerId rejected)
+- [x] Verify WASM builds (`GOOS=js GOARCH=wasm go build ./net/transport/webtransport/...`)
+- [x] Verify CORS headers present on server responses
+- [x] Run full test suite: `GOEXPERIMENT=synctest go test ./... --cover`
+- [x] Run linter — all issues must be fixed
+- [x] Verify no regressions in existing QUIC/WebRTC/Yamux transports
 
 ### Task 8: [Final] Update documentation
 - [ ] Update README if needed

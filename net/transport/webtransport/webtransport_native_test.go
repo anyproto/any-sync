@@ -298,6 +298,29 @@ func TestWtTransport_HandshakePeerIdVerification(t *testing.T) {
 	assert.Equal(t, clientPeerId, connPeerId)
 }
 
+func TestWtTransport_HandshakeMismatchedPeerIdRejected(t *testing.T) {
+	fxS := newNativeFixture(t)
+	defer fxS.finish(t)
+	fxC := newNativeFixture(t)
+	defer fxC.finish(t)
+
+	// Use a wrong expected peerId — the handshake should fail
+	wrongPeerId := "12D3KooWWrongPeerIdThatDoesNotMatchAnything"
+	dialCtx := netpeer.CtxWithExpectedPeerId(testCtx, wrongPeerId)
+
+	_, err := fxC.Dial(dialCtx, fxS.addr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "handshake")
+
+	// Server should not have accepted any connection
+	select {
+	case <-fxS.accepter.mcs:
+		t.Fatal("server should not have accepted a connection with mismatched peerId")
+	case <-time.After(500 * time.Millisecond):
+		// Expected: no accept
+	}
+}
+
 func TestWtTransport_ShutdownClosesListeners(t *testing.T) {
 	fx := newNativeFixture(t)
 
