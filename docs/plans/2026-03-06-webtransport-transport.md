@@ -49,15 +49,15 @@
 - [x] Run existing tests — must pass before next task
 
 ### Task 2: Create config and interface (`net/transport/webtransport/`)
-- [ ] Create `net/transport/webtransport/webtransport.go`:
+- [x] Create `net/transport/webtransport/webtransport.go`:
   - `CName = "net.transport.webtransport"`
   - `WebTransport` interface (embeds `transport.Transport` + `app.ComponentRunnable`)
   - `New()` constructor
-- [ ] Create `net/transport/webtransport/config.go`:
+- [x] Create `net/transport/webtransport/config.go`:
   - `configGetter` interface with `GetWebTransport() Config`
   - `Config` struct: `ListenAddrs []string`, `Path string`, `CertFile string`, `KeyFile string`, `WriteTimeoutSec int`, `CloseTimeoutSec int`, `DialTimeoutSec int`, `MaxStreams int64`
-- [ ] Verify `go build ./net/transport/webtransport/...` passes
-- [ ] Run project tests — must pass before next task
+- [x] Verify `go build ./net/transport/webtransport/...` passes
+- [x] Run project tests — must pass before next task
 
 ### Task 3: Implement conn.go — MultiConn and stream wrappers
 - [ ] Create `net/transport/webtransport/conn.go`:
