@@ -12,9 +12,10 @@ var (
 )
 
 const (
-	Yamux  = "yamux"
-	Quic   = "quic"
-	WebRTC = "webrtc"
+	Yamux        = "yamux"
+	Quic         = "quic"
+	WebRTC       = "webrtc"
+	WebTransport = "webtransport"
 )
 
 // Transport is a common interface for a network transport
