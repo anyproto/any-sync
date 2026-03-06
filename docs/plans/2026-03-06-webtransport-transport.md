@@ -60,7 +60,7 @@
 - [x] Run project tests — must pass before next task
 
 ### Task 3: Implement conn.go — MultiConn and stream wrappers
-- [ ] Create `net/transport/webtransport/conn.go`:
+- [x] Create `net/transport/webtransport/conn.go`:
   - `wtAddr` implementing `net.Addr` (Network="webtransport", String=addr)
   - `wtNetConn` struct wrapping `*webtransport.Stream` as `net.Conn`:
     - `Read`, `Write` (with optional write deadline), `Close` (CancelRead + Close, like quicNetConn)
@@ -75,9 +75,9 @@
     - `IsClosed()` → check session context done
     - `CloseChan()` → `session.Context().Done()`
     - `Close()` → `session.CloseWithError(0, "")`
-- [ ] Write tests for `wtNetConn` (read/write/close)
-- [ ] Write tests for `wtMultiConn` (open/accept/close/addr)
-- [ ] Run project tests — must pass before next task
+- [x] Write tests for `wtNetConn` (read/write/close)
+- [x] Write tests for `wtMultiConn` (open/accept/close/addr)
+- [x] Run project tests — must pass before next task
 
 ### Task 4: Implement native server + client (`webtransport_native.go`)
 - [ ] Create `net/transport/webtransport/webtransport_native.go` (build tag `//go:build !js`):
