@@ -145,7 +145,7 @@
 - [x] Run project tests (native) — must pass before next task
 
 ### Task 6: PeerService integration
-- [ ] Modify `net/peerservice/peerservice.go`:
+- [x] Modify `net/peerservice/peerservice.go`:
   - Add import for `"github.com/anyproto/any-sync/net/transport/webtransport"`
   - Add field `webtransport transport.Transport` to `peerService` struct
   - In `Init()`: register webtransport (optional, like webrtc):
@@ -157,8 +157,8 @@
     ```
   - In `preferredSchemes()`: add `transport.WebTransport` after webrtc
   - In `dialScheme()`: add case `transport.WebTransport: tr = p.webtransport`
-- [ ] Write test verifying webtransport is discovered and routed in dialScheme
-- [ ] Run project tests — must pass before next task
+- [x] Write test verifying webtransport is discovered and routed in dialScheme
+- [x] Run project tests — must pass before next task
 
 ### Task 7: Verify acceptance criteria
 - [ ] Verify Go-to-Go dial/accept works end-to-end (test with self-signed certs)

@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
+	"github.com/anyproto/any-sync/net/transport/webtransport"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
@@ -41,10 +42,11 @@ type PeerService interface {
 }
 
 type peerService struct {
-	yamux      transport.Transport
-	quic       transport.Transport
-	webrtc     transport.Transport
-	nodeConf   nodeconf.NodeConf
+	yamux        transport.Transport
+	quic         transport.Transport
+	webrtc       transport.Transport
+	webtransport transport.Transport
+	nodeConf     nodeconf.NodeConf
 	peerAddrs  map[string][]string
 	pool       pool.Pool
 	server     server.DRPCServer
@@ -65,6 +67,10 @@ func (p *peerService) Init(a *app.App) (err error) {
 		p.webrtc = comp.(transport.Transport)
 		p.webrtc.SetAccepter(p)
 	}
+	if comp := a.Component(webtransport.CName); comp != nil {
+		p.webtransport = comp.(transport.Transport)
+		p.webtransport.SetAccepter(p)
+	}
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
@@ -84,6 +90,9 @@ func (p *peerService) preferredSchemes() []string {
 		if p.webrtc != nil {
 			schemes = append(schemes, transport.WebRTC)
 		}
+		if p.webtransport != nil {
+			schemes = append(schemes, transport.WebTransport)
+		}
 	} else {
 		if p.yamux != nil {
 			schemes = append(schemes, transport.Yamux)
@@ -93,6 +102,9 @@ func (p *peerService) preferredSchemes() []string {
 		}
 		if p.webrtc != nil {
 			schemes = append(schemes, transport.WebRTC)
+		}
+		if p.webtransport != nil {
+			schemes = append(schemes, transport.WebTransport)
 		}
 	}
 	return schemes
@@ -152,6 +164,8 @@ func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string
 		tr = p.yamux
 	case transport.WebRTC:
 		tr = p.webrtc
+	case transport.WebTransport:
+		tr = p.webtransport
 	default:
 		return nil, fmt.Errorf("unexpected transport: %v", sch)
 	}
