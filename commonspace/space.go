@@ -198,6 +198,9 @@ func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto
 }
 
 func (s *space) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	if err = s.checkReadAccess(ctx); err != nil {
+		return
+	}
 	return s.headSync.HandleRangeRequest(ctx, req)
 }
 
