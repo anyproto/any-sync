@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -196,14 +197,18 @@ func TestDCStream_ConcurrentReadWrite(t *testing.T) {
 
 	var wg sync.WaitGroup
 	messages := 100
+	msgData := []byte("msg")
+	expectedBytes := int64(len(msgData)) * int64(messages)
+	var totalRead atomic.Int64
 
 	// Writer goroutine on A
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for i := 0; i < messages; i++ {
-			_, err := sA.Write([]byte("msg"))
+			_, err := sA.Write(msgData)
 			if err != nil {
+				t.Errorf("write error: %v", err)
 				return
 			}
 		}
@@ -215,19 +220,17 @@ func TestDCStream_ConcurrentReadWrite(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		buf := make([]byte, 64)
-		count := 0
 		for {
 			n, err := sB.Read(buf)
+			totalRead.Add(int64(n))
 			if err != nil {
 				return
-			}
-			if n > 0 {
-				count++
 			}
 		}
 	}()
 
 	wg.Wait()
+	assert.Equal(t, expectedBytes, totalRead.Load(), "total bytes read should match total bytes written")
 }
 
 func TestDCStream_WriteAfterClose(t *testing.T) {

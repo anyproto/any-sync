@@ -26,12 +26,12 @@ func (h *signalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1 MiB limit
 	if err != nil {
 		http.Error(w, "failed to read body", http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
 
 	var msg signalMessage
 	if err := json.Unmarshal(body, &msg); err != nil {
@@ -46,7 +46,7 @@ func (h *signalHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	answerSDP, err := h.handleOffer(msg.SDP)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 

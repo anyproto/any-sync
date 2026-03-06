@@ -5,6 +5,7 @@ package webtransport
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"runtime"
 	"syscall/js"
 
@@ -60,13 +61,13 @@ func (t *wtTransportJS) Dial(ctx context.Context, addr string) (transport.MultiC
 		return nil, fmt.Errorf("expected peer id required for WebTransport WASM dial: %w", err)
 	}
 
-	url := "https://" + addr + t.conf.Path + "?peerId=" + t.localPeerId
+	dialURL := "https://" + addr + t.conf.Path + "?peerId=" + url.QueryEscape(t.localPeerId)
 
 	wtConstructor := js.Global().Get("WebTransport")
 	if wtConstructor.IsUndefined() {
 		return nil, fmt.Errorf("WebTransport API not available in this browser")
 	}
-	wtObj := wtConstructor.New(url)
+	wtObj := wtConstructor.New(dialURL)
 
 	// Wait for the connection to be ready.
 	readyPromise := wtObj.Get("ready")

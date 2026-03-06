@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
+	"github.com/anyproto/any-sync/net/transport/webrtc"
 	"github.com/anyproto/any-sync/net/transport/webtransport"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -63,7 +64,7 @@ func (p *peerService) Init(a *app.App) (err error) {
 		p.quic = comp.(transport.Transport)
 		p.quic.SetAccepter(p)
 	}
-	if comp := a.Component("net.transport.webrtc"); comp != nil {
+	if comp := a.Component(webrtc.CName); comp != nil {
 		p.webrtc = comp.(transport.Transport)
 		p.webrtc.SetAccepter(p)
 	}
@@ -87,12 +88,6 @@ func (p *peerService) preferredSchemes() []string {
 		if p.yamux != nil {
 			schemes = append(schemes, transport.Yamux)
 		}
-		if p.webrtc != nil {
-			schemes = append(schemes, transport.WebRTC)
-		}
-		if p.webtransport != nil {
-			schemes = append(schemes, transport.WebTransport)
-		}
 	} else {
 		if p.yamux != nil {
 			schemes = append(schemes, transport.Yamux)
@@ -100,12 +95,12 @@ func (p *peerService) preferredSchemes() []string {
 		if p.quic != nil {
 			schemes = append(schemes, transport.Quic)
 		}
-		if p.webrtc != nil {
-			schemes = append(schemes, transport.WebRTC)
-		}
-		if p.webtransport != nil {
-			schemes = append(schemes, transport.WebTransport)
-		}
+	}
+	if p.webrtc != nil {
+		schemes = append(schemes, transport.WebRTC)
+	}
+	if p.webtransport != nil {
+		schemes = append(schemes, transport.WebTransport)
 	}
 	return schemes
 }

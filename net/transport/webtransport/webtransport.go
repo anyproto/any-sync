@@ -1,6 +1,8 @@
 package webtransport
 
 import (
+	"net"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/transport"
 )
@@ -14,3 +16,14 @@ type WebTransport interface {
 	transport.Transport
 	app.ComponentRunnable
 }
+
+// wtAddr implements net.Addr for WebTransport connections.
+type wtAddr struct {
+	addr string
+}
+
+func (a wtAddr) Network() string { return "webtransport" }
+func (a wtAddr) String() string  { return a.addr }
+
+// Compile-time check.
+var _ net.Addr = wtAddr{}

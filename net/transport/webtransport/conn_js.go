@@ -66,14 +66,6 @@ func awaitPromise(ctx context.Context, promise js.Value) (js.Value, error) {
 	}
 }
 
-// wtJSAddr implements net.Addr for WASM WebTransport connections.
-type wtJSAddr struct {
-	addr string
-}
-
-func (a wtJSAddr) Network() string { return "webtransport" }
-func (a wtJSAddr) String() string  { return a.addr }
-
 // jsStream wraps a browser WebTransportBidirectionalStream as a net.Conn.
 type jsStream struct {
 	reader     js.Value // ReadableStreamDefaultReader
@@ -96,8 +88,8 @@ func newJSStream(bidiStream js.Value, remoteAddr string) *jsStream {
 	return &jsStream{
 		reader:     reader,
 		writer:     writer,
-		localAddr:  wtJSAddr{addr: "local"},
-		remoteAddr: wtJSAddr{addr: remoteAddr},
+		localAddr:  wtAddr{addr: "local"},
+		remoteAddr: wtAddr{addr: remoteAddr},
 		closeCtx:   ctx,
 		closeFunc:  cancel,
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -181,11 +182,11 @@ func (t *wtTransport) accept(sess *wt.Session, remoteAddr, remotePeerId string) 
 
 	cctx, err := t.secure.HandshakeInbound(ctx, hsConn, remotePeerId)
 	if err != nil {
-		_ = stream.Close()
+		_ = hsConn.Close()
 		_ = sess.CloseWithError(3, "inbound handshake failed")
 		return fmt.Errorf("handshake inbound: %w", err)
 	}
-	_ = stream.Close()
+	_ = hsConn.Close()
 
 	mc := newConn(cctx, sess, remoteAddr,
 		time.Duration(t.conf.WriteTimeoutSec)*time.Second,
@@ -207,7 +208,7 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 		},
 	}
 
-	dialURL := "https://" + addr + t.conf.Path + "?peerId=" + t.localPeerId
+	dialURL := "https://" + addr + t.conf.Path + "?peerId=" + url.QueryEscape(t.localPeerId)
 	_, sess, err := dialer.Dial(ctx, dialURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("webtransport dial: %w", err)
@@ -227,11 +228,11 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 
 	cctx, err := t.secure.HandshakeOutbound(ctx, hsConn, expectedPeerId)
 	if err != nil {
-		_ = stream.Close()
+		_ = hsConn.Close()
 		_ = sess.CloseWithError(3, "outbound handshake failed")
 		return nil, fmt.Errorf("handshake outbound: %w", err)
 	}
-	_ = stream.Close()
+	_ = hsConn.Close()
 
 	return newConn(cctx, sess, addr,
 		time.Duration(t.conf.WriteTimeoutSec)*time.Second,

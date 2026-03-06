@@ -8,6 +8,7 @@ import (
 	"time"
 
 	wt "github.com/quic-go/webtransport-go"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
@@ -22,14 +23,6 @@ type session interface {
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
 }
-
-// wtAddr implements net.Addr for WebTransport connections.
-type wtAddr struct {
-	addr string
-}
-
-func (a wtAddr) Network() string { return "webtransport" }
-func (a wtAddr) String() string  { return a.addr }
 
 // wtNetConn wraps a *webtransport.Stream as a net.Conn.
 type wtNetConn struct {
@@ -127,5 +120,15 @@ func (m *wtMultiConn) CloseChan() <-chan struct{} {
 }
 
 func (m *wtMultiConn) Close() error {
-	return m.session.CloseWithError(0, "")
+	closeWait := make(chan struct{})
+	go func() {
+		defer close(closeWait)
+		_ = m.session.CloseWithError(0, "")
+	}()
+	select {
+	case <-closeWait:
+	case <-time.After(m.closeTimeout):
+		log.Warn("webtransport session close timed out", zap.String("addr", m.remoteAddr))
+	}
+	return nil
 }

@@ -138,7 +138,7 @@ func TestPeerService_DialWebTransport(t *testing.T) {
 		schemes := ps.preferredSchemes()
 		assert.Contains(t, schemes, transport.WebTransport)
 	})
-	t.Run("webtransport after webrtc in schemes", func(t *testing.T) {
+	t.Run("webtransport present without webrtc", func(t *testing.T) {
 		fx := newFixtureWithWebTransport(t)
 		defer fx.finish(t)
 

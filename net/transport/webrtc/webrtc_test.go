@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -110,6 +111,7 @@ func TestWebRTCTransport_MultipleStreams(t *testing.T) {
 
 	numStreams := 5
 	var wg sync.WaitGroup
+	var verified atomic.Int32
 
 	// Server side: accept and echo
 	wg.Add(1)
@@ -118,6 +120,7 @@ func TestWebRTCTransport_MultipleStreams(t *testing.T) {
 		for i := 0; i < numStreams; i++ {
 			conn, err := mcS.Accept()
 			if err != nil {
+				t.Errorf("server accept error: %v", err)
 				return
 			}
 			go func(c net.Conn) {
@@ -134,23 +137,31 @@ func TestWebRTCTransport_MultipleStreams(t *testing.T) {
 			defer wg.Done()
 			conn, err := mcC.Open(ctx)
 			if err != nil {
+				t.Errorf("client open error: %v", err)
 				return
 			}
 			defer conn.Close()
 
 			msg := fmt.Sprintf("stream-%d", idx)
-			conn.Write([]byte(msg))
+			_, err = conn.Write([]byte(msg))
+			if err != nil {
+				t.Errorf("client write error: %v", err)
+				return
+			}
 
 			buf := make([]byte, 64)
 			n, err := conn.Read(buf)
 			if err != nil {
+				t.Errorf("client read error: %v", err)
 				return
 			}
 			assert.Equal(t, msg, string(buf[:n]))
+			verified.Add(1)
 		}(i)
 	}
 
 	wg.Wait()
+	assert.Equal(t, int32(numStreams), verified.Load(), "all streams should have verified data")
 }
 
 func TestWebRTCTransport_Addr(t *testing.T) {
