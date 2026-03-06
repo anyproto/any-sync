@@ -80,7 +80,7 @@
 - [x] Run project tests — must pass before next task
 
 ### Task 4: Implement native server + client (`webtransport_native.go`)
-- [ ] Create `net/transport/webtransport/webtransport_native.go` (build tag `//go:build !js`):
+- [x] Create `net/transport/webtransport/webtransport_native.go` (build tag `//go:build !js`):
   - `wtTransport` struct:
     - Fields: `secure secureservice.SecureService`, `localPeerId string`, `accepter transport.Accepter`, `conf Config`, `server *webtransport.Server`, `udpConns []net.PacketConn`, `listCtx/listCtxCancel`, `mu sync.Mutex`
   - `Init(app)`:
@@ -101,18 +101,19 @@
     - Add CORS headers (Access-Control-Allow-Origin: *, etc.)
     - Handle OPTIONS preflight
     - Call `server.Upgrade(w, r)` → get session
-    - Launch goroutine: `accept(session, remoteAddr)`
-  - `accept(session, remoteAddr)`:
+    - Extract remotePeerId from query param `?peerId=`
+    - Launch goroutine: `accept(session, remoteAddr, remotePeerId)`
+  - `accept(session, remoteAddr, remotePeerId)`:
     - Timeout context from DialTimeoutSec
     - `session.AcceptStream(ctx)` — handshake stream
     - Wrap as net.Conn
-    - `secure.HandshakeInbound(ctx, stream, "")` — empty peerId, handshake discovers it
+    - `secure.HandshakeInbound(ctx, stream, remotePeerId)` — peerId from URL query
     - Close handshake stream
     - Create `wtMultiConn`, call `accepter.Accept(mc)`
   - `Dial(ctx, addr)`:
     - Get `expectedPeerId` from context
-    - Create `webtransport.Dialer{TLSClientConfig: &tls.Config{}, QUICConfig: quicConf}`
-    - `dialer.Dial(ctx, "https://"+addr+conf.Path, nil)`
+    - Create `webtransport.Dialer{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, QUICConfig: quicConf}`
+    - `dialer.Dial(ctx, "https://"+addr+conf.Path+"?peerId="+localPeerId, nil)`
     - `session.OpenStreamSync(ctx)` — handshake stream
     - Wrap as net.Conn, `secure.HandshakeOutbound(ctx, stream, expectedPeerId)`
     - Close handshake stream
@@ -121,11 +122,11 @@
     - Cancel listCtx
     - `server.Close()`
     - Close UDP connections
-- [ ] Write tests for Dial + Accept flow (fixture pattern from quic_test.go, self-signed test certs)
-- [ ] Write test for cert hot-reload (replace cert files, verify new connections use new cert)
-- [ ] Write tests for CORS headers
-- [ ] Write tests for close/shutdown behavior
-- [ ] Run project tests — must pass before next task
+- [x] Write tests for Dial + Accept flow (fixture pattern from quic_test.go, self-signed test certs)
+- [x] Write test for cert hot-reload (replace cert files, verify new connections use new cert)
+- [x] Write tests for CORS headers
+- [x] Write tests for close/shutdown behavior
+- [x] Run project tests — must pass before next task
 
 ### Task 5: Implement WASM/browser client (`webtransport_js.go`)
 - [ ] Create `net/transport/webtransport/webtransport_js.go` (build tag `//go:build js`):
