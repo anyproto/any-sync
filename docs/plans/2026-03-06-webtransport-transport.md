@@ -171,8 +171,8 @@
 - [x] Verify no regressions in existing QUIC/WebRTC/Yamux transports
 
 ### Task 8: [Final] Update documentation
-- [ ] Update README if needed
-- [ ] Add config example for WebTransport in documentation or comments
+- [x] Update README if needed
+- [x] Add config example for WebTransport in documentation or comments
 
 ## Technical Details
 
