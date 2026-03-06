@@ -56,6 +56,7 @@ type dcStream struct {
 	remoteFIN bool
 	finAckCh  chan struct{}
 	remoteRST bool
+	writeMu   sync.Mutex // protects Write to prevent frame interleaving
 
 	localAddr  net.Addr
 	remoteAddr net.Addr
@@ -180,6 +181,9 @@ func (s *dcStream) Read(b []byte) (n int, err error) {
 }
 
 func (s *dcStream) Write(b []byte) (n int, err error) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
 	s.mu.Lock()
 	if s.localFIN {
 		s.mu.Unlock()

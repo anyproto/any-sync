@@ -247,7 +247,6 @@ func TestDiffSyncer(t *testing.T) {
 		fx.clientMock.EXPECT().
 			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(fx.spaceState.SpaceId, aclRootId, settingsId, credential, spaceHeader)).
 			Return(nil, nil)
-		fx.peerManagerMock.EXPECT().SendMessage(gomock.Any(), "peerId", gomock.Any()).Return(nil)
 		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
 
 		require.NoError(t, fx.diffSyncer.Sync(ctx))

@@ -195,6 +195,9 @@ func (t *wtTransport) accept(sess *wt.Session, remoteAddr, remotePeerId string) 
 
 func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiConn, error) {
 	expectedPeerId, _ := netpeer.CtxExpectedPeerId(ctx)
+	if expectedPeerId == "" {
+		return nil, fmt.Errorf("no expected peer id in context for WebTransport dial")
+	}
 
 	dialer := wt.Dialer{
 		TLSClientConfig: &tls.Config{
