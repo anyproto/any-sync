@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -42,7 +41,6 @@ type wtTransport struct {
 
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
-	mu            sync.Mutex
 }
 
 func (t *wtTransport) Init(a *app.App) (err error) {

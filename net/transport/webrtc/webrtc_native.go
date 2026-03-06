@@ -34,8 +34,8 @@ type webrtcTransport struct {
 	accepter    transport.Accepter
 	conf        Config
 
-	signalServer   *http.Server
-	signalListener net.Listener
+	signalServers   []*http.Server
+	signalListeners []net.Listener
 
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
@@ -126,7 +126,7 @@ func (t *webrtcTransport) listenAddr(addr string) error {
 	mux.Handle(signalPath, &signalHandler{
 		handleOffer: t.handleOffer,
 	})
-	t.signalServer = &http.Server{
+	srv := &http.Server{
 		Handler: mux,
 	}
 
@@ -134,14 +134,15 @@ func (t *webrtcTransport) listenAddr(addr string) error {
 	if err != nil {
 		return fmt.Errorf("listen signal: %w", err)
 	}
-	t.signalListener = signalListener
+	t.signalServers = append(t.signalServers, srv)
+	t.signalListeners = append(t.signalListeners, signalListener)
 
 	log.Info("webrtc transport started",
 		zap.Int("signalPort", signalListener.Addr().(*net.TCPAddr).Port),
 	)
 
 	go func() {
-		if err := t.signalServer.Serve(signalListener); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(signalListener); err != nil && err != http.ErrServerClosed {
 			log.Error("signal server error", zap.Error(err))
 		}
 	}()
@@ -152,10 +153,10 @@ func (t *webrtcTransport) listenAddr(addr string) error {
 func (t *webrtcTransport) SignalPort() int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.signalListener == nil {
+	if len(t.signalListeners) == 0 {
 		return 0
 	}
-	return t.signalListener.Addr().(*net.TCPAddr).Port
+	return t.signalListeners[0].Addr().(*net.TCPAddr).Port
 }
 
 func (t *webrtcTransport) handleOffer(offerSDP string) (string, error) {
@@ -332,8 +333,8 @@ func (t *webrtcTransport) Close(ctx context.Context) error {
 	if t.listCtxCancel != nil {
 		t.listCtxCancel()
 	}
-	if t.signalServer != nil {
-		_ = t.signalServer.Shutdown(ctx)
+	for _, srv := range t.signalServers {
+		_ = srv.Shutdown(ctx)
 	}
 	return nil
 }

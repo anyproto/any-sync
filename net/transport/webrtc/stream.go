@@ -82,6 +82,7 @@ func newDCStream(dc dataChannel, localAddr, remoteAddr net.Addr) *dcStream {
 	dc.SetOnMessage(s.onMessage)
 	dc.SetOnClose(func() {
 		s.closeOnce.Do(func() { close(s.closeCh) })
+		s.readCond.Broadcast()
 	})
 
 	return s
