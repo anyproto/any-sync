@@ -83,7 +83,6 @@ func (t *webrtcTransport) Run(ctx context.Context) (err error) {
 // newPeerConnection creates a new PeerConnection with detached DataChannels.
 func (t *webrtcTransport) newPeerConnection() (*webrtc.PeerConnection, error) {
 	se := webrtc.SettingEngine{}
-	se.DetachDataChannels()
 	if t.conf.SignalPort > 0 {
 		se.SetEphemeralUDPPortRange(uint16(t.conf.SignalPort), uint16(t.conf.SignalPort))
 	}
