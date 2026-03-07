@@ -75,6 +75,7 @@ type jsStream struct {
 	readBuf    []byte
 	readMu     sync.Mutex
 	writeMu    sync.Mutex
+	closeOnce  sync.Once
 	closeCtx   context.Context
 	closeFunc  context.CancelFunc
 }
@@ -152,9 +153,11 @@ func (s *jsStream) Write(b []byte) (int, error) {
 }
 
 func (s *jsStream) Close() error {
-	s.closeFunc()
-	s.reader.Call("cancel")
-	s.writer.Call("close")
+	s.closeOnce.Do(func() {
+		s.closeFunc()
+		s.reader.Call("cancel")
+		s.writer.Call("close")
+	})
 	return nil
 }
 

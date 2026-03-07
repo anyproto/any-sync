@@ -157,6 +157,11 @@ func (t *wtTransport) handleUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	remotePeerId := r.URL.Query().Get("peerId")
+	if remotePeerId == "" {
+		log.Info("webtransport upgrade rejected: missing peerId query parameter", zap.String("remoteAddr", r.RemoteAddr))
+		_ = sess.CloseWithError(2, "peerId query parameter required")
+		return
+	}
 	remoteAddr := r.RemoteAddr
 	go func() {
 		if err := t.accept(sess, remoteAddr, remotePeerId); err != nil {

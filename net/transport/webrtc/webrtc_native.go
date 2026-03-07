@@ -225,6 +225,9 @@ func (t *webrtcTransport) acceptPeerConnection(pc *webrtc.PeerConnection, dcCh <
 		if strings.HasPrefix(label, handshakeDCPrefix) {
 			remotePeerId = label[len(handshakeDCPrefix):]
 		}
+		if remotePeerId == "" {
+			return fmt.Errorf("missing peerId in handshake DataChannel label")
+		}
 	case <-ctx.Done():
 		return fmt.Errorf("wait handshake dc: %w", ctx.Err())
 	}
