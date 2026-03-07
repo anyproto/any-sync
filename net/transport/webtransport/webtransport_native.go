@@ -77,6 +77,9 @@ func (t *wtTransport) Run(ctx context.Context) (err error) {
 	if t.accepter == nil {
 		return fmt.Errorf("can't run webtransport without accepter")
 	}
+	if len(t.conf.ListenAddrs) > 0 && (t.conf.CertFile == "" || t.conf.KeyFile == "") {
+		return fmt.Errorf("CertFile and KeyFile are required when ListenAddrs is configured")
+	}
 	t.listCtx, t.listCtxCancel = context.WithCancel(context.Background())
 
 	tlsConf := &tls.Config{
@@ -205,6 +208,7 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 		},
 		QUICConfig: &quic.Config{
 			EnableDatagrams:                  true,
+			MaxIncomingStreams:               t.conf.MaxStreams,
 			EnableStreamResetPartialDelivery: true,
 		},
 	}
