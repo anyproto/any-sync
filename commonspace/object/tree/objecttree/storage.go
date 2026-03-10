@@ -127,14 +127,32 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 		}
 		return nil, err
 	}
-	err = st.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
+	headsUpdate := headstorage.HeadsUpdate{
 		Id:             root.Id,
 		Heads:          []string{root.Id},
 		CommonSnapshot: &root.Id,
 		IsDerived:      &unmarshalled.IsDerived,
-	})
+	}
+	if unmarshalled.ParentId != "" {
+		headsUpdate.ParentId = &unmarshalled.ParentId
+	}
+	err = st.headStorage.UpdateEntry(ctx, headsUpdate)
 	if err != nil {
 		return nil, err
+	}
+	// Late-arriving child check: if the parent is already deleted/queued, immediately queue this child for deletion
+	if unmarshalled.ParentId != "" {
+		parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId)
+		if parentErr == nil && parentEntry.DeletedStatus >= headstorage.DeletedStatusQueued {
+			deletedStatus := headstorage.DeletedStatusQueued
+			err = st.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
+				Id:            root.Id,
+				DeletedStatus: &deletedStatus,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	return st, nil
 }

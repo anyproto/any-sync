@@ -8,6 +8,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage/mock_headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
@@ -18,6 +19,7 @@ func TestDeleter_Delete(t *testing.T) {
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
+	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
 
 	deleter := newDeleter(st, delState, treeManager, log)
 
@@ -29,6 +31,8 @@ func TestDeleter_Delete(t *testing.T) {
 		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, treestorage.ErrUnknownTreeId)
 		treeManager.EXPECT().MarkTreeDeleted(gomock.Any(), spaceId, id).Return(nil)
 		delState.EXPECT().Delete(id).Return(nil)
+		st.EXPECT().HeadStorage().Return(headStorage)
+		headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), id).Return(nil, nil)
 
 		deleter.Delete(context.Background())
 	})
@@ -62,6 +66,8 @@ func TestDeleter_Delete(t *testing.T) {
 		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, nil)
 		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(nil)
 		delState.EXPECT().Delete(id).Return(nil)
+		st.EXPECT().HeadStorage().Return(headStorage)
+		headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), id).Return(nil, nil)
 
 		deleter.Delete(context.Background())
 	})

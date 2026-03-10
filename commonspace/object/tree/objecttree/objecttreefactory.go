@@ -24,6 +24,7 @@ type ObjectTreeDerivePayload struct {
 	ChangePayload []byte
 	SpaceId       string
 	IsEncrypted   bool
+	ParentId      string
 }
 
 type HistoryTreeParams struct {
@@ -245,6 +246,7 @@ func DeriveObjectTreeRoot(payload ObjectTreeDerivePayload, aclList list.AclList)
 		SpaceId:       payload.SpaceId,
 		ChangeType:    payload.ChangeType,
 		ChangePayload: payload.ChangePayload,
+		ParentId:      payload.ParentId,
 	}
 	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildDerivedRoot(cnt)
 	return

@@ -81,16 +81,16 @@ func (m *MockChangeFactory) EXPECT() *MockChangeFactoryMockRecorder {
 }
 
 // CreateObjectDeleteChange mocks base method.
-func (m *MockChangeFactory) CreateObjectDeleteChange(id string, state *settingsstate.State, isSnapshot bool) ([]byte, error) {
+func (m *MockChangeFactory) CreateObjectDeleteChange(ids []string, state *settingsstate.State, isSnapshot bool) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateObjectDeleteChange", id, state, isSnapshot)
+	ret := m.ctrl.Call(m, "CreateObjectDeleteChange", ids, state, isSnapshot)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateObjectDeleteChange indicates an expected call of CreateObjectDeleteChange.
-func (mr *MockChangeFactoryMockRecorder) CreateObjectDeleteChange(id, state, isSnapshot any) *gomock.Call {
+func (mr *MockChangeFactoryMockRecorder) CreateObjectDeleteChange(ids, state, isSnapshot any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectDeleteChange", reflect.TypeOf((*MockChangeFactory)(nil).CreateObjectDeleteChange), id, state, isSnapshot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectDeleteChange", reflect.TypeOf((*MockChangeFactory)(nil).CreateObjectDeleteChange), ids, state, isSnapshot)
 }

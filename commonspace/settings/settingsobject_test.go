@@ -158,9 +158,10 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	fx.headStorage.EXPECT().GetEntry(gomock.Any(), gomock.Any()).Return(headstorage.HeadsEntry{
 		IsDerived: false,
 	}, nil)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
-	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, false).Return(res, nil)
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
 
 	accountData, err := accountdata.NewRandom()
 	require.NoError(t, err)
@@ -191,9 +192,10 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 	fx.headStorage.EXPECT().GetEntry(gomock.Any(), gomock.Any()).Return(headstorage.HeadsEntry{
 		IsDerived: false,
 	}, nil)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
-	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, true).Return(res, nil)
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, true).Return(res, nil)
 
 	accountData, err := accountdata.NewRandom()
 	require.NoError(t, err)

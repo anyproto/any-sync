@@ -20,6 +20,8 @@ message RootChange {
     bytes changePayload = 7;
     // IsDerived tells if the tree is derived
     bool isDerived = 8;
+    // ParentId is the id of the parent object for bound derived objects
+    string parentId = 9;
 }
 
 // TreeChange is a change of a tree

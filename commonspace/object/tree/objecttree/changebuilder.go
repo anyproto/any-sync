@@ -38,6 +38,7 @@ type InitialDerivedContent struct {
 	SpaceId       string
 	ChangeType    string
 	ChangePayload []byte
+	ParentId      string
 }
 
 type nonVerifiableChangeBuilder struct {
@@ -187,6 +188,7 @@ func (c *changeBuilder) BuildDerivedRoot(payload InitialDerivedContent) (ch *Cha
 		ChangePayload: payload.ChangePayload,
 		SpaceId:       payload.SpaceId,
 		IsDerived:     true,
+		ParentId:      payload.ParentId,
 	}
 	marshalledChange, err := change.MarshalVT()
 	if err != nil {
