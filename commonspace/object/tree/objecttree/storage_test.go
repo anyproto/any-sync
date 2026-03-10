@@ -37,8 +37,8 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 
 		creator := NewMockChangeCreator(nil)
 
-		// Create parent tree first
-		parentRoot := creator.CreateDerivedRoot("parent1", true)
+		// Create non-derived parent tree first
+		parentRoot := creator.CreateRoot("parent1", "aclHead")
 		_, err = CreateStorage(ctx, parentRoot, hs, store)
 		require.NoError(t, err)
 
@@ -69,8 +69,8 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 
 		creator := NewMockChangeCreator(nil)
 
-		// Create parent tree (not deleted)
-		parentRoot := creator.CreateDerivedRoot("parent2", true)
+		// Create non-derived parent tree (not deleted)
+		parentRoot := creator.CreateRoot("parent2", "aclHead")
 		_, err = CreateStorage(ctx, parentRoot, hs, store)
 		require.NoError(t, err)
 
@@ -85,7 +85,7 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 		require.Equal(t, headstorage.DeletedStatusNotDeleted, childEntry.DeletedStatus)
 	})
 
-	t.Run("parent does not exist - child created normally", func(t *testing.T) {
+	t.Run("parent does not exist - returns error", func(t *testing.T) {
 		ctx := context.Background()
 		store := newTestStore(t)
 		hs, err := headstorage.New(ctx, store)
@@ -96,11 +96,25 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 		// Create child with ParentId pointing to non-existent parent
 		childRoot := creator.CreateDerivedRootWithParent("child3", "nonexistent-parent")
 		_, err = CreateStorage(ctx, childRoot, hs, store)
+		require.ErrorIs(t, err, ErrParentNotFound)
+	})
+
+	t.Run("parent is derived - returns error", func(t *testing.T) {
+		ctx := context.Background()
+		store := newTestStore(t)
+		hs, err := headstorage.New(ctx, store)
 		require.NoError(t, err)
 
-		// Verify child is created and NOT queued for deletion
-		childEntry, err := hs.GetEntry(ctx, "child3")
+		creator := NewMockChangeCreator(nil)
+
+		// Create derived parent
+		parentRoot := creator.CreateDerivedRoot("derived-parent", true)
+		_, err = CreateStorage(ctx, parentRoot, hs, store)
 		require.NoError(t, err)
-		require.Equal(t, headstorage.DeletedStatusNotDeleted, childEntry.DeletedStatus)
+
+		// Try to create child with derived parent - should fail
+		childRoot := creator.CreateDerivedRootWithParent("child4", "derived-parent")
+		_, err = CreateStorage(ctx, childRoot, hs, store)
+		require.ErrorIs(t, err, ErrDerivedParent)
 	})
 }

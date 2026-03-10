@@ -74,7 +74,11 @@ type storage struct {
 	root        StorageChange
 }
 
-var StorageChangeBuilder = NewChangeBuilder
+var (
+	StorageChangeBuilder = NewChangeBuilder
+	ErrParentNotFound    = errors.New("parent object not found")
+	ErrDerivedParent     = errors.New("derived object cannot be a parent")
+)
 
 func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	tx, err := store.WriteTx(ctx)
@@ -135,6 +139,13 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 	}
 	if unmarshalled.ParentId != "" {
 		headsUpdate.ParentId = &unmarshalled.ParentId
+		parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId)
+		if parentErr != nil {
+			return nil, ErrParentNotFound
+		}
+		if parentEntry.IsDerived {
+			return nil, ErrDerivedParent
+		}
 	}
 	err = st.headStorage.UpdateEntry(ctx, headsUpdate)
 	if err != nil {
