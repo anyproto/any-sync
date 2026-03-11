@@ -107,37 +107,35 @@ bridge clients from pre-bridge clients.
 
 ### Rollout
 
-| Step | Action | Proto / compat | pre-bridge (v8) | bridge v0.11.Y (v9) | v0.12.0 (v12) | v0.13.0 (v13) |
-|------|--------|----------------|-----------------|----------------------|---------------|---------------|
-| 0 | Release bridge v0.11.Y | 9 / [8, 9, 12] | green | green | — | — |
-| 1 | Release clients v0.12.0 (PREPARE) | 12 / [9, 12, 13] | green | green | green | — |
-| 2 | Deploy infra v0.12.0 | 12 / [9, 12, 13] | **red** | yellow | green | — |
-| 3a | Infra config: drop v9 | 12 / [12, 13] | red | **red** | green | — |
-| 3b | Release clients v0.13.0 (ACTIVATE) | 13 / [12, 13, 14] | red | red | green | green |
-| 3c | Deploy infra v0.13.0, remove config override | 13 / [12, 13, 14] | red | red | yellow | green |
+| Step | Action | Proto / compat | pre-bridge (v8) | bridge v0.11.Y (v9) | v0.12.0 (v12) |
+|------|--------|----------------|-----------------|----------------------|---------------|
+| 0 | Release bridge v0.11.Y (PREPARE) | 9 / [8, 9, 12] | green | green | — |
+| 1 | Release clients v0.12.0 (ACTIVATE) | 12 / [9, 12, 13] | green | green | green |
+| 2 | Deploy infra v0.12.0 | 12 / [9, 12, 13] | **red** | yellow | green |
+| 3a | Infra config: drop v9 | 12 / [12, 13] | red | **red** | green |
 
 ### Step details
 
-**Step 0 — Bridge release v0.11.Y**
+**Step 0 — Bridge release v0.11.Y (PREPARE)**
 
 Code changes:
 - Add `CompatibleVersions` field to `secureservice.Config` (infra config override)
 - Set `ProtoVersion = 9`, `compatibleVersions = [8, 9, 12]`
+- Ship handler code for new features (can receive, does not produce)
 
 Bridge clients (proto 9) are distinguishable from pre-bridge (proto 8) on infra side,
 enabling metrics tracking and selective config gating.
 
-No feature code in bridge — keep it minimal. PREPARE goes into v0.12.0.
+**Step 1 — Release clients v0.12.0 (ACTIVATE)**
 
-**Step 1 — Release clients v0.12.0 (PREPARE)**
-
-Ship handler code for new features. `compatibleVersions = [9, 12, 13]` — accepts
-bridge clients (v9) and future infra (v13). Infra still at v8, accepts v9 and v12.
+Features go live. `compatibleVersions = [9, 12, 13]` — accepts bridge clients (v9)
+who can handle the new data (got PREPARE in step 0). Infra still at v8, accepts v9 and v12.
 
 **Step 2 — Deploy infra v0.12.0**
 
 `compatibleVersions = [9, 12, 13]`. Pre-bridge clients (proto 8) go red — 8 is not
-in [9, 12, 13]. Bridge clients (proto 9) go yellow — connected but prompted to update.
+in [9, 12, 13]. Bridge clients (proto 9) go yellow — still connected and can handle
+new-format data thanks to PREPARE code, prompted to update.
 
 **Step 3a — Infra config: drop v9**
 
@@ -147,7 +145,5 @@ secureService:
 ```
 
 Gate on metrics: proceed when bridge client (v9) share is acceptably low.
-
-**Steps 3b/3c — Standard flow**
 
 From here the standard ±1 flow applies for all future versions.
