@@ -144,7 +144,11 @@ func TestRequestPool(t *testing.T) {
 		}, func() {})
 		wg.Wait()
 		time.Sleep(200 * time.Millisecond)
-		require.Empty(t, rp.(*actionPool).queues)
+		ap := rp.(*actionPool)
+		ap.mu.Lock()
+		queuesLen := len(ap.queues)
+		ap.mu.Unlock()
+		require.Equal(t, 0, queuesLen)
 		rp.Close()
 	})
 }
