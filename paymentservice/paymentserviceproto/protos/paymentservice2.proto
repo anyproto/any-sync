@@ -132,6 +132,7 @@ message MembershipV2 {
     // the next invoice amount will also be generated
     Amount totalNextInvoice = 3;
     uint64 nextInvoiceDate = 4;
+    repeated string appliedPromocodes = 5;
   }
 
   message GetProductsRequest {
@@ -182,6 +183,7 @@ message MembershipV2 {
   message StoreCartUpdateRequest {
     repeated CartProduct products = 1;
     string ownerEthAddress = 2;
+    repeated string promocodes = 3;
   }
 
   message StoreCartUpdateResponse {
