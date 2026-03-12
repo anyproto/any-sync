@@ -34,3 +34,6 @@ db
 # vendor/
 /.direnv/
 /.envrc
+
+# ralphex progress logs
+.ralphex/progress/

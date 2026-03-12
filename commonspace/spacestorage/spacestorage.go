@@ -4,6 +4,7 @@ package spacestorage
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 
 	anystore "github.com/anyproto/any-store"
 
@@ -84,6 +85,11 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
+	applySeqIdx := anystore.IndexInfo{Fields: []string{objecttree.ApplySeqKey}}
+	err = changesColl.EnsureIndex(tx.Context(), applySeqIdx)
+	if err != nil {
+		return nil, err
+	}
 	// TODO: put it in one transaction
 	stateStorage, err := statestorage.CreateTx(tx.Context(), state, store)
 	if err != nil {
@@ -103,6 +109,13 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
+	s := &spaceStorage{
+		store:        store,
+		spaceId:      spaceId,
+		headStorage:  headStorage,
+		stateStorage: stateStorage,
+		aclStorage:   aclStorage,
+	}
 	_, err = objecttree.CreateStorageTx(tx.Context(), &treechangeproto.RawTreeChangeWithId{
 		RawChange: payload.SpaceSettingsWithId.RawChange,
 		Id:        payload.SpaceSettingsWithId.Id,
@@ -110,13 +123,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
-	return &spaceStorage{
-		store:        store,
-		spaceId:      spaceId,
-		headStorage:  headStorage,
-		stateStorage: stateStorage,
-		aclStorage:   aclStorage,
-	}, nil
+	return s, nil
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, error) {
@@ -135,6 +142,21 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, 
 	err = changesColl.EnsureIndex(ctx, orderIdx)
 	if err != nil {
 		return nil, err
+	}
+	applySeqIdx := anystore.IndexInfo{Fields: []string{objecttree.ApplySeqKey}}
+	err = changesColl.EnsureIndex(ctx, applySeqIdx)
+	if err != nil {
+		return nil, err
+	}
+	// Initialize in-memory ApplySeq counter from existing data
+	maxIter, err := changesColl.Find(nil).Sort("-" + objecttree.ApplySeqKey).Limit(1).Iter(ctx)
+	if err == nil {
+		if maxIter.Next() {
+			if doc, docErr := maxIter.Doc(); docErr == nil {
+				s.applySeq.Store(uint64(doc.Value().GetInt(objecttree.ApplySeqKey)))
+			}
+		}
+		maxIter.Close()
 	}
 	s.headStorage, err = headstorage.New(ctx, s.store)
 	if err != nil {
@@ -161,6 +183,7 @@ type spaceStorage struct {
 	stateStorage statestorage.StateStorage
 	aclStorage   list.Storage
 	store        anystore.DB
+	applySeq     atomic.Uint64 // space-global apply sequence counter (in-memory)
 }
 
 func (s *spaceStorage) Run(ctx context.Context) (err error) {
@@ -195,16 +218,42 @@ func (s *spaceStorage) AclStorage() (list.Storage, error) {
 	return s.aclStorage, nil
 }
 
+// applySeqSetter is implemented by storage types that support space-global apply sequences.
+type applySeqSetter interface {
+	SetApplySeq(seq *atomic.Uint64)
+}
+
+func (s *spaceStorage) setApplySeq(st objecttree.Storage) {
+	if setter, ok := st.(applySeqSetter); ok {
+		setter.SetApplySeq(&s.applySeq)
+	}
+}
+
 func (s *spaceStorage) TreeStorage(ctx context.Context, id string) (objecttree.Storage, error) {
-	return objecttree.NewStorage(ctx, id, s.headStorage, s.store)
+	st, err := objecttree.NewStorage(ctx, id, s.headStorage, s.store)
+	if err != nil {
+		return nil, err
+	}
+	s.setApplySeq(st)
+	return st, nil
 }
 
 func (s *spaceStorage) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
-	return objecttree.CreateStorage(ctx, payload.RootRawChange, s.headStorage, s.store)
+	st, err := objecttree.CreateStorage(ctx, payload.RootRawChange, s.headStorage, s.store)
+	if err != nil {
+		return nil, err
+	}
+	s.setApplySeq(st)
+	return st, nil
 }
 
 func (s *spaceStorage) CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
-	return objecttree.CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, s.headStorage, s.store)
+	st, err := objecttree.CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, s.headStorage, s.store)
+	if err != nil {
+		return nil, err
+	}
+	s.setApplySeq(st)
+	return st, nil
 }
 
 func (s *spaceStorage) Init(a *app.App) (err error) {

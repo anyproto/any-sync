@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -28,6 +29,7 @@ const (
 	prevIdsKey         = "p"
 	TreeKey            = "t"
 	CollName           = "changes"
+	ApplySeqKey        = "_q"
 )
 
 type StorageChange struct {
@@ -39,6 +41,7 @@ type StorageChange struct {
 	OrderId         string
 	ChangeSize      int
 	TreeId          string
+	ApplySeq        uint64 // Space-global monotonic sequence; assigned on storage insert
 }
 
 func (c StorageChange) RawTreeChangeWithId() *treechangeproto.RawTreeChangeWithId {
@@ -58,6 +61,7 @@ type Storage interface {
 	Has(ctx context.Context, id string) (bool, error)
 	Get(ctx context.Context, id string) (StorageChange, error)
 	GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error
+	GetAfterApplySeq(ctx context.Context, applySeq uint64, iter StorageIterator) error
 	AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
 	AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
 	Delete(ctx context.Context) error
@@ -72,6 +76,7 @@ type storage struct {
 	arena       *anyenc.Arena
 	parser      *anyenc.Parser
 	root        StorageChange
+	applySeq    *atomic.Uint64
 }
 
 var StorageChangeBuilder = NewChangeBuilder
@@ -214,6 +219,30 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 	return nil
 }
 
+func (s *storage) GetAfterApplySeq(ctx context.Context, applySeq uint64, storageIter StorageIterator) error {
+	filter := query.And{
+		query.Key{Path: []string{ApplySeqKey}, Filter: query.NewComp(query.CompOpGt, applySeq)},
+		query.Key{Path: []string{TreeKey}, Filter: query.NewComp(query.CompOpEq, s.id)},
+	}
+	qry := s.changesColl.Find(filter).Sort(OrderKey)
+	iter, err := qry.Iter(ctx)
+	if err != nil {
+		return fmt.Errorf("find iter: %w", err)
+	}
+	defer iter.Close()
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return fmt.Errorf("doc not found: %w", err)
+		}
+		cont, err := storageIter(ctx, s.changeFromDoc(doc))
+		if !cont {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	arena := s.arena
 	defer arena.Reset()
@@ -221,28 +250,39 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	var seq uint64
+	if s.applySeq != nil {
+		seq = s.applySeq.Load()
+	}
 	defer func() {
 		if err != nil {
 			tx.Rollback()
 		} else {
+			if s.applySeq != nil {
+				s.applySeq.Store(seq)
+			}
 			err = tx.Commit()
 		}
 	}()
-	for _, ch := range changes {
-		ch.TreeId = s.id
-		newVal := newStorageChangeValue(ch, arena)
+	for i := range changes {
+		if s.applySeq != nil {
+			seq++
+			changes[i].ApplySeq = seq
+		}
+		changes[i].TreeId = s.id
+		newVal := newStorageChangeValue(changes[i], arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil {
 			return err
 		}
 	}
-	update := headstorage.HeadsUpdate{
+	err = s.headStorage.UpdateEntry(tx.Context(), headstorage.HeadsUpdate{
 		Id:             s.id,
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
-	}
-	return s.headStorage.UpdateEntry(tx.Context(), update)
+	})
+	return err
 }
 
 func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
@@ -252,28 +292,39 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	var seq uint64
+	if s.applySeq != nil {
+		seq = s.applySeq.Load()
+	}
 	defer func() {
 		if err != nil {
 			tx.Rollback()
 		} else {
+			if s.applySeq != nil {
+				s.applySeq.Store(seq)
+			}
 			err = tx.Commit()
 		}
 	}()
-	for _, ch := range changes {
-		ch.TreeId = s.id
-		newVal := newStorageChangeValue(ch, arena)
+	for i := range changes {
+		if s.applySeq != nil {
+			seq++
+			changes[i].ApplySeq = seq
+		}
+		changes[i].TreeId = s.id
+		newVal := newStorageChangeValue(changes[i], arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil && !errors.Is(err, anystore.ErrDocExists) {
 			return err
 		}
 	}
-	update := headstorage.HeadsUpdate{
+	err = s.headStorage.UpdateEntry(tx.Context(), headstorage.HeadsUpdate{
 		Id:             s.id,
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
-	}
-	return s.headStorage.UpdateEntry(tx.Context(), update)
+	})
+	return err
 }
 
 func (s *storage) Delete(ctx context.Context) error {
@@ -291,6 +342,10 @@ func (s *storage) Delete(ctx context.Context) error {
 
 func (s *storage) Close() error {
 	return s.changesColl.Close()
+}
+
+func (s *storage) SetApplySeq(seq *atomic.Uint64) {
+	s.applySeq = seq
 }
 
 func (s *storage) Id() string {
@@ -336,6 +391,7 @@ func (s *storage) changeFromDoc(doc anystore.Doc) StorageChange {
 		ChangeSize:      doc.Value().GetInt(ChangeSizeKey),
 		SnapshotCounter: doc.Value().GetInt(SnapshotCounterKey),
 		PrevIds:         storeutil.StringsFromArrayValue(doc.Value(), prevIdsKey),
+		ApplySeq:        uint64(doc.Value().GetInt(ApplySeqKey)),
 	}
 }
 
@@ -351,6 +407,9 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal.Set(addedKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
 	if len(ch.PrevIds) != 0 {
 		newVal.Set(prevIdsKey, storeutil.NewStringArrayValue(ch.PrevIds, arena))
+	}
+	if ch.ApplySeq > 0 {
+		newVal.Set(ApplySeqKey, arena.NewNumberInt(int(ch.ApplySeq)))
 	}
 	return newVal
 }

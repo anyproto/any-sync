@@ -156,7 +156,10 @@ func (s *jsStream) Close() error {
 	s.closeOnce.Do(func() {
 		s.closeFunc()
 		s.reader.Call("cancel")
-		s.writer.Call("close")
+		// Use abort() instead of close() because close() returns a rejected
+		// promise if the writable stream is already errored (e.g. the remote
+		// side closed first), causing an unhandled promise rejection.
+		s.writer.Call("abort")
 	})
 	return nil
 }

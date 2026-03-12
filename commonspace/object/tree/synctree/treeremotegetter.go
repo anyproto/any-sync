@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -73,8 +74,10 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullR
 func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage objecttree.Storage, peerId string, err error) {
 	treeStorage, err = t.deps.SpaceStorage.TreeStorage(ctx, t.treeId)
 	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
+		fmt.Printf("[GETTER-DEBUG] getTree: found locally treeId=%s err=%v\n", t.treeId, err)
 		return
 	}
+	fmt.Printf("[GETTER-DEBUG] getTree: not found locally, fetching remote treeId=%s\n", t.treeId)
 	err = checkTreeDeleted(ctx, t.treeId, t.deps.SpaceStorage)
 	if err != nil {
 		return
@@ -88,5 +91,6 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage objecttree.S
 		return
 	}
 
+	fmt.Printf("[GETTER-DEBUG] getTree: remote fetch complete treeId=%s\n", t.treeId)
 	return collector.objectTree.Storage(), peerId, nil
 }

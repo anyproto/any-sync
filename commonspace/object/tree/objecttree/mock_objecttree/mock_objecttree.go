@@ -597,6 +597,20 @@ func (mr *MockStorageMockRecorder) GetAfterOrder(ctx, orderId, iter any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAfterOrder", reflect.TypeOf((*MockStorage)(nil).GetAfterOrder), ctx, orderId, iter)
 }
 
+// GetAfterApplySeq mocks base method.
+func (m *MockStorage) GetAfterApplySeq(ctx context.Context, applySeq uint64, iter objecttree.StorageIterator) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAfterApplySeq", ctx, applySeq, iter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetAfterApplySeq indicates an expected call of GetAfterApplySeq.
+func (mr *MockStorageMockRecorder) GetAfterApplySeq(ctx, applySeq, iter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAfterApplySeq", reflect.TypeOf((*MockStorage)(nil).GetAfterApplySeq), ctx, applySeq, iter)
+}
+
 // Has mocks base method.
 func (m *MockStorage) Has(ctx context.Context, id string) (bool, error) {
 	m.ctrl.T.Helper()

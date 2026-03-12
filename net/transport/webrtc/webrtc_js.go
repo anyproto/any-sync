@@ -5,6 +5,7 @@ package webrtc
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/pion/webrtc/v4"
 
@@ -144,6 +145,14 @@ func (t *webrtcTransportJS) Dial(ctx context.Context, addr string) (mc transport
 		_ = pc.Close()
 		return nil, fmt.Errorf("handshake outbound: %w", err)
 	}
+
+	// Prevent Go GC from collecting pc/hsDC while goroutine is suspended
+	// at await points (JS promises). Go's GC doesn't track JS-side references
+	// to the event handler js.Funcs stored in these structs, so without
+	// KeepAlive the struct can be collected and handlers released, causing
+	// "call to released function" errors when JS fires events.
+	runtime.KeepAlive(pc)
+	runtime.KeepAlive(hsDC)
 
 	return newConn(cctx, pc, expectedPeerId), nil
 }

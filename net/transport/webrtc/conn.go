@@ -4,12 +4,21 @@ import (
 	"context"
 	"io"
 	"net"
+	"runtime"
 	"sync"
 
 	"github.com/pion/webrtc/v4"
 
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
+)
+
+// prevent Go GC from collecting active PeerConnections/DataChannels and their
+// js.Func handlers while JavaScript still holds references to them.
+var (
+	activePCs   = make(map[*webrtcMultiConn]struct{})
+	activeDCs   = make(map[*webrtc.DataChannel]struct{})
+	activeJSMu  sync.Mutex
 )
 
 func newConn(cctx context.Context, pc *webrtc.PeerConnection, remoteAddr string) transport.MultiConn {
@@ -22,6 +31,11 @@ func newConn(cctx context.Context, pc *webrtc.PeerConnection, remoteAddr string)
 		closeCh:    closeCh,
 		remoteAddr: remoteAddr,
 	}
+
+	// Pin mc so GC cannot collect it (and its pc with js.Func handlers)
+	activeJSMu.Lock()
+	activePCs[mc] = struct{}{}
+	activeJSMu.Unlock()
 
 	pc.OnDataChannel(func(dc *webrtc.DataChannel) {
 		select {
@@ -86,10 +100,19 @@ func (m *webrtcMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 		return nil, transport.ErrConnClosed
 	}
 
+	// Prevent GC from collecting dc (and its js.Func handlers) while
+	// the goroutine was suspended waiting for the DC to open.
+	runtime.KeepAlive(dc)
+
 	return m.wrapDC(dc), nil
 }
 
 func (m *webrtcMultiConn) wrapDC(dc *webrtc.DataChannel) net.Conn {
+	// Pin DC so GC cannot collect its js.Func handlers
+	activeJSMu.Lock()
+	activeDCs[dc] = struct{}{}
+	activeJSMu.Unlock()
+
 	localAddr := webrtcAddr{addr: "local"}
 	remoteAddr := webrtcAddr{addr: m.remoteAddr}
 	raw, err := dc.Detach()
@@ -123,6 +146,10 @@ func (m *webrtcMultiConn) CloseChan() <-chan struct{} {
 
 func (m *webrtcMultiConn) Close() error {
 	m.closeOnce.Do(func() { close(m.closeCh) })
+	activeJSMu.Lock()
+	delete(activePCs, m)
+	activeJSMu.Unlock()
+	clearPCHandlers(m.pc)
 	return m.pc.Close()
 }
 
@@ -159,6 +186,10 @@ func (w *pionDCWrapper) SetOnClose(f func()) {
 }
 
 func (w *pionDCWrapper) Close() error {
+	activeJSMu.Lock()
+	delete(activeDCs, w.dc)
+	activeJSMu.Unlock()
+	clearDCHandlers(w.dc)
 	return w.dc.Close()
 }
 
@@ -211,7 +242,11 @@ func (w *detachedDCWrapper) Close() error {
 		return nil
 	}
 	w.closed = true
+	activeJSMu.Lock()
+	delete(activeDCs, w.dc)
+	activeJSMu.Unlock()
 	_ = w.rw.Close()
+	clearDCHandlers(w.dc)
 	return w.dc.Close()
 }
 
