@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -80,6 +81,11 @@ func (s *validatorTestSetup) identityOf(account string) crypto.PubKey {
 	return s.executor.ActualAccounts()[account].Keys.SignKey.GetPublic()
 }
 
+// noopGetAuthor is used for tests where the author lookup is not expected to be called.
+func noopGetAuthor(_ string) (crypto.PubKey, error) {
+	return nil, errors.New("unexpected call to getAuthor")
+}
+
 func TestSettingsContentValidator_NoRestriction_WriterCanDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -88,6 +94,7 @@ func TestSettingsContentValidator_NoRestriction_WriterCanDelete(t *testing.T) {
 	mockAcl := mock_list.NewMockAclList(ctrl)
 	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		Data:        makeDeleteChangeData(t, "obj1"),
 		PreviousIds: []string{"prev"},
@@ -95,7 +102,7 @@ func TestSettingsContentValidator_NoRestriction_WriterCanDelete(t *testing.T) {
 		Identity:    setup.identityOf("b"), // writer
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
 }
 
@@ -107,6 +114,11 @@ func TestSettingsContentValidator_Restricted_WriterCannotDelete(t *testing.T) {
 	mockAcl := mock_list.NewMockAclList(ctrl)
 	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
 
+	// getAuthor returns a different identity (owner "a"), so writer "b" is not the author
+	getAuthor := func(_ string) (crypto.PubKey, error) {
+		return setup.identityOf("a"), nil
+	}
+	validator := newSettingsContentValidator(getAuthor)
 	change := &objecttree.Change{
 		Data:        makeDeleteChangeData(t, "obj1"),
 		PreviousIds: []string{"prev"},
@@ -114,7 +126,7 @@ func TestSettingsContentValidator_Restricted_WriterCannotDelete(t *testing.T) {
 		Identity:    setup.identityOf("b"), // writer
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.ErrorIs(t, err, list.ErrInsufficientPermissions)
 }
 
@@ -126,6 +138,7 @@ func TestSettingsContentValidator_Restricted_AdminCanDelete(t *testing.T) {
 	mockAcl := mock_list.NewMockAclList(ctrl)
 	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		Data:        makeDeleteChangeData(t, "obj1"),
 		PreviousIds: []string{"prev"},
@@ -133,7 +146,7 @@ func TestSettingsContentValidator_Restricted_AdminCanDelete(t *testing.T) {
 		Identity:    setup.identityOf("c"), // admin
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
 }
 
@@ -145,6 +158,7 @@ func TestSettingsContentValidator_Restricted_OwnerCanDelete(t *testing.T) {
 	mockAcl := mock_list.NewMockAclList(ctrl)
 	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		Data:        makeDeleteChangeData(t, "obj1"),
 		PreviousIds: []string{"prev"},
@@ -152,7 +166,7 @@ func TestSettingsContentValidator_Restricted_OwnerCanDelete(t *testing.T) {
 		Identity:    setup.identityOf("a"), // owner
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
 }
 
@@ -164,6 +178,7 @@ func TestSettingsContentValidator_NonDeleteChange_PassesEvenWhenRestricted(t *te
 	mockAcl := mock_list.NewMockAclList(ctrl)
 	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		Data:        makeNonDeleteChangeData(t),
 		PreviousIds: []string{"prev"},
@@ -171,7 +186,7 @@ func TestSettingsContentValidator_NonDeleteChange_PassesEvenWhenRestricted(t *te
 		Identity:    setup.identityOf("b"), // writer
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
 }
 
@@ -181,11 +196,12 @@ func TestSettingsContentValidator_RootChange_Skipped(t *testing.T) {
 
 	mockAcl := mock_list.NewMockAclList(ctrl)
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		Data: makeDeleteChangeData(t, "obj1"),
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
 }
 
@@ -195,10 +211,110 @@ func TestSettingsContentValidator_NilData_Skipped(t *testing.T) {
 
 	mockAcl := mock_list.NewMockAclList(ctrl)
 
+	validator := newSettingsContentValidator(noopGetAuthor)
 	change := &objecttree.Change{
 		PreviousIds: []string{"prev"},
 	}
 
-	err := settingsContentValidator(change, mockAcl)
+	err := validator(change, mockAcl)
 	require.NoError(t, err)
+}
+
+func TestSettingsContentValidator_Restricted_AuthorCanDeleteOwnObject(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	setup := newValidatorTestSetup(t, true)
+	mockAcl := mock_list.NewMockAclList(ctrl)
+	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
+
+	writerIdentity := setup.identityOf("b")
+	// getAuthor returns writer "b"'s identity — they are the author
+	getAuthor := func(_ string) (crypto.PubKey, error) {
+		return writerIdentity, nil
+	}
+	validator := newSettingsContentValidator(getAuthor)
+	change := &objecttree.Change{
+		Data:        makeDeleteChangeData(t, "obj1"),
+		PreviousIds: []string{"prev"},
+		AclHeadId:   setup.acl.Head().Id,
+		Identity:    writerIdentity,
+	}
+
+	err := validator(change, mockAcl)
+	require.NoError(t, err)
+}
+
+func TestSettingsContentValidator_Restricted_NonAuthorWriterCannotDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	setup := newValidatorTestSetup(t, true)
+	mockAcl := mock_list.NewMockAclList(ctrl)
+	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
+
+	// Object was authored by owner "a", but writer "b" tries to delete
+	getAuthor := func(_ string) (crypto.PubKey, error) {
+		return setup.identityOf("a"), nil
+	}
+	validator := newSettingsContentValidator(getAuthor)
+	change := &objecttree.Change{
+		Data:        makeDeleteChangeData(t, "obj1"),
+		PreviousIds: []string{"prev"},
+		AclHeadId:   setup.acl.Head().Id,
+		Identity:    setup.identityOf("b"), // writer, not the author
+	}
+
+	err := validator(change, mockAcl)
+	require.ErrorIs(t, err, list.ErrInsufficientPermissions)
+}
+
+func TestSettingsContentValidator_Restricted_AuthorCheckWithParentResolution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	setup := newValidatorTestSetup(t, true)
+	mockAcl := mock_list.NewMockAclList(ctrl)
+	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
+
+	writerIdentity := setup.identityOf("b")
+	// Simulate parent resolution: getAuthor is called with child object ID
+	// and returns the parent's author which matches the change author
+	getAuthor := func(objId string) (crypto.PubKey, error) {
+		require.Equal(t, "childObj1", objId)
+		return writerIdentity, nil
+	}
+	validator := newSettingsContentValidator(getAuthor)
+	change := &objecttree.Change{
+		Data:        makeDeleteChangeData(t, "childObj1"),
+		PreviousIds: []string{"prev"},
+		AclHeadId:   setup.acl.Head().Id,
+		Identity:    writerIdentity,
+	}
+
+	err := validator(change, mockAcl)
+	require.NoError(t, err)
+}
+
+func TestSettingsContentValidator_Restricted_AuthorLookupError_Rejected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	setup := newValidatorTestSetup(t, true)
+	mockAcl := mock_list.NewMockAclList(ctrl)
+	mockAcl.EXPECT().AclState().Return(setup.acl.AclState()).AnyTimes()
+
+	getAuthor := func(_ string) (crypto.PubKey, error) {
+		return nil, errors.New("storage error")
+	}
+	validator := newSettingsContentValidator(getAuthor)
+	change := &objecttree.Change{
+		Data:        makeDeleteChangeData(t, "obj1"),
+		PreviousIds: []string{"prev"},
+		AclHeadId:   setup.acl.Head().Id,
+		Identity:    setup.identityOf("b"),
+	}
+
+	err := validator(change, mockAcl)
+	require.ErrorIs(t, err, list.ErrInsufficientPermissions)
 }
