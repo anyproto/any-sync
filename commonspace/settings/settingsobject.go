@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/util/crypto"
 
 	"go.uber.org/zap"
@@ -193,8 +194,19 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 	if entry.IsDerived {
 		return ErrCantDeleteDerivedObject
 	}
+	// Find bound children to cascade delete
+	idsToDelete := []string{id}
+	children, err := s.store.HeadStorage().GetEntriesByParentId(ctx, id)
+	if err != nil {
+		return err
+	}
+	for _, child := range children {
+		if child.DeletedStatus < headstorage.DeletedStatusQueued {
+			idsToDelete = append(idsToDelete, child.Id)
+		}
+	}
 	isSnapshot := DoSnapshot(s.Len())
-	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, isSnapshot)
+	res, err := s.changeFactory.CreateObjectDeleteChange(idsToDelete, s.state, isSnapshot)
 	if err != nil {
 		return
 	}

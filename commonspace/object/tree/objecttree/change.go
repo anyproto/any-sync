@@ -31,6 +31,7 @@ type Change struct {
 	IsSnapshot bool
 	IsDerived  bool
 	IsNew      bool
+	ParentId   string
 	OrderId    string
 
 	// SnapshotCounter is the number of previous snapshots in the current branch. For the first snapshot it's zero, for all next changes
@@ -63,6 +64,7 @@ func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.Ro
 		Data:       data,
 		Model:      changeInfo,
 		IsDerived:  isDerived,
+		ParentId:   ch.ParentId,
 	}
 }
 

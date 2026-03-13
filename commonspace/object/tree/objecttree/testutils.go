@@ -135,6 +135,25 @@ func (c *MockChangeCreator) CreateDerivedRoot(id string, isDerived bool) *treech
 	}
 }
 
+func (c *MockChangeCreator) CreateDerivedRootWithParent(id, parentId string) *treechangeproto.RawTreeChangeWithId {
+	aclChange := &treechangeproto.RootChange{
+		IsDerived: true,
+		ParentId:  parentId,
+	}
+	res, _ := aclChange.MarshalVT()
+
+	raw := &treechangeproto.RawTreeChange{
+		Payload:   res,
+		Signature: nil,
+	}
+	rawMarshalled, _ := raw.MarshalVT()
+
+	return &treechangeproto.RawTreeChangeWithId{
+		RawChange: rawMarshalled,
+		Id:        id,
+	}
+}
+
 func (c *MockChangeCreator) CreateRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *treechangeproto.RawTreeChangeWithId {
 	return c.CreateRawWithData(id, aclId, snapshotId, isSnapshot, nil, prevIds...)
 }

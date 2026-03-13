@@ -108,6 +108,72 @@ func TestDeletionState_Delete(t *testing.T) {
 	require.NotContains(t, fx.delState.queued, id)
 }
 
+func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
+	t.Run("queues orphaned children of deleted parents", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.stop()
+		parentId := "parentId"
+		childId := "childId"
+		// IterateEntries returns the parent as fully deleted
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
+				_, _ = iter(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted})
+				return nil
+			})
+		// GetEntriesByParentId returns a non-deleted child
+		fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), parentId).Return([]headstorage.HeadsEntry{
+			{Id: childId, DeletedStatus: headstorage.DeletedStatusNotDeleted},
+		}, nil)
+		// Expect the child to be queued
+		fx.headStorage.EXPECT().UpdateEntry(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, update headstorage.HeadsUpdate) error {
+			require.Equal(t, childId, update.Id)
+			require.Equal(t, headstorage.DeletedStatusQueued, *update.DeletedStatus)
+			return nil
+		})
+
+		err := fx.delState.Run(context.Background())
+		require.NoError(t, err)
+		require.Contains(t, fx.delState.deleted, parentId)
+		require.Contains(t, fx.delState.queued, childId)
+	})
+
+	t.Run("skips already deleted children", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.stop()
+		parentId := "parentId"
+		childId := "childId"
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
+				_, _ = iter(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted})
+				return nil
+			})
+		// Child is already deleted — should not be queued
+		fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), parentId).Return([]headstorage.HeadsEntry{
+			{Id: childId, DeletedStatus: headstorage.DeletedStatusDeleted},
+		}, nil)
+		// No UpdateEntry call expected
+
+		err := fx.delState.Run(context.Background())
+		require.NoError(t, err)
+		require.NotContains(t, fx.delState.queued, childId)
+	})
+
+	t.Run("no children — no error", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.stop()
+		parentId := "parentId"
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
+				_, _ = iter(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted})
+				return nil
+			})
+		fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), parentId).Return(nil, nil)
+
+		err := fx.delState.Run(context.Background())
+		require.NoError(t, err)
+	})
+}
+
 func TestDeletionState_Exists(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.stop()

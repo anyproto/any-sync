@@ -5,7 +5,7 @@ import (
 )
 
 type ChangeFactory interface {
-	CreateObjectDeleteChange(id string, state *State, isSnapshot bool) (res []byte, err error)
+	CreateObjectDeleteChange(ids []string, state *State, isSnapshot bool) (res []byte, err error)
 }
 
 func NewChangeFactory() ChangeFactory {
@@ -15,29 +15,30 @@ func NewChangeFactory() ChangeFactory {
 type changeFactory struct {
 }
 
-func (c *changeFactory) CreateObjectDeleteChange(id string, state *State, isSnapshot bool) (res []byte, err error) {
-	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
-		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
+func (c *changeFactory) CreateObjectDeleteChange(ids []string, state *State, isSnapshot bool) (res []byte, err error) {
+	content := make([]*spacesyncproto.SpaceSettingsContent, 0, len(ids))
+	for _, id := range ids {
+		content = append(content, &spacesyncproto.SpaceSettingsContent{
+			Value: &spacesyncproto.SpaceSettingsContent_ObjectDelete{
+				ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
+			},
+		})
 	}
 	change := &spacesyncproto.SettingsData{
-		Content: []*spacesyncproto.SpaceSettingsContent{
-			{Value: content},
-		},
+		Content: content,
 	}
 	if isSnapshot {
-		change.Snapshot = c.makeSnapshot(state, id)
+		change.Snapshot = c.makeSnapshot(state, ids...)
 	}
 	res, err = change.MarshalVT()
 	return
 }
 
-func (c *changeFactory) makeSnapshot(state *State, objectId string) *spacesyncproto.SpaceSettingsSnapshot {
+func (c *changeFactory) makeSnapshot(state *State, objectIds ...string) *spacesyncproto.SpaceSettingsSnapshot {
 	var (
-		deletedIds = make([]string, 0, len(state.DeletedIds)+1)
+		deletedIds = make([]string, 0, len(state.DeletedIds)+len(objectIds))
 	)
-	if objectId != "" {
-		deletedIds = append(deletedIds, objectId)
-	}
+	deletedIds = append(deletedIds, objectIds...)
 	for id := range state.DeletedIds {
 		deletedIds = append(deletedIds, id)
 	}

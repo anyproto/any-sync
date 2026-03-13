@@ -67,6 +67,21 @@ func (mr *MockHeadStorageMockRecorder) DeleteEntry(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntry", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntry), ctx, id)
 }
 
+// GetEntriesByParentId mocks base method.
+func (m *MockHeadStorage) GetEntriesByParentId(ctx context.Context, parentId string) ([]headstorage.HeadsEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEntriesByParentId", ctx, parentId)
+	ret0, _ := ret[0].([]headstorage.HeadsEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEntriesByParentId indicates an expected call of GetEntriesByParentId.
+func (mr *MockHeadStorageMockRecorder) GetEntriesByParentId(ctx, parentId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntriesByParentId", reflect.TypeOf((*MockHeadStorage)(nil).GetEntriesByParentId), ctx, parentId)
+}
+
 // GetEntry mocks base method.
 func (m *MockHeadStorage) GetEntry(ctx context.Context, id string) (headstorage.HeadsEntry, error) {
 	m.ctrl.T.Helper()

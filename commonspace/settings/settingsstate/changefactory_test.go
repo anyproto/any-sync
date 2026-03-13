@@ -14,7 +14,7 @@ func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {
 	state := &State{
 		DeletedIds: map[string]struct{}{"1": {}, "2": {}},
 	}
-	marshalled, err := factory.CreateObjectDeleteChange("3", state, false)
+	marshalled, err := factory.CreateObjectDeleteChange([]string{"3"}, state, false)
 	require.NoError(t, err)
 	data := &spacesyncproto.SettingsData{}
 	err = data.UnmarshalVT(marshalled)
@@ -22,7 +22,7 @@ func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {
 	require.Nil(t, data.Snapshot)
 	require.Equal(t, "3", data.Content[0].Value.(*spacesyncproto.SpaceSettingsContent_ObjectDelete).ObjectDelete.Id)
 
-	marshalled, err = factory.CreateObjectDeleteChange("3", state, true)
+	marshalled, err = factory.CreateObjectDeleteChange([]string{"3"}, state, true)
 	require.NoError(t, err)
 	data = &spacesyncproto.SettingsData{}
 	err = data.UnmarshalVT(marshalled)
