@@ -185,6 +185,18 @@ func BuildEmptyDataKeyFilterableObjectTree(storage Storage, aclList list.AclList
 	return buildObjectTree(deps)
 }
 
+func BuildObjectTreeWithContentValidator(contentValidator func(*Change, list.AclList) error) BuildObjectTreeFunc {
+	return func(storage Storage, aclList list.AclList) (ObjectTree, error) {
+		rootChange, err := storage.Root(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		deps := defaultObjectTreeDeps(rootChange.RawTreeChangeWithId(), storage, aclList)
+		deps.validator = NewTreeValidatorWithContentCheck(false, false, contentValidator)
+		return buildObjectTree(deps)
+	}
+}
+
 func BuildObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := storage.Root(context.Background())
 	if err != nil {

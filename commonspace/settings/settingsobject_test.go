@@ -16,15 +16,19 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage/mock_statestorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 type testSyncTreeMock struct {
@@ -61,6 +65,7 @@ type settingsFixture struct {
 	account         *mock_accountservice.MockService
 	stateStorage    *mock_statestorage.MockStateStorage
 	headStorage     *mock_headstorage.MockHeadStorage
+	aclList         *mock_list.MockAclList
 }
 
 var ctx = context.Background()
@@ -80,6 +85,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	historyTree := mock_objecttree.NewMockObjectTree(ctrl)
 	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
 	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
+	aclList := mock_list.NewMockAclList(ctrl)
 
 	buildFunc := BuildTreeFunc(func(ctx context.Context, id string, listener updatelistener.UpdateListener) (synctree.SyncTree, error) {
 		require.Equal(t, objectId, id)
@@ -114,7 +120,16 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		historyTree:     historyTree,
 		stateStorage:    stateStorage,
 		headStorage:     headStorage,
+		aclList:         aclList,
 	}
+}
+
+func (fx *settingsFixture) expectAclNoRestriction() {
+	aclState := &list.AclState{} // empty state, CurrentOptions() returns nil
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
 }
 
 func (fx *settingsFixture) init(t *testing.T) {
@@ -159,6 +174,7 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 		IsDerived: false,
 	}, nil)
 	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+	fx.expectAclNoRestriction()
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
@@ -193,6 +209,7 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 		IsDerived: false,
 	}, nil)
 	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+	fx.expectAclNoRestriction()
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, true).Return(res, nil)
@@ -257,4 +274,127 @@ func TestSettingsObject_Update(t *testing.T) {
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
 
 	fx.doc.Update(fx.doc)
+}
+
+func makeRootChangeBytes(t *testing.T, identity crypto.PubKey) []byte {
+	t.Helper()
+	identityProto, err := identity.Marshall()
+	require.NoError(t, err)
+	rootChange := &treechangeproto.RootChange{
+		Identity: identityProto,
+	}
+	payload, err := rootChange.MarshalVT()
+	require.NoError(t, err)
+	rawChange := &treechangeproto.RawTreeChange{
+		Payload: payload,
+	}
+	rawBytes, err := rawChange.MarshalVT()
+	require.NoError(t, err)
+	return rawBytes
+}
+
+func TestSettingsObject_DeleteObject_Restricted_AuthorCanDelete(t *testing.T) {
+	fx := newSettingsFixture(t)
+	defer fx.stop(t)
+	fx.init(t)
+
+	delId := "delId"
+	DoSnapshot = func(len int) bool {
+		return false
+	}
+
+	// Use AclTestExecutor to get a real ACL state with restricted delete
+	aclSetup := newValidatorTestSetup(t, true)
+	aclState := aclSetup.acl.AclState()
+	// Use writer "b"'s keys as the current account
+	writerKeys := aclSetup.executor.ActualAccounts()["b"].Keys
+
+	fx.syncTree.EXPECT().Id().Return("syncId")
+	fx.syncTree.EXPECT().Len().Return(10)
+	// GetEntry is called twice: once in DeleteObject, once in objectAuthor
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), delId).Return(headstorage.HeadsEntry{
+		Id:        delId,
+		IsDerived: false,
+	}, nil).Times(2)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+
+	// ACL restriction check: writer "b" does not have admin perms
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	// Author check: objectAuthor resolves to writer "b" (the current user is the author)
+	mockTreeStorage := mock_objecttree.NewMockStorage(fx.ctrl)
+	fx.spaceStorage.EXPECT().TreeStorage(gomock.Any(), delId).Return(mockTreeStorage, nil)
+	mockTreeStorage.EXPECT().Root(gomock.Any()).Return(objecttree.StorageChange{
+		RawChange: makeRootChangeBytes(t, writerKeys.SignKey.GetPublic()),
+		Id:        "rootId",
+	}, nil)
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	// Proceed to create the change
+	res := []byte("settingsData")
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
+	fx.account.EXPECT().Account().Return(writerKeys)
+	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
+		Data:              res,
+		Key:               writerKeys.SignKey,
+		IsSnapshot:        false,
+		ShouldBeEncrypted: false,
+	}).Return(objecttree.AddResult{}, nil)
+	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
+	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
+
+	err := fx.doc.DeleteObject(ctx, delId)
+	require.NoError(t, err)
+}
+
+func TestSettingsObject_DeleteObject_Restricted_NonAuthorCannotDelete(t *testing.T) {
+	fx := newSettingsFixture(t)
+	defer fx.stop(t)
+	fx.init(t)
+
+	delId := "delId"
+	DoSnapshot = func(len int) bool {
+		return false
+	}
+
+	// Use AclTestExecutor to get a real ACL state with restricted delete
+	aclSetup := newValidatorTestSetup(t, true)
+	aclState := aclSetup.acl.AclState()
+	// Use writer "b"'s keys as the current account
+	writerKeys := aclSetup.executor.ActualAccounts()["b"].Keys
+	// Object was authored by owner "a"
+	ownerKeys := aclSetup.executor.ActualAccounts()["a"].Keys
+
+	fx.syncTree.EXPECT().Id().Return("syncId")
+	// GetEntry is called twice: once in DeleteObject, once in objectAuthor
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), delId).Return(headstorage.HeadsEntry{
+		Id:        delId,
+		IsDerived: false,
+	}, nil).Times(2)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+
+	// ACL restriction check
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	// Author check: object authored by owner "a", current user is writer "b" → mismatch
+	mockTreeStorage := mock_objecttree.NewMockStorage(fx.ctrl)
+	fx.spaceStorage.EXPECT().TreeStorage(gomock.Any(), delId).Return(mockTreeStorage, nil)
+	mockTreeStorage.EXPECT().Root(gomock.Any()).Return(objecttree.StorageChange{
+		RawChange: makeRootChangeBytes(t, ownerKeys.SignKey.GetPublic()),
+		Id:        "rootId",
+	}, nil)
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	err := fx.doc.DeleteObject(ctx, delId)
+	require.ErrorIs(t, err, list.ErrInsufficientPermissions)
 }

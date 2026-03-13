@@ -805,6 +805,18 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		} else {
 			a.expectedAccounts[id].status = StatusActive
 		}
+	case "space_options":
+		deleteRestricted := parsedArgs.Args[0] == "restrict_delete"
+		res, err := acl.RecordBuilder().BuildSpaceOptionsChange(&aclrecordproto.AclSpaceOptions{
+			DeleteRestricted: deleteRestricted,
+		})
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
 	case "revoke":
 		invite := a.invites[parsedArgs.Args[0]]
 		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)

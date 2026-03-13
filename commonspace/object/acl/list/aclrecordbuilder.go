@@ -18,6 +18,7 @@ type RootContent struct {
 	SpaceId   string
 	Change    ReadKeyChangePayload
 	Metadata  []byte
+	Options   *aclrecordproto.AclSpaceOptions
 }
 
 type RequestJoinPayload struct {
@@ -123,6 +124,7 @@ type AclRecordBuilder interface {
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildSpaceOptionsChange(options *aclrecordproto.AclSpaceOptions) (rawRecord *consensusproto.RawRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -900,6 +902,20 @@ func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *consensusproto.RawRe
 	return a.buildRecord(content)
 }
 
+func (a *aclRecordBuilder) BuildSpaceOptionsChange(options *aclrecordproto.AclSpaceOptions) (rawRecord *consensusproto.RawRecord, err error) {
+	if !a.state.Permissions(a.state.pubKey).IsOwner() {
+		return nil, ErrInsufficientPermissions
+	}
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_SpaceOptionsChange{
+			SpaceOptionsChange: &aclrecordproto.AclSpaceOptionsChange{
+				Options: options,
+			},
+		},
+	}
+	return a.buildRecord(content)
+}
+
 func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec *AclRecord, err error) {
 	aclRecord := &consensusproto.Record{}
 	err = aclRecord.UnmarshalVT(rawRecord.Payload)
@@ -1045,6 +1061,9 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 			return nil, err
 		}
 		aclRoot.EncryptedOwnerMetadata = enc
+	}
+	if content.Options != nil {
+		aclRoot.Options = content.Options
 	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }

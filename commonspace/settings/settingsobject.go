@@ -7,6 +7,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/util/crypto"
 
 	"go.uber.org/zap"
@@ -205,6 +206,24 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 			idsToDelete = append(idsToDelete, child.Id)
 		}
 	}
+	aclList := s.AclList()
+	aclList.RLock()
+	var needsAuthorCheck bool
+	opts := aclList.AclState().CurrentOptions()
+	if opts != nil && opts.DeleteRestricted {
+		perms := aclList.AclState().Permissions(s.account.Account().SignKey.GetPublic())
+		if !perms.CanManageAccounts() {
+			needsAuthorCheck = true
+		}
+	}
+	aclList.RUnlock()
+	if needsAuthorCheck {
+		author, err := objectAuthor(s.store, id)
+		if err != nil || !author.Equals(s.account.Account().SignKey.GetPublic()) {
+			return list.ErrInsufficientPermissions
+		}
+	}
+
 	isSnapshot := DoSnapshot(s.Len())
 	res, err := s.changeFactory.CreateObjectDeleteChange(idsToDelete, s.state, isSnapshot)
 	if err != nil {

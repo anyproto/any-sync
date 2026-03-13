@@ -25,6 +25,7 @@ type ContentValidator interface {
 	ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
+	ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error)
 }
 
 type contentValidator struct {
@@ -198,6 +199,8 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidatePermissionChanges(ch.GetPermissionChanges(), authorIdentity)
 	case ch.GetAccountsAdd() != nil:
 		return c.ValidateAccountsAdd(ch.GetAccountsAdd(), authorIdentity)
+	case ch.GetSpaceOptionsChange() != nil:
+		return c.ValidateSpaceOptionsChange(ch.GetSpaceOptionsChange(), authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -452,6 +455,16 @@ func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 		return ErrInsufficientPermissions
 	}
 	return c.validateReadKeyChange(ch, nil)
+}
+
+func (c *contentValidator) ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).IsOwner() {
+		return ErrInsufficientPermissions
+	}
+	return nil
 }
 
 func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, removedUsers map[string]struct{}) (err error) {
