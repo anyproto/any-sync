@@ -50,7 +50,7 @@ func (s *settings) Init(a *app.App) (err error) {
 			res, err := s.treeBuilder.BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{
 				Listener: listener,
 				// space settings document should not have empty data
-				TreeBuilder: objecttree.BuildObjectTree,
+				TreeBuilder: objecttree.BuildObjectTreeWithContentValidator(settingsContentValidator),
 			})
 			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", sharedState.SpaceId))
 			if err != nil {

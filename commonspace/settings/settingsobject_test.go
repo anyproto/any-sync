@@ -16,6 +16,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage/mock_statestorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
@@ -61,6 +63,7 @@ type settingsFixture struct {
 	account         *mock_accountservice.MockService
 	stateStorage    *mock_statestorage.MockStateStorage
 	headStorage     *mock_headstorage.MockHeadStorage
+	aclList         *mock_list.MockAclList
 }
 
 var ctx = context.Background()
@@ -80,6 +83,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	historyTree := mock_objecttree.NewMockObjectTree(ctrl)
 	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
 	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
+	aclList := mock_list.NewMockAclList(ctrl)
 
 	buildFunc := BuildTreeFunc(func(ctx context.Context, id string, listener updatelistener.UpdateListener) (synctree.SyncTree, error) {
 		require.Equal(t, objectId, id)
@@ -114,7 +118,16 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		historyTree:     historyTree,
 		stateStorage:    stateStorage,
 		headStorage:     headStorage,
+		aclList:         aclList,
 	}
+}
+
+func (fx *settingsFixture) expectAclNoRestriction() {
+	aclState := &list.AclState{} // empty state, CurrentOptions() returns nil
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
 }
 
 func (fx *settingsFixture) init(t *testing.T) {
@@ -159,6 +172,7 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 		IsDerived: false,
 	}, nil)
 	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+	fx.expectAclNoRestriction()
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
@@ -193,6 +207,7 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 		IsDerived: false,
 	}, nil)
 	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+	fx.expectAclNoRestriction()
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, true).Return(res, nil)

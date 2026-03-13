@@ -85,14 +85,26 @@ func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, changes []*Chang
 }
 
 type objectTreeValidator struct {
-	validateKeys bool
-	shouldFilter bool
+	validateKeys     bool
+	shouldFilter     bool
+	contentValidator func(c *Change, aclList list.AclList) error
 }
 
 func newTreeValidator(validateKeys bool, filterChanges bool) ObjectTreeValidator {
 	return &objectTreeValidator{
 		validateKeys: validateKeys,
 		shouldFilter: filterChanges,
+	}
+}
+
+func NewTreeValidatorWithContentCheck(
+	validateKeys, filterChanges bool,
+	check func(*Change, list.AclList) error,
+) ObjectTreeValidator {
+	return &objectTreeValidator{
+		validateKeys:     validateKeys,
+		shouldFilter:     filterChanges,
+		contentValidator: check,
 	}
 }
 
@@ -167,6 +179,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		keys, exists := state.Keys()[c.ReadKeyId]
 		if !exists || keys.ReadKey == nil {
 			return list.ErrNoReadKey
+		}
+	}
+
+	if v.contentValidator != nil {
+		if err = v.contentValidator(c, aclList); err != nil {
+			return
 		}
 	}
 

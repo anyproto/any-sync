@@ -44,6 +44,7 @@ type AclSpaceClient interface {
 	RevokeAllInvites(ctx context.Context) (err error)
 	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
 	OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) (err error)
+	ChangeSpaceOptions(ctx context.Context, options *aclrecordproto.AclSpaceOptions) error
 }
 
 func NewAclSpaceClient() AclSpaceClient {
@@ -275,6 +276,17 @@ func (c *aclSpaceClient) ReplaceInvite(ctx context.Context, payload InvitePayloa
 		InviteRec: res.Rec,
 		InviteKey: res.Invites[0],
 	}, nil
+}
+
+func (c *aclSpaceClient) ChangeSpaceOptions(ctx context.Context, options *aclrecordproto.AclSpaceOptions) error {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildSpaceOptionsChange(options)
+	if err != nil {
+		c.acl.Unlock()
+		return err
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) (err error) {
