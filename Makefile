@@ -11,12 +11,16 @@ PROTOC_GEN_GO=deps/protoc-gen-go
 PROTOC_GEN_DRPC=deps/protoc-gen-go-drpc
 PROTOC_GEN_VTPROTO=deps/protoc-gen-go-vtproto
 
+VTPROTO_POOL_TYPES = \
+	--go-vtproto_opt=pool=commonspace/object/tree/treechangeproto.NoDataTreeChange
+
 define generate_proto
 	@echo "Generating Protobuf for directory: $(1)"
 	$(PROTOC) \
 		--go_out=. --plugin protoc-gen-go="$(PROTOC_GEN_GO)" \
 		--go-vtproto_out=. --plugin protoc-gen-go-vtproto="$(PROTOC_GEN_VTPROTO)" \
-		--go-vtproto_opt=features=marshal+unmarshal+size \
+		--go-vtproto_opt=features=marshal+unmarshal+size+pool \
+		$(VTPROTO_POOL_TYPES) \
 		--proto_path=$(1) $(wildcard $(1)/*.proto)
 endef
 
@@ -27,7 +31,8 @@ define generate_drpc
 		--plugin protoc-gen-go-drpc=$(PROTOC_GEN_DRPC) \
 		--go_opt=$(1) \
 		--go-vtproto_out=:. --plugin protoc-gen-go-vtproto=$(PROTOC_GEN_VTPROTO) \
-		--go-vtproto_opt=features=marshal+unmarshal+size \
+		--go-vtproto_opt=features=marshal+unmarshal+size+pool \
+		$(VTPROTO_POOL_TYPES) \
 		--go-drpc_out=protolib=github.com/planetscale/vtprotobuf/codec/drpc:. $(wildcard $(2)/*.proto)
 endef
 

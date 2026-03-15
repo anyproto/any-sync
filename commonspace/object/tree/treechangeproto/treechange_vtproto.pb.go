@@ -9,6 +9,7 @@ import (
 	protohelpers "github.com/planetscale/vtprotobuf/protohelpers"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	io "io"
+	sync "sync"
 )
 
 const (
@@ -894,6 +895,30 @@ func (m *TreeChangeInfo) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+var vtprotoPool_NoDataTreeChange = sync.Pool{
+	New: func() interface{} {
+		return &NoDataTreeChange{}
+	},
+}
+
+func (m *NoDataTreeChange) ResetVT() {
+	if m != nil {
+		f0 := m.TreeHeadIds[:0]
+		f1 := m.Identity[:0]
+		m.Reset()
+		m.TreeHeadIds = f0
+		m.Identity = f1
+	}
+}
+func (m *NoDataTreeChange) ReturnToVTPool() {
+	if m != nil {
+		m.ResetVT()
+		vtprotoPool_NoDataTreeChange.Put(m)
+	}
+}
+func NoDataTreeChangeFromVTPool() *NoDataTreeChange {
+	return vtprotoPool_NoDataTreeChange.Get().(*NoDataTreeChange)
+}
 func (m *RootChange) SizeVT() (n int) {
 	if m == nil {
 		return 0

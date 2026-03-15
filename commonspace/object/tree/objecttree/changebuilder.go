@@ -341,13 +341,15 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		return
 	}
 	if !c.hasData {
-		change := &treechangeproto.NoDataTreeChange{}
+		change := treechangeproto.NoDataTreeChangeFromVTPool()
 		err = change.UnmarshalVT(raw.Payload)
 		if err != nil {
+			change.ReturnToVTPool()
 			return
 		}
 		key, err = c.keys.PubKeyFromProto(change.Identity)
 		if err != nil {
+			change.ReturnToVTPool()
 			return
 		}
 		ch = &Change{
@@ -362,6 +364,9 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 			DataType:    change.DataType,
 			IsSnapshot:  change.IsSnapshot,
 		}
+		// Detach retained slices before returning to pool
+		change.TreeHeadIds = nil
+		change.ReturnToVTPool()
 	} else {
 		change := &treechangeproto.TreeChange{}
 		err = change.UnmarshalVT(raw.Payload)
