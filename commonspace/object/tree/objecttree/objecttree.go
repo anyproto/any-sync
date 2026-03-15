@@ -288,7 +288,8 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	if err != nil {
 		panic(err)
 	}
-	err = ot.storage.AddAll(ctx, []StorageChange{storageChange}, ot.Heads(), ot.tree.root.Id)
+	added := []StorageChange{storageChange}
+	err = ot.storage.AddAll(ctx, added, ot.Heads(), ot.tree.root.Id)
 	if err != nil {
 		return
 	}
@@ -301,7 +302,7 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	res = AddResult{
 		OldHeads: oldHeads,
 		Heads:    []string{objChange.Id},
-		Added:    []StorageChange{storageChange},
+		Added:    added,
 		Mode:     mode,
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
@@ -626,6 +627,7 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, changes []*C
 			ChangeSize:      len(rawChange.RawChange),
 		})
 		ch.rawChange = nil
+		ch.Data = nil
 	}
 	addResult = AddResult{
 		OldHeads: oldHeads,

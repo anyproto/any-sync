@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"fmt"
+	"sync"
+
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
 	mbase "github.com/multiformats/go-multibase"
 )
@@ -19,7 +21,22 @@ const (
 )
 
 type AESKey struct {
-	raw []byte
+	raw      []byte
+	gcmOnce  sync.Once
+	gcmCache cipher.AEAD
+	gcmErr   error
+}
+
+func (k *AESKey) aead() (cipher.AEAD, error) {
+	k.gcmOnce.Do(func() {
+		block, err := aes.NewCipher(k.raw[:KeyBytes])
+		if err != nil {
+			k.gcmErr = err
+			return
+		}
+		k.gcmCache, k.gcmErr = cipher.NewGCM(block)
+	})
+	return k.gcmCache, k.gcmErr
 }
 
 func (k *AESKey) Equals(key Key) bool {
@@ -99,11 +116,7 @@ func (k *AESKey) String() string {
 
 // Encrypt performs AES-256 GCM encryption on plaintext.
 func (k *AESKey) Encrypt(plaintext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(k.raw[:KeyBytes])
-	if err != nil {
-		return nil, err
-	}
-	aesgcm, err := cipher.NewGCM(block)
+	aesgcm, err := k.aead()
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +131,7 @@ func (k *AESKey) Encrypt(plaintext []byte) ([]byte, error) {
 
 // Decrypt uses key to perform AES-256 GCM decryption on ciphertext.
 func (k *AESKey) Decrypt(ciphertext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(k.raw[:KeyBytes])
-	if err != nil {
-		return nil, err
-	}
-	aesgcm, err := cipher.NewGCM(block)
+	aesgcm, err := k.aead()
 	if err != nil {
 		return nil, err
 	}
