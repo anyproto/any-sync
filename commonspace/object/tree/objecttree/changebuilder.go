@@ -364,8 +364,11 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 			DataType:    change.DataType,
 			IsSnapshot:  change.IsSnapshot,
 		}
-		// Detach retained slices before returning to pool
+		// Detach retained slices before returning to pool.
+		// TreeHeadIds is held by Change.PreviousIds.
+		// Identity backing array is held by keyStorage.PubKeyFromProto.
 		change.TreeHeadIds = nil
+		change.Identity = nil
 		change.ReturnToVTPool()
 	} else {
 		change := &treechangeproto.TreeChange{}
