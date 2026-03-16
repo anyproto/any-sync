@@ -844,6 +844,12 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		}
 		ot.keys[key] = treeKey
 	}
+	curKeyId := state.CurrentReadKeyId()
+	if derived, ok := ot.keys[curKeyId]; ok {
+		ot.currentReadKey = derived
+		return nil
+	}
+	// Fallback: derive if not in map (e.g., ReadKey was nil and skipped in the loop above)
 	curKey, err := state.CurrentReadKey()
 	if err != nil {
 		return err

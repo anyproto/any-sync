@@ -289,6 +289,12 @@ func (s *storage) readKeysFromAclState(state *list.AclState) (err error) {
 		}
 		s.readKeys[key] = treeKey
 	}
+	curKeyId := state.CurrentReadKeyId()
+	if derived, ok := s.readKeys[curKeyId]; ok {
+		s.currentReadKey = derived
+		return nil
+	}
+	// Fallback: derive if not in map (e.g., ReadKey was nil and skipped in the loop above)
 	curKey, err := state.CurrentReadKey()
 	if err != nil {
 		return err
