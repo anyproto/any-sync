@@ -627,7 +627,6 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, changes []*C
 			ChangeSize:      len(rawChange.RawChange),
 		})
 		ch.rawChange = nil
-		ch.Data = nil
 	}
 	addResult = AddResult{
 		OldHeads: oldHeads,
