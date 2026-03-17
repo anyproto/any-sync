@@ -44,9 +44,10 @@ type KeyDeriver struct {
 }
 
 // NewKeyDeriver creates a KeyDeriver for the given SLIP-21 path.
-// The path should be in standard format like "m/SLIP-0021/anysync/tree/someId".
+// The path should be fully formed, e.g. "m/SLIP-0021/anysync/tree/someId".
 func NewKeyDeriver(path string) *KeyDeriver {
-	parts := strings.Split(path, "/")[1:] // skip "m"
+	path, _ = strings.CutPrefix(path, "m/")
+	parts := strings.Split(path, "/")
 	labels := make([][]byte, len(parts))
 	for i, p := range parts {
 		label := make([]byte, 1+len(p))
