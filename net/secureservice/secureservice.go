@@ -3,8 +3,10 @@ package secureservice
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
+	"slices"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -32,14 +34,16 @@ var (
 	// ProtoVersion 5 - sync with no entry space
 	// ProtoVersion 6 - sync with key value messages
 	// ProtoVersion 7 - sync with new invites
-	// ProtoVersion 8 - acl: transfer ownership feature
-	// ProtoVersion 9 - space header V1
-	CompatibleVersion = uint32(9)
-	ProtoVersion      = uint32(8)
+	// ProtoVersion 8 - acl: transfer ownership feature, space header V1
+	// ProtoVersion 9 - nested derived objects, delete restrictions (bridge release v0.11.Y)
+	// ProtoVersion 10 - reserved (not used, version alignment gap)
+	// ProtoVersion 11 - reserved (not used, version alignment gap)
+	// ProtoVersion 12 will align with v0.12.X
+	ProtoVersion = uint32(9)
 )
 
 var (
-	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion}
+	defaultCompatibleVersions = []uint32{8, 9, 12}
 )
 
 func New() SecureService {
@@ -73,13 +77,19 @@ func (s *secureService) Init(a *app.App) (err error) {
 		s.protoVersion = ProtoVersion
 	}
 	if len(s.compatibleVersions) == 0 {
-		s.compatibleVersions = compatibleVersions
+		s.compatibleVersions = defaultCompatibleVersions
 	}
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
 
 	var conf Config
 	if cg, ok := a.Component("config").(configGetter); ok {
 		conf = cg.GetSecureService()
+	}
+	if len(conf.CompatibleVersions) > 0 {
+		if !slices.Contains(conf.CompatibleVersions, s.protoVersion) {
+			return fmt.Errorf("compatibleVersions %v from config must contain current ProtoVersion %d", conf.CompatibleVersions, s.protoVersion)
+		}
+		s.compatibleVersions = conf.CompatibleVersions
 	}
 
 	peerKey, err := account.Account().PeerKey.Raw()
