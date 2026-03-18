@@ -92,7 +92,8 @@ type AclState struct {
 	contentValidator ContentValidator
 	list             *aclList
 
-	isOneToOne bool
+	optionChanges []OptionChange
+	isOneToOne    bool
 }
 
 func newAclStateWithKeys(
@@ -358,6 +359,9 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	st.readKeyChanges = []string{record.Id}
 	st.accountStates[mapKeyFromPubKey(record.Identity)] = accountState
 	st.lastRecordId = record.Id
+	if root.Options != nil {
+		st.optionChanges = []OptionChange{{RecordId: record.Id, Options: root.Options}}
+	}
 	return
 }
 
@@ -428,6 +432,7 @@ func (st *AclState) Copy() *AclState {
 		newSt.pendingRequests[k] = v
 	}
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
+	newSt.optionChanges = append(newSt.optionChanges, st.optionChanges...)
 	newSt.list = st.list
 	newSt.lastRecordId = st.lastRecordId
 	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt, st.list.verifier)
@@ -466,6 +471,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyAccountsAdd(ch.GetAccountsAdd(), record)
 	case ch.GetPermissionChanges() != nil:
 		return st.applyPermissionChanges(ch.GetPermissionChanges(), record)
+	case ch.GetSpaceOptionsChange() != nil:
+		return st.applySpaceOptionsChange(ch.GetSpaceOptionsChange(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
 		return nil
@@ -1056,6 +1063,38 @@ func (st *AclState) OwnerPubKeyWithRecordId() (ownerIdentity crypto.PubKey, reco
 
 func (st *AclState) IsOneToOne() bool {
 	return st.isOneToOne
+}
+
+func (st *AclState) applySpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, record *AclRecord) error {
+	err := st.contentValidator.ValidateSpaceOptionsChange(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	st.optionChanges = append(st.optionChanges, OptionChange{
+		RecordId: record.Id,
+		Options:  ch.Options,
+	})
+	return nil
+}
+
+// OptionsAtRecord resolves options at a specific ACL record using the same
+// pattern as closestPermissions - walks optionChanges backwards to find
+// the closest change before/at the given recordId.
+func (st *AclState) OptionsAtRecord(recordId string) *aclrecordproto.AclSpaceOptions {
+	for i := len(st.optionChanges) - 1; i >= 0; i-- {
+		if st.list.isAfterNoCheck(recordId, st.optionChanges[i].RecordId) {
+			return st.optionChanges[i].Options
+		}
+	}
+	return nil
+}
+
+// CurrentOptions returns the current (head) options.
+func (st *AclState) CurrentOptions() *aclrecordproto.AclSpaceOptions {
+	if len(st.optionChanges) == 0 {
+		return nil
+	}
+	return st.optionChanges[len(st.optionChanges)-1].Options
 }
 
 func (st *AclState) deriveKey() (crypto.SymKey, error) {

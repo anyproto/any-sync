@@ -72,5 +72,8 @@ mocks:
 	go generate ./...
 
 test:
-	# TODO: remove GOEXPERIMENT when go 1.25
+ifeq ($(shell go version | grep -c 'go1\.25'),1)
 	GOEXPERIMENT=synctest go test ./... --cover
+else
+	go test ./... --cover
+endif
