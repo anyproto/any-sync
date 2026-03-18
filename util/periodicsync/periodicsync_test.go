@@ -17,7 +17,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	l := logger.NewNamed("sync")
 
 	t.Run("loop call 1 time", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			diffSyncer := func(ctx context.Context) error {
 				times.Add(1)
@@ -32,7 +32,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("loop kick", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			diffSyncer := func(ctx context.Context) error {
 				times.Add(1)
@@ -51,7 +51,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("loop reset", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			diffSyncer := func(ctx context.Context) error {
 				times.Add(1)
@@ -79,7 +79,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("loop call 2 times", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			diffSyncer := func(ctx context.Context) error {
 				times.Add(1)
@@ -107,7 +107,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("loop with timeout", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			timeout := 100 * time.Millisecond
 			diffSyncer := func(ctx context.Context) error {
@@ -126,7 +126,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("loop caller returns error", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			testErr := fmt.Errorf("test error")
 			diffSyncer := func(ctx context.Context) error {
@@ -151,7 +151,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("kick context cancelled", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			blocker := make(chan struct{})
 			diffSyncer := func(ctx context.Context) error {
@@ -177,7 +177,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 	})
 
 	t.Run("reset context cancelled", func(t *testing.T) {
-		synctest.Run(func() {
+		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
 			blocker := make(chan struct{})
 			diffSyncer := func(ctx context.Context) error {
