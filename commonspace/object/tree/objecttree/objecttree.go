@@ -831,6 +831,7 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 	if state.AccountKey() == nil || !state.HadReadPermissions(state.AccountKey().GetPublic()) {
 		return nil
 	}
+	deriver := crypto.NewKeyDeriver(fmt.Sprintf(crypto.AnysyncTreePath, ot.id))
 	for key, value := range state.Keys() {
 		if _, exists := ot.keys[key]; exists {
 			continue
@@ -838,12 +839,22 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		if value.ReadKey == nil {
 			continue
 		}
-		treeKey, err := deriveTreeKey(value.ReadKey, ot.id)
+		raw, err := value.ReadKey.Raw()
+		if err != nil {
+			return err
+		}
+		treeKey, err := deriver.DeriveKey(raw)
 		if err != nil {
 			return err
 		}
 		ot.keys[key] = treeKey
 	}
+	curKeyId := state.CurrentReadKeyId()
+	if derived, ok := ot.keys[curKeyId]; ok {
+		ot.currentReadKey = derived
+		return nil
+	}
+	// Fallback: derive if not in map (e.g., ReadKey was nil and skipped in the loop above)
 	curKey, err := state.CurrentReadKey()
 	if err != nil {
 		return err
