@@ -245,6 +245,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		err = aTree.Delete()
@@ -298,6 +299,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
@@ -313,6 +315,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
+		initTestAddSeq(bStore)
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
 		err = exec.Execute("a.remove::b")
@@ -408,6 +411,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		treeStorage, err := CreateStorage(ctx, root, headStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(treeStorage)
 		_, err = BuildKeyFilterableObjectTree(treeStorage, beforeAcl)
 		require.True(t, errors.Is(err, list.ErrNoSuchRecord))
 	})
@@ -443,6 +447,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
@@ -458,6 +463,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
+		initTestAddSeq(bStore)
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
 		require.NoError(t, err)
@@ -510,6 +516,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		storage, err := CreateStorage(ctx, root, headsStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(storage)
 		oTree, err := BuildObjectTree(storage, aclList)
 		require.NoError(t, err)
 
@@ -583,6 +590,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
@@ -608,6 +616,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			validateStore := createStore(ctx, t)
@@ -645,6 +654,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -695,6 +705,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
