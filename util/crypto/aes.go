@@ -118,20 +118,7 @@ func (k *AESKey) Encrypt(plaintext []byte) ([]byte, error) {
 
 // Decrypt uses key to perform AES-256 GCM decryption on ciphertext.
 func (k *AESKey) Decrypt(ciphertext []byte) ([]byte, error) {
-	block, err := aes.NewCipher(k.raw[:KeyBytes])
-	if err != nil {
-		return nil, err
-	}
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	nonce := ciphertext[:NonceBytes]
-	plain, err := aesgcm.Open(nil, nonce, ciphertext[NonceBytes:], nil)
-	if err != nil {
-		return nil, err
-	}
-	return plain, nil
+	return k.DecryptReuse(nil, ciphertext)
 }
 
 // DecryptReuse is like Decrypt but reuses dst's underlying array to avoid allocation.
