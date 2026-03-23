@@ -1,6 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.25.0
+go 1.25.7
 
 require (
 	filippo.io/edwards25519 v1.2.0
@@ -24,7 +24,7 @@ require (
 	github.com/ipfs/go-block-format v0.2.3
 	github.com/ipfs/go-cid v0.6.0
 	github.com/ipfs/go-ipld-format v0.6.3
-	github.com/libp2p/go-libp2p v0.47.0
+	github.com/libp2p/go-libp2p v0.48.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
