@@ -650,6 +650,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		ot.tree.IterateSkip(id, iterate)
 		return
 	}
+	var buf []byte
 	decrypt := func(c *Change) (decrypted []byte, err error) {
 		// the change is not encrypted
 		if c.ReadKeyId == "" {
@@ -665,7 +666,8 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			err = fmt.Errorf("no data in change %s", c.Id)
 			return
 		}
-		decrypted, err = readKey.Decrypt(c.Data)
+		buf, err = readKey.DecryptReuse(buf, c.Data)
+		decrypted = buf
 		return
 	}
 
@@ -680,9 +682,9 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			return iterate(c)
 		}
 
-		var decrypted []byte
-		decrypted, err = decrypt(c)
-		if err != nil {
+		decrypted, decErr := decrypt(c)
+		if decErr != nil {
+			err = decErr
 			return false
 		}
 
