@@ -35,6 +35,7 @@ type HeadNotifiable interface {
 
 type ListenerSetter interface {
 	SetListener(listener updatelistener.UpdateListener)
+	SetDeferredUpdater(deferred bool)
 }
 
 type peerSendableObjectTree interface {
