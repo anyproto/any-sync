@@ -8,32 +8,43 @@ import (
 )
 
 type (
-	hasChangesFunc  func(ids ...string) bool
 	treeBuilderFunc func(heads []string) (ReadableObjectTree, error)
 	onRemoveFunc    func(ids []string)
 )
 
-type ChangeDiffer struct {
-	hasChanges hasChangesFunc
-	attached   map[string]*Change
-	waitList   map[string][]*Change
-	visitedBuf []*Change
+type diffChange struct {
+	Id          string
+	PreviousIds []string
+	Previous    []*diffChange
+	visited     bool
 }
 
-func NewChangeDiffer(tree ReadableObjectTree, hasChanges hasChangesFunc) (*ChangeDiffer, error) {
+func newDiffChange(id string, previousIds []string) *diffChange {
+	return &diffChange{
+		Id:          id,
+		PreviousIds: previousIds,
+	}
+}
+
+type ChangeDiffer struct {
+	known      map[string]struct{}
+	attached   map[string]*diffChange
+	waitList   map[string][]*diffChange
+	visitedBuf []*diffChange
+}
+
+func NewChangeDiffer(tree ReadableObjectTree) (*ChangeDiffer, error) {
 	diff := &ChangeDiffer{
-		hasChanges: hasChanges,
-		attached:   make(map[string]*Change),
-		waitList:   make(map[string][]*Change),
+		known:    make(map[string]struct{}),
+		attached: make(map[string]*diffChange),
+		waitList: make(map[string][]*diffChange),
 	}
 	if tree == nil {
 		return diff, nil
 	}
 	err := tree.IterateRoot(nil, func(c *Change) (isContinue bool) {
-		diff.add(&Change{
-			Id:          c.Id,
-			PreviousIds: c.PreviousIds,
-		})
+		diff.known[c.Id] = struct{}{}
+		diff.add(newDiffChange(c.Id, c.PreviousIds))
 		return true
 	})
 	if err != nil {
@@ -44,7 +55,7 @@ func NewChangeDiffer(tree ReadableObjectTree, hasChanges hasChangesFunc) (*Chang
 
 func (d *ChangeDiffer) RemoveBefore(ids []string, seenHeads []string) (removed []string, notFound []string, heads []string) {
 	var (
-		attached    []*Change
+		attached    []*diffChange
 		attachedIds []string
 	)
 	for _, id := range ids {
@@ -53,24 +64,23 @@ func (d *ChangeDiffer) RemoveBefore(ids []string, seenHeads []string) (removed [
 			attachedIds = append(attachedIds, id)
 			continue
 		}
-		// check if we have it at the bottom
-		if !d.hasChanges(id) {
+		if _, ok := d.known[id]; !ok {
 			notFound = append(notFound, id)
 		}
 	}
 	heads = make([]string, 0, len(seenHeads))
 	heads = append(heads, seenHeads...)
-	d.dfsPrev(attached, func(ch *Change) (isContinue bool) {
+	d.dfsPrev(attached, func(ch *diffChange) (isContinue bool) {
 		heads = append(heads, ch.Id)
 		heads = append(heads, ch.PreviousIds...)
 		removed = append(removed, ch.Id)
 		return true
-	}, func(changes []*Change) {
+	}, func() {
 		for _, ch := range removed {
 			delete(d.attached, ch)
 		}
 		for _, ch := range d.attached {
-			ch.Previous = slice.DiscardFromSlice(ch.Previous, func(change *Change) bool {
+			ch.Previous = slice.DiscardFromSlice(ch.Previous, func(change *diffChange) bool {
 				return change.visited
 			})
 		}
@@ -85,11 +95,11 @@ func (d *ChangeDiffer) RemoveBefore(ids []string, seenHeads []string) (removed [
 	return
 }
 
-func (d *ChangeDiffer) dfsPrev(stack []*Change, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
+func (d *ChangeDiffer) dfsPrev(stack []*diffChange, visit func(ch *diffChange) (isContinue bool), afterVisit func()) {
 	d.visitedBuf = d.visitedBuf[:0]
 	defer func() {
 		if afterVisit != nil {
-			afterVisit(d.visitedBuf)
+			afterVisit()
 		}
 		for _, ch := range d.visitedBuf {
 			ch.visited = false
@@ -116,12 +126,12 @@ func (d *ChangeDiffer) dfsPrev(stack []*Change, visit func(ch *Change) (isContin
 
 func (d *ChangeDiffer) Add(changes ...*Change) {
 	for _, ch := range changes {
-		d.add(ch)
+		d.add(newDiffChange(ch.Id, ch.PreviousIds))
 	}
 	return
 }
 
-func (d *ChangeDiffer) add(change *Change) {
+func (d *ChangeDiffer) add(change *diffChange) {
 	_, exists := d.attached[change.Id]
 	if exists {
 		return
@@ -147,12 +157,11 @@ func (d *ChangeDiffer) add(change *Change) {
 }
 
 type DiffManager struct {
-	differ       *ChangeDiffer
-	readableTree ReadableObjectTree
-	notFound     map[string]struct{}
-	onRemove     func(ids []string)
-	heads        []string
-	seenHeads    []string
+	differ    *ChangeDiffer
+	notFound  map[string]struct{}
+	onRemove  func(ids []string)
+	heads     []string
+	seenHeads []string
 }
 
 func NewDiffManager(initHeads, curHeads []string, treeBuilder treeBuilderFunc, onRemove onRemoveFunc) (*DiffManager, error) {
@@ -163,17 +172,16 @@ func NewDiffManager(initHeads, curHeads []string, treeBuilder treeBuilderFunc, o
 	if err != nil {
 		return nil, err
 	}
-	differ, err := NewChangeDiffer(readableTree, readableTree.HasChanges)
+	differ, err := NewChangeDiffer(readableTree)
 	if err != nil {
 		return nil, err
 	}
 	return &DiffManager{
-		differ:       differ,
-		heads:        curHeads,
-		seenHeads:    initHeads,
-		onRemove:     onRemove,
-		readableTree: readableTree,
-		notFound:     make(map[string]struct{}),
+		differ:    differ,
+		heads:     curHeads,
+		seenHeads: initHeads,
+		onRemove:  onRemove,
+		notFound:  make(map[string]struct{}),
 	}, nil
 }
 
