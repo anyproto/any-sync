@@ -1990,6 +1990,7 @@ func TestObjectTree_IterateFrom_DecryptReuse(t *testing.T) {
 	require.NoError(t, err)
 	treeStorage, err := CreateStorage(ctx, root, headStorage, store)
 	require.NoError(t, err)
+	initTestAddSeq(treeStorage)
 	tree, err := BuildKeyFilterableObjectTree(treeStorage, aAccount.Acl)
 	require.NoError(t, err)
 
