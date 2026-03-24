@@ -107,6 +107,7 @@ type ObjectTree interface {
 	Delete() error
 	Close() error
 	SetFlusher(flusher Flusher)
+	SetDeferredUpdater(deferred bool)
 	TryClose(objectTTL time.Duration) (bool, error)
 }
 
@@ -123,9 +124,10 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys           map[string]crypto.SymKey
-	currentReadKey crypto.SymKey
-	isDeleted      bool
+	keys            map[string]crypto.SymKey
+	currentReadKey  crypto.SymKey
+	isDeleted       bool
+	deferredUpdater bool
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -203,6 +205,10 @@ func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 
 func (ot *objectTree) SetFlusher(flusher Flusher) {
 	ot.flusher = flusher
+}
+
+func (ot *objectTree) SetDeferredUpdater(deferred bool) {
+	ot.deferredUpdater = deferred
 }
 
 func (ot *objectTree) UnmarshalledHeader() *Change {
@@ -413,7 +419,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 		}
 	}
 
-	if updater != nil {
+	if updater != nil && !ot.deferredUpdater {
 		err = updater(ot, addResult.Mode)
 		if err != nil {
 			rollback()
@@ -425,6 +431,13 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 	if err != nil {
 		rollback()
 		return
+	}
+
+	if updater != nil && ot.deferredUpdater {
+		err = updater(ot, addResult.Mode)
+		if err != nil {
+			return
+		}
 	}
 	ot.flusher.Flush(ot)
 	return

@@ -376,6 +376,18 @@ func (mr *MockObjectTreeMockRecorder) Root() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockObjectTree)(nil).Root))
 }
 
+// SetDeferredUpdater mocks base method.
+func (m *MockObjectTree) SetDeferredUpdater(deferred bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDeferredUpdater", deferred)
+}
+
+// SetDeferredUpdater indicates an expected call of SetDeferredUpdater.
+func (mr *MockObjectTreeMockRecorder) SetDeferredUpdater(deferred any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeferredUpdater", reflect.TypeOf((*MockObjectTree)(nil).SetDeferredUpdater), deferred)
+}
+
 // SetFlusher mocks base method.
 func (m *MockObjectTree) SetFlusher(flusher objecttree.Flusher) {
 	m.ctrl.T.Helper()

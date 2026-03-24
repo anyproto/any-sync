@@ -184,6 +184,10 @@ func (s *syncTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, conver
 	return s.ObjectTree.IterateAfterAddSeq(ctx, addSeq, convert, iterate)
 }
 
+func (s *syncTree) SetDeferredUpdater(deferred bool) {
+	s.ObjectTree.SetDeferredUpdater(deferred)
+}
+
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {
 	return s.AddContentWithValidator(ctx, content, nil)
 }
