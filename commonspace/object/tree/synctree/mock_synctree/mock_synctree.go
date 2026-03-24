@@ -346,6 +346,20 @@ func (mr *MockSyncTreeMockRecorder) IsDerived() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDerived", reflect.TypeOf((*MockSyncTree)(nil).IsDerived))
 }
 
+// IterateAfterAddSeq mocks base method.
+func (m *MockSyncTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IterateAfterAddSeq", ctx, addSeq, convert, iterate)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IterateAfterAddSeq indicates an expected call of IterateAfterAddSeq.
+func (mr *MockSyncTreeMockRecorder) IterateAfterAddSeq(ctx, addSeq, convert, iterate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateAfterAddSeq", reflect.TypeOf((*MockSyncTree)(nil).IterateAfterAddSeq), ctx, addSeq, convert, iterate)
+}
+
 // IterateFrom mocks base method.
 func (m *MockSyncTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()

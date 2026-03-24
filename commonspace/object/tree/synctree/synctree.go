@@ -177,6 +177,13 @@ func (s *syncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate obj
 	return s.ObjectTree.IterateRoot(convert, iterate)
 }
 
+func (s *syncTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.IterateAfterAddSeq(ctx, addSeq, convert, iterate)
+}
+
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {
 	return s.AddContentWithValidator(ctx, content, nil)
 }

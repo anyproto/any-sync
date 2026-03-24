@@ -85,6 +85,7 @@ type ReadableObjectTree interface {
 	Debug(parser DescriptionParser) (DebugInfo, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+	IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 }
 
 type ObjectTree interface {
@@ -699,6 +700,48 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		return iterate(c)
 	})
 	return
+}
+
+func (ot *objectTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	if ot.isDeleted {
+		return ErrDeleted
+	}
+	var buf []byte
+	return ot.storage.GetAfterAddSeq(ctx, addSeq, func(ctx context.Context, sc StorageChange) (bool, error) {
+		raw := sc.RawTreeChangeWithId()
+		ch, uErr := ot.changeBuilder.Unmarshall(raw, false)
+		if uErr != nil {
+			return false, uErr
+		}
+		ch.OrderId = sc.OrderId
+		ch.SnapshotCounter = sc.SnapshotCounter
+		ch.AddSeq = sc.AddSeq
+
+		if convert != nil && ch.Id != ot.id {
+			if ch.ReadKeyId != "" {
+				readKey, exists := ot.keys[ch.ReadKeyId]
+				if !exists {
+					return false, list.ErrNoReadKey
+				}
+				if ch.Data == nil {
+					return false, fmt.Errorf("no data in change %s", ch.Id)
+				}
+				buf, uErr = readKey.DecryptReuse(buf, ch.Data)
+				if uErr != nil {
+					return false, uErr
+				}
+			} else {
+				buf = ch.Data
+			}
+			model, cErr := convert(ch, buf)
+			if cErr != nil {
+				return false, cErr
+			}
+			ch.Model = model
+			ch.Data = nil
+		}
+		return iterate(ch), nil
+	})
 }
 
 func (ot *objectTree) HasChanges(chs ...string) bool {
