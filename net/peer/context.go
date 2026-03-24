@@ -18,6 +18,7 @@ const (
 	contextKeyPeerAddr
 	contextKeyPeerClientVersion
 	contextKeyPeerProtoVersion
+	contextKeyExpectedPeerId
 )
 
 var (
@@ -102,4 +103,19 @@ func CtxPubKey(ctx context.Context) (crypto.PubKey, error) {
 // CtxWithIdentity sets identity in the context
 func CtxWithIdentity(ctx context.Context, identity []byte) context.Context {
 	return context.WithValue(ctx, contextKeyIdentity, identity)
+}
+
+// CtxWithExpectedPeerId sets the expected remote peerId in context.
+// Used by WebRTC Dial (especially WASM) where the peerId can't be extracted
+// from the DTLS certificate.
+func CtxWithExpectedPeerId(ctx context.Context, peerId string) context.Context {
+	return context.WithValue(ctx, contextKeyExpectedPeerId, peerId)
+}
+
+// CtxExpectedPeerId returns the expected remote peerId from context.
+func CtxExpectedPeerId(ctx context.Context) (string, error) {
+	if peerId, ok := ctx.Value(contextKeyExpectedPeerId).(string); ok {
+		return peerId, nil
+	}
+	return "", ErrPeerIdNotFoundInContext
 }
