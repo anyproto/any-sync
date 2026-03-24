@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	anystore "github.com/anyproto/any-store"
@@ -79,6 +80,17 @@ func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error
 
 type MockChangeCreator struct {
 	storeCreator func() anystore.DB
+}
+
+// initTestAddSeq sets a default addSeq counter on a storage for tests.
+// In production this is done by spaceStorage.
+func initTestAddSeq(st Storage) {
+	switch s := st.(type) {
+	case *storage:
+		s.SetAddSeq(&atomic.Uint64{})
+	case *storageDeferredCreation:
+		s.SetAddSeq(&atomic.Uint64{})
+	}
 }
 
 type testStorage struct {
@@ -194,6 +206,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 	require.NoError(t, err)
 	storage, err := CreateStorage(ctx, root, headStorage, store)
 	require.NoError(t, err)
+	initTestAddSeq(storage)
 	return &testStorage{
 		Storage: storage,
 	}

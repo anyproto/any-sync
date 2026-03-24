@@ -53,6 +53,21 @@ func (mr *MockHeadStorageMockRecorder) AddObserver(observer any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddObserver", reflect.TypeOf((*MockHeadStorage)(nil).AddObserver), observer)
 }
 
+// MaxLastAddSeq mocks base method.
+func (m *MockHeadStorage) MaxLastAddSeq(ctx context.Context) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MaxLastAddSeq", ctx)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MaxLastAddSeq indicates an expected call of MaxLastAddSeq.
+func (mr *MockHeadStorageMockRecorder) MaxLastAddSeq(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaxLastAddSeq", reflect.TypeOf((*MockHeadStorage)(nil).MaxLastAddSeq), ctx)
+}
+
 // DeleteEntry mocks base method.
 func (m *MockHeadStorage) DeleteEntry(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
