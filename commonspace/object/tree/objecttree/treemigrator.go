@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	anystore "github.com/anyproto/any-store"
 
@@ -84,6 +85,10 @@ func (tm *TreeMigrator) MigrateTreeStorage(ctx context.Context, storage treeStor
 		if err != nil {
 			return fmt.Errorf("migration: failed to start old storage: %w", err)
 		}
+	}
+	// Set up AddSeq counter so storage.AddAll can assign sequence numbers
+	if setter, ok := newStorage.(interface{ SetAddSeq(seq *atomic.Uint64) }); ok {
+		setter.SetAddSeq(&atomic.Uint64{})
 	}
 	objTree, err := BuildMigratableObjectTree(newStorage, tm.aclList)
 	if err != nil {
