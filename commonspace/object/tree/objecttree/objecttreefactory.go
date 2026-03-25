@@ -32,6 +32,7 @@ type HistoryTreeParams struct {
 	AclList         list.AclList
 	Heads           []string
 	IncludeBeforeId bool
+	BuildEmptyData  bool
 }
 
 type objectTreeDeps struct {
@@ -213,7 +214,13 @@ func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error
 	}
 	root := rootChange.RawTreeChangeWithId()
 	// Use real key storage to preserve actual identities, but skip verification
-	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(crypto.NewKeyStorage(), root)}
+	var cb ChangeBuilder
+	if params.BuildEmptyData {
+		cb = NewEmptyDataChangeBuilder(crypto.NewKeyStorage(), root)
+	} else {
+		cb = NewChangeBuilder(crypto.NewKeyStorage(), root)
+	}
+	changeBuilder := &nonVerifiableChangeBuilder{cb}
 	treeBuilder := newTreeBuilder(params.Storage, changeBuilder)
 	deps := objectTreeDeps{
 		changeBuilder: changeBuilder,
@@ -231,7 +238,13 @@ func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	deps := defaultObjectTreeDeps(rootChange.RawTreeChangeWithId(), params.Storage, params.AclList)
+	root := rootChange.RawTreeChangeWithId()
+	var deps objectTreeDeps
+	if params.BuildEmptyData {
+		deps = emptyDataTreeDeps(root, params.Storage, params.AclList)
+	} else {
+		deps = defaultObjectTreeDeps(root, params.Storage, params.AclList)
+	}
 	return buildHistoryTree(deps, params)
 }
 
