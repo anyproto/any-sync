@@ -520,15 +520,18 @@ type InboxPayloadType int32
 
 const (
 	InboxPayloadType_InboxPayloadOneToOneInvite InboxPayloadType = 0
+	InboxPayloadType_InboxPayloadRegularInvite  InboxPayloadType = 1
 )
 
 // Enum value maps for InboxPayloadType.
 var (
 	InboxPayloadType_name = map[int32]string{
 		0: "InboxPayloadOneToOneInvite",
+		1: "InboxPayloadRegularInvite",
 	}
 	InboxPayloadType_value = map[string]int32{
 		"InboxPayloadOneToOneInvite": 0,
+		"InboxPayloadRegularInvite":  1,
 	}
 )
 
@@ -3700,9 +3703,10 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x0fInboxPacketType\x12\v\n" +
 	"\aDefault\x10\x00*\x1b\n" +
 	"\fInboxKeyType\x12\v\n" +
-	"\aed25519\x10\x00*2\n" +
+	"\aed25519\x10\x00*Q\n" +
 	"\x10InboxPayloadType\x12\x1e\n" +
-	"\x1aInboxPayloadOneToOneInvite\x10\x00*`\n" +
+	"\x1aInboxPayloadOneToOneInvite\x10\x00\x12\x1d\n" +
+	"\x19InboxPayloadRegularInvite\x10\x01*`\n" +
 	"\x0fNotifyEventType\x12\x14\n" +
 	"\x10UnspecifiedEvent\x10\x00\x12\x18\n" +
 	"\x14InboxNewMessageEvent\x10\x01\x12\x1d\n" +
