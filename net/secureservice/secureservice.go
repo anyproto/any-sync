@@ -39,11 +39,11 @@ var (
 	// ProtoVersion 10 - reserved (not used, version alignment gap)
 	// ProtoVersion 11 - reserved (not used, version alignment gap)
 	// ProtoVersion 12 will align with v0.12.X
-	ProtoVersion = uint32(9)
+	ProtoVersion = uint32(12)
 )
 
 var (
-	defaultCompatibleVersions = []uint32{8, 9, 12}
+	defaultCompatibleVersions = []uint32{9, 12, 13}
 )
 
 func New() SecureService {
