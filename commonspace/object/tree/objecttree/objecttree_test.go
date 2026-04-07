@@ -22,6 +22,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 var ctx = context.Background()
@@ -245,6 +246,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		err = aTree.Delete()
@@ -298,6 +300,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
@@ -313,6 +316,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
+		initTestAddSeq(bStore)
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
 		err = exec.Execute("a.remove::b")
@@ -408,6 +412,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		treeStorage, err := CreateStorage(ctx, root, headStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(treeStorage)
 		_, err = BuildKeyFilterableObjectTree(treeStorage, beforeAcl)
 		require.True(t, errors.Is(err, list.ErrNoSuchRecord))
 	})
@@ -443,6 +448,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
+		initTestAddSeq(aStore)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
@@ -458,6 +464,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
+		initTestAddSeq(bStore)
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
 		require.NoError(t, err)
@@ -510,6 +517,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		storage, err := CreateStorage(ctx, root, headsStorage, store)
 		require.NoError(t, err)
+		initTestAddSeq(storage)
 		oTree, err := BuildObjectTree(storage, aclList)
 		require.NoError(t, err)
 
@@ -544,8 +552,8 @@ func TestObjectTree(t *testing.T) {
 			require.Equal(t, res.Added[0].Id, oTree.Heads()[0])
 			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0].RawTreeChangeWithId(), true)
 			require.NoError(t, err)
-			require.GreaterOrEqual(t, start.Unix(), ch.Timestamp)
-			require.LessOrEqual(t, end.Unix(), ch.Timestamp)
+			require.GreaterOrEqual(t, ch.Timestamp, start.Unix())
+			require.LessOrEqual(t, ch.Timestamp, end.Unix())
 			require.Equal(t, res.Added[0].Id, oTree.(*objectTree).tree.lastIteratedHeadId)
 			require.Equal(t, mockDataType, ch.DataType)
 		})
@@ -583,6 +591,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
@@ -608,6 +617,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			validateStore := createStore(ctx, t)
@@ -645,6 +655,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -695,6 +706,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			storage, err := CreateStorage(ctx, root, headsStorage, store)
 			require.NoError(t, err)
+			initTestAddSeq(storage)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -1956,4 +1968,124 @@ func TestObjectTree(t *testing.T) {
 		}
 		require.Equal(t, objTree.Heads(), otherTree.Heads())
 	})
+}
+
+func TestObjectTree_IterateFrom_DecryptReuse(t *testing.T) {
+	aclList, _ := prepareAclList(t)
+	exec := list.NewAclExecutor("spaceId")
+	err := exec.Execute("a.init::a")
+	require.NoError(t, err)
+	aAccount := exec.ActualAccounts()["a"]
+
+	store := createStore(ctx, t)
+	root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+		PrivKey:       aAccount.Keys.SignKey,
+		ChangeType:    "changeType",
+		ChangePayload: nil,
+		SpaceId:       "spaceId",
+		IsEncrypted:   true,
+	}, aAccount.Acl)
+	require.NoError(t, err)
+	headStorage, err := headstorage.New(ctx, store)
+	require.NoError(t, err)
+	treeStorage, err := CreateStorage(ctx, root, headStorage, store)
+	require.NoError(t, err)
+	initTestAddSeq(treeStorage)
+	tree, err := BuildKeyFilterableObjectTree(treeStorage, aAccount.Acl)
+	require.NoError(t, err)
+
+	_ = aclList
+	messages := []string{"first", "second", "third", "fourth", "fifth"}
+	for _, msg := range messages {
+		_, err = tree.AddContent(ctx, SignableChangeContent{
+			Data:              []byte(msg),
+			Key:               aAccount.Keys.SignKey,
+			IsSnapshot:        false,
+			ShouldBeEncrypted: true,
+			DataType:          mockDataType,
+		})
+		require.NoError(t, err)
+	}
+
+	var decryptedData [][]byte
+	err = tree.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
+		cp := make([]byte, len(decrypted))
+		copy(cp, decrypted)
+		return string(cp), nil
+	}, func(change *Change) bool {
+		if change.Model != nil {
+			if s, ok := change.Model.(string); ok {
+				decryptedData = append(decryptedData, []byte(s))
+			}
+		}
+		return true
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(messages), len(decryptedData))
+	for i, msg := range messages {
+		require.Equal(t, msg, string(decryptedData[i]))
+	}
+}
+
+func benchmarkIterateFrom(b *testing.B, numChanges int) {
+	key, err := crypto.NewRandomAES()
+	if err != nil {
+		b.Fatal(err)
+	}
+	keyId := "key1"
+
+	tr := new(Tree)
+	tr.AddFast(newSnapshot("root", ""))
+
+	for i := 0; i < numChanges; i++ {
+		id := fmt.Sprint(i + 1)
+		prevId := "root"
+		if i > 0 {
+			prevId = fmt.Sprint(i)
+		}
+		data := []byte(fmt.Sprintf("change data payload number %d with some content", i))
+		encrypted, encErr := key.Encrypt(data)
+		if encErr != nil {
+			b.Fatal(encErr)
+		}
+		ch := newChange(id, "root", prevId)
+		ch.ReadKeyId = keyId
+		ch.Data = encrypted
+		tr.Add(ch)
+	}
+
+	ot := &objectTree{
+		id:   "root",
+		tree: tr,
+		keys: map[string]crypto.SymKey{keyId: key},
+	}
+	convert := func(change *Change, decrypted []byte) (any, error) {
+		return string(decrypted), nil
+	}
+	iterate := func(change *Change) bool {
+		return true
+	}
+
+	// clear cached models before benchmark
+	resetModels := func() {
+		tr.IterateSkip("root", func(c *Change) bool {
+			c.Model = nil
+			return true
+		})
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		resetModels()
+		_ = ot.IterateFrom("root", convert, iterate)
+	}
+}
+
+func BenchmarkObjectTree_IterateFrom_Encrypted100(b *testing.B) {
+	benchmarkIterateFrom(b, 100)
+}
+
+func BenchmarkObjectTree_IterateFrom_Encrypted1000(b *testing.B) {
+	benchmarkIterateFrom(b, 1000)
 }

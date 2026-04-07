@@ -24,6 +24,7 @@ type ObjectTreeDerivePayload struct {
 	ChangePayload []byte
 	SpaceId       string
 	IsEncrypted   bool
+	ParentId      string
 }
 
 type HistoryTreeParams struct {
@@ -31,6 +32,7 @@ type HistoryTreeParams struct {
 	AclList         list.AclList
 	Heads           []string
 	IncludeBeforeId bool
+	BuildEmptyData  bool
 }
 
 type objectTreeDeps struct {
@@ -184,6 +186,18 @@ func BuildEmptyDataKeyFilterableObjectTree(storage Storage, aclList list.AclList
 	return buildObjectTree(deps)
 }
 
+func BuildObjectTreeWithContentValidator(contentValidator func(*Change, list.AclList) error) BuildObjectTreeFunc {
+	return func(storage Storage, aclList list.AclList) (ObjectTree, error) {
+		rootChange, err := storage.Root(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		deps := defaultObjectTreeDeps(rootChange.RawTreeChangeWithId(), storage, aclList)
+		deps.validator = NewTreeValidatorWithContentCheck(false, false, contentValidator)
+		return buildObjectTree(deps)
+	}
+}
+
 func BuildObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := storage.Root(context.Background())
 	if err != nil {
@@ -200,7 +214,13 @@ func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error
 	}
 	root := rootChange.RawTreeChangeWithId()
 	// Use real key storage to preserve actual identities, but skip verification
-	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(crypto.NewKeyStorage(), root)}
+	var cb ChangeBuilder
+	if params.BuildEmptyData {
+		cb = NewEmptyDataChangeBuilder(crypto.NewKeyStorage(), root)
+	} else {
+		cb = NewChangeBuilder(crypto.NewKeyStorage(), root)
+	}
+	changeBuilder := &nonVerifiableChangeBuilder{cb}
 	treeBuilder := newTreeBuilder(params.Storage, changeBuilder)
 	deps := objectTreeDeps{
 		changeBuilder: changeBuilder,
@@ -218,7 +238,13 @@ func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	deps := defaultObjectTreeDeps(rootChange.RawTreeChangeWithId(), params.Storage, params.AclList)
+	root := rootChange.RawTreeChangeWithId()
+	var deps objectTreeDeps
+	if params.BuildEmptyData {
+		deps = emptyDataTreeDeps(root, params.Storage, params.AclList)
+	} else {
+		deps = defaultObjectTreeDeps(root, params.Storage, params.AclList)
+	}
 	return buildHistoryTree(deps, params)
 }
 
@@ -245,6 +271,7 @@ func DeriveObjectTreeRoot(payload ObjectTreeDerivePayload, aclList list.AclList)
 		SpaceId:       payload.SpaceId,
 		ChangeType:    payload.ChangeType,
 		ChangePayload: payload.ChangePayload,
+		ParentId:      payload.ParentId,
 	}
 	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildDerivedRoot(cnt)
 	return

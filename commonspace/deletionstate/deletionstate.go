@@ -42,7 +42,7 @@ type objectDeletionState struct {
 }
 
 func (st *objectDeletionState) Run(ctx context.Context) (err error) {
-	return st.storage.IterateEntries(ctx, headstorage.IterOpts{Deleted: true}, func(entry headstorage.HeadsEntry) (bool, error) {
+	err = st.storage.IterateEntries(ctx, headstorage.IterOpts{Deleted: true}, func(entry headstorage.HeadsEntry) (bool, error) {
 		switch entry.DeletedStatus {
 		case headstorage.DeletedStatusQueued:
 			st.queued[entry.Id] = struct{}{}
@@ -52,6 +52,28 @@ func (st *objectDeletionState) Run(ctx context.Context) (err error) {
 		}
 		return true, nil
 	})
+	if err != nil {
+		return err
+	}
+	// Scan for orphaned children of fully deleted parents.
+	// This handles the case where an old client deleted a parent without
+	// cascading to bound children. After upgrade, this queues them for cleanup.
+	for parentId := range st.deleted {
+		children, cErr := st.storage.GetEntriesByParentId(ctx, parentId)
+		if cErr != nil {
+			continue
+		}
+		for _, child := range children {
+			if child.DeletedStatus == headstorage.DeletedStatusNotDeleted {
+				if uErr := st.updateStatus(child.Id, headstorage.DeletedStatusQueued); uErr != nil {
+					st.log.Warn("failed to queue orphaned child", zap.String("childId", child.Id), zap.Error(uErr))
+					continue
+				}
+				st.queued[child.Id] = struct{}{}
+			}
+		}
+	}
+	return nil
 }
 
 func (st *objectDeletionState) Close(ctx context.Context) (err error) {

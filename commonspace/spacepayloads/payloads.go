@@ -40,6 +40,8 @@ type SpaceCreatePayload struct {
 	MetadataKey crypto.PrivKey
 	// Metadata is the metadata of the owner
 	Metadata []byte
+	// Options is the ACL space options (e.g. delete restrictions)
+	Options *aclrecordproto.AclSpaceOptions
 }
 
 type SpaceDerivePayload struct {
@@ -109,6 +111,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 			ReadKey:     payload.ReadKey,
 		},
 		Metadata: payload.Metadata,
+		Options:  payload.Options,
 	})
 	if err != nil {
 		return
@@ -176,6 +179,7 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 			ReadKey:     payload.ReadKey,
 		},
 		Metadata: payload.Metadata,
+		Options:  payload.Options,
 	})
 	if err != nil {
 		return

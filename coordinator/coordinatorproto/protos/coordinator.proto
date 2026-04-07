@@ -447,6 +447,7 @@ message InboxPacket {
 
 enum InboxPayloadType {
   InboxPayloadOneToOneInvite = 0;
+  InboxPayloadRegularInvite = 1;
 }
 
 message InboxPayload {

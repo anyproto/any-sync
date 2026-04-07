@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "common.commonspace.settings"
@@ -45,12 +46,15 @@ func (s *settings) Init(a *app.App) (err error) {
 	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 
+	getAuthor := func(objectId string) (crypto.PubKey, error) {
+		return objectAuthor(s.storage, objectId)
+	}
 	deps := Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.treeBuilder.BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{
 				Listener: listener,
 				// space settings document should not have empty data
-				TreeBuilder: objecttree.BuildObjectTree,
+				TreeBuilder: objecttree.BuildObjectTreeWithContentValidator(newSettingsContentValidator(getAuthor)),
 			})
 			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", sharedState.SpaceId))
 			if err != nil {

@@ -18,6 +18,8 @@ const (
 	idKey               = "id"
 	DeletedStatusKey    = "d"
 	derivedStatusKey    = "r"
+	parentIdKey         = "p"
+	lastAddSeqKey       = "q"
 	HeadsCollectionName = "heads"
 )
 
@@ -35,6 +37,8 @@ type HeadsEntry struct {
 	CommonSnapshot string
 	DeletedStatus  DeletedStatus
 	IsDerived      bool
+	ParentId       string
+	LastAddSeq     uint64
 }
 
 type HeadsUpdate struct {
@@ -43,6 +47,8 @@ type HeadsUpdate struct {
 	CommonSnapshot *string
 	DeletedStatus  *DeletedStatus
 	IsDerived      *bool
+	ParentId       *string
+	LastAddSeq     *uint64
 }
 
 type EntryIterator func(entry HeadsEntry) (bool, error)
@@ -55,6 +61,8 @@ type HeadStorage interface {
 	AddObserver(observer Observer)
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
+	GetEntriesByParentId(ctx context.Context, parentId string) ([]HeadsEntry, error)
+	MaxLastAddSeq(ctx context.Context) (uint64, error)
 	DeleteEntry(ctx context.Context, id string) error
 	UpdateEntry(ctx context.Context, update HeadsUpdate) error
 }
@@ -85,7 +93,22 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		Fields: []string{DeletedStatusKey},
 		Sparse: true,
 	}
-	return st, st.headsColl.EnsureIndex(ctx, deletedIdx)
+	parentIdx := anystore.IndexInfo{
+		Name:   parentIdKey,
+		Fields: []string{parentIdKey},
+		Sparse: true,
+	}
+	lastAddSeqIdx := anystore.IndexInfo{
+		Name:   lastAddSeqKey,
+		Fields: []string{lastAddSeqKey},
+	}
+	if err := st.headsColl.EnsureIndex(ctx, deletedIdx); err != nil {
+		return nil, err
+	}
+	if err := st.headsColl.EnsureIndex(ctx, parentIdx); err != nil {
+		return nil, err
+	}
+	return st, st.headsColl.EnsureIndex(ctx, lastAddSeqIdx)
 }
 
 func (h *headStorage) AddObserver(observer Observer) {
@@ -171,6 +194,18 @@ func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err 
 			}
 		}
 
+		if update.ParentId != nil {
+			if storeutil.ModifyKey(v, parentIdKey, a.NewString(*update.ParentId)) {
+				modified = true
+			}
+		}
+
+		if update.LastAddSeq != nil {
+			if storeutil.ModifyKey(v, lastAddSeqKey, a.NewNumberInt(int(*update.LastAddSeq))) {
+				modified = true
+			}
+		}
+
 		resultEntry = entryFromVal(v)
 		return v, modified, nil
 	})
@@ -178,8 +213,43 @@ func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err 
 	return
 }
 
+func (h *headStorage) MaxLastAddSeq(ctx context.Context) (uint64, error) {
+	iter, err := h.headsColl.Find(nil).Sort("-" + lastAddSeqKey).Limit(1).Iter(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer iter.Close()
+	if iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return 0, err
+		}
+		return uint64(doc.Value().GetInt(lastAddSeqKey)), nil
+	}
+	return 0, nil
+}
+
 func (h *headStorage) DeleteEntry(ctx context.Context, id string) error {
 	return h.headsColl.DeleteId(ctx, id)
+}
+
+func (h *headStorage) GetEntriesByParentId(ctx context.Context, parentId string) ([]HeadsEntry, error) {
+	qry := query.Key{Path: []string{parentIdKey}, Filter: query.NewComp(query.CompOpEq, parentId)}
+	iter, err := h.headsColl.Find(qry).Iter(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("find by parent id: %w", err)
+	}
+	defer iter.Close()
+
+	var entries []HeadsEntry
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return nil, fmt.Errorf("doc not found: %w", err)
+		}
+		entries = append(entries, entryFromVal(doc.Value()))
+	}
+	return entries, nil
 }
 
 func entryFromVal(val *anyenc.Value) HeadsEntry {
@@ -189,5 +259,7 @@ func entryFromVal(val *anyenc.Value) HeadsEntry {
 		CommonSnapshot: val.GetString(commonSnapshotKey),
 		DeletedStatus:  DeletedStatus(val.GetInt(DeletedStatusKey)),
 		IsDerived:      val.GetBool(derivedStatusKey),
+		ParentId:       val.GetString(parentIdKey),
+		LastAddSeq:     uint64(val.GetInt(lastAddSeqKey)),
 	}
 }
