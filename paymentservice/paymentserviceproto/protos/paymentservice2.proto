@@ -134,6 +134,12 @@ message MembershipV2 {
     uint64 nextInvoiceDate = 4;
   }
 
+  message CryptoCheckout {
+    string invoiceURL = 1;
+    Amount total = 2;
+    bool isCanCancel = 3;
+  }
+
   message GetProductsRequest {
 
   }
@@ -151,6 +157,8 @@ message MembershipV2 {
     MembershipV2.Invoice nextInvoice = 2;
     string teamOwnerID = 3;
     MembershipV2.PaymentProvider paymentProvider = 4;
+    // if crypto checkout is in process
+    MembershipV2.CryptoCheckout cryptoCheckout = 5;
   }
 
   message StoreCartGetRequest {
