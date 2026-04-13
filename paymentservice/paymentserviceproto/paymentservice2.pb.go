@@ -987,10 +987,11 @@ type MembershipV2_Cart struct {
 	Total *MembershipV2_Amount `protobuf:"bytes,2,opt,name=total,proto3" json:"total,omitempty"`
 	// in case you are paying in the middle of the period (for existing customers)
 	// the next invoice amount will also be generated
-	TotalNextInvoice *MembershipV2_Amount `protobuf:"bytes,3,opt,name=totalNextInvoice,proto3" json:"totalNextInvoice,omitempty"`
-	NextInvoiceDate  uint64               `protobuf:"varint,4,opt,name=nextInvoiceDate,proto3" json:"nextInvoiceDate,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	TotalNextInvoice  *MembershipV2_Amount `protobuf:"bytes,3,opt,name=totalNextInvoice,proto3" json:"totalNextInvoice,omitempty"`
+	NextInvoiceDate   uint64               `protobuf:"varint,4,opt,name=nextInvoiceDate,proto3" json:"nextInvoiceDate,omitempty"`
+	AppliedPromocodes []string             `protobuf:"bytes,5,rep,name=appliedPromocodes,proto3" json:"appliedPromocodes,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *MembershipV2_Cart) Reset() {
@@ -1049,6 +1050,13 @@ func (x *MembershipV2_Cart) GetNextInvoiceDate() uint64 {
 		return x.NextInvoiceDate
 	}
 	return 0
+}
+
+func (x *MembershipV2_Cart) GetAppliedPromocodes() []string {
+	if x != nil {
+		return x.AppliedPromocodes
+	}
+	return nil
 }
 
 type MembershipV2_CryptoCheckout struct {
@@ -1228,13 +1236,14 @@ func (*MembershipV2_GetStatusRequest) Descriptor() ([]byte, []int) {
 }
 
 type MembershipV2_GetStatusResponse struct {
-	state           protoimpl.MessageState           `protogen:"open.v1"`
-	Products        []*MembershipV2_PurchasedProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
-	NextInvoice     *MembershipV2_Invoice            `protobuf:"bytes,2,opt,name=nextInvoice,proto3" json:"nextInvoice,omitempty"`
-	TeamOwnerID     string                           `protobuf:"bytes,3,opt,name=teamOwnerID,proto3" json:"teamOwnerID,omitempty"`
-	PaymentProvider MembershipV2_PaymentProvider     `protobuf:"varint,4,opt,name=paymentProvider,proto3,enum=MembershipV2_PaymentProvider" json:"paymentProvider,omitempty"`
+	state             protoimpl.MessageState           `protogen:"open.v1"`
+	Products          []*MembershipV2_PurchasedProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	NextInvoice       *MembershipV2_Invoice            `protobuf:"bytes,2,opt,name=nextInvoice,proto3" json:"nextInvoice,omitempty"`
+	TeamOwnerID       string                           `protobuf:"bytes,3,opt,name=teamOwnerID,proto3" json:"teamOwnerID,omitempty"`
+	PaymentProvider   MembershipV2_PaymentProvider     `protobuf:"varint,4,opt,name=paymentProvider,proto3,enum=MembershipV2_PaymentProvider" json:"paymentProvider,omitempty"`
+	AppliedPromocodes []string                         `protobuf:"bytes,5,rep,name=appliedPromocodes,proto3" json:"appliedPromocodes,omitempty"`
 	// if crypto checkout is in process
-	CryptoCheckout *MembershipV2_CryptoCheckout `protobuf:"bytes,5,opt,name=cryptoCheckout,proto3" json:"cryptoCheckout,omitempty"`
+	CryptoCheckout *MembershipV2_CryptoCheckout `protobuf:"bytes,6,opt,name=cryptoCheckout,proto3" json:"cryptoCheckout,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1295,6 +1304,13 @@ func (x *MembershipV2_GetStatusResponse) GetPaymentProvider() MembershipV2_Payme
 		return x.PaymentProvider
 	}
 	return MembershipV2_None
+}
+
+func (x *MembershipV2_GetStatusResponse) GetAppliedPromocodes() []string {
+	if x != nil {
+		return x.AppliedPromocodes
+	}
+	return nil
 }
 
 func (x *MembershipV2_GetStatusResponse) GetCryptoCheckout() *MembershipV2_CryptoCheckout {
@@ -1517,6 +1533,7 @@ type MembershipV2_StoreCartUpdateRequest struct {
 	state           protoimpl.MessageState      `protogen:"open.v1"`
 	Products        []*MembershipV2_CartProduct `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
 	OwnerEthAddress string                      `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	Promocodes      []string                    `protobuf:"bytes,3,rep,name=promocodes,proto3" json:"promocodes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1563,6 +1580,13 @@ func (x *MembershipV2_StoreCartUpdateRequest) GetOwnerEthAddress() string {
 		return x.OwnerEthAddress
 	}
 	return ""
+}
+
+func (x *MembershipV2_StoreCartUpdateRequest) GetPromocodes() []string {
+	if x != nil {
+		return x.Promocodes
+	}
+	return nil
 }
 
 type MembershipV2_StoreCartUpdateResponse struct {
@@ -2032,7 +2056,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xdf\x1d\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xdc\x1e\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -2089,12 +2113,13 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x06Status\x12\n" +
 	"\n" +
 	"\x06Unpaid\x10\x00\x12\b\n" +
-	"\x04Paid\x10\x01\x1a\xd5\x01\n" +
+	"\x04Paid\x10\x01\x1a\x83\x02\n" +
 	"\x04Cart\x125\n" +
 	"\bproducts\x18\x01 \x03(\v2\x19.MembershipV2.CartProductR\bproducts\x12*\n" +
 	"\x05total\x18\x02 \x01(\v2\x14.MembershipV2.AmountR\x05total\x12@\n" +
 	"\x10totalNextInvoice\x18\x03 \x01(\v2\x14.MembershipV2.AmountR\x10totalNextInvoice\x12(\n" +
-	"\x0fnextInvoiceDate\x18\x04 \x01(\x04R\x0fnextInvoiceDate\x1a~\n" +
+	"\x0fnextInvoiceDate\x18\x04 \x01(\x04R\x0fnextInvoiceDate\x12,\n" +
+	"\x11appliedPromocodes\x18\x05 \x03(\tR\x11appliedPromocodes\x1a~\n" +
 	"\x0eCryptoCheckout\x12\x1e\n" +
 	"\n" +
 	"invoiceURL\x18\x01 \x01(\tR\n" +
@@ -2104,13 +2129,14 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x12GetProductsRequest\x1aH\n" +
 	"\x13GetProductsResponse\x121\n" +
 	"\bproducts\x18\x01 \x03(\v2\x15.MembershipV2.ProductR\bproducts\x1a\x12\n" +
-	"\x10GetStatusRequest\x1a\xb9\x02\n" +
+	"\x10GetStatusRequest\x1a\xe7\x02\n" +
 	"\x11GetStatusResponse\x12:\n" +
 	"\bproducts\x18\x01 \x03(\v2\x1e.MembershipV2.PurchasedProductR\bproducts\x127\n" +
 	"\vnextInvoice\x18\x02 \x01(\v2\x15.MembershipV2.InvoiceR\vnextInvoice\x12 \n" +
 	"\vteamOwnerID\x18\x03 \x01(\tR\vteamOwnerID\x12G\n" +
-	"\x0fpaymentProvider\x18\x04 \x01(\x0e2\x1d.MembershipV2.PaymentProviderR\x0fpaymentProvider\x12D\n" +
-	"\x0ecryptoCheckout\x18\x05 \x01(\v2\x1c.MembershipV2.CryptoCheckoutR\x0ecryptoCheckout\x1a\x15\n" +
+	"\x0fpaymentProvider\x18\x04 \x01(\x0e2\x1d.MembershipV2.PaymentProviderR\x0fpaymentProvider\x12,\n" +
+	"\x11appliedPromocodes\x18\x05 \x03(\tR\x11appliedPromocodes\x12D\n" +
+	"\x0ecryptoCheckout\x18\x06 \x01(\v2\x1c.MembershipV2.CryptoCheckoutR\x0ecryptoCheckout\x1a\x15\n" +
 	"\x13StoreCartGetRequest\x1a>\n" +
 	"\x14StoreCartGetResponse\x12&\n" +
 	"\x04cart\x18\x01 \x01(\v2\x12.MembershipV2.CartR\x04cart\x1a>\n" +
@@ -2120,10 +2146,13 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x19StoreCartCheckoutResponse\x12\x1e\n" +
 	"\n" +
 	"paymentUrl\x18\x01 \x01(\tR\n" +
-	"paymentUrl\x1ay\n" +
+	"paymentUrl\x1a\x99\x01\n" +
 	"\x16StoreCartUpdateRequest\x125\n" +
 	"\bproducts\x18\x01 \x03(\v2\x19.MembershipV2.CartProductR\bproducts\x12(\n" +
-	"\x0fownerEthAddress\x18\x02 \x01(\tR\x0fownerEthAddress\x1aA\n" +
+	"\x0fownerEthAddress\x18\x02 \x01(\tR\x0fownerEthAddress\x12\x1e\n" +
+	"\n" +
+	"promocodes\x18\x03 \x03(\tR\n" +
+	"promocodes\x1aA\n" +
 	"\x17StoreCartUpdateResponse\x12&\n" +
 	"\x04cart\x18\x01 \x01(\v2\x12.MembershipV2.CartR\x04cart\x1a\x17\n" +
 	"\x15StoreCartClearRequest\x1a\x10\n" +
