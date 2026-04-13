@@ -12,10 +12,11 @@ message MembershipV2 {
   }
 
   enum Period {
-    Unlimited = 0;
+    Unlimited = 0 [deprecated = true];
     Monthly = 1;
     Yearly = 2;
     ThreeYears = 3;
+    Lifetime = 4;
   }
 
   enum Platform {

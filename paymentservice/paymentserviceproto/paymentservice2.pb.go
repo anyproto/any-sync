@@ -82,10 +82,12 @@ func (MembershipV2_PaymentProvider) EnumDescriptor() ([]byte, []int) {
 type MembershipV2_Period int32
 
 const (
+	// Deprecated: Marked as deprecated in paymentservice/paymentserviceproto/protos/paymentservice2.proto.
 	MembershipV2_Unlimited  MembershipV2_Period = 0
 	MembershipV2_Monthly    MembershipV2_Period = 1
 	MembershipV2_Yearly     MembershipV2_Period = 2
 	MembershipV2_ThreeYears MembershipV2_Period = 3
+	MembershipV2_Lifetime   MembershipV2_Period = 4
 )
 
 // Enum value maps for MembershipV2_Period.
@@ -95,12 +97,14 @@ var (
 		1: "Monthly",
 		2: "Yearly",
 		3: "ThreeYears",
+		4: "Lifetime",
 	}
 	MembershipV2_Period_value = map[string]int32{
 		"Unlimited":  0,
 		"Monthly":    1,
 		"Yearly":     2,
 		"ThreeYears": 3,
+		"Lifetime":   4,
 	}
 )
 
@@ -2067,7 +2071,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xfd\x1e\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\x8f\x1f\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -2206,14 +2210,15 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\rBillingPortal\x10\x03\x12\f\n" +
 	"\bAppStore\x10\x04\x12\x0e\n" +
 	"\n" +
-	"GooglePlay\x10\x05\"@\n" +
-	"\x06Period\x12\r\n" +
-	"\tUnlimited\x10\x00\x12\v\n" +
+	"GooglePlay\x10\x05\"R\n" +
+	"\x06Period\x12\x11\n" +
+	"\tUnlimited\x10\x00\x1a\x02\b\x01\x12\v\n" +
 	"\aMonthly\x10\x01\x12\n" +
 	"\n" +
 	"\x06Yearly\x10\x02\x12\x0e\n" +
 	"\n" +
-	"ThreeYears\x10\x03\"O\n" +
+	"ThreeYears\x10\x03\x12\f\n" +
+	"\bLifetime\x10\x04\"O\n" +
 	"\bPlatform\x12\v\n" +
 	"\aUnknown\x10\x00\x12\v\n" +
 	"\aDesktop\x10\x01\x12\r\n" +
