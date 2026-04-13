@@ -585,6 +585,15 @@ func (m *MembershipV2_Cart) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.AppliedPromocodes) > 0 {
+		for iNdEx := len(m.AppliedPromocodes) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AppliedPromocodes[iNdEx])
+			copy(dAtA[i:], m.AppliedPromocodes[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AppliedPromocodes[iNdEx])))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if m.NextInvoiceDate != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.NextInvoiceDate))
 		i--
@@ -765,6 +774,15 @@ func (m *MembershipV2_GetStatusResponse) MarshalToSizedBufferVT(dAtA []byte) (in
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.AppliedPromocodes) > 0 {
+		for iNdEx := len(m.AppliedPromocodes) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AppliedPromocodes[iNdEx])
+			copy(dAtA[i:], m.AppliedPromocodes[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AppliedPromocodes[iNdEx])))
+			i--
+			dAtA[i] = 0x2a
+		}
 	}
 	if m.PaymentProvider != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.PaymentProvider))
@@ -1021,6 +1039,15 @@ func (m *MembershipV2_StoreCartUpdateRequest) MarshalToSizedBufferVT(dAtA []byte
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.Promocodes) > 0 {
+		for iNdEx := len(m.Promocodes) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Promocodes[iNdEx])
+			copy(dAtA[i:], m.Promocodes[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Promocodes[iNdEx])))
+			i--
+			dAtA[i] = 0x1a
+		}
 	}
 	if len(m.OwnerEthAddress) > 0 {
 		i -= len(m.OwnerEthAddress)
@@ -1723,6 +1750,12 @@ func (m *MembershipV2_Cart) SizeVT() (n int) {
 	if m.NextInvoiceDate != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.NextInvoiceDate))
 	}
+	if len(m.AppliedPromocodes) > 0 {
+		for _, s := range m.AppliedPromocodes {
+			l = len(s)
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
+	}
 	n += len(m.unknownFields)
 	return n
 }
@@ -1785,6 +1818,12 @@ func (m *MembershipV2_GetStatusResponse) SizeVT() (n int) {
 	}
 	if m.PaymentProvider != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.PaymentProvider))
+	}
+	if len(m.AppliedPromocodes) > 0 {
+		for _, s := range m.AppliedPromocodes {
+			l = len(s)
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
 	}
 	n += len(m.unknownFields)
 	return n
@@ -1867,6 +1906,12 @@ func (m *MembershipV2_StoreCartUpdateRequest) SizeVT() (n int) {
 	l = len(m.OwnerEthAddress)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if len(m.Promocodes) > 0 {
+		for _, s := range m.Promocodes {
+			l = len(s)
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
 	}
 	n += len(m.unknownFields)
 	return n
@@ -3503,6 +3548,38 @@ func (m *MembershipV2_Cart) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AppliedPromocodes", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AppliedPromocodes = append(m.AppliedPromocodes, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -3862,6 +3939,38 @@ func (m *MembershipV2_GetStatusResponse) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AppliedPromocodes", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AppliedPromocodes = append(m.AppliedPromocodes, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -4333,6 +4442,38 @@ func (m *MembershipV2_StoreCartUpdateRequest) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Promocodes", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Promocodes = append(m.Promocodes, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
