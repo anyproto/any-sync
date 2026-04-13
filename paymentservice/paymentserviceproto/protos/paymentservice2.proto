@@ -102,11 +102,15 @@ message MembershipV2 {
 
   message CartProduct {
     Product product = 1;    
-    // otherwise - monthly
+    // otherwise - monthly or isLifetime
     bool isYearly = 2;
     // set to true if you want to remove this item from the customer
     // it's like setting -1 to some product
     bool remove = 3;
+    // if true - then this is lifetime product (no matter what isYearly above is)
+    // unfortunately we do not use Period here to keep compatibility with old versions 
+    // that still use isYearly! 
+    bool isLifetime = 4;
   }
 
   message Invoice {

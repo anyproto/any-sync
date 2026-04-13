@@ -850,11 +850,15 @@ func (x *MembershipV2_PurchasedProduct) GetProductStatus() *MembershipV2_Product
 type MembershipV2_CartProduct struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Product *MembershipV2_Product  `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
-	// otherwise - monthly
+	// otherwise - monthly or isLifetime
 	IsYearly bool `protobuf:"varint,2,opt,name=isYearly,proto3" json:"isYearly,omitempty"`
 	// set to true if you want to remove this item from the customer
 	// it's like setting -1 to some product
-	Remove        bool `protobuf:"varint,3,opt,name=remove,proto3" json:"remove,omitempty"`
+	Remove bool `protobuf:"varint,3,opt,name=remove,proto3" json:"remove,omitempty"`
+	// if true - then this is lifetime product (no matter what isYearly above is)
+	// unfortunately we do not use Period here to keep compatibility with old versions
+	// that still use isYearly!
+	IsLifetime    bool `protobuf:"varint,4,opt,name=isLifetime,proto3" json:"isLifetime,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -906,6 +910,13 @@ func (x *MembershipV2_CartProduct) GetIsYearly() bool {
 func (x *MembershipV2_CartProduct) GetRemove() bool {
 	if x != nil {
 		return x.Remove
+	}
+	return false
+}
+
+func (x *MembershipV2_CartProduct) GetIsLifetime() bool {
+	if x != nil {
+		return x.IsLifetime
 	}
 	return false
 }
@@ -2056,7 +2067,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xdc\x1e\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xfd\x1e\n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -2100,11 +2111,14 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x10PurchasedProduct\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.MembershipV2.ProductR\aproduct\x12>\n" +
 	"\fpurchaseInfo\x18\x02 \x01(\v2\x1a.MembershipV2.PurchaseInfoR\fpurchaseInfo\x12A\n" +
-	"\rproductStatus\x18\x03 \x01(\v2\x1b.MembershipV2.ProductStatusR\rproductStatus\x1ar\n" +
+	"\rproductStatus\x18\x03 \x01(\v2\x1b.MembershipV2.ProductStatusR\rproductStatus\x1a\x92\x01\n" +
 	"\vCartProduct\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.MembershipV2.ProductR\aproduct\x12\x1a\n" +
 	"\bisYearly\x18\x02 \x01(\bR\bisYearly\x12\x16\n" +
-	"\x06remove\x18\x03 \x01(\bR\x06remove\x1a\xaf\x01\n" +
+	"\x06remove\x18\x03 \x01(\bR\x06remove\x12\x1e\n" +
+	"\n" +
+	"isLifetime\x18\x04 \x01(\bR\n" +
+	"isLifetime\x1a\xaf\x01\n" +
 	"\aInvoice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04date\x18\x02 \x01(\x04R\x04date\x12*\n" +
