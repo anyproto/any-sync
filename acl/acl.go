@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -49,11 +50,13 @@ type aclService struct {
 	consService    consensusclient.Service
 	cache          ocache.OCache
 	accountService commonaccount.Service
+	nodeConf       nodeconf.NodeConf
 }
 
 func (as *aclService) Init(a *app.App) (err error) {
 	as.consService = app.MustComponent[consensusclient.Service](a)
 	as.accountService = app.MustComponent[commonaccount.Service](a)
+	as.nodeConf = app.MustComponent[nodeconf.Service](a)
 
 	var metricReg *prometheus.Registry
 	if m := a.Component(metric.CName); m != nil {

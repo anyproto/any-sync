@@ -211,19 +211,18 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if deps.Indexer != nil {
 		keyValueIndexer = deps.Indexer
 	}
-	recordVerifier := recordverifier.New()
+	recordVerifier := recordverifier.New(s.configurationService)
 	if deps.recordVerifier != nil {
 		recordVerifier = deps.recordVerifier
 	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
-		Register(recordVerifier).
 		Register(peerManager).
 		Register(st).
 		Register(keyValueIndexer).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
-		Register(syncacl.New()).
+		Register(syncacl.New(recordVerifier)).
 		Register(keyvalue.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
@@ -349,7 +348,7 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		if err != nil {
 			return nil, err
 		}
-		recordVerifier := recordverifier.New()
+		recordVerifier := recordverifier.New(s.configurationService)
 		if deps.recordVerifier != nil {
 			recordVerifier = deps.recordVerifier
 		}

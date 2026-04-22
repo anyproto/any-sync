@@ -15,6 +15,8 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusclient/mock_consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 )
 
@@ -218,7 +220,14 @@ func newFixture(t *testing.T) *fixture {
 	fx.consCl.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.consCl.EXPECT().Close(gomock.Any()).AnyTimes()
 
-	fx.a.Register(fx.consCl).Register(fx.AclService).Register(&accounttest.AccountTestService{})
+	nc := mock_nodeconf.NewMockService(ctrl)
+	nc.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	nc.EXPECT().Init(gomock.Any()).AnyTimes()
+	nc.EXPECT().Run(gomock.Any()).AnyTimes()
+	nc.EXPECT().Close(gomock.Any()).AnyTimes()
+	nc.EXPECT().ConsensusPeers().Return(nil).AnyTimes()
+
+	fx.a.Register(fx.consCl).Register(fx.AclService).Register(&accounttest.AccountTestService{}).Register(nc)
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx

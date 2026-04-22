@@ -39,6 +39,10 @@ func createStore(ctx context.Context, t *testing.T) anystore.DB {
 
 var mockMetadata = []byte("very important metadata")
 
+type noConsensusPeers struct{}
+
+func (noConsensusPeers) ConsensusPeers() []string { return nil }
+
 func newFixture(t *testing.T) *aclFixture {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
@@ -313,8 +317,8 @@ func TestAclList_MetadataDecrypt(t *testing.T) {
 func TestAclList_ValidateUsesCorrectVerifier(t *testing.T) {
 	fx := newFixture(t)
 	var ownerAcl = fx.ownerAcl
-	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New()
-	ownerAcl.verifier = recordverifier.New()
+	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New(noConsensusPeers{})
+	ownerAcl.verifier = recordverifier.New(noConsensusPeers{})
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)

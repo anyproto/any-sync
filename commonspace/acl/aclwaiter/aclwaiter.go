@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
@@ -32,8 +33,9 @@ type AclWaiter interface {
 }
 
 type aclWaiter struct {
-	client aclclient.AclJoiningClient
-	keys   *accountdata.AccountKeys
+	client   aclclient.AclJoiningClient
+	keys     *accountdata.AccountKeys
+	nodeConf nodeconf.NodeConf
 
 	periodicCall periodicsync.PeriodicSync
 
@@ -59,6 +61,7 @@ func New(spaceId string, aclHeadId string, onFinish, onReject func(acl list.AclL
 func (a *aclWaiter) Init(app *app.App) (err error) {
 	a.client = app.MustComponent(aclclient.CName).(aclclient.AclJoiningClient)
 	a.keys = app.MustComponent(accountservice.CName).(accountservice.Service).Account()
+	a.nodeConf = app.MustComponent(nodeconf.CName).(nodeconf.Service)
 	a.periodicCall = periodicsync.NewPeriodicSync(checkIntervalSecs, timeout, a.loop, log.With(zap.String("spaceId", a.spaceId)))
 	return nil
 }
@@ -83,7 +86,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.New())
+		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.New(a.nodeConf))
 		if err != nil {
 			return err
 		}
