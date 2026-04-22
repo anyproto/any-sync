@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/node/nodeclient"
+	"github.com/anyproto/any-sync/nodeconf"
 )
 
 const CName = "common.acl.aclclient"
@@ -28,6 +29,7 @@ type AclJoiningClient interface {
 
 type aclJoiningClient struct {
 	nodeClient nodeclient.NodeClient
+	nodeConf   nodeconf.NodeConf
 	keys       *accountdata.AccountKeys
 }
 
@@ -41,6 +43,7 @@ func (c *aclJoiningClient) Name() (name string) {
 
 func (c *aclJoiningClient) Init(a *app.App) (err error) {
 	c.nodeClient = a.MustComponent(nodeclient.CName).(nodeclient.NodeClient)
+	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	c.keys = a.MustComponent(accountservice.CName).(accountservice.Service).Account()
 	return nil
 }
@@ -62,7 +65,7 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 	if err != nil {
 		return
 	}
-	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New())
+	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New(c.nodeConf))
 }
 
 func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {

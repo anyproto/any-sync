@@ -37,14 +37,15 @@ type SyncAcl interface {
 	SetAclUpdater(updater headupdater.AclUpdater)
 }
 
-func New() SyncAcl {
-	return &syncAcl{}
+func New(verifier recordverifier.RecordVerifier) SyncAcl {
+	return &syncAcl{verifier: verifier}
 }
 
 type syncAcl struct {
 	list.AclList
 	syncdeps.ObjectSyncHandler
 	syncClient SyncClient
+	verifier   recordverifier.RecordVerifier
 	isClosed   bool
 	aclUpdater headupdater.AclUpdater
 }
@@ -68,8 +69,7 @@ func (s *syncAcl) Init(a *app.App) (err error) {
 		return err
 	}
 	acc := a.MustComponent(accountservice.CName).(accountservice.Service)
-	verifier := a.MustComponent(recordverifier.CName).(recordverifier.RecordVerifier)
-	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, verifier)
+	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, s.verifier)
 	if err != nil {
 		return
 	}
