@@ -60,6 +60,8 @@ type SymKey interface {
 
 	// Decrypt decrypts the message and returns the result
 	Decrypt(message []byte) ([]byte, error)
+	// DecryptReuse is like Decrypt but reuses dst's underlying array to avoid allocation.
+	DecryptReuse(dst, message []byte) ([]byte, error)
 	// Encrypt encrypts the message and returns the result
 	Encrypt(message []byte) ([]byte, error)
 	// Marshall wraps key in proto encoding and marshalls it

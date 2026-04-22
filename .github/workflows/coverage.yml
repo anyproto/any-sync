@@ -1,15 +1,15 @@
+name: Coverage
+
 on:
   pull_request:
     branches:
       - main
-
-name: coverage
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  release-reusable:
-    uses: anyproto/any-sync-node/.github/workflows/coverage-reusable.yml@main
+  coverage-reusable:
+    uses: anyproto/shared-actions/.github/workflows/coverage-go-daemons-reusable.yml@v1
     secrets: inherit # pass all secrets

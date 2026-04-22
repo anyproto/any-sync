@@ -279,6 +279,20 @@ func (mr *MockObjectTreeMockRecorder) IsDerived() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDerived", reflect.TypeOf((*MockObjectTree)(nil).IsDerived))
 }
 
+// IterateAfterAddSeq mocks base method.
+func (m *MockObjectTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IterateAfterAddSeq", ctx, addSeq, convert, iterate)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IterateAfterAddSeq indicates an expected call of IterateAfterAddSeq.
+func (mr *MockObjectTreeMockRecorder) IterateAfterAddSeq(ctx, addSeq, convert, iterate any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateAfterAddSeq", reflect.TypeOf((*MockObjectTree)(nil).IterateAfterAddSeq), ctx, addSeq, convert, iterate)
+}
+
 // IterateFrom mocks base method.
 func (m *MockObjectTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) error {
 	m.ctrl.T.Helper()
@@ -360,6 +374,18 @@ func (m *MockObjectTree) Root() *objecttree.Change {
 func (mr *MockObjectTreeMockRecorder) Root() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockObjectTree)(nil).Root))
+}
+
+// SetDeferredUpdater mocks base method.
+func (m *MockObjectTree) SetDeferredUpdater(deferred bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDeferredUpdater", deferred)
+}
+
+// SetDeferredUpdater indicates an expected call of SetDeferredUpdater.
+func (mr *MockObjectTreeMockRecorder) SetDeferredUpdater(deferred any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeferredUpdater", reflect.TypeOf((*MockObjectTree)(nil).SetDeferredUpdater), deferred)
 }
 
 // SetFlusher mocks base method.
@@ -581,6 +607,20 @@ func (m *MockStorage) Get(ctx context.Context, id string) (objecttree.StorageCha
 func (mr *MockStorageMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockStorage)(nil).Get), ctx, id)
+}
+
+// GetAfterAddSeq mocks base method.
+func (m *MockStorage) GetAfterAddSeq(ctx context.Context, addSeq uint64, iter objecttree.StorageIterator) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAfterAddSeq", ctx, addSeq, iter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetAfterAddSeq indicates an expected call of GetAfterAddSeq.
+func (mr *MockStorageMockRecorder) GetAfterAddSeq(ctx, addSeq, iter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAfterAddSeq", reflect.TypeOf((*MockStorage)(nil).GetAfterAddSeq), ctx, addSeq, iter)
 }
 
 // GetAfterOrder mocks base method.

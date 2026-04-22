@@ -132,6 +132,7 @@ func (tb *treeBuilder) buildWithAdded(opts treeBuilderOpts) (*Tree, []*Change, e
 		}
 		ch.OrderId = storageChange.OrderId
 		ch.SnapshotCounter = storageChange.SnapshotCounter
+		ch.AddSeq = storageChange.AddSeq
 		changes = append(changes, ch)
 		if _, contains := cache[ch.Id]; contains {
 			delete(cache, ch.Id)

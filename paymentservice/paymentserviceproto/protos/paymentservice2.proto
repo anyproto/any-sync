@@ -12,10 +12,11 @@ message MembershipV2 {
   }
 
   enum Period {
-    Unlimited = 0;
+    Unlimited = 0 [deprecated = true];
     Monthly = 1;
     Yearly = 2;
     ThreeYears = 3;
+    Lifetime = 4;
   }
 
   enum Platform {
@@ -75,6 +76,7 @@ message MembershipV2 {
     string colorStr = 10;
     string offer = 11;
     Features features = 12;
+    repeated Amount pricesLifetime = 13;
   }
 
   message PurchaseInfo {
@@ -102,11 +104,15 @@ message MembershipV2 {
 
   message CartProduct {
     Product product = 1;    
-    // otherwise - monthly
+    // otherwise - monthly or isLifetime
     bool isYearly = 2;
     // set to true if you want to remove this item from the customer
     // it's like setting -1 to some product
     bool remove = 3;
+    // if true - then this is lifetime product (no matter what isYearly above is)
+    // unfortunately we do not use Period here to keep compatibility with old versions 
+    // that still use isYearly! 
+    bool isLifetime = 4;
   }
 
   message Invoice {
@@ -132,6 +138,13 @@ message MembershipV2 {
     // the next invoice amount will also be generated
     Amount totalNextInvoice = 3;
     uint64 nextInvoiceDate = 4;
+    repeated string appliedPromocodes = 5;
+  }
+
+  message CryptoCheckout {
+    string invoiceURL = 1;
+    Amount total = 2;
+    bool isCanCancel = 3;
   }
 
   message GetProductsRequest {
@@ -151,6 +164,10 @@ message MembershipV2 {
     MembershipV2.Invoice nextInvoice = 2;
     string teamOwnerID = 3;
     MembershipV2.PaymentProvider paymentProvider = 4;
+    repeated string appliedPromocodes = 5;
+
+    // if crypto checkout is in process
+    MembershipV2.CryptoCheckout cryptoCheckout = 6;
   }
 
   message StoreCartGetRequest {
@@ -181,6 +198,7 @@ message MembershipV2 {
   message StoreCartUpdateRequest {
     repeated CartProduct products = 1;
     string ownerEthAddress = 2;
+    repeated string promocodes = 3;
   }
 
   message StoreCartUpdateResponse {

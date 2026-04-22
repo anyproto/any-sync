@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	anystore "github.com/anyproto/any-store"
@@ -81,6 +82,17 @@ type MockChangeCreator struct {
 	storeCreator func() anystore.DB
 }
 
+// initTestAddSeq sets a default addSeq counter on a storage for tests.
+// In production this is done by spaceStorage.
+func initTestAddSeq(st Storage) {
+	switch s := st.(type) {
+	case *storage:
+		s.SetAddSeq(&atomic.Uint64{})
+	case *storageDeferredCreation:
+		s.SetAddSeq(&atomic.Uint64{})
+	}
+}
+
 type testStorage struct {
 	Storage
 	errAdd error
@@ -120,6 +132,25 @@ func (c *MockChangeCreator) CreateRoot(id, aclId string) *treechangeproto.RawTre
 func (c *MockChangeCreator) CreateDerivedRoot(id string, isDerived bool) *treechangeproto.RawTreeChangeWithId {
 	aclChange := &treechangeproto.RootChange{
 		IsDerived: isDerived,
+	}
+	res, _ := aclChange.MarshalVT()
+
+	raw := &treechangeproto.RawTreeChange{
+		Payload:   res,
+		Signature: nil,
+	}
+	rawMarshalled, _ := raw.MarshalVT()
+
+	return &treechangeproto.RawTreeChangeWithId{
+		RawChange: rawMarshalled,
+		Id:        id,
+	}
+}
+
+func (c *MockChangeCreator) CreateDerivedRootWithParent(id, parentId string) *treechangeproto.RawTreeChangeWithId {
+	aclChange := &treechangeproto.RootChange{
+		IsDerived: true,
+		ParentId:  parentId,
 	}
 	res, _ := aclChange.MarshalVT()
 
@@ -175,6 +206,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 	require.NoError(t, err)
 	storage, err := CreateStorage(ctx, root, headStorage, store)
 	require.NoError(t, err)
+	initTestAddSeq(storage)
 	return &testStorage{
 		Storage: storage,
 	}

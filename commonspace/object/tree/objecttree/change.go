@@ -31,7 +31,9 @@ type Change struct {
 	IsSnapshot bool
 	IsDerived  bool
 	IsNew      bool
+	ParentId   string
 	OrderId    string
+	AddSeq     uint64 // Space-global apply sequence from storage
 
 	// SnapshotCounter is the number of previous snapshots in the current branch. For the first snapshot it's zero, for all next changes
 	// it increases every time a new snapshot is created. You can think of it as depth of the node in a snapshots tree.
@@ -63,6 +65,7 @@ func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.Ro
 		Data:       data,
 		Model:      changeInfo,
 		IsDerived:  isDerived,
+		ParentId:   ch.ParentId,
 	}
 }
 

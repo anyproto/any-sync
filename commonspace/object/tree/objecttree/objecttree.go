@@ -85,6 +85,7 @@ type ReadableObjectTree interface {
 	Debug(parser DescriptionParser) (DebugInfo, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+	IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 }
 
 type ObjectTree interface {
@@ -106,6 +107,7 @@ type ObjectTree interface {
 	Delete() error
 	Close() error
 	SetFlusher(flusher Flusher)
+	SetDeferredUpdater(deferred bool)
 	TryClose(objectTTL time.Duration) (bool, error)
 }
 
@@ -122,9 +124,10 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys           map[string]crypto.SymKey
-	currentReadKey crypto.SymKey
-	isDeleted      bool
+	keys            map[string]crypto.SymKey
+	currentReadKey  crypto.SymKey
+	isDeleted       bool
+	deferredUpdater bool
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -202,6 +205,10 @@ func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 
 func (ot *objectTree) SetFlusher(flusher Flusher) {
 	ot.flusher = flusher
+}
+
+func (ot *objectTree) SetDeferredUpdater(deferred bool) {
+	ot.deferredUpdater = deferred
 }
 
 func (ot *objectTree) UnmarshalledHeader() *Change {
@@ -288,7 +295,8 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	if err != nil {
 		panic(err)
 	}
-	err = ot.storage.AddAll(ctx, []StorageChange{storageChange}, ot.Heads(), ot.tree.root.Id)
+	added := []StorageChange{storageChange}
+	err = ot.storage.AddAll(ctx, added, ot.Heads(), ot.tree.root.Id)
 	if err != nil {
 		return
 	}
@@ -301,7 +309,7 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	res = AddResult{
 		OldHeads: oldHeads,
 		Heads:    []string{objChange.Id},
-		Added:    []StorageChange{storageChange},
+		Added:    added,
 		Mode:     mode,
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
@@ -411,7 +419,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 		}
 	}
 
-	if updater != nil {
+	if updater != nil && !ot.deferredUpdater {
 		err = updater(ot, addResult.Mode)
 		if err != nil {
 			rollback()
@@ -423,6 +431,13 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 	if err != nil {
 		rollback()
 		return
+	}
+
+	if updater != nil && ot.deferredUpdater {
+		err = updater(ot, addResult.Mode)
+		if err != nil {
+			return
+		}
 	}
 	ot.flusher.Flush(ot)
 	return
@@ -649,6 +664,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		ot.tree.IterateSkip(id, iterate)
 		return
 	}
+	var buf []byte
 	decrypt := func(c *Change) (decrypted []byte, err error) {
 		// the change is not encrypted
 		if c.ReadKeyId == "" {
@@ -664,7 +680,8 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			err = fmt.Errorf("no data in change %s", c.Id)
 			return
 		}
-		decrypted, err = readKey.Decrypt(c.Data)
+		buf, err = readKey.DecryptReuse(buf, c.Data)
+		decrypted = buf
 		return
 	}
 
@@ -679,9 +696,9 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			return iterate(c)
 		}
 
-		var decrypted []byte
-		decrypted, err = decrypt(c)
-		if err != nil {
+		decrypted, decErr := decrypt(c)
+		if decErr != nil {
+			err = decErr
 			return false
 		}
 
@@ -696,6 +713,48 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		return iterate(c)
 	})
 	return
+}
+
+func (ot *objectTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	if ot.isDeleted {
+		return ErrDeleted
+	}
+	var buf []byte
+	return ot.storage.GetAfterAddSeq(ctx, addSeq, func(ctx context.Context, sc StorageChange) (bool, error) {
+		raw := sc.RawTreeChangeWithId()
+		ch, uErr := ot.changeBuilder.Unmarshall(raw, false)
+		if uErr != nil {
+			return false, uErr
+		}
+		ch.OrderId = sc.OrderId
+		ch.SnapshotCounter = sc.SnapshotCounter
+		ch.AddSeq = sc.AddSeq
+
+		if convert != nil && ch.Id != ot.id {
+			if ch.ReadKeyId != "" {
+				readKey, exists := ot.keys[ch.ReadKeyId]
+				if !exists {
+					return false, list.ErrNoReadKey
+				}
+				if ch.Data == nil {
+					return false, fmt.Errorf("no data in change %s", ch.Id)
+				}
+				buf, uErr = readKey.DecryptReuse(buf, ch.Data)
+				if uErr != nil {
+					return false, uErr
+				}
+			} else {
+				buf = ch.Data
+			}
+			model, cErr := convert(ch, buf)
+			if cErr != nil {
+				return false, cErr
+			}
+			ch.Model = model
+			ch.Data = nil
+		}
+		return iterate(ch), nil
+	})
 }
 
 func (ot *objectTree) HasChanges(chs ...string) bool {
@@ -831,6 +890,7 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 	if state.AccountKey() == nil || !state.HadReadPermissions(state.AccountKey().GetPublic()) {
 		return nil
 	}
+	deriver := crypto.NewKeyDeriver(fmt.Sprintf(crypto.AnysyncTreePath, ot.id))
 	for key, value := range state.Keys() {
 		if _, exists := ot.keys[key]; exists {
 			continue
@@ -838,12 +898,22 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		if value.ReadKey == nil {
 			continue
 		}
-		treeKey, err := deriveTreeKey(value.ReadKey, ot.id)
+		raw, err := value.ReadKey.Raw()
+		if err != nil {
+			return err
+		}
+		treeKey, err := deriver.DeriveKey(raw)
 		if err != nil {
 			return err
 		}
 		ot.keys[key] = treeKey
 	}
+	curKeyId := state.CurrentReadKeyId()
+	if derived, ok := ot.keys[curKeyId]; ok {
+		ot.currentReadKey = derived
+		return nil
+	}
+	// Fallback: derive if not in map (e.g., ReadKey was nil and skipped in the loop above)
 	curKey, err := state.CurrentReadKey()
 	if err != nil {
 		return err

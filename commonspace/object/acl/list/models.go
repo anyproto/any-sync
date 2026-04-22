@@ -50,6 +50,11 @@ type PermissionChange struct {
 	Permission AclPermissions
 }
 
+type OptionChange struct {
+	RecordId string
+	Options  *aclrecordproto.AclSpaceOptions
+}
+
 type AccountState struct {
 	PubKey      crypto.PubKey
 	Permissions AclPermissions

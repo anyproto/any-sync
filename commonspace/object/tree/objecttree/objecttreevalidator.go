@@ -3,6 +3,7 @@ package objecttree
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	anystore "github.com/anyproto/any-store"
 
@@ -21,12 +22,21 @@ type tempTreeStorageCreator struct {
 	store anystore.DB
 }
 
+// noopAddSeq is a zero-valued counter for ephemeral validation storages
+// that don't participate in incremental sync.
+var noopAddSeq atomic.Uint64
+
 func (t *tempTreeStorageCreator) CreateStorageWithDeferredCreation(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
 	headStorage, err := headstorage.New(ctx, t.store)
 	if err != nil {
 		return nil, err
 	}
-	return CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, headStorage, t.store)
+	st, err := CreateStorageWithDeferredCreation(ctx, payload.RootRawChange, headStorage, t.store)
+	if err != nil {
+		return nil, err
+	}
+	st.(*storageDeferredCreation).SetAddSeq(&noopAddSeq)
+	return st, nil
 }
 
 func (t *tempTreeStorageCreator) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
@@ -34,7 +44,12 @@ func (t *tempTreeStorageCreator) CreateTreeStorage(ctx context.Context, payload 
 	if err != nil {
 		return nil, err
 	}
-	return CreateStorage(ctx, payload.RootRawChange, headStorage, t.store)
+	st, err := CreateStorage(ctx, payload.RootRawChange, headStorage, t.store)
+	if err != nil {
+		return nil, err
+	}
+	st.(*storage).SetAddSeq(&noopAddSeq)
+	return st, nil
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)
@@ -85,14 +100,26 @@ func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, changes []*Chang
 }
 
 type objectTreeValidator struct {
-	validateKeys bool
-	shouldFilter bool
+	validateKeys     bool
+	shouldFilter     bool
+	contentValidator func(c *Change, aclList list.AclList) error
 }
 
 func newTreeValidator(validateKeys bool, filterChanges bool) ObjectTreeValidator {
 	return &objectTreeValidator{
 		validateKeys: validateKeys,
 		shouldFilter: filterChanges,
+	}
+}
+
+func NewTreeValidatorWithContentCheck(
+	validateKeys, filterChanges bool,
+	check func(*Change, list.AclList) error,
+) ObjectTreeValidator {
+	return &objectTreeValidator{
+		validateKeys:     validateKeys,
+		shouldFilter:     filterChanges,
+		contentValidator: check,
 	}
 }
 
@@ -167,6 +194,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		keys, exists := state.Keys()[c.ReadKeyId]
 		if !exists || keys.ReadKey == nil {
 			return list.ErrNoReadKey
+		}
+	}
+
+	if v.contentValidator != nil {
+		if err = v.contentValidator(c, aclList); err != nil {
+			return
 		}
 	}
 

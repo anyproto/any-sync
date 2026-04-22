@@ -15,6 +15,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	aclclient "github.com/anyproto/any-sync/commonspace/acl/aclclient"
+	aclrecordproto "github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
@@ -266,6 +267,20 @@ func (m *MockAclSpaceClient) ChangePermissions(ctx context.Context, permChange l
 func (mr *MockAclSpaceClientMockRecorder) ChangePermissions(ctx, permChange any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangePermissions", reflect.TypeOf((*MockAclSpaceClient)(nil).ChangePermissions), ctx, permChange)
+}
+
+// ChangeSpaceOptions mocks base method.
+func (m *MockAclSpaceClient) ChangeSpaceOptions(ctx context.Context, options *aclrecordproto.AclSpaceOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeSpaceOptions", ctx, options)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ChangeSpaceOptions indicates an expected call of ChangeSpaceOptions.
+func (mr *MockAclSpaceClientMockRecorder) ChangeSpaceOptions(ctx, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeSpaceOptions", reflect.TypeOf((*MockAclSpaceClient)(nil).ChangeSpaceOptions), ctx, options)
 }
 
 // DeclineRequest mocks base method.

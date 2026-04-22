@@ -14,6 +14,17 @@ message AclRoot {
     bytes encryptedMetadataPrivKey = 8;
     bytes encryptedOwnerMetadata = 9;
     AclOneToOneInfo oneToOneInfo = 10;
+    AclSpaceOptions options = 11;
+}
+
+// AclSpaceOptions contains space-level toggles/options
+message AclSpaceOptions {
+    bool deleteRestricted = 1;
+}
+
+// AclSpaceOptionsChange changes space options (owner-only)
+message AclSpaceOptionsChange {
+    AclSpaceOptions options = 1;
 }
 
 // AclOneToOneInfo exists if its one-to-one space acl record
@@ -164,6 +175,7 @@ message AclContentValue {
         AclAccountInviteJoin inviteJoin = 13;
         AclAccountInviteChange inviteChange = 14;
         AclOwnershipChange ownershipChange = 15;
+        AclSpaceOptionsChange spaceOptionsChange = 16;
     }
 }
 

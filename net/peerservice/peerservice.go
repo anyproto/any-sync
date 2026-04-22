@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
+	"github.com/anyproto/any-sync/net/transport/webtransport"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
@@ -41,32 +42,59 @@ type PeerService interface {
 }
 
 type peerService struct {
-	yamux      transport.Transport
-	quic       transport.Transport
-	nodeConf   nodeconf.NodeConf
-	peerAddrs  map[string][]string
-	pool       pool.Pool
-	server     server.DRPCServer
-	preferQuic bool
-	mu         sync.RWMutex
+	yamux        transport.Transport
+	quic         transport.Transport
+	webtransport transport.Transport
+	nodeConf     nodeconf.NodeConf
+	peerAddrs    map[string][]string
+	pool         pool.Pool
+	server       server.DRPCServer
+	preferQuic   bool
+	mu           sync.RWMutex
 }
 
 func (p *peerService) Init(a *app.App) (err error) {
-	p.yamux = a.MustComponent(yamux.CName).(transport.Transport)
-	p.quic = a.MustComponent(quic.CName).(transport.Transport)
+	if comp := a.Component(yamux.CName); comp != nil {
+		p.yamux = comp.(transport.Transport)
+		p.yamux.SetAccepter(p)
+	}
+	if comp := a.Component(quic.CName); comp != nil {
+		p.quic = comp.(transport.Transport)
+		p.quic.SetAccepter(p)
+	}
+	if comp := a.Component(webtransport.CName); comp != nil {
+		p.webtransport = comp.(transport.Transport)
+		p.webtransport.SetAccepter(p)
+	}
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
-	p.yamux.SetAccepter(p)
-	p.quic.SetAccepter(p)
 	return nil
 }
 
-var (
-	yamuxPreferSchemes = []string{transport.Yamux, transport.Quic}
-	quicPreferSchemes  = []string{transport.Quic, transport.Yamux}
-)
+func (p *peerService) preferredSchemes() []string {
+	var schemes []string
+	if p.preferQuic {
+		if p.quic != nil {
+			schemes = append(schemes, transport.Quic)
+		}
+		if p.yamux != nil {
+			schemes = append(schemes, transport.Yamux)
+		}
+	} else {
+		if p.yamux != nil {
+			schemes = append(schemes, transport.Yamux)
+		}
+		if p.quic != nil {
+			schemes = append(schemes, transport.Quic)
+		}
+	}
+	if p.webtransport != nil {
+		schemes = append(schemes, transport.WebTransport)
+	}
+	return schemes
+}
 
 func (p *peerService) Name() (name string) {
 	return CName
@@ -79,17 +107,17 @@ func (p *peerService) PreferQuic(prefer bool) {
 }
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
-	var schemes = yamuxPreferSchemes
 	p.mu.RLock()
-	if p.preferQuic {
-		schemes = quicPreferSchemes
-	}
+	schemes := p.preferredSchemes()
 	addrs, err := p.getPeerAddrs(peerId)
 	if err != nil {
 		p.mu.RUnlock()
 		return
 	}
 	p.mu.RUnlock()
+
+	// Pass expected peerId in context for transports that need it (e.g. WebTransport)
+	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
 
 	var mc transport.MultiConn
 	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
@@ -120,8 +148,13 @@ func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string
 		tr = p.quic
 	case transport.Yamux:
 		tr = p.yamux
+	case transport.WebTransport:
+		tr = p.webtransport
 	default:
 		return nil, fmt.Errorf("unexpected transport: %v", sch)
+	}
+	if tr == nil {
+		return nil, fmt.Errorf("transport %v not available", sch)
 	}
 
 	err = ErrAddrsNotFound

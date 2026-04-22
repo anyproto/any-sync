@@ -35,6 +35,7 @@ type HeadNotifiable interface {
 
 type ListenerSetter interface {
 	SetListener(listener updatelistener.UpdateListener)
+	SetDeferredUpdater(deferred bool)
 }
 
 type peerSendableObjectTree interface {
@@ -175,6 +176,17 @@ func (s *syncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate obj
 		return
 	}
 	return s.ObjectTree.IterateRoot(convert, iterate)
+}
+
+func (s *syncTree) IterateAfterAddSeq(ctx context.Context, addSeq uint64, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.IterateAfterAddSeq(ctx, addSeq, convert, iterate)
+}
+
+func (s *syncTree) SetDeferredUpdater(deferred bool) {
+	s.ObjectTree.SetDeferredUpdater(deferred)
 }
 
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {

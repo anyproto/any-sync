@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
@@ -16,6 +17,7 @@ type storageDeferredCreation struct {
 
 	store       anystore.DB
 	headStorage headstorage.HeadStorage
+	addSeq      *atomic.Uint64
 
 	storage Storage
 
@@ -75,12 +77,20 @@ func (s *storageDeferredCreation) isRootChangeStored(ctx context.Context) (bool,
 }
 
 func (s *storageDeferredCreation) createStorage(ctx context.Context) error {
-	store, err := CreateStorageTx(ctx, s.root.RawTreeChangeWithId(), s.headStorage, s.store)
+	st, err := CreateStorageTx(ctx, s.root.RawTreeChangeWithId(), s.headStorage, s.store)
 	if err != nil {
 		return fmt.Errorf("create storage: %w", err)
 	}
-	s.storage = store
+	st.(*storage).SetAddSeq(s.addSeq)
+	s.storage = st
 	return nil
+}
+
+func (s *storageDeferredCreation) SetAddSeq(seq *atomic.Uint64) {
+	s.addSeq = seq
+	if s.storage != nil {
+		s.storage.(*storage).SetAddSeq(seq)
+	}
 }
 
 func (s *storageDeferredCreation) Id() string {
@@ -124,6 +134,17 @@ func (s *storageDeferredCreation) GetAfterOrder(ctx context.Context, orderId str
 		return s.storage.GetAfterOrder(ctx, orderId, iter)
 	}
 	if orderId <= s.root.OrderId {
+		_, err := iter(ctx, s.root)
+		return err
+	}
+	return nil
+}
+
+func (s *storageDeferredCreation) GetAfterAddSeq(ctx context.Context, addSeq uint64, iter StorageIterator) error {
+	if s.storage != nil {
+		return s.storage.GetAfterAddSeq(ctx, addSeq, iter)
+	}
+	if s.root.AddSeq > addSeq {
 		_, err := iter(ctx, s.root)
 		return err
 	}

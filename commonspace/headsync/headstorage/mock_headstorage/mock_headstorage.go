@@ -67,6 +67,21 @@ func (mr *MockHeadStorageMockRecorder) DeleteEntry(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntry", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntry), ctx, id)
 }
 
+// GetEntriesByParentId mocks base method.
+func (m *MockHeadStorage) GetEntriesByParentId(ctx context.Context, parentId string) ([]headstorage.HeadsEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEntriesByParentId", ctx, parentId)
+	ret0, _ := ret[0].([]headstorage.HeadsEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEntriesByParentId indicates an expected call of GetEntriesByParentId.
+func (mr *MockHeadStorageMockRecorder) GetEntriesByParentId(ctx, parentId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntriesByParentId", reflect.TypeOf((*MockHeadStorage)(nil).GetEntriesByParentId), ctx, parentId)
+}
+
 // GetEntry mocks base method.
 func (m *MockHeadStorage) GetEntry(ctx context.Context, id string) (headstorage.HeadsEntry, error) {
 	m.ctrl.T.Helper()
@@ -94,6 +109,21 @@ func (m *MockHeadStorage) IterateEntries(ctx context.Context, iterOpts headstora
 func (mr *MockHeadStorageMockRecorder) IterateEntries(ctx, iterOpts, iter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateEntries", reflect.TypeOf((*MockHeadStorage)(nil).IterateEntries), ctx, iterOpts, iter)
+}
+
+// MaxLastAddSeq mocks base method.
+func (m *MockHeadStorage) MaxLastAddSeq(ctx context.Context) (uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MaxLastAddSeq", ctx)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MaxLastAddSeq indicates an expected call of MaxLastAddSeq.
+func (mr *MockHeadStorageMockRecorder) MaxLastAddSeq(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaxLastAddSeq", reflect.TypeOf((*MockHeadStorage)(nil).MaxLastAddSeq), ctx)
 }
 
 // UpdateEntry mocks base method.
