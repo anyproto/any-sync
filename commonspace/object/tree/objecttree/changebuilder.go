@@ -8,8 +8,18 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
-var ErrEmptyChange = errors.New("change payload should not be empty")
+var (
+	ErrEmptyChange       = errors.New("change payload should not be empty")
+	ErrMissingEncryptKey = errors.New("encrypted change requires a read key")
+)
 
+// BuilderContent is the payload Build consumes to produce a signed change.
+//
+// Encryption contract: encryption is the default. Unencrypted is an explicit
+// opt-out - when false (the zero value), ReadKey MUST be non-nil and is used
+// to encrypt Content; Build returns ErrMissingEncryptKey otherwise (never
+// silently writes plaintext). When Unencrypted is true, Content is written
+// as-is regardless of ReadKey.
 type BuilderContent struct {
 	// TreeHeadsIds are current heads in the tree. They become PreviousIds in the new change
 	TreeHeadIds    []string
@@ -17,6 +27,7 @@ type BuilderContent struct {
 	SnapshotBaseId string
 	ReadKeyId      string
 	IsSnapshot     bool
+	Unencrypted    bool
 	PrivKey        crypto.PrivKey
 	ReadKey        crypto.SymKey
 	Content        []byte
@@ -228,15 +239,19 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 		IsSnapshot:     payload.IsSnapshot,
 		DataType:       payload.DataType,
 	}
-	if payload.ReadKey != nil {
+	if payload.Unencrypted {
+		change.ChangesData = payload.Content
+	} else {
+		if payload.ReadKey == nil {
+			err = ErrMissingEncryptKey
+			return
+		}
 		var encrypted []byte
 		encrypted, err = payload.ReadKey.Encrypt(payload.Content)
 		if err != nil {
 			return
 		}
 		change.ChangesData = encrypted
-	} else {
-		change.ChangesData = payload.Content
 	}
 	marshalledChange, err := change.MarshalVT()
 	if err != nil {
