@@ -2,6 +2,7 @@ package cidutil
 
 import (
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multicodec"
 	mh "github.com/multiformats/go-multihash"
 )
 
@@ -10,7 +11,7 @@ func NewCidFromBytes(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return cid.NewCidV1(cid.DagCBOR, hash).String(), nil
+	return cid.NewCidV1(uint64(multicodec.DagCbor), hash).String(), nil
 }
 
 func VerifyCid(data []byte, id string) bool {
@@ -18,5 +19,5 @@ func VerifyCid(data []byte, id string) bool {
 	if err != nil {
 		return false
 	}
-	return cid.NewCidV1(cid.DagCBOR, hash).String() == id
+	return cid.NewCidV1(uint64(multicodec.DagCbor), hash).String() == id
 }
