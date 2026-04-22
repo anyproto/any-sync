@@ -199,7 +199,13 @@ func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 				closed = true
 			}
 		} else {
-			panic("conn does not implement Unblocked()")
+			// By construction, conns returned from AcquireDrpcConn are *subConn
+			// which embeds encoding.ConnUnblocked. Reaching this branch means
+			// the caller passed a foreign conn; close it defensively instead
+			// of crashing the process.
+			log.Warn("released conn does not implement encoding.ConnUnblocked, closing", zap.String("peerId", p.id))
+			_ = conn.Close()
+			closed = true
 		}
 	}
 

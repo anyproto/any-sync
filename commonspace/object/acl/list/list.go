@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -354,17 +353,3 @@ func (a *aclList) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func WrapAclRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
-	payload, err := rawRec.MarshalVT()
-	if err != nil {
-		panic(err)
-	}
-	id, err := cidutil.NewCidFromBytes(payload)
-	if err != nil {
-		panic(err)
-	}
-	return &consensusproto.RawRecordWithId{
-		Payload: payload,
-		Id:      id,
-	}
-}
