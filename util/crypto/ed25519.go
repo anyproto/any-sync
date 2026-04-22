@@ -10,6 +10,7 @@ import (
 	"io"
 	"sync"
 
+	"filippo.io/edwards25519"
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
 	"github.com/anyproto/any-sync/util/strkey"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -242,9 +243,14 @@ func (k *Ed25519PubKey) LibP2P() (crypto.PubKey, error) {
 }
 
 // UnmarshalEd25519PublicKey returns a public key from input bytes.
+// It validates that the bytes decode as a valid point on the Edwards curve,
+// rejecting malformed or non-curve inputs at the earliest boundary.
 func UnmarshalEd25519PublicKey(data []byte) (PubKey, error) {
 	if len(data) != 32 {
 		return nil, errors.New("expect ed25519 public key data size to be 32")
+	}
+	if _, err := (&edwards25519.Point{}).SetBytes(data); err != nil {
+		return nil, fmt.Errorf("invalid ed25519 public key: %w", err)
 	}
 
 	return NewEd25519PubKey(data), nil

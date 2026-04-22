@@ -54,6 +54,33 @@ func TestEd25519PublicKeyToCurve25519(t *testing.T) {
 
 }
 
+func TestUnmarshalEd25519PublicKey(t *testing.T) {
+	t.Run("valid key", func(t *testing.T) {
+		pub, _, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		_, err = UnmarshalEd25519PublicKey(pub)
+		require.NoError(t, err)
+	})
+	t.Run("wrong length", func(t *testing.T) {
+		_, err := UnmarshalEd25519PublicKey([]byte{1, 2, 3})
+		require.Error(t, err)
+	})
+	t.Run("32 bytes not on curve", func(t *testing.T) {
+		// 32 bytes that pass length check but do not decode as a valid
+		// Edwards curve point. Same pattern used by TestEd25519PublicKeyToCurve25519.
+		badPoint := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+		_, err := UnmarshalEd25519PublicKey(badPoint)
+		require.Error(t, err)
+	})
+	t.Run("proto wrapper rejects non-curve point", func(t *testing.T) {
+		badPoint := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+		proto, err := NewEd25519PubKey(badPoint).Marshall()
+		require.NoError(t, err)
+		_, err = UnmarshalEd25519PublicKeyProto(proto)
+		require.Error(t, err)
+	})
+}
+
 func Test_InvalidKey(t *testing.T) {
 	corruptedKey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
 	t.Run("decrypt", func(t *testing.T) {
