@@ -7,6 +7,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list/listtest"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -245,7 +246,7 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 	for i, id := range inviteIds {
 		a.invites[id] = res.Invites[i]
 	}
-	return afterAll, addRec(WrapAclRecord(res.Rec))
+	return afterAll, addRec(listtest.WrapAclRecord(res.Rec))
 }
 
 func (a *AclTestExecutor) initOneToOne(parsedArgs *ParsedArgs) error {
@@ -497,7 +498,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(requestJoin))
+		err = addRec(listtest.WrapAclRecord(requestJoin))
 		if err != nil {
 			return err
 		}
@@ -508,7 +509,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 			return err
 		}
 		a.invites[parsedArgs.Args[0]] = res.InviteKey
-		err = addRec(WrapAclRecord(res.InviteRec))
+		err = addRec(listtest.WrapAclRecord(res.InviteRec))
 		if err != nil {
 			return err
 		}
@@ -534,7 +535,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -553,7 +554,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 			return err
 		}
 		a.invites[inviteParts[0]] = res.InviteKey
-		err = addRec(WrapAclRecord(res.InviteRec))
+		err = addRec(listtest.WrapAclRecord(res.InviteRec))
 		if err != nil {
 			return err
 		}
@@ -589,7 +590,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -611,7 +612,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -637,7 +638,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -689,7 +690,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -718,7 +719,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(inviteJoin))
+		err = addRec(listtest.WrapAclRecord(inviteJoin))
 		if err != nil {
 			return err
 		}
@@ -750,7 +751,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -764,7 +765,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -780,7 +781,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -796,7 +797,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -813,7 +814,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(res))
+		err = addRec(listtest.WrapAclRecord(res))
 		if err != nil {
 			return err
 		}
@@ -827,7 +828,7 @@ func (a *AclTestExecutor) Execute(cmdStr string) (err error) {
 		if err != nil {
 			return err
 		}
-		err = addRec(WrapAclRecord(requestJoin))
+		err = addRec(listtest.WrapAclRecord(requestJoin))
 		if err != nil {
 			return err
 		}

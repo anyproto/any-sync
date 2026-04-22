@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list/listtest"
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusclient/mock_consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -33,7 +34,7 @@ func TestAclService_AddRecord(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.finish(t)
 
-		expRes := list.WrapAclRecord(inv.InviteRec)
+		expRes := listtest.WrapAclRecord(inv.InviteRec)
 		var watcherCh = make(chan consensusclient.Watcher)
 		fx.consCl.EXPECT().Watch(spaceId, gomock.Any()).DoAndReturn(func(spaceId string, w consensusclient.Watcher) error {
 			go func() {
