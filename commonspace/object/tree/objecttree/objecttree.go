@@ -380,6 +380,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		SnapshotBaseId: ot.tree.RootId(),
 		ReadKeyId:      readKeyId,
 		IsSnapshot:     content.IsSnapshot,
+		Unencrypted:    !content.ShouldBeEncrypted,
 		PrivKey:        content.Key,
 		ReadKey:        readKey,
 		Content:        content.Data,
