@@ -1,8 +1,6 @@
 package slice
 
 import (
-	"hash/fnv"
-	"math/rand"
 	"sort"
 
 	"golang.org/x/exp/constraints"
@@ -82,17 +80,6 @@ func Filter(vals []string, cond func(string) bool) []string {
 		}
 	}
 	return result
-}
-
-func GetRandomString(s []string, seed string) string {
-	rand.Seed(int64(hash(seed)))
-	return s[rand.Intn(len(s))]
-}
-
-func hash(s string) uint64 {
-	h := fnv.New64a()
-	h.Write([]byte(s))
-	return h.Sum64()
 }
 
 func SortedEquals(s1, s2 []string) bool {
