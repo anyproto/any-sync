@@ -26,7 +26,7 @@ require (
 	github.com/ipfs/go-ipld-format v0.6.3
 	github.com/libp2p/go-libp2p v0.48.0
 	github.com/mr-tron/base58 v1.3.0
-	github.com/multiformats/go-multibase v0.2.0
+	github.com/multiformats/go-multibase v0.3.0
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.23.2
