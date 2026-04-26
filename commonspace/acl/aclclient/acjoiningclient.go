@@ -66,11 +66,15 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 	if err != nil {
 		return
 	}
-	netKey, err := crypto.DecodeNetworkId(c.nodeConf.Configuration().NetworkId)
-	if err != nil {
-		return nil, fmt.Errorf("invalid networkId: %w", err)
+	verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+	if networkId := c.nodeConf.Configuration().NetworkId; networkId != "" {
+		netKey, decodeErr := crypto.DecodeNetworkId(networkId)
+		if decodeErr != nil {
+			return nil, fmt.Errorf("invalid networkId: %w", decodeErr)
+		}
+		verifier = recordverifier.New(netKey)
 	}
-	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New(netKey))
+	return list.BuildAclListWithIdentity(c.keys, storage, verifier)
 }
 
 func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {

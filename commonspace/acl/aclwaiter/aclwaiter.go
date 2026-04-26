@@ -87,11 +87,15 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		netKey, err := crypto.DecodeNetworkId(a.nodeConf.Configuration().NetworkId)
-		if err != nil {
-			return fmt.Errorf("invalid networkId: %w", err)
+		verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+		if networkId := a.nodeConf.Configuration().NetworkId; networkId != "" {
+			netKey, decodeErr := crypto.DecodeNetworkId(networkId)
+			if decodeErr != nil {
+				return fmt.Errorf("invalid networkId: %w", decodeErr)
+			}
+			verifier = recordverifier.New(netKey)
 		}
-		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.New(netKey))
+		acl, err := list.BuildAclListWithIdentity(a.keys, storage, verifier)
 		if err != nil {
 			return err
 		}

@@ -61,12 +61,16 @@ func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
 			return
 		}
-		netKey, err := crypto.DecodeNetworkId(a.aclService.nodeConf.Configuration().NetworkId)
-		if err != nil {
-			a.consErr = fmt.Errorf("invalid networkId: %w", err)
-			return
+		verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+		if networkId := a.aclService.nodeConf.Configuration().NetworkId; networkId != "" {
+			netKey, err := crypto.DecodeNetworkId(networkId)
+			if err != nil {
+				a.consErr = fmt.Errorf("invalid networkId: %w", err)
+				return
+			}
+			verifier = recordverifier.New(netKey)
 		}
-		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.New(netKey)); a.consErr != nil {
+		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, verifier); a.consErr != nil {
 			return
 		}
 	} else {
