@@ -19,6 +19,8 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/strkey"
 )
 
 var ctx = context.Background()
@@ -221,12 +223,19 @@ func newFixture(t *testing.T) *fixture {
 	fx.consCl.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.consCl.EXPECT().Close(gomock.Any()).AnyTimes()
 
+	_, netPub, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	netPubRaw, err := netPub.Raw()
+	require.NoError(t, err)
+	networkId, err := strkey.Encode(strkey.NetworkAddressVersionByte, netPubRaw)
+	require.NoError(t, err)
+
 	nc := mock_nodeconf.NewMockService(ctrl)
 	nc.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
 	nc.EXPECT().Init(gomock.Any()).AnyTimes()
 	nc.EXPECT().Run(gomock.Any()).AnyTimes()
 	nc.EXPECT().Close(gomock.Any()).AnyTimes()
-	nc.EXPECT().ConsensusPeers().Return(nil).AnyTimes()
+	nc.EXPECT().Configuration().Return(nodeconf.Configuration{NetworkId: networkId}).AnyTimes()
 
 	fx.a.Register(fx.consCl).Register(fx.AclService).Register(&accounttest.AccountTestService{}).Register(nc)
 

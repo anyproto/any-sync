@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "common.acl.aclclient"
@@ -65,7 +66,11 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 	if err != nil {
 		return
 	}
-	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New(c.nodeConf))
+	netKey, err := crypto.DecodeNetworkId(c.nodeConf.Configuration().NetworkId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid networkId: %w", err)
+	}
+	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New(netKey))
 }
 
 func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {

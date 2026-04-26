@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 func (as *aclService) newAclObject(ctx context.Context, id string) (*aclObject, error) {
@@ -59,7 +61,12 @@ func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
 			return
 		}
-		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.New(a.aclService.nodeConf)); a.consErr != nil {
+		netKey, err := crypto.DecodeNetworkId(a.aclService.nodeConf.Configuration().NetworkId)
+		if err != nil {
+			a.consErr = fmt.Errorf("invalid networkId: %w", err)
+			return
+		}
+		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.New(netKey)); a.consErr != nil {
 			return
 		}
 	} else {
