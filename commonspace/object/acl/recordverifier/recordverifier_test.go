@@ -10,12 +10,6 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
-type fakeConsensusPeers struct {
-	peers []string
-}
-
-func (f fakeConsensusPeers) ConsensusPeers() []string { return f.peers }
-
 type fixture struct {
 	*recordVerifier
 	networkPrivKey crypto.PrivKey
@@ -25,8 +19,7 @@ func newFixture(t *testing.T) *fixture {
 	accService := &accounttest.AccountTestService{}
 	require.NoError(t, accService.Init(nil))
 	networkKey := accService.Account().SignKey
-	src := fakeConsensusPeers{peers: []string{networkKey.GetPublic().PeerId()}}
-	verifier := New(src).(*recordVerifier)
+	verifier := New(networkKey.GetPublic()).(*recordVerifier)
 	return &fixture{
 		recordVerifier: verifier,
 		networkPrivKey: networkKey,
@@ -107,7 +100,7 @@ func TestRecordVerifier_VerifyAcceptor_EmptySignature(t *testing.T) {
 }
 
 // An acceptor signature may be cryptographically valid, but if the signer's
-// peerId is not in ConsensusPeers() the record must be rejected. This is the
+// pubkey is not the network key the record must be rejected. This is the
 // Cure53 finding the verifier was hardened against.
 func TestRecordVerifier_VerifyAcceptor_UnknownAcceptor(t *testing.T) {
 	fx := newFixture(t)
@@ -125,5 +118,5 @@ func TestRecordVerifier_VerifyAcceptor_UnknownAcceptor(t *testing.T) {
 	}
 	err = fx.VerifyAcceptor(rawRecord)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "not a consensus node")
+	require.Contains(t, err.Error(), "not the network key")
 }

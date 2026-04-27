@@ -2,7 +2,6 @@ package recordverifier
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -15,27 +14,21 @@ type AcceptorVerifier interface {
 
 type RecordVerifier = AcceptorVerifier
 
-// ConsensusPeersSource is the minimal view of nodeconf needed by the verifier.
-// nodeconf.NodeConf satisfies this interface; tests can supply a trivial fake.
-type ConsensusPeersSource interface {
-	ConsensusPeers() []string
-}
-
 // New returns a RecordVerifier that accepts only records whose AcceptorIdentity
-// resolves to a peerId listed by src.ConsensusPeers(). Records signed by any
-// other key — even with a well-formed Ed25519 signature — are rejected. The
-// consensus node is assumed to use the same Ed25519 key for its peer identity
-// and record acceptance (see any-sync-consensusnode/account/service.go).
-func New(src ConsensusPeersSource) RecordVerifier {
+// equals networkKey — the Ed25519 root key of the network (the pubkey encoded
+// by nodeconf.Configuration().NetworkId; decode via crypto.DecodeNetworkId).
+// Records signed by any other key — even with a well-formed Ed25519 signature —
+// are rejected.
+func New(networkKey crypto.PubKey) RecordVerifier {
 	return &recordVerifier{
-		store: crypto.NewKeyStorage(),
-		src:   src,
+		store:      crypto.NewKeyStorage(),
+		networkKey: networkKey,
 	}
 }
 
 type recordVerifier struct {
-	store crypto.KeyStorage
-	src   ConsensusPeersSource
+	store      crypto.KeyStorage
+	networkKey crypto.PubKey
 }
 
 func (r *recordVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
@@ -46,9 +39,8 @@ func (r *recordVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err erro
 			return fmt.Errorf("failed to get acceptor identity: %w", err)
 		}
 	}
-	peerId := identity.PeerId()
-	if !slices.Contains(r.src.ConsensusPeers(), peerId) {
-		return fmt.Errorf("acceptor %s is not a consensus node", peerId)
+	if r.networkKey == nil || !identity.Equals(r.networkKey) {
+		return fmt.Errorf("acceptor %s is not the network key", identity.Network())
 	}
 	verified, err := identity.Verify(rec.Payload, rec.AcceptorSignature)
 	if !verified || err != nil {

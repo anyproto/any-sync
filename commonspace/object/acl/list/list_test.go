@@ -40,9 +40,13 @@ func createStore(ctx context.Context, t *testing.T) anystore.DB {
 
 var mockMetadata = []byte("very important metadata")
 
-type noConsensusPeers struct{}
-
-func (noConsensusPeers) ConsensusPeers() []string { return nil }
+// testNetworkKey returns a fresh random pubkey for tests that need a
+// recordverifier without caring which key it trusts.
+func testNetworkKey(t *testing.T) crypto.PubKey {
+	_, pub, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	return pub
+}
 
 func newFixture(t *testing.T) *aclFixture {
 	ownerKeys, err := accountdata.NewRandom()
@@ -318,8 +322,9 @@ func TestAclList_MetadataDecrypt(t *testing.T) {
 func TestAclList_ValidateUsesCorrectVerifier(t *testing.T) {
 	fx := newFixture(t)
 	var ownerAcl = fx.ownerAcl
-	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New(noConsensusPeers{})
-	ownerAcl.verifier = recordverifier.New(noConsensusPeers{})
+	netKey := testNetworkKey(t)
+	ownerAcl.aclState.contentValidator.(*contentValidator).verifier = recordverifier.New(netKey)
+	ownerAcl.verifier = recordverifier.New(netKey)
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)

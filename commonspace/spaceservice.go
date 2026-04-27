@@ -4,6 +4,7 @@ package commonspace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -110,6 +111,21 @@ func (s *spaceService) Name() (name string) {
 	return CName
 }
 
+// buildRecordVerifier returns a verifier anchored to the network root key.
+// When NetworkId is empty (e.g. LocalOnly mode) no consensus signatures will
+// ever arrive, so we fall back to the no-op ValidateFull verifier.
+func (s *spaceService) buildRecordVerifier() (recordverifier.RecordVerifier, error) {
+	networkId := s.configurationService.Configuration().NetworkId
+	if networkId == "" {
+		return recordverifier.NewValidateFull(), nil
+	}
+	netKey, err := crypto.DecodeNetworkId(networkId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid networkId: %w", err)
+	}
+	return recordverifier.New(netKey), nil
+}
+
 func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (id string, err error) {
 	// TODO: switch to SpaceCreatePayloadV1 after next proto update
 	// storageCreate, err := spacepayloads.StoragePayloadForSpaceCreateV1(payload)
@@ -211,7 +227,10 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if deps.Indexer != nil {
 		keyValueIndexer = deps.Indexer
 	}
-	recordVerifier := recordverifier.New(s.configurationService)
+	recordVerifier, err := s.buildRecordVerifier()
+	if err != nil {
+		return nil, err
+	}
 	if deps.recordVerifier != nil {
 		recordVerifier = deps.recordVerifier
 	}
@@ -348,7 +367,11 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		if err != nil {
 			return nil, err
 		}
-		recordVerifier := recordverifier.New(s.configurationService)
+		netKey, err := crypto.DecodeNetworkId(s.configurationService.Configuration().NetworkId)
+		if err != nil {
+			return nil, fmt.Errorf("invalid networkId: %w", err)
+		}
+		recordVerifier := recordverifier.New(netKey)
 		if deps.recordVerifier != nil {
 			recordVerifier = deps.recordVerifier
 		}

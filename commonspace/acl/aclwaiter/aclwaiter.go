@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
@@ -86,7 +87,15 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.New(a.nodeConf))
+		verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+		if networkId := a.nodeConf.Configuration().NetworkId; networkId != "" {
+			netKey, decodeErr := crypto.DecodeNetworkId(networkId)
+			if decodeErr != nil {
+				return fmt.Errorf("invalid networkId: %w", decodeErr)
+			}
+			verifier = recordverifier.New(netKey)
+		}
+		acl, err := list.BuildAclListWithIdentity(a.keys, storage, verifier)
 		if err != nil {
 			return err
 		}
