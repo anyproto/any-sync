@@ -494,3 +494,12 @@ func TestAclState_OwnerPubKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fx.ownerKeys.SignKey.GetPublic().Account(), pubKey.Account())
 }
+
+func TestAclPermissions_IsAdmin(t *testing.T) {
+	require.True(t, AclPermissionsAdmin.IsAdmin())
+	require.False(t, AclPermissionsOwner.IsAdmin())
+	require.False(t, AclPermissionsWriter.IsAdmin())
+	require.False(t, AclPermissionsReader.IsAdmin())
+	require.False(t, AclPermissionsGuest.IsAdmin())
+	require.False(t, AclPermissionsNone.IsAdmin())
+}

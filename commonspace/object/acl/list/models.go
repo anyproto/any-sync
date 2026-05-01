@@ -99,6 +99,10 @@ func (p AclPermissions) IsGuest() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Guest
 }
 
+func (p AclPermissions) IsAdmin() bool {
+	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Admin
+}
+
 func (p AclPermissions) CanWrite() bool {
 	switch aclrecordproto.AclUserPermissions(p) {
 	case aclrecordproto.AclUserPermissions_Admin:
