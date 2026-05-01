@@ -503,3 +503,68 @@ func TestAclPermissions_IsAdmin(t *testing.T) {
 	require.False(t, AclPermissionsGuest.IsAdmin())
 	require.False(t, AclPermissionsNone.IsAdmin())
 }
+
+// FR1: only the owner can grant the Admin role.
+func TestAclList_AdminCannotGrantAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"b.join::invId", nil},
+		{"a.approve::b,r", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		// e is admin; cannot grant admin to b
+		{"e.changes::b,adm", ErrInsufficientPermissions},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
+// FR2: only the owner can revoke the Admin role.
+func TestAclList_AdminCannotRevokeAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		{"y.join::invId", nil},
+		{"a.approve::y,adm", nil},
+		// e is admin; cannot demote y from admin
+		{"e.changes::y,rw", ErrInsufficientPermissions},
+		// owner can demote
+		{"a.changes::y,rw", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
+// Owner can grant and revoke Admin freely.
+func TestAclList_OwnerCanGrantAndRevokeAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"b.join::invId", nil},
+		{"a.approve::b,r", nil},
+		// owner promotes b to admin
+		{"a.changes::b,adm", nil},
+		// owner demotes b back to writer
+		{"a.changes::b,rw", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}

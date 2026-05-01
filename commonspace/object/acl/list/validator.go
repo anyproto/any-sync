@@ -210,7 +210,8 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	chIdentity, err := c.keyStore.PubKeyFromProto(ch.Identity)
@@ -233,9 +234,19 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 		return ErrInsufficientPermissions
 	}
 
+	if currentState.Permissions.IsAdmin() && !authorPerms.IsOwner() {
+		// only the owner can revoke the Admin role from a user (FR2)
+		return ErrInsufficientPermissions
+	}
+
 	if ch.Permissions == aclrecordproto.AclUserPermissions_Owner {
 		// not supported
 		// if we are going to support owner transfer, it should be done with a separate acl change so we can't have more than 1 owner at a time
+		return ErrInsufficientPermissions
+	}
+
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Admin && !authorPerms.IsOwner() {
+		// only the owner can assign the Admin role (FR1)
 		return ErrInsufficientPermissions
 	}
 
