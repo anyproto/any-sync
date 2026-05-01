@@ -87,7 +87,8 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	for _, ch := range ch.Additions {
@@ -103,6 +104,10 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 			return ErrIsOwner
 		}
 		if perm.NoPermissions() {
+			return ErrInsufficientPermissions
+		}
+		if perm.IsAdmin() && !authorPerms.IsOwner() {
+			// only the owner can add an account at Admin level (FR1)
 			return ErrInsufficientPermissions
 		}
 	}
@@ -263,12 +268,17 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, a
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	permissions := AclPermissions(ch.Permissions)
 	if ch.InviteType == aclrecordproto.AclInviteType_AnyoneCanJoin {
 		if permissions.IsOwner() || permissions.NoPermissions() || permissions.IsGuest() {
+			return ErrInsufficientPermissions
+		}
+		if permissions.IsAdmin() && !authorPerms.IsOwner() {
+			// only the owner can issue an Admin-granting invite (FR1)
 			return ErrInsufficientPermissions
 		}
 		if ch.EncryptedReadKey == nil {
@@ -283,7 +293,8 @@ func (c *contentValidator) ValidateInviteChange(ch *aclrecordproto.AclAccountInv
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	invite, exists := c.aclState.invites[ch.InviteRecordId]
@@ -298,6 +309,10 @@ func (c *contentValidator) ValidateInviteChange(ch *aclrecordproto.AclAccountInv
 		return ErrInsufficientPermissions
 	}
 	if permissions.IsOwner() || permissions.NoPermissions() || permissions.IsGuest() {
+		return ErrInsufficientPermissions
+	}
+	if permissions.IsAdmin() && !authorPerms.IsOwner() {
+		// only the owner can change invite permissions to Admin (FR1)
 		return ErrInsufficientPermissions
 	}
 	return
@@ -362,7 +377,8 @@ func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRe
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	record, exists := c.aclState.requestRecords[ch.RequestRecordId]
@@ -377,6 +393,10 @@ func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRe
 		return ErrIncorrectIdentity
 	}
 	if ch.Permissions == aclrecordproto.AclUserPermissions_Owner {
+		return ErrInsufficientPermissions
+	}
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Admin && !authorPerms.IsOwner() {
+		// only the owner can approve a join request at Admin level (FR1)
 		return ErrInsufficientPermissions
 	}
 	return

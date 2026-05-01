@@ -569,6 +569,77 @@ func TestAclList_OwnerCanGrantAndRevokeAdmin(t *testing.T) {
 	}
 }
 
+// FR1: only the owner can introduce a new Admin via AccountsAdd.
+func TestAclList_AdminCannotAddNewAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		// e (admin) can add a writer
+		{"e.add::x,rw,m1", nil},
+		// e (admin) cannot add an admin
+		{"e.add::z,adm,m2", ErrInsufficientPermissions},
+		// owner can
+		{"a.add::z,adm,m2", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
+// FR1: only the owner can issue or change an invite that grants Admin.
+func TestAclList_AdminCannotIssueAdminInvite(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		// e (admin) cannot create an anyone-can-join invite at Admin level
+		{"e.invite_anyone::admInv,a", ErrInsufficientPermissions},
+		// owner can
+		{"a.invite_anyone::admInv,a", nil},
+		// e (admin) cannot change an existing invite to Admin level
+		{"a.invite_anyone::otherInv,rw", nil},
+		{"e.invite_change::otherInv,a", ErrInsufficientPermissions},
+		// owner can
+		{"a.invite_change::otherInv,a", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
+// FR1: only the owner can accept a join request at Admin level.
+func TestAclList_AdminCannotApproveAsAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		{"b.join::invId", nil},
+		// e (admin) cannot approve b as admin
+		{"e.approve::b,adm", ErrInsufficientPermissions},
+		// owner can
+		{"a.approve::b,adm", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
 // FR2: only the owner can remove an Admin (revoking via account removal).
 func TestAclList_AdminCannotRemoveAdmin(t *testing.T) {
 	a := NewAclExecutor("spaceId")
