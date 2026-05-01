@@ -352,6 +352,56 @@ func TestSettingsObject_DeleteObject_Restricted_AuthorCanDelete(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestSettingsObject_DeleteObject_Restricted_AdminCanDelete(t *testing.T) {
+	fx := newSettingsFixture(t)
+	defer fx.stop(t)
+	fx.init(t)
+
+	delId := "delId"
+	DoSnapshot = func(len int) bool {
+		return false
+	}
+
+	// Build a DeleteRestricted ACL where "c" is admin (CanManageAccounts() == true).
+	aclSetup := newValidatorTestSetup(t, true)
+	aclState := aclSetup.acl.AclState()
+	adminKeys := aclSetup.executor.ActualAccounts()["c"].Keys
+
+	fx.syncTree.EXPECT().Id().Return("syncId")
+	fx.syncTree.EXPECT().Len().Return(10)
+	// Single GetEntry call: the author-check branch is skipped for admins.
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), delId).Return(headstorage.HeadsEntry{
+		Id:        delId,
+		IsDerived: false,
+	}, nil)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+
+	// ACL permission check: admin "c" has CanManageAccounts() == true,
+	// so needsAuthorCheck stays false and objectAuthor is never consulted.
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
+	fx.account.EXPECT().Account().Return(adminKeys)
+
+	// Proceed straight to creating the change — no TreeStorage / Root lookup.
+	res := []byte("settingsData")
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
+	fx.account.EXPECT().Account().Return(adminKeys)
+	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
+		Data:              res,
+		Key:               adminKeys.SignKey,
+		IsSnapshot:        false,
+		ShouldBeEncrypted: false,
+	}).Return(objecttree.AddResult{}, nil)
+	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
+	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
+
+	err := fx.doc.DeleteObject(ctx, delId)
+	require.NoError(t, err)
+}
+
 func TestSettingsObject_DeleteObject_Restricted_NonAuthorCannotDelete(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop(t)
