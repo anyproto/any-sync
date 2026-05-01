@@ -80,9 +80,12 @@ func TestAclExecutor(t *testing.T) {
 		{"e.revoke::invId", ErrNoSuchRecord},
 		// e can't remove a, because a is the owner
 		{"e.remove::a", ErrInsufficientPermissions},
-		// e can add new users
-		{"e.add::x,r,m1;y,adm,m2", nil},
-		// now y can also change permission as an admin
+		// e (admin) can add new non-admin users
+		{"e.add::x,r,m1", nil},
+		// only the owner can introduce another admin
+		{"e.add::y,adm,m2", ErrInsufficientPermissions},
+		{"a.add::y,adm,m2", nil},
+		// y (admin) can change permission of a non-admin
 		{"y.changes::x,rw", nil},
 		// e can generate another invite
 		{"e.invite::inv1Id", nil},
