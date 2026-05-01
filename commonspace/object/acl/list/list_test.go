@@ -568,3 +568,30 @@ func TestAclList_OwnerCanGrantAndRevokeAdmin(t *testing.T) {
 		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
 	}
 }
+
+// FR2: only the owner can remove an Admin (revoking via account removal).
+func TestAclList_AdminCannotRemoveAdmin(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		{"y.join::invId", nil},
+		{"a.approve::y,adm", nil},
+		{"b.join::invId", nil},
+		{"a.approve::b,rw", nil},
+		// e (admin) can remove a regular writer
+		{"e.remove::b", nil},
+		// e (admin) cannot remove another admin
+		{"e.remove::y", ErrInsufficientPermissions},
+		// owner can remove the admin
+		{"a.remove::y", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}

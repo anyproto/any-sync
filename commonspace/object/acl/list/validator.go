@@ -414,7 +414,8 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
 	seenIdentities := map[string]struct{}{}
@@ -431,6 +432,10 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 			return ErrNoSuchAccount
 		}
 		if permissions.IsOwner() {
+			return ErrInsufficientPermissions
+		}
+		if permissions.IsAdmin() && !authorPerms.IsOwner() {
+			// only the owner can remove an Admin (FR2 — revoking admin via removal)
 			return ErrInsufficientPermissions
 		}
 		idKey := mapKeyFromPubKey(identity)
