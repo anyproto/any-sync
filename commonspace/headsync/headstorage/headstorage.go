@@ -54,7 +54,8 @@ type HeadsUpdate struct {
 type EntryIterator func(entry HeadsEntry) (bool, error)
 
 type IterOpts struct {
-	Deleted bool
+	Deleted       bool
+	MinLastAddSeq uint64
 }
 
 type HeadStorage interface {
@@ -117,13 +118,22 @@ func (h *headStorage) AddObserver(observer Observer) {
 }
 
 func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIter EntryIterator) error {
-	var qry any
+	var deletedFilter query.Filter
 	if opts.Deleted {
-		qry = query.Key{Path: []string{DeletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
+		deletedFilter = query.Key{Path: []string{DeletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
 	} else {
-		qry = query.Key{Path: []string{DeletedStatusKey}, Filter: query.Not{query.Exists{}}}
+		deletedFilter = query.Key{Path: []string{DeletedStatusKey}, Filter: query.Not{query.Exists{}}}
 	}
-	iter, err := h.headsColl.Find(qry).Sort(idKey).Iter(ctx)
+	var qry query.Filter = deletedFilter
+	sortKey := idKey
+	if opts.MinLastAddSeq > 0 {
+		qry = query.And{
+			deletedFilter,
+			query.Key{Path: []string{lastAddSeqKey}, Filter: query.NewComp(query.CompOpGt, int(opts.MinLastAddSeq))},
+		}
+		sortKey = lastAddSeqKey
+	}
+	iter, err := h.headsColl.Find(qry).Sort(sortKey).Iter(ctx)
 	if err != nil {
 		return fmt.Errorf("find iter: %w", err)
 	}
