@@ -2,6 +2,9 @@ package secureservice
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"errors"
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
@@ -127,7 +130,33 @@ func TestHandshakeAdmissionRequiredRejectsMissingToken(t *testing.T) {
 	assert.Empty(t, verifier.Requests())
 }
 
-func TestInitAdmissionEnabledRequiresVerifier(t *testing.T) {
+func TestInitAdmissionEnabledBuildsVerifierFromJWKSURL(t *testing.T) {
+	nc := testnodeconf.GenNodeConfig(1)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	const jwksURL = "https://issuer.example/.well-known/jwks.json"
+	var gotURLs []string
+	withAdmissionJWKSFetcher(t, func(ctx context.Context, url string) ([]byte, error) {
+		gotURLs = append(gotURLs, url)
+		return rsaJWKS(t, &privateKey.PublicKey, "test-key"), nil
+	})
+	secureConf := Config{Admission: AdmissionConfig{
+		Enabled:  true,
+		Required: true,
+		Issuer:   "https://issuer.example",
+		Audience: "any-sync",
+		JWKSURL:  jwksURL,
+	}}
+
+	fx := newFixtureWithSecureConfig(t, nc, nc.GetAccountService(0), 1, []uint32{1}, &secureConf, nil)
+	defer fx.Finish(t)
+
+	_, ok := fx.admissionVerifier.(*jwtAdmissionVerifier)
+	assert.True(t, ok)
+	assert.Equal(t, []string{jwksURL}, gotURLs)
+}
+
+func TestInitAdmissionEnabledRequiresJWKSURLOrVerifier(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(1)
 	secureConf := Config{Admission: AdmissionConfig{Enabled: true}}
 	a := new(app.App)
@@ -136,6 +165,78 @@ func TestInitAdmissionEnabledRequiresVerifier(t *testing.T) {
 	ss := New().(*secureService)
 	err := ss.Init(a)
 	assert.ErrorIs(t, err, ErrAdmissionInvalidConfig)
+}
+
+func TestInitAdmissionDisabledDoesNotFetchJWKSURL(t *testing.T) {
+	nc := testnodeconf.GenNodeConfig(1)
+	fetchCalled := false
+	withAdmissionJWKSFetcher(t, func(ctx context.Context, url string) ([]byte, error) {
+		fetchCalled = true
+		return nil, errors.New("unexpected fetch")
+	})
+	secureConf := Config{Admission: AdmissionConfig{
+		JWKSURL: "https://issuer.example/.well-known/jwks.json",
+	}}
+
+	fx := newFixtureWithSecureConfig(t, nc, nc.GetAccountService(0), 1, []uint32{1}, &secureConf, nil)
+	defer fx.Finish(t)
+
+	assert.False(t, fetchCalled)
+}
+
+func TestInitAdmissionEnabledPropagatesJWKSFetchError(t *testing.T) {
+	nc := testnodeconf.GenNodeConfig(1)
+	fetchErr := errors.New("fetch failed")
+	withAdmissionJWKSFetcher(t, func(ctx context.Context, url string) ([]byte, error) {
+		return nil, fetchErr
+	})
+	secureConf := Config{Admission: AdmissionConfig{
+		Enabled:  true,
+		Issuer:   "https://issuer.example",
+		Audience: "any-sync",
+		JWKSURL:  "https://issuer.example/.well-known/jwks.json",
+	}}
+	a := new(app.App)
+	a.Register(nc.GetAccountService(0)).Register(testSecureConfig{nodeConf: nc, secureConf: secureConf})
+
+	ss := New().(*secureService)
+	err := ss.Init(a)
+	assert.ErrorIs(t, err, ErrAdmissionInvalidConfig)
+	assert.ErrorIs(t, err, fetchErr)
+}
+
+func TestInitAdmissionInjectedVerifierDoesNotFetchJWKSURL(t *testing.T) {
+	nc := testnodeconf.GenNodeConfig(1)
+	fetchCalled := false
+	withAdmissionJWKSFetcher(t, func(ctx context.Context, url string) ([]byte, error) {
+		fetchCalled = true
+		return nil, errors.New("unexpected fetch")
+	})
+	verifier := &recordingAdmissionVerifier{
+		decision: AdmissionDecision{Allowed: true, Reason: "ok"},
+	}
+	secureConf := Config{Admission: AdmissionConfig{
+		Enabled:  true,
+		Required: true,
+		Issuer:   "https://issuer.example",
+		Audience: "any-sync",
+		JWKSURL:  "https://issuer.example/.well-known/jwks.json",
+	}}
+
+	fx := newFixtureWithSecureConfig(t, nc, nc.GetAccountService(0), 1, []uint32{1}, &secureConf, verifier)
+	defer fx.Finish(t)
+
+	assert.Same(t, verifier, fx.admissionVerifier)
+	assert.False(t, fetchCalled)
+}
+
+func withAdmissionJWKSFetcher(t *testing.T, fetcher func(context.Context, string) ([]byte, error)) {
+	t.Helper()
+	original := fetchAdmissionJWKS
+	fetchAdmissionJWKS = fetcher
+	t.Cleanup(func() {
+		fetchAdmissionJWKS = original
+	})
 }
 
 func TestHandshakeIncompatibleVersion(t *testing.T) {

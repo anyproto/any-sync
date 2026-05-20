@@ -104,7 +104,9 @@ func (s *secureService) Init(a *app.App) (err error) {
 	s.admissionEnabled = admissionConf.Enabled || admissionConf.Required
 	s.admissionRequired = admissionConf.Required
 	if s.admissionEnabled && s.admissionVerifier == nil {
-		return ErrAdmissionInvalidConfig
+		if s.admissionVerifier, err = newAdmissionVerifierFromConfig(admissionConf); err != nil {
+			return err
+		}
 	}
 
 	peerKey, err := account.Account().PeerKey.Raw()
