@@ -2,12 +2,17 @@ package secureservice
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
@@ -90,6 +95,34 @@ func TestAdmissionVerifierCredentialChecker_AllowsAdmissionToken(t *testing.T) {
 	}, verifier.Requests()[0])
 }
 
+func TestAdmissionVerifierCredentialChecker_LogsAcceptedAdmission(t *testing.T) {
+	logs := captureSecureServiceLogs(t)
+	baseResult := handshake.Result{
+		Identity:       []byte("identity"),
+		ProtoVersion:   1,
+		ClientVersion:  "test:v1",
+		AdmissionToken: "secret-admission-token",
+	}
+	verifier := &recordingAdmissionVerifier{
+		decision: AdmissionDecision{Allowed: true, Reason: "ok"},
+	}
+	checker := withAdmissionVerifier(context.Background(), staticCredentialChecker{result: baseResult}, verifier, true, "network-1")
+
+	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
+	require.NoError(t, err)
+	entries := logs.FilterMessage("admission accepted").All()
+	require.Len(t, entries, 1)
+	fields := entries[0].ContextMap()
+	assert.Equal(t, "peer-id", fields["peerId"])
+	assert.Equal(t, "network-1", fields["networkId"])
+	assert.Equal(t, "test:v1", fields["clientVersion"])
+	assert.Equal(t, uint32(1), fields["protoVersion"])
+	assert.Equal(t, true, fields["required"])
+	assert.Equal(t, true, fields["hasToken"])
+	assert.Equal(t, true, fields["allowed"])
+	assertObservedLogsDoNotContain(t, logs, "secret-admission-token")
+}
+
 func TestAdmissionVerifierCredentialChecker_DeniesRejectedAdmissionToken(t *testing.T) {
 	verifier := &recordingAdmissionVerifier{
 		decision: AdmissionDecision{Allowed: false, Reason: "not admitted"},
@@ -99,6 +132,31 @@ func TestAdmissionVerifierCredentialChecker_DeniesRejectedAdmissionToken(t *test
 	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
 	assert.Equal(t, handshake.ErrInvalidCredentials, err)
 	require.Len(t, verifier.Requests(), 1)
+}
+
+func TestAdmissionVerifierCredentialChecker_LogsRejectedAdmission(t *testing.T) {
+	logs := captureSecureServiceLogs(t)
+	verifier := &recordingAdmissionVerifier{
+		decision: AdmissionDecision{Allowed: false, Reason: "not admitted"},
+	}
+	checker := withAdmissionVerifier(context.Background(), staticCredentialChecker{result: handshake.Result{
+		ProtoVersion:   1,
+		ClientVersion:  "test:v1",
+		AdmissionToken: "secret-admission-token",
+	}}, verifier, true, "network-1")
+
+	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
+	assert.Equal(t, handshake.ErrInvalidCredentials, err)
+	entries := logs.FilterMessage("admission rejected").All()
+	require.Len(t, entries, 1)
+	fields := entries[0].ContextMap()
+	assert.Equal(t, "peer-id", fields["peerId"])
+	assert.Equal(t, "network-1", fields["networkId"])
+	assert.Equal(t, true, fields["required"])
+	assert.Equal(t, true, fields["hasToken"])
+	assert.Equal(t, false, fields["allowed"])
+	assert.Equal(t, false, fields["verifierError"])
+	assertObservedLogsDoNotContain(t, logs, "secret-admission-token")
 }
 
 func TestAdmissionVerifierCredentialChecker_DeniesVerifierError(t *testing.T) {
@@ -111,6 +169,42 @@ func TestAdmissionVerifierCredentialChecker_DeniesVerifierError(t *testing.T) {
 	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
 	assert.Equal(t, handshake.ErrInvalidCredentials, err)
 	require.Len(t, verifier.Requests(), 1)
+}
+
+func TestAdmissionVerifierCredentialChecker_LogsVerifierErrorWithoutSensitiveFields(t *testing.T) {
+	logs := captureSecureServiceLogs(t)
+	tokenSecret := "secret-token"
+	reasonSecret := "secret-reason"
+	errorSecret := "secret-error"
+	claimSecret := "secret-claim"
+	verifier := &recordingAdmissionVerifier{
+		decision: AdmissionDecision{
+			Allowed: false,
+			Reason:  reasonSecret,
+			Claims: AdmissionClaims{
+				Claims: map[string]any{"claim": claimSecret},
+			},
+		},
+		err: errors.New(errorSecret),
+	}
+	checker := withAdmissionVerifier(context.Background(), staticCredentialChecker{result: handshake.Result{
+		ProtoVersion:   1,
+		ClientVersion:  "test:v1",
+		AdmissionToken: tokenSecret,
+	}}, verifier, true, "network-1")
+
+	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
+	assert.Equal(t, handshake.ErrInvalidCredentials, err)
+	entries := logs.FilterMessage("admission rejected").All()
+	require.Len(t, entries, 1)
+	fields := entries[0].ContextMap()
+	assert.Equal(t, true, fields["hasToken"])
+	assert.Equal(t, false, fields["allowed"])
+	assert.Equal(t, true, fields["verifierError"])
+	assertObservedLogsDoNotContain(t, logs, tokenSecret)
+	assertObservedLogsDoNotContain(t, logs, reasonSecret)
+	assertObservedLogsDoNotContain(t, logs, errorSecret)
+	assertObservedLogsDoNotContain(t, logs, claimSecret)
 }
 
 func TestAdmissionVerifierCredentialChecker_SkipsMissingOptionalToken(t *testing.T) {
@@ -134,6 +228,29 @@ func TestAdmissionVerifierCredentialChecker_DeniesMissingRequiredToken(t *testin
 
 	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
 	assert.Equal(t, handshake.ErrInvalidCredentials, err)
+	assert.Empty(t, verifier.Requests())
+}
+
+func TestAdmissionVerifierCredentialChecker_LogsMissingRequiredToken(t *testing.T) {
+	logs := captureSecureServiceLogs(t)
+	verifier := &recordingAdmissionVerifier{
+		decision: AdmissionDecision{Allowed: true, Reason: "ok"},
+	}
+	checker := withAdmissionVerifier(context.Background(), staticCredentialChecker{result: handshake.Result{
+		ProtoVersion:  1,
+		ClientVersion: "test:v1",
+	}}, verifier, true, "network-1")
+
+	_, err := checker.CheckCredential("peer-id", &handshakeproto.Credentials{})
+	assert.Equal(t, handshake.ErrInvalidCredentials, err)
+	entries := logs.FilterMessage("admission rejected: missing token").All()
+	require.Len(t, entries, 1)
+	fields := entries[0].ContextMap()
+	assert.Equal(t, "peer-id", fields["peerId"])
+	assert.Equal(t, "network-1", fields["networkId"])
+	assert.Equal(t, true, fields["required"])
+	assert.Equal(t, false, fields["hasToken"])
+	assert.Equal(t, false, fields["allowed"])
 	assert.Empty(t, verifier.Requests())
 }
 
@@ -196,6 +313,29 @@ func newTestAccData(t *testing.T) *accountdata.AccountKeys {
 	as := accounttest.AccountTestService{}
 	require.NoError(t, as.Init(nil))
 	return as.Account()
+}
+
+var secureServiceLogCaptureMu sync.Mutex
+
+func captureSecureServiceLogs(t *testing.T) *observer.ObservedLogs {
+	t.Helper()
+	secureServiceLogCaptureMu.Lock()
+	oldLog := log
+	core, logs := observer.New(zap.DebugLevel)
+	log = logger.CtxLogger{Logger: zap.New(core).Named(CName)}
+	t.Cleanup(func() {
+		log = oldLog
+		secureServiceLogCaptureMu.Unlock()
+	})
+	return logs
+}
+
+func assertObservedLogsDoNotContain(t *testing.T, logs *observer.ObservedLogs, secret string) {
+	t.Helper()
+	for _, entry := range logs.All() {
+		assert.NotContains(t, entry.Message, secret)
+		assert.NotContains(t, fmt.Sprint(entry.ContextMap()), secret)
+	}
 }
 
 type recordingAdmissionVerifier struct {
