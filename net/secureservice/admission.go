@@ -65,6 +65,11 @@ type AdmissionVerifier interface {
 	VerifyAdmission(ctx context.Context, req AdmissionRequest) (AdmissionDecision, error)
 }
 
+// AdmissionTokenProvider supplies bearer tokens for outbound handshakes.
+type AdmissionTokenProvider interface {
+	OutboundAdmissionToken(ctx context.Context, peerId string) (string, error)
+}
+
 type NoopAdmissionVerifier struct{}
 
 func (NoopAdmissionVerifier) VerifyAdmission(ctx context.Context, req AdmissionRequest) (AdmissionDecision, error) {
