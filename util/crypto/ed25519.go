@@ -119,8 +119,7 @@ func (k *Ed25519PrivKey) Equals(o Key) bool {
 // GetPublic returns an ed25519 public key from a private key.
 func (k *Ed25519PrivKey) GetPublic() PubKey {
 	return &Ed25519PubKey{
-		pubKey:   k.pubKeyBytes(),
-		pubCurve: k.pubCurve,
+		pubKey: k.pubKeyBytes(),
 	}
 }
 
