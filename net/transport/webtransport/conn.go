@@ -5,6 +5,7 @@ package webtransport
 import (
 	"context"
 	"net"
+	"sync/atomic"
 	"time"
 
 	wt "github.com/quic-go/webtransport-go"
@@ -29,6 +30,8 @@ type wtNetConn struct {
 	*wt.Stream
 	writeTimeout          time.Duration
 	localAddr, remoteAddr net.Addr
+	bytesRead             *atomic.Int64
+	bytesWritten          *atomic.Int64
 }
 
 func (c wtNetConn) Close() error {
@@ -42,7 +45,19 @@ func (c wtNetConn) Write(b []byte) (n int, err error) {
 			return
 		}
 	}
-	return c.Stream.Write(b)
+	n, err = c.Stream.Write(b)
+	if n > 0 && c.bytesWritten != nil {
+		c.bytesWritten.Add(int64(n))
+	}
+	return
+}
+
+func (c wtNetConn) Read(b []byte) (n int, err error) {
+	n, err = c.Stream.Read(b)
+	if n > 0 && c.bytesRead != nil {
+		c.bytesRead.Add(int64(n))
+	}
+	return
 }
 
 func (c wtNetConn) LocalAddr() net.Addr {
@@ -70,6 +85,16 @@ type wtMultiConn struct {
 	remoteAddr   string
 	writeTimeout time.Duration
 	closeTimeout time.Duration
+	bytesRead    atomic.Int64
+	bytesWritten atomic.Int64
+}
+
+func (m *wtMultiConn) BytesRead() int64 {
+	return m.bytesRead.Load()
+}
+
+func (m *wtMultiConn) BytesWritten() int64 {
+	return m.bytesWritten.Load()
 }
 
 func (m *wtMultiConn) Context() context.Context {
@@ -86,6 +111,8 @@ func (m *wtMultiConn) Accept() (conn net.Conn, err error) {
 		localAddr:    m.session.LocalAddr(),
 		remoteAddr:   m.session.RemoteAddr(),
 		writeTimeout: m.writeTimeout,
+		bytesRead:    &m.bytesRead,
+		bytesWritten: &m.bytesWritten,
 	}, nil
 }
 
@@ -99,6 +126,8 @@ func (m *wtMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 		localAddr:    m.session.LocalAddr(),
 		remoteAddr:   m.session.RemoteAddr(),
 		writeTimeout: m.writeTimeout,
+		bytesRead:    &m.bytesRead,
+		bytesWritten: &m.bytesWritten,
 	}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"syscall/js"
 	"time"
 
@@ -68,31 +69,35 @@ func awaitPromise(ctx context.Context, promise js.Value) (js.Value, error) {
 
 // jsStream wraps a browser WebTransportBidirectionalStream as a net.Conn.
 type jsStream struct {
-	reader     js.Value // ReadableStreamDefaultReader
-	writer     js.Value // WritableStreamDefaultWriter
-	localAddr  net.Addr
-	remoteAddr net.Addr
-	readBuf    []byte
-	readMu     sync.Mutex
-	writeMu    sync.Mutex
-	closeOnce  sync.Once
-	closeCtx   context.Context
-	closeFunc  context.CancelFunc
+	reader       js.Value // ReadableStreamDefaultReader
+	writer       js.Value // WritableStreamDefaultWriter
+	localAddr    net.Addr
+	remoteAddr   net.Addr
+	readBuf      []byte
+	readMu       sync.Mutex
+	writeMu      sync.Mutex
+	closeOnce    sync.Once
+	closeCtx     context.Context
+	closeFunc    context.CancelFunc
+	bytesRead    *atomic.Int64
+	bytesWritten *atomic.Int64
 }
 
-func newJSStream(bidiStream js.Value, remoteAddr string) *jsStream {
+func newJSStream(bidiStream js.Value, remoteAddr string, bytesRead, bytesWritten *atomic.Int64) *jsStream {
 	readable := bidiStream.Get("readable")
 	writable := bidiStream.Get("writable")
 	reader := readable.Call("getReader")
 	writer := writable.Call("getWriter")
 	ctx, cancel := context.WithCancel(context.Background())
 	return &jsStream{
-		reader:     reader,
-		writer:     writer,
-		localAddr:  wtAddr{addr: "local"},
-		remoteAddr: wtAddr{addr: remoteAddr},
-		closeCtx:   ctx,
-		closeFunc:  cancel,
+		reader:       reader,
+		writer:       writer,
+		localAddr:    wtAddr{addr: "local"},
+		remoteAddr:   wtAddr{addr: remoteAddr},
+		closeCtx:     ctx,
+		closeFunc:    cancel,
+		bytesRead:    bytesRead,
+		bytesWritten: bytesWritten,
 	}
 }
 
@@ -131,6 +136,9 @@ func (s *jsStream) Read(b []byte) (int, error) {
 	if n < dataLen {
 		s.readBuf = data[n:]
 	}
+	if n > 0 && s.bytesRead != nil {
+		s.bytesRead.Add(int64(n))
+	}
 	return n, nil
 }
 
@@ -148,6 +156,9 @@ func (s *jsStream) Write(b []byte) (int, error) {
 	writePromise := s.writer.Call("write", uint8Array)
 	if _, err := awaitPromise(s.closeCtx, writePromise); err != nil {
 		return 0, err
+	}
+	if len(b) > 0 && s.bytesWritten != nil {
+		s.bytesWritten.Add(int64(len(b)))
 	}
 	return len(b), nil
 }
@@ -178,6 +189,16 @@ type jsMultiConn struct {
 	closeCh        chan struct{}
 	closeOnce      sync.Once
 	remoteAddr     string
+	bytesRead      atomic.Int64
+	bytesWritten   atomic.Int64
+}
+
+func (m *jsMultiConn) BytesRead() int64 {
+	return m.bytesRead.Load()
+}
+
+func (m *jsMultiConn) BytesWritten() int64 {
+	return m.bytesWritten.Load()
 }
 
 func newJSConn(cctx context.Context, wtObj js.Value, remoteAddr string) transport.MultiConn {
@@ -220,7 +241,7 @@ func (m *jsMultiConn) Accept() (net.Conn, error) {
 		return nil, transport.ErrConnClosed
 	}
 	stream := result.Get("value")
-	return newJSStream(stream, m.remoteAddr), nil
+	return newJSStream(stream, m.remoteAddr, &m.bytesRead, &m.bytesWritten), nil
 }
 
 func (m *jsMultiConn) Open(ctx context.Context) (net.Conn, error) {
@@ -229,7 +250,7 @@ func (m *jsMultiConn) Open(ctx context.Context) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newJSStream(stream, m.remoteAddr), nil
+	return newJSStream(stream, m.remoteAddr, &m.bytesRead, &m.bytesWritten), nil
 }
 
 func (m *jsMultiConn) Addr() string {

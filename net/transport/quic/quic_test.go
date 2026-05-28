@@ -75,6 +75,46 @@ func TestQuicTransport_Dial(t *testing.T) {
 	assert.NoError(t, copyErr)
 }
 
+func TestQuicTransport_BytesCounters(t *testing.T) {
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	mcC, err := fxC.Dial(ctx, fxS.addr)
+	require.NoError(t, err)
+	var mcS transport.MultiConn
+	select {
+	case mcS = <-fxS.accepter.mcs:
+	case <-time.After(time.Second * 5):
+		t.Fatal("accept timeout")
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, serr := mcS.Accept()
+		require.NoError(t, serr)
+		buf := bytes.NewBuffer(nil)
+		_, _ = io.Copy(buf, conn)
+	}()
+
+	conn, err := mcC.Open(ctx)
+	require.NoError(t, err)
+	payload := bytes.Repeat([]byte("y"), 4096)
+	_, err = conn.Write(payload)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+	<-done
+
+	assert.Eventually(t, func() bool {
+		return mcC.BytesWritten() >= int64(len(payload)) &&
+			mcS.BytesRead() >= int64(len(payload))
+	}, time.Second*2, time.Millisecond*20,
+		"client wrote=%d server read=%d (payload=%d)",
+		mcC.BytesWritten(), mcS.BytesRead(), len(payload))
+}
+
 // no deadline - 69100 rps
 // common write deadline - 66700 rps
 // subconn write deadline - 67100 rps

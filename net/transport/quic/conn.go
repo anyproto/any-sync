@@ -6,10 +6,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/quic-go/quic-go"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/net/peer"
@@ -41,7 +41,17 @@ type quicMultiConn struct {
 	cctx         context.Context
 	writeTimeout time.Duration
 	closeTimeout time.Duration
+	bytesRead    atomic.Int64
+	bytesWritten atomic.Int64
 	connection
+}
+
+func (q *quicMultiConn) BytesRead() int64 {
+	return q.bytesRead.Load()
+}
+
+func (q *quicMultiConn) BytesWritten() int64 {
+	return q.bytesWritten.Load()
 }
 
 func (q *quicMultiConn) Context() context.Context {
@@ -63,6 +73,8 @@ func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
 		localAddr:    q.LocalAddr(),
 		remoteAddr:   q.RemoteAddr(),
 		writeTimeout: q.writeTimeout,
+		bytesRead:    &q.bytesRead,
+		bytesWritten: &q.bytesWritten,
 	}, nil
 }
 
@@ -76,6 +88,8 @@ func (q *quicMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 		localAddr:    q.LocalAddr(),
 		remoteAddr:   q.RemoteAddr(),
 		writeTimeout: q.writeTimeout,
+		bytesRead:    &q.bytesRead,
+		bytesWritten: &q.bytesWritten,
 	}, nil
 }
 
@@ -100,7 +114,7 @@ func (q *quicMultiConn) Close() error {
 	// if we have the udp connection saved in quicMultiConn, then we manage it ourselves
 	// we don't manage/close the udp connections when we accept streams, otherwise we would kill the server
 	closeWait := make(chan struct{})
-	isTimeout := atomic.NewBool(false)
+	var isTimeout atomic.Bool
 	go func() {
 		select {
 		case <-closeWait:
@@ -138,6 +152,8 @@ type quicNetConn struct {
 	*quic.Stream
 	writeTimeout          time.Duration
 	localAddr, remoteAddr net.Addr
+	bytesRead             *atomic.Int64
+	bytesWritten          *atomic.Int64
 }
 
 func (q quicNetConn) Close() error {
@@ -157,7 +173,19 @@ func (q quicNetConn) Write(b []byte) (n int, err error) {
 			return
 		}
 	}
-	return q.Stream.Write(b)
+	n, err = q.Stream.Write(b)
+	if n > 0 && q.bytesWritten != nil {
+		q.bytesWritten.Add(int64(n))
+	}
+	return
+}
+
+func (q quicNetConn) Read(b []byte) (n int, err error) {
+	n, err = q.Stream.Read(b)
+	if n > 0 && q.bytesRead != nil {
+		q.bytesRead.Add(int64(n))
+	}
+	return
 }
 
 func (q quicNetConn) LocalAddr() net.Addr {

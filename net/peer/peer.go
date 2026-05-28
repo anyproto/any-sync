@@ -63,6 +63,8 @@ type Stat struct {
 	Created        time.Time `json:"created"`
 	Version        uint32    `json:"version"`
 	AliveTimeSecs  float64   `json:"aliveTimeSecs"`
+	BytesRead      int64     `json:"bytesRead"`
+	BytesWritten   int64     `json:"bytesWritten"`
 }
 
 type StatProvider interface {
@@ -429,5 +431,7 @@ func (p *peer) ProvideStat() *Stat {
 		Created:        p.created,
 		Version:        protoVersion,
 		AliveTimeSecs:  time.Now().Sub(p.created).Seconds(),
+		BytesRead:      p.MultiConn.BytesRead(),
+		BytesWritten:   p.MultiConn.BytesWritten(),
 	}
 }
