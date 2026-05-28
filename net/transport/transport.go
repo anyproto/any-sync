@@ -42,6 +42,15 @@ type MultiConn interface {
 	CloseChan() <-chan struct{}
 	// Close closes the connection and all sub connections
 	Close() error
+	// BytesRead returns the cumulative number of bytes received from the peer
+	// at the transport boundary (post-decryption, post-compression). For yamux
+	// this includes session framing on top of the underlying TCP conn; for
+	// QUIC/webtransport this counts only stream-level bytes and excludes
+	// QUIC/UDP framing overhead.
+	BytesRead() int64
+	// BytesWritten returns the cumulative number of bytes sent to the peer
+	// at the transport boundary (see BytesRead for level-of-detail caveats).
+	BytesWritten() int64
 }
 
 type Accepter interface {

@@ -84,7 +84,7 @@ func (t *wtTransportJS) Dial(ctx context.Context, addr string) (transport.MultiC
 		return nil, fmt.Errorf("create bidi stream: %w", err)
 	}
 
-	hsConn := newJSStream(bidiStream, addr)
+	hsConn := newJSStream(bidiStream, addr, nil, nil)
 	defer hsConn.Close()
 
 	cctx, err := t.secure.HandshakeOutbound(ctx, hsConn, expectedPeerId)

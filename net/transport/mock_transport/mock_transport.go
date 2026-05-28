@@ -122,6 +122,34 @@ func (mr *MockMultiConnMockRecorder) Addr() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Addr", reflect.TypeOf((*MockMultiConn)(nil).Addr))
 }
 
+// BytesRead mocks base method.
+func (m *MockMultiConn) BytesRead() int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BytesRead")
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// BytesRead indicates an expected call of BytesRead.
+func (mr *MockMultiConnMockRecorder) BytesRead() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BytesRead", reflect.TypeOf((*MockMultiConn)(nil).BytesRead))
+}
+
+// BytesWritten mocks base method.
+func (m *MockMultiConn) BytesWritten() int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BytesWritten")
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// BytesWritten indicates an expected call of BytesWritten.
+func (mr *MockMultiConnMockRecorder) BytesWritten() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BytesWritten", reflect.TypeOf((*MockMultiConn)(nil).BytesWritten))
+}
+
 // Close mocks base method.
 func (m *MockMultiConn) Close() error {
 	m.ctrl.T.Helper()

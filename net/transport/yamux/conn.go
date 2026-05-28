@@ -41,6 +41,14 @@ func (y *yamuxConn) LastUsage() time.Time {
 	return y.luConn.LastUsage()
 }
 
+func (y *yamuxConn) BytesRead() int64 {
+	return y.luConn.BytesRead()
+}
+
+func (y *yamuxConn) BytesWritten() int64 {
+	return y.luConn.BytesWritten()
+}
+
 func (y *yamuxConn) Context() context.Context {
 	return y.ctx
 }

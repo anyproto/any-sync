@@ -206,6 +206,8 @@ func (p *pipeMultiConn) Close() error               { return nil }
 func (p *pipeMultiConn) CloseChan() <-chan struct{} { ch := make(chan struct{}); close(ch); return ch }
 func (p *pipeMultiConn) IsClosed() bool             { return false }
 func (p *pipeMultiConn) Accept() (net.Conn, error)  { return nil, transport.ErrConnClosed }
+func (p *pipeMultiConn) BytesRead() int64           { return 0 }
+func (p *pipeMultiConn) BytesWritten() int64        { return 0 }
 
 func (p *pipeMultiConn) Open(ctx context.Context) (net.Conn, error) {
 	client, server := NewDelayPipe(p.delay)
