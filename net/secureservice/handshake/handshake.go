@@ -70,9 +70,10 @@ type CredentialChecker interface {
 }
 
 type Result struct {
-	Identity      []byte
-	ProtoVersion  uint32
-	ClientVersion string
+	Identity       []byte
+	ProtoVersion   uint32
+	ClientVersion  string
+	AdmissionToken string
 }
 
 func newHandshake() *handshake {
@@ -191,6 +192,7 @@ func (h *handshake) release() {
 	h.remoteAck.Error = 0
 	h.remoteCred.Type = 0
 	h.remoteCred.Payload = h.remoteCred.Payload[:0]
+	h.remoteCred.AdmissionToken = ""
 	h.remoteProto.Proto = 0
 	h.remoteProto.Encodings = h.remoteProto.Encodings[:0]
 	handshakePool.Put(h)
