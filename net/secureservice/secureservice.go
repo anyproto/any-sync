@@ -134,7 +134,8 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 }
 
 func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
-	res, err := handshake.IncomingHandshake(ctx, conn, peerId, s.inboundChecker)
+	checker := withAdmissionToken(s.inboundChecker, CtxOutboundAdmissionToken(ctx))
+	res, err := handshake.IncomingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +144,7 @@ func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteC
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
+	cctx = ctxWithRemoteAdmissionToken(cctx, res.AdmissionToken)
 	return
 }
 
@@ -162,6 +164,7 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	} else {
 		checker = s.noVerifyChecker
 	}
+	checker = withAdmissionToken(checker, CtxOutboundAdmissionToken(ctx))
 	res, err := handshake.OutgoingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
@@ -171,6 +174,7 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
+	cctx = ctxWithRemoteAdmissionToken(cctx, res.AdmissionToken)
 	return cctx, nil
 }
 

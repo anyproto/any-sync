@@ -39,7 +39,8 @@ func TestHandshake(t *testing.T) {
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 1, []uint32{1})
 	defer fxC.Finish(t)
 
-	cctx, err := fxC.SecureOutbound(ctx, cc)
+	const admissionToken = "client-admission-token"
+	cctx, err := fxC.SecureOutbound(CtxWithOutboundAdmissionToken(ctx, admissionToken), cc)
 	require.NoError(t, err)
 	ctxPeerId, err := peer.CtxPeerId(cctx)
 	require.NoError(t, err)
@@ -53,6 +54,8 @@ func TestHandshake(t *testing.T) {
 	marshalledId, _ := nc.GetAccountService(1).Account().SignKey.GetPublic().Marshall()
 	assert.Equal(t, nc.GetAccountService(1).Account().PeerId, peerId)
 	assert.Equal(t, marshalledId, accId)
+	assert.Equal(t, admissionToken, CtxRemoteAdmissionToken(res.ctx))
+	assert.Empty(t, CtxOutboundAdmissionToken(res.ctx))
 }
 
 func TestHandshakeIncompatibleVersion(t *testing.T) {
