@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/server"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/webtransport"
@@ -51,6 +52,8 @@ type peerService struct {
 	server       server.DRPCServer
 	preferQuic   bool
 	mu           sync.RWMutex
+
+	admissionTokenProvider secureservice.AdmissionTokenProvider
 }
 
 func (p *peerService) Init(a *app.App) (err error) {
@@ -69,6 +72,11 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
+	if provider, providerErr := app.GetComponent[secureservice.AdmissionTokenProvider](a); providerErr == nil {
+		p.admissionTokenProvider = provider
+	} else if !errors.Is(providerErr, app.ErrComponentNotFound) {
+		return providerErr
+	}
 	p.peerAddrs = map[string][]string{}
 	return nil
 }
@@ -118,6 +126,9 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 
 	// Pass expected peerId in context for transports that need it (e.g. WebTransport)
 	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
+	if ctx, err = p.withOutboundAdmissionToken(ctx, peerId); err != nil {
+		return nil, err
+	}
 
 	var mc transport.MultiConn
 	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
@@ -139,6 +150,20 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		return nil, ErrPeerIdMismatched
 	}
 	return peer.NewPeer(mc, p.server)
+}
+
+func (p *peerService) withOutboundAdmissionToken(ctx context.Context, peerId string) (context.Context, error) {
+	if p.admissionTokenProvider == nil || secureservice.CtxOutboundAdmissionToken(ctx) != "" {
+		return ctx, nil
+	}
+	token, err := p.admissionTokenProvider.OutboundAdmissionToken(ctx, peerId)
+	if err != nil {
+		return nil, err
+	}
+	if token == "" {
+		return ctx, nil
+	}
+	return secureservice.CtxWithOutboundAdmissionToken(ctx, token), nil
 }
 
 func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string) (mc transport.MultiConn, err error) {
