@@ -40,6 +40,7 @@ message Credentials {
     bytes payload = 2;
     uint32 version = 3;
     string clientVersion = 4;
+    string admissionToken = 5;
 }
 
 enum CredentialsType {
