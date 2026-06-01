@@ -3,9 +3,8 @@ package headsync
 import (
 	"context"
 	"errors"
+	"net"
 	"time"
-
-	"github.com/quic-go/quic-go"
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
@@ -100,8 +99,10 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
 		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
-			var idleTimeoutErr *quic.IdleTimeoutError
-			if !errors.As(err, &idleTimeoutErr) && !errors.Is(err, context.DeadlineExceeded) {
+			// suppress benign transient failures: a closed/idle connection
+			// (normalized to transport.ErrConnClosed, which unwraps to
+			// net.ErrClosed) or a sync deadline
+			if !errors.Is(err, net.ErrClosed) && !errors.Is(err, context.DeadlineExceeded) {
 				d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 			}
 		}

@@ -34,13 +34,35 @@ type poolStats struct {
 }
 
 type pool struct {
-	outgoing    ocache.OCache
-	incoming    ocache.OCache
-	statService debugstat.StatService
+	outgoing      ocache.OCache
+	incoming      ocache.OCache
+	statService   debugstat.StatService
+	closingCtx    context.Context
+	closingCancel context.CancelFunc
 }
 
 func (p *pool) Name() (name string) {
 	return CName
+}
+
+// evictOnClose removes the peer from the cache as soon as its underlying
+// connection dies, instead of waiting for the next Get or the GC to notice.
+// When the whole pool is shutting down, cache.Close already evicts every peer,
+// so per-peer removal is skipped. It never outlives the peer.
+func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache) {
+	select {
+	case <-pr.CloseChan():
+	case <-p.closingCtx.Done():
+		return
+	}
+	if p.closingCtx.Err() != nil {
+		// pool is shutting down; let cache.Close handle eviction
+		return
+	}
+	// Remove only if the cache still holds THIS peer. A newer connection for
+	// the same id may have replaced pr (incoming AddPeer re-add, or outgoing
+	// redial); removing by id alone would close that live replacement.
+	_, _ = cache.RemoveSame(p.closingCtx, pr.Id(), pr)
 }
 
 func (p *pool) Get(ctx context.Context, id string) (pr peer.Peer, err error) {
@@ -145,19 +167,19 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 }
 
 func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
-	if err = p.incoming.Add(pr.Id(), pr); err != nil {
-		if err == ocache.ErrExists {
-			// in case when an incoming connection with a peer already exists, we close and remove an existing connection
-			if v, e := p.incoming.Pick(ctx, pr.Id()); e == nil {
-				_ = v.Close()
-				_, _ = p.incoming.Remove(ctx, pr.Id())
-				return p.incoming.Add(pr.Id(), pr)
-			}
-		} else {
-			return err
+	err = p.incoming.Add(pr.Id(), pr)
+	if err == ocache.ErrExists {
+		// in case when an incoming connection with a peer already exists, we close and remove an existing connection
+		if v, e := p.incoming.Pick(ctx, pr.Id()); e == nil {
+			_ = v.Close()
+			_, _ = p.incoming.Remove(ctx, pr.Id())
+			err = p.incoming.Add(pr.Id(), pr)
 		}
 	}
-	return
+	if err == nil {
+		go p.evictOnClose(pr, p.incoming)
+	}
+	return err
 }
 
 func (p *pool) Pick(ctx context.Context, id string) (pr peer.Peer, err error) {

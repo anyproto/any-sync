@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	_ "net/http/pprof"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 
 	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
 )
 
@@ -306,6 +308,7 @@ func newFixture(t *testing.T, peerId string) *fixture {
 		return ac.conn, ac.err
 	}).AnyTimes()
 	fx.mc.EXPECT().Close().AnyTimes()
+	fx.mc.EXPECT().IsClosed().DoAndReturn(func() bool { return fx.mcClosed.Load() }).AnyTimes()
 	p, err := NewPeer(fx.mc, fx.testCtrl)
 	require.NoError(t, err)
 	fx.peer = p.(*peer)
@@ -318,11 +321,23 @@ type fixture struct {
 	mc       *mock_transport.MockMultiConn
 	acceptCh chan acceptedConn
 	testCtrl *testCtrl
+	mcClosed atomic.Bool
 }
 
 func (fx *fixture) finish() {
 	fx.testCtrl.close()
 	fx.ctrl.Finish()
+}
+
+func TestPeer_AcquireDrpcConn_ConnClosed(t *testing.T) {
+	fx := newFixture(t, "p1")
+	defer fx.finish()
+
+	fx.mcClosed.Store(true) // underlying MultiConn is dead
+
+	dc, err := fx.AcquireDrpcConn(context.Background())
+	assert.ErrorIs(t, err, transport.ErrConnClosed)
+	assert.Nil(t, dc)
 }
 
 func newTesCtrl() *testCtrl {

@@ -132,6 +132,9 @@ func (p *peer) Id() string {
 }
 
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+	if p.IsClosed() {
+		return nil, transport.ErrConnClosed
+	}
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
 		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))

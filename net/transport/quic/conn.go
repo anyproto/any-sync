@@ -58,12 +58,28 @@ func (q *quicMultiConn) Context() context.Context {
 	return q.cctx
 }
 
+// isConnDead reports whether err means the underlying QUIC connection is gone
+// (idle timeout, peer-initiated close, or an already-closed connection), as
+// opposed to a transient or stream-level error.
+func isConnDead(err error) bool {
+	if err == nil {
+		return false
+	}
+	var idle *quic.IdleTimeoutError
+	if errors.As(err, &idle) {
+		return true
+	}
+	var appErr *quic.ApplicationError
+	if errors.As(err, &appErr) && appErr.ErrorCode == 2 {
+		return true
+	}
+	return errors.Is(err, quic.ErrServerClosed) || errors.Is(err, net.ErrClosed)
+}
+
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
 	stream, err := q.connection.AcceptStream(context.Background())
 	if err != nil {
-		if errors.Is(err, quic.ErrServerClosed) {
-			err = transport.ErrConnClosed
-		} else if aerr, ok := err.(*quic.ApplicationError); ok && aerr.ErrorCode == 2 {
+		if isConnDead(err) {
 			err = transport.ErrConnClosed
 		}
 		return nil, err
@@ -81,6 +97,9 @@ func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
 func (q *quicMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 	stream, err := q.OpenStreamSync(ctx)
 	if err != nil {
+		if isConnDead(err) {
+			return nil, transport.ErrConnClosed
+		}
 		return nil, err
 	}
 	return quicNetConn{

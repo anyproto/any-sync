@@ -89,6 +89,12 @@ type OCache interface {
 	Add(id string, value Object) (err error)
 	// Remove closes and removes object
 	Remove(ctx context.Context, id string) (ok bool, err error)
+	// RemoveSame closes and removes the object only if the value currently
+	// stored under id is exactly the given one (pointer identity). It lets a
+	// caller evict a specific instance it owns without racing a newer value
+	// that has replaced it under the same id. Returns ok=true only when this
+	// call performed the removal.
+	RemoveSame(ctx context.Context, id string, value Object) (ok bool, err error)
 	// TryRemove Tries to close and to remove the object
 	TryRemove(id string) (ok bool, err error)
 	// ForEach iterates over all loaded objects, breaks when callback returns false
@@ -212,6 +218,26 @@ func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 		c.mu.Unlock()
 	}
 	return
+}
+
+func (c *oCache) RemoveSame(ctx context.Context, id string, value Object) (ok bool, err error) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return false, ErrClosed
+	}
+	e, exists := c.data[id]
+	// e.value is written only under c.mu (in Add/load), so reading it here is
+	// race-free. remove() acts on this exact entry: it deletes/closes it only
+	// if this call is the one that transitions it to closing. If e was already
+	// replaced under the same id it is in a closed state and remove() is a
+	// no-op, so a stale caller can never close the newer value that took the id.
+	same := exists && e.value == value
+	c.mu.Unlock()
+	if !same {
+		return false, ErrNotExists
+	}
+	return c.remove(ctx, e)
 }
 
 func (c *oCache) TryRemove(id string) (ok bool, err error) {

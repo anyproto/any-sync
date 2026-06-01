@@ -593,3 +593,50 @@ func TestOCacheFuzzy(t *testing.T) {
 		require.Equal(t, 0, c.Len())
 	})
 }
+
+func TestOCache_RemoveSame(t *testing.T) {
+	newCache := func() OCache {
+		return New(func(ctx context.Context, id string) (Object, error) {
+			return nil, ErrNotExists
+		})
+	}
+
+	t.Run("removes matching value", func(t *testing.T) {
+		c := newCache()
+		obj := NewTestObject("1", false, nil)
+		require.NoError(t, c.Add("1", obj))
+		ok, err := c.RemoveSame(ctx, "1", obj)
+		require.NoError(t, err)
+		require.True(t, ok)
+		require.True(t, obj.closeCalled)
+		require.Equal(t, 0, c.Len())
+	})
+
+	t.Run("keeps replacement under same id", func(t *testing.T) {
+		c := newCache()
+		old := NewTestObject("old", false, nil)
+		repl := NewTestObject("repl", false, nil)
+		require.NoError(t, c.Add("1", old))
+		// old gets replaced by repl under the same id
+		_, err := c.Remove(ctx, "1")
+		require.NoError(t, err)
+		require.NoError(t, c.Add("1", repl))
+		// a stale RemoveSame holding the old value must not touch repl
+		ok, err := c.RemoveSame(ctx, "1", old)
+		require.ErrorIs(t, err, ErrNotExists)
+		require.False(t, ok)
+		require.False(t, repl.closeCalled, "replacement must not be closed")
+		require.Equal(t, 1, c.Len())
+		pk, err := c.Pick(ctx, "1")
+		require.NoError(t, err)
+		require.Equal(t, repl, pk)
+	})
+
+	t.Run("missing id", func(t *testing.T) {
+		c := newCache()
+		obj := NewTestObject("1", false, nil)
+		ok, err := c.RemoveSame(ctx, "1", obj)
+		require.ErrorIs(t, err, ErrNotExists)
+		require.False(t, ok)
+	})
+}
