@@ -3,13 +3,23 @@ package transport
 
 import (
 	"context"
-	"errors"
 	"net"
 )
 
 var (
-	ErrConnClosed = errors.New("connection closed")
+	// ErrConnClosed is returned by transport Open/Accept when the underlying
+	// connection is gone (idle timeout, peer close, server close). It unwraps to
+	// net.ErrClosed so callers can match either sentinel.
+	ErrConnClosed error = connClosedError{}
 )
+
+// connClosedError carries a distinctive message (to tell it apart from other
+// connection errors in logs) while unwrapping to net.ErrClosed.
+type connClosedError struct{}
+
+func (connClosedError) Error() string { return "transport connection closed" }
+
+func (connClosedError) Unwrap() error { return net.ErrClosed }
 
 const (
 	Yamux        = "yamux"
