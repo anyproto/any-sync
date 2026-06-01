@@ -748,7 +748,10 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 	defer fx.Finish()
 	p := fx.Service.(*poolService).pool
 
+	// the peer is actually in the cache, so a wrong eviction would be observable
 	tp := newTestPeer("inc1") // peer stays alive (CloseChan never fires)
+	require.NoError(t, p.incoming.Add(tp.Id(), tp))
+
 	done := make(chan struct{})
 	go func() {
 		p.evictOnClose(tp, p.incoming)
@@ -762,12 +765,40 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 	case <-time.After(50 * time.Millisecond):
 	}
 
-	// pool shutting down: watcher must exit promptly and NOT touch the peer
+	// pool shutting down: watcher must exit promptly and must NOT evict the peer
 	p.closingCancel()
 	select {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("watcher did not exit on shutdown")
 	}
-	require.False(t, tp.IsClosed(), "shutdown path must not close/evict the peer")
+	require.False(t, tp.IsClosed(), "shutdown path must not close the peer")
+	pk, err := p.incoming.Pick(ctx, tp.Id())
+	require.NoError(t, err, "shutdown path must leave the peer for cache.Close to evict")
+	require.Equal(t, tp, pk)
+}
+
+// TestPool_ReAddIncomingKeepsReplacement guards against the stale-watcher race:
+// when a second incoming connection replaces an existing one under the same id,
+// the watcher spawned for the old (now closed) peer must NOT evict the live
+// replacement.
+func TestPool_ReAddIncomingKeepsReplacement(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish()
+
+	old := newTestPeer("1")
+	require.NoError(t, fx.AddPeer(ctx, old))
+
+	// a fresh incoming connection for the same id: AddPeer closes `old`
+	// (waking its watcher) and installs `repl` under the same id.
+	repl := newTestPeer("1")
+	require.NoError(t, fx.AddPeer(ctx, repl))
+	require.True(t, old.IsClosed(), "re-add must close the old connection")
+
+	// the old peer's watcher must never tear down the live replacement
+	require.Never(t, func() bool {
+		pk, err := fx.Pick(ctx, "1")
+		return err != nil || pk != peer.Peer(repl)
+	}, 300*time.Millisecond, 10*time.Millisecond)
+	require.False(t, repl.IsClosed(), "replacement must stay open")
 }

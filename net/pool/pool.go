@@ -59,7 +59,10 @@ func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache) {
 		// pool is shutting down; let cache.Close handle eviction
 		return
 	}
-	_, _ = cache.Remove(p.closingCtx, pr.Id())
+	// Remove only if the cache still holds THIS peer. A newer connection for
+	// the same id may have replaced pr (incoming AddPeer re-add, or outgoing
+	// redial); removing by id alone would close that live replacement.
+	_, _ = cache.RemoveSame(p.closingCtx, pr.Id(), pr)
 }
 
 func (p *pool) Get(ctx context.Context, id string) (pr peer.Peer, err error) {
