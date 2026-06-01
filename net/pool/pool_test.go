@@ -707,3 +707,67 @@ func (t *testPeer) IsClosed() bool {
 func (t *testPeer) CloseChan() <-chan struct{} {
 	return t.closed
 }
+
+func TestPool_EvictsOutgoingOnClose(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish()
+
+	tp := newTestPeer("1")
+	fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+		return tp, nil
+	}
+
+	p, err := fx.Get(ctx, "1")
+	require.NoError(t, err)
+	require.Equal(t, tp, p)
+
+	// simulate the underlying connection dying
+	require.NoError(t, tp.Close())
+
+	require.Eventually(t, func() bool {
+		return fx.Service.(*poolService).outgoing.Len() == 0
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestPool_EvictsIncomingOnClose(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish()
+
+	tp := newTestPeer("inc1")
+	require.NoError(t, fx.AddPeer(ctx, tp))
+
+	require.NoError(t, tp.Close())
+
+	require.Eventually(t, func() bool {
+		return fx.Service.(*poolService).incoming.Len() == 0
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish()
+	p := fx.Service.(*poolService).pool
+
+	tp := newTestPeer("inc1") // peer stays alive (CloseChan never fires)
+	done := make(chan struct{})
+	go func() {
+		p.evictOnClose(tp, p.incoming)
+		close(done)
+	}()
+
+	// peer alive and pool not closing: watcher must stay blocked
+	select {
+	case <-done:
+		t.Fatal("watcher exited before peer close or shutdown")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	// pool shutting down: watcher must exit promptly and NOT touch the peer
+	p.closingCancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("watcher did not exit on shutdown")
+	}
+	require.False(t, tp.IsClosed(), "shutdown path must not close/evict the peer")
+}

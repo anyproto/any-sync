@@ -47,17 +47,23 @@ type poolService struct {
 func (p *poolService) Init(a *app.App) (err error) {
 	p.dialer = a.MustComponent("net.peerservice").(dialer)
 	p.pool = &pool{}
+	p.pool.closingCtx, p.pool.closingCancel = context.WithCancel(context.Background())
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}
 	p.pool.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			if value, err = p.dialer.Dial(ctx, id); err != nil {
+			value, err = p.dialer.Dial(ctx, id)
+			if err != nil {
 				if errors.Is(err, handshake.ErrIncompatibleVersion) {
 					return &errObject{err: err, createdTime: atomic.NewTime(time.Now())}, nil
 				}
+				return value, err
 			}
-			return
+			if pr, ok := value.(peer.Peer); ok {
+				go p.pool.evictOnClose(pr, p.pool.outgoing)
+			}
+			return value, nil
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute/2),
@@ -87,6 +93,9 @@ func (p *pool) Run(ctx context.Context) (err error) {
 }
 
 func (p *pool) Close(ctx context.Context) (err error) {
+	if p.closingCancel != nil {
+		p.closingCancel()
+	}
 	p.statService.RemoveProvider(p)
 	if e := p.incoming.Close(); e != nil {
 		log.Warn("close incoming cache error", zap.Error(e))
