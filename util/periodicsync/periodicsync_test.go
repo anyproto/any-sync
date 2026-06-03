@@ -78,6 +78,49 @@ func TestPeriodicSync_Run(t *testing.T) {
 		})
 	})
 
+	t.Run("reset timer restarts ticker without calling", func(t *testing.T) {
+		runSyncTest(t, func(t *testing.T) {
+			times := atomic.Int32{}
+			diffSyncer := func(ctx context.Context) error {
+				times.Add(1)
+				return nil
+			}
+			pSync := NewPeriodicSyncDuration(time.Minute, 0, diffSyncer, l)
+			pSync.Run()
+			synctest.Wait()
+			require.Equal(t, int32(1), times.Load())
+			// advance almost up to the next tick
+			time.Sleep(50 * time.Second)
+			synctest.Wait()
+			require.Equal(t, int32(1), times.Load())
+			// resetting the timer must not call the function...
+			pSync.ResetTimer()
+			synctest.Wait()
+			require.Equal(t, int32(1), times.Load())
+			// ...and must restart the ticker: the original tick no longer fires
+			time.Sleep(20 * time.Second)
+			synctest.Wait()
+			require.Equal(t, int32(1), times.Load())
+			// a full period after the reset, the ticker fires again
+			time.Sleep(40 * time.Second)
+			synctest.Wait()
+			require.Equal(t, int32(2), times.Load())
+			pSync.Close()
+		})
+	})
+
+	t.Run("reset timer is a no-op when not running", func(t *testing.T) {
+		diffSyncer := func(ctx context.Context) error {
+			return nil
+		}
+		pSync := NewPeriodicSyncDuration(time.Minute, 0, diffSyncer, l)
+		// must not block or panic before Run
+		pSync.ResetTimer()
+		pSync.Close()
+		// ...nor after Close
+		pSync.ResetTimer()
+	})
+
 	t.Run("loop call 2 times", func(t *testing.T) {
 		runSyncTest(t, func(t *testing.T) {
 			times := atomic.Int32{}
