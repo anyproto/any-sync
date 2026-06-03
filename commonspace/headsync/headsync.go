@@ -39,6 +39,7 @@ type HeadSync interface {
 	app.ComponentRunnable
 	ExternalIds() []string
 	AllIds() []string
+	DiffSync(ctx context.Context) error
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 }
 
@@ -103,6 +104,17 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 	}
 	h.periodicSync.Run()
 	return
+}
+
+// DiffSync runs a single head-sync (diff) round immediately, using the same
+// logic as the periodic loop, and resets the periodic timer so the next
+// scheduled round is pushed out. It blocks until the round completes and
+// returns its error verbatim. Safe to call concurrently with the periodic loop
+// and before Run/after Close.
+func (h *headSync) DiffSync(ctx context.Context) error {
+	err := h.syncer.Sync(ctx)
+	h.periodicSync.ResetTimer()
+	return err
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {

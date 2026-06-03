@@ -80,6 +80,18 @@ func (mr *MockPeriodicSyncMockRecorder) Reset(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockPeriodicSync)(nil).Reset), ctx)
 }
 
+// ResetTimer mocks base method.
+func (m *MockPeriodicSync) ResetTimer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetTimer")
+}
+
+// ResetTimer indicates an expected call of ResetTimer.
+func (mr *MockPeriodicSyncMockRecorder) ResetTimer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetTimer", reflect.TypeOf((*MockPeriodicSync)(nil).ResetTimer))
+}
+
 // Run mocks base method.
 func (m *MockPeriodicSync) Run() {
 	m.ctrl.T.Helper()

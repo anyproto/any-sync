@@ -14,6 +14,7 @@ import (
 type PeriodicSync interface {
 	Kick(ctx context.Context) error
 	Reset(ctx context.Context) error
+	ResetTimer()
 	Run()
 	Close()
 }
@@ -34,6 +35,7 @@ func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller
 		loopCancel: cancel,
 		loopDone:   make(chan struct{}),
 		loopKick:   make(chan bool),
+		loopReset:  make(chan struct{}),
 		period:     periodicLoopInterval,
 		timeout:    timeout,
 	}
@@ -46,6 +48,7 @@ type periodicCall struct {
 	loopCancel context.CancelFunc
 	loopDone   chan struct{}
 	loopKick   chan bool
+	loopReset  chan struct{}
 	period     time.Duration
 	timeout    time.Duration
 	isRunning  atomic.Bool
@@ -82,6 +85,8 @@ func (p *periodicCall) loop(period time.Duration) {
 					ticker.Reset(period)
 				}
 				doCall()
+			case <-p.loopReset:
+				ticker.Reset(period)
 			case <-ticker.C:
 				doCall()
 			}
@@ -107,6 +112,17 @@ func (p *periodicCall) Reset(ctx context.Context) error {
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
+	}
+}
+
+// ResetTimer restarts the periodic schedule without running the scheduled
+// function. It is best-effort and never blocks: if the loop is not running or
+// is currently executing the scheduled function, the call is a no-op. Safe to
+// call concurrently with the loop and before Run/after Close.
+func (p *periodicCall) ResetTimer() {
+	select {
+	case p.loopReset <- struct{}{}:
+	default:
 	}
 }
 
