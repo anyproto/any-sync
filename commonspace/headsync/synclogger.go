@@ -9,9 +9,6 @@ import (
 )
 
 type syncLogger struct {
-	// mu is a pointer so copies of syncLogger (it is passed/stored by value)
-	// share the same mutex guarding lastLogged. logSyncDone may run from
-	// several goroutines at once (the periodic loop and on-demand DiffSync).
 	mu          *sync.Mutex
 	lastLogged  map[string]time.Time
 	logInterval time.Duration
