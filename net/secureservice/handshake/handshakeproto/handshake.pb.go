@@ -223,13 +223,14 @@ func (Encoding) EnumDescriptor() ([]byte, []int) {
 }
 
 type Credentials struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          CredentialsType        `protobuf:"varint,1,opt,name=type,proto3,enum=anyHandshake.CredentialsType" json:"type,omitempty"`
-	Payload       []byte                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
-	Version       uint32                 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	ClientVersion string                 `protobuf:"bytes,4,opt,name=clientVersion,proto3" json:"clientVersion,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Type           CredentialsType        `protobuf:"varint,1,opt,name=type,proto3,enum=anyHandshake.CredentialsType" json:"type,omitempty"`
+	Payload        []byte                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	Version        uint32                 `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	ClientVersion  string                 `protobuf:"bytes,4,opt,name=clientVersion,proto3" json:"clientVersion,omitempty"`
+	AdmissionToken string                 `protobuf:"bytes,5,opt,name=admissionToken,proto3" json:"admissionToken,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Credentials) Reset() {
@@ -286,6 +287,13 @@ func (x *Credentials) GetVersion() uint32 {
 func (x *Credentials) GetClientVersion() string {
 	if x != nil {
 		return x.ClientVersion
+	}
+	return ""
+}
+
+func (x *Credentials) GetAdmissionToken() string {
+	if x != nil {
+		return x.AdmissionToken
 	}
 	return ""
 }
@@ -444,12 +452,13 @@ var File_net_secureservice_handshake_handshakeproto_protos_handshake_proto proto
 
 const file_net_secureservice_handshake_handshakeproto_protos_handshake_proto_rawDesc = "" +
 	"\n" +
-	"Anet/secureservice/handshake/handshakeproto/protos/handshake.proto\x12\fanyHandshake\"\x9a\x01\n" +
+	"Anet/secureservice/handshake/handshakeproto/protos/handshake.proto\x12\fanyHandshake\"\xc2\x01\n" +
 	"\vCredentials\x121\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x1d.anyHandshake.CredentialsTypeR\x04type\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\fR\apayload\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\rR\aversion\x12$\n" +
-	"\rclientVersion\x18\x04 \x01(\tR\rclientVersion\"F\n" +
+	"\rclientVersion\x18\x04 \x01(\tR\rclientVersion\x12&\n" +
+	"\x0eadmissionToken\x18\x05 \x01(\tR\x0eadmissionToken\"F\n" +
 	"\x14PayloadSignedPeerIds\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12\x12\n" +
 	"\x04sign\x18\x02 \x01(\fR\x04sign\"0\n" +
