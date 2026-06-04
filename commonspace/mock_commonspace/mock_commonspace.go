@@ -267,6 +267,20 @@ func (mr *MockSpaceMockRecorder) StoredIds() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoredIds", reflect.TypeOf((*MockSpace)(nil).StoredIds))
 }
 
+// SyncHeads mocks base method.
+func (m *MockSpace) SyncHeads(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncHeads", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncHeads indicates an expected call of SyncHeads.
+func (mr *MockSpaceMockRecorder) SyncHeads(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncHeads", reflect.TypeOf((*MockSpace)(nil).SyncHeads), ctx)
+}
+
 // SyncStatus mocks base method.
 func (m *MockSpace) SyncStatus() syncstatus.StatusUpdater {
 	m.ctrl.T.Helper()
