@@ -128,16 +128,21 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	}
 	defer p.ReleaseDrpcConn(ctx, conn)
 
-	var (
-		cl        = d.clientFactory.Client(conn)
-		rdiff     = NewRemoteDiff(d.spaceId, cl)
-		syncAclId = d.syncAcl.Id()
-	)
-	storageId := d.keyValue.DefaultStore().Id()
+	cl := d.clientFactory.Client(conn)
+	rdiff := NewRemoteDiff(d.spaceId, cl)
 	newIds, changedIds, removedIds, err := d.diffManager.TryDiff(ctx, rdiff)
 	if err != nil {
 		return d.onDiffError(ctx, p, cl, err)
 	}
+	return d.applyDiff(ctx, p, newIds, changedIds, removedIds)
+}
+
+// applyDiff syncs the divergent ids resolved by a successful TryDiff round with
+// the peer: it routes the acl/storage roots to their dedicated syncers and hands
+// the remaining tree ids to treeSyncer.
+func (d *diffSyncer) applyDiff(ctx context.Context, p peer.Peer, newIds, changedIds, removedIds []string) (err error) {
+	syncAclId := d.syncAcl.Id()
+	storageId := d.keyValue.DefaultStore().Id()
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
@@ -183,11 +188,34 @@ func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncp
 		return err
 	}
 	// in case space is missing on peer, we should send push request
-	err = d.sendPushSpaceRequest(ctx, p.Id(), cl)
-	if err != nil {
+	if err = d.sendPushSpaceRequest(ctx, p.Id(), cl); err != nil {
 		return err
 	}
-	return nil
+	// SpacePush only registers the space on the peer (header + acl root + settings
+	// root) — it does NOT transfer object trees. Without an immediate follow-up the
+	// trees would be uploaded only on the next periodic head-sync round (a full
+	// SyncPeriod later), leaving a window in which the peer has the space but none
+	// of its trees, so a freshly-joined client requesting them gets "tree not
+	// found" until then. Now that the peer holds the space, run one more diff in
+	// the same flow so treeSyncer uploads the trees immediately.
+	//
+	// Guard against a tight loop: if the peer has not yet committed the space (a
+	// rare race), TryDiff returns ErrSpaceMissing again — we then fall back to the
+	// periodic round rather than pushing again (note we call applyDiff directly,
+	// not onDiffError, so a repeated ErrSpaceMissing cannot recurse).
+	newIds, changedIds, removedIds, err := d.diffManager.TryDiff(ctx, NewRemoteDiff(d.spaceId, cl))
+	if err != nil {
+		// A repeated ErrSpaceMissing means the peer has not committed the space
+		// yet (the rare race noted above): silently fall back to the periodic
+		// round. Any other error is a genuine follow-up failure — surface it the
+		// same way the first-round path does (Sync logs per-peer errors) instead
+		// of swallowing it.
+		if err != spacesyncproto.ErrSpaceMissing {
+			d.log.WarnCtx(ctx, "follow-up diff after space push failed", zap.Error(err))
+		}
+		return nil
+	}
+	return d.applyDiff(ctx, p, newIds, changedIds, removedIds)
 }
 
 func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
