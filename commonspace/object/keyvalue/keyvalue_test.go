@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -271,6 +272,7 @@ func (n noOpSyncClient) Broadcast(ctx context.Context, objectId string, keyValue
 type fixture struct {
 	*keyValueService
 	server *rpctest.TestServer
+	ts     *testServer
 }
 
 func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spacestorage.SpaceStorageCreatePayload) *fixture {
@@ -304,10 +306,12 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 		clientFactory: spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		defaultStore:  defaultStorage,
 	}
-	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(rpcHandler, &testServer{service: service, t: t}))
+	ts := &testServer{service: service, t: t}
+	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(rpcHandler, ts))
 	return &fixture{
 		keyValueService: service,
 		server:          rpcHandler,
+		ts:              ts,
 	}
 }
 
@@ -358,6 +362,15 @@ type testServer struct {
 	spacesyncproto.DRPCSpaceSyncUnimplementedServer
 	service *keyValueService
 	t       *testing.T
+	mu      sync.Mutex
+	sent    []string // KeyPeerIds the server streamed back, in send order
+}
+
+// sentIds returns a copy of the order in which the server streamed values back.
+func (t *testServer) sentIds() []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return append([]string(nil), t.sent...)
 }
 
 func (t *testServer) StoreDiff(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
@@ -368,5 +381,20 @@ func (t *testServer) StoreElements(stream spacesyncproto.DRPCSpaceSync_StoreElem
 	msg, err := stream.Recv()
 	require.NoError(t.t, err)
 	require.NotEmpty(t.t, msg.SpaceId)
-	return t.service.HandleStoreElementsRequest(ctx, stream)
+	return t.service.HandleStoreElementsRequest(ctx, &recordingStream{DRPCSpaceSync_StoreElementsStream: stream, ts: t})
+}
+
+// recordingStream records the order of values the server sends, for ordering assertions.
+type recordingStream struct {
+	spacesyncproto.DRPCSpaceSync_StoreElementsStream
+	ts *testServer
+}
+
+func (r *recordingStream) Send(kv *spacesyncproto.StoreKeyValue) error {
+	if kv.KeyPeerId != "" {
+		r.ts.mu.Lock()
+		r.ts.sent = append(r.ts.sent, kv.KeyPeerId)
+		r.ts.mu.Unlock()
+	}
+	return r.DRPCSpaceSync_StoreElementsStream.Send(kv)
 }

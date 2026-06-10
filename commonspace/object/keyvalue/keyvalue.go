@@ -3,6 +3,7 @@ package keyvalue
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"go.uber.org/zap"
 	"storj.io/drpc"
@@ -13,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/innerstorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/syncstorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -26,6 +28,12 @@ import (
 )
 
 var ErrUnexpectedMessageType = errors.New("unexpected message type")
+
+// applyBatchSize bounds how many streamed values the client applies per SetRaw
+// during a pull. Because the server streams values newest-first, applying in
+// batches lets the most recent read-markers become queryable before the long
+// tail finishes arriving.
+const applyBatchSize = 100
 
 var log = logger.NewNamed(kvinterfaces.CName)
 
@@ -107,7 +115,14 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 	if err != nil {
 		return err
 	}
-	var messages []*spacesyncproto.StoreKeyValue
+	// Apply incrementally as values stream in (the server sends them newest-first)
+	// so the most recent read-markers become queryable before the long tail
+	// arrives. SetRaw is LWW-idempotent and each call is atomic, so batching is
+	// safe and interrupt-safe: an aborted stream just leaves a consistent prefix
+	// that the next sync resumes. Each Recv yields a fresh message and SetRaw does
+	// not retain the batch, so reallocating it per flush is safe. (Trade-off: one
+	// broadcast per batch instead of one for the whole pull — same value volume.)
+	batch := make([]*spacesyncproto.StoreKeyValue, 0, applyBatchSize)
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
@@ -116,9 +131,18 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 		if msg.KeyPeerId == "" {
 			break
 		}
-		messages = append(messages, msg)
+		batch = append(batch, msg)
+		if len(batch) >= applyBatchSize {
+			if err = k.defaultStore.SetRaw(ctx, batch...); err != nil {
+				return err
+			}
+			batch = make([]*spacesyncproto.StoreKeyValue, 0, applyBatchSize)
+		}
 	}
-	return k.defaultStore.SetRaw(ctx, messages...)
+	if len(batch) > 0 {
+		return k.defaultStore.SetRaw(ctx, batch...)
+	}
+	return nil
 }
 
 func (k *keyValueService) HandleStoreDiffRequest(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (resp *spacesyncproto.StoreDiffResponse, err error) {
@@ -145,26 +169,44 @@ func (k *keyValueService) HandleStoreElementsRequest(ctx context.Context, stream
 		}
 	}
 	innerStorage := k.defaultStore.InnerStorage()
-	isError := false
-	for _, msg := range messagesToSend {
-		kv, err := innerStorage.GetKeyPeerId(ctx, msg)
+	// Fetch the requested values, then stream them newest-first (by "t" desc) so a
+	// cold-syncing peer gets the most recent read-markers before the long tail.
+	// SetRaw is LWW-idempotent, so order never changes the converged set — only
+	// when each value lands. Each value's byte slices are copied because
+	// GetKeyPeerId returns buffers that the next fetch reuses.
+	kvs := make([]innerstorage.KeyValue, 0, len(messagesToSend))
+	for _, id := range messagesToSend {
+		kv, err := innerStorage.GetKeyPeerId(ctx, id)
 		if err != nil {
-			log.Warn("failed to get key value", zap.String("key", msg), zap.Error(err))
+			log.Warn("failed to get key value", zap.String("key", id), zap.Error(err))
 			continue
 		}
-		err = stream.Send(kv.Proto())
-		if err != nil {
-			log.Warn("failed to send key value", zap.String("key", msg), zap.Error(err))
+		kv.Value.Value = append([]byte(nil), kv.Value.Value...)
+		kv.Value.PeerSignature = append([]byte(nil), kv.Value.PeerSignature...)
+		kv.Value.IdentitySignature = append([]byte(nil), kv.Value.IdentitySignature...)
+		kvs = append(kvs, kv)
+	}
+	// Newest-first. NB: despite its name, TimestampMilli holds the write time in
+	// MICROSECONDS (set from StoreKeyInner.TimestampMicro), so this orders with
+	// microsecond resolution.
+	sort.Slice(kvs, func(i, j int) bool {
+		return kvs[i].TimestampMilli > kvs[j].TimestampMilli
+	})
+	isError := false
+	for i := range kvs {
+		if err = stream.Send(kvs[i].Proto()); err != nil {
+			log.Warn("failed to send key value", zap.Error(err))
 			isError = true
 			break
 		}
 	}
 	if !isError {
-		err = stream.Send(&spacesyncproto.StoreKeyValue{})
-		if err != nil {
+		if err = stream.Send(&spacesyncproto.StoreKeyValue{}); err != nil {
 			return err
 		}
 	}
+	// Persist the peer's pushed values regardless of any send error above: they
+	// were already received and are independent of streaming our response.
 	return k.defaultStore.SetRaw(ctx, messagesToSave...)
 }
 
