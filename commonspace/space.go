@@ -52,6 +52,8 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description(ctx context.Context) (desc SpaceDescription, err error)
 
+	SyncHeads(ctx context.Context) error
+
 	TreeBuilder() objecttreebuilder.TreeBuilder
 	TreeSyncer() treesyncer.TreeSyncer
 	AclClient() aclclient.AclSpaceClient
@@ -133,6 +135,18 @@ func (s *space) Description(ctx context.Context) (desc SpaceDescription, err err
 
 func (s *space) StoredIds() []string {
 	return s.headSync.ExternalIds()
+}
+
+// SyncHeads triggers an immediate head-sync (diff) round on demand, running the
+// same logic as the periodic loop and resetting the periodic timer. It blocks
+// until the round completes and returns its error verbatim. It is safe to call
+// concurrently with the periodic loop; if invoked before the space has been
+// initialised it is a no-op and returns nil.
+func (s *space) SyncHeads(ctx context.Context) error {
+	if s.headSync == nil {
+		return nil
+	}
+	return s.headSync.DiffSync(ctx)
 }
 
 func (s *space) DebugAllHeads() (heads []headsync.TreeHeads) {

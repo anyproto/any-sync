@@ -223,10 +223,15 @@ func TestDiffSyncer(t *testing.T) {
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
-		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil)
+		// After the push registers the space, onDiffError runs the diff once more
+		// in the same flow. Here the peer has not yet committed the space, so the
+		// second TryDiff also returns ErrSpaceMissing and we fall back to the
+		// periodic round (no second push, no tree sync).
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil).Times(2)
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
-			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
+			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing).
+			Times(2)
 
 		fx.storageMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
 		fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
@@ -247,6 +252,121 @@ func TestDiffSyncer(t *testing.T) {
 		fx.clientMock.EXPECT().
 			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(fx.spaceState.SpaceId, aclRootId, settingsId, credential, spaceHeader)).
 			Return(nil, nil)
+		fx.peerManagerMock.EXPECT().SendMessage(gomock.Any(), "peerId", gomock.Any()).Return(nil)
+		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
+
+		require.NoError(t, fx.diffSyncer.Sync(ctx))
+	})
+
+	t.Run("diff syncer sync space missing then pushes trees in same flow", func(t *testing.T) {
+		fx := newHeadSyncFixture(t)
+		fx.initDiffSyncer(t)
+		defer fx.stop()
+		mPeer := rpctest.MockPeer{}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
+		aclStorageMock := mock_list.NewMockStorage(fx.ctrl)
+		settingsStorage := mock_objecttree.NewMockStorage(fx.ctrl)
+		settingsId := "settingsId"
+		aclRootId := "aclRootId"
+		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{
+			RawHeader: []byte{1},
+		}
+		credential := []byte("credential")
+		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
+
+		fx.peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{mPeer}, nil)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil).Times(2)
+		// First diff: space missing -> triggers push. Second diff (after push, same
+		// flow): the peer now holds the (still empty) space, so the owner's tree
+		// surfaces as a REMOVED id (owner has it, peer lacks it -> ldiff
+		// removedIds), which applyDiff routes into the `existing` list that
+		// treeSyncer pushes. It is uploaded immediately instead of waiting for the
+		// next periodic head-sync round.
+		gomock.InOrder(
+			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
+			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, []string{"tree1"}, nil),
+		)
+		fx.storageMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
+		fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
+			SettingsId:  settingsId,
+			SpaceHeader: []byte{1},
+		}, nil)
+		fx.storageMock.EXPECT().TreeStorage(gomock.Any(), settingsId).Return(settingsStorage, nil)
+		settingsStorage.EXPECT().Root(gomock.Any()).Return(objecttree.StorageChange{RawChange: nil, Id: settingsId}, nil)
+		aclStorageMock.EXPECT().
+			Root(gomock.Any()).
+			Return(list.StorageRecord{
+				Id: aclRootId,
+			}, nil)
+		fx.credentialProviderMock.EXPECT().
+			GetCredential(gomock.Any(), spaceHeader).
+			Return(credential, nil)
+		fx.clientMock.EXPECT().
+			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(fx.spaceState.SpaceId, aclRootId, settingsId, credential, spaceHeader)).
+			Return(nil, nil)
+		fx.peerManagerMock.EXPECT().SendMessage(gomock.Any(), "peerId", gomock.Any()).Return(nil)
+		// follow-up diff result is applied: the tree id arrives as a removed id and
+		// is handed to treeSyncer as an `existing` id (the bucket treeSyncer pushes),
+		// with no `missing` ids.
+		fx.deletionStateMock.EXPECT().Filter([]string{"tree1"}).Return([]string{"tree1"}).Times(1)
+		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(2)
+		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer, []string{"tree1"}, gomock.Len(0)).Return(nil)
+		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
+
+		require.NoError(t, fx.diffSyncer.Sync(ctx))
+	})
+
+	t.Run("diff syncer sync space missing then follow-up diff errors", func(t *testing.T) {
+		fx := newHeadSyncFixture(t)
+		fx.initDiffSyncer(t)
+		defer fx.stop()
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
+		aclStorageMock := mock_list.NewMockStorage(fx.ctrl)
+		settingsStorage := mock_objecttree.NewMockStorage(fx.ctrl)
+		settingsId := "settingsId"
+		aclRootId := "aclRootId"
+		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{
+			RawHeader: []byte{1},
+		}
+		credential := []byte("credential")
+		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
+
+		fx.peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil).Times(2)
+		// First diff: space missing -> push. Second diff (after push) fails with a
+		// transient error that is NOT ErrSpaceMissing: we must not push again and
+		// must not sync trees; the round falls back to the periodic loop and Sync
+		// still returns nil (per-peer errors are not fatal).
+		gomock.InOrder(
+			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
+			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, context.Canceled),
+		)
+		fx.storageMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
+		fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
+			SettingsId:  settingsId,
+			SpaceHeader: []byte{1},
+		}, nil)
+		fx.storageMock.EXPECT().TreeStorage(gomock.Any(), settingsId).Return(settingsStorage, nil)
+		settingsStorage.EXPECT().Root(gomock.Any()).Return(objecttree.StorageChange{RawChange: nil, Id: settingsId}, nil)
+		aclStorageMock.EXPECT().
+			Root(gomock.Any()).
+			Return(list.StorageRecord{
+				Id: aclRootId,
+			}, nil)
+		fx.credentialProviderMock.EXPECT().
+			GetCredential(gomock.Any(), spaceHeader).
+			Return(credential, nil)
+		// exactly one push; SyncAll must NOT be called (no EXPECT for it).
+		fx.clientMock.EXPECT().
+			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(fx.spaceState.SpaceId, aclRootId, settingsId, credential, spaceHeader)).
+			Return(nil, nil).
+			Times(1)
 		fx.peerManagerMock.EXPECT().SendMessage(gomock.Any(), "peerId", gomock.Any()).Return(nil)
 		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
 

@@ -207,6 +207,9 @@ func (fx *fixture) mockMC(peerId string) *mock_transport.MockMultiConn {
 	mc.EXPECT().Context().Return(cctx).AnyTimes()
 	mc.EXPECT().Accept().Return(nil, fmt.Errorf("test")).AnyTimes()
 	mc.EXPECT().Close().AnyTimes()
+	// the pool subscribes to CloseChan to evict the peer when the connection
+	// dies; keep the peer alive by returning a nil channel that never fires.
+	mc.EXPECT().CloseChan().Return((<-chan struct{})(nil)).AnyTimes()
 	return mc
 }
 
