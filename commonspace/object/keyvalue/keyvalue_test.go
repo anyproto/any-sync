@@ -3,6 +3,7 @@ package keyvalue
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -141,6 +143,36 @@ func TestKeyValueService(t *testing.T) {
 	})
 }
 
+// TestSetRawSkipsInvalidValues asserts a value that fails to decode or verify
+// poisons only itself: the rest of the batch still applies and the call
+// succeeds. Otherwise one bad element wedges every subsequent pull at the same
+// deterministic point, since the stream order is stable.
+func TestSetRawSkipsInvalidValues(t *testing.T) {
+	fxClient, fxServer, _ := prepareFixtures(t)
+	for _, k := range []string{"good1", "poisoned", "good2"} {
+		fxClient.add(t, k, []byte("v-"+k))
+	}
+	var protos []*spacesyncproto.StoreKeyValue
+	err := fxClient.defaultStore.InnerStorage().IterateValues(ctx, func(kv innerstorage.KeyValue) (bool, error) {
+		p := kv.Proto()
+		p.Value = append([]byte(nil), p.Value...)
+		p.PeerSignature = append([]byte(nil), p.PeerSignature...)
+		p.IdentitySignature = append([]byte(nil), p.IdentitySignature...)
+		if kv.Key == "poisoned" {
+			p.IdentitySignature[0] ^= 0xff
+		}
+		protos = append(protos, p)
+		return true, nil
+	})
+	require.NoError(t, err)
+	require.Len(t, protos, 3)
+
+	require.NoError(t, fxServer.defaultStore.SetRaw(ctx, protos...))
+	require.True(t, fxServer.check(t, "good1", []byte("v-good1")), "valid value before the poisoned one must apply")
+	require.True(t, fxServer.check(t, "good2", []byte("v-good2")), "valid value after the poisoned one must apply")
+	require.False(t, fxServer.check(t, "poisoned", []byte("v-poisoned")), "the poisoned value itself must be skipped")
+}
+
 func TestKeyValueServiceIterate(t *testing.T) {
 	t.Run("empty storage", func(t *testing.T) {
 		fxClient, _, _ := prepareFixtures(t)
@@ -263,16 +295,22 @@ func mapEqual[K comparable, V comparable](map1, map2 map[K]V) bool {
 
 var ctx = context.Background()
 
-type noOpSyncClient struct{}
+// countingSyncClient counts Broadcast calls; the store broadcasts once per
+// applied Set/SetRaw, so the count observes how many applies happened.
+type countingSyncClient struct {
+	broadcasts atomic.Int32
+}
 
-func (n noOpSyncClient) Broadcast(ctx context.Context, objectId string, keyValues ...innerstorage.KeyValue) error {
+func (c *countingSyncClient) Broadcast(ctx context.Context, objectId string, keyValues ...innerstorage.KeyValue) error {
+	c.broadcasts.Add(1)
 	return nil
 }
 
 type fixture struct {
 	*keyValueService
-	server *rpctest.TestServer
-	ts     *testServer
+	server     *rpctest.TestServer
+	ts         *testServer
+	syncClient *countingSyncClient
 }
 
 func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spacestorage.SpaceStorageCreatePayload) *fixture {
@@ -287,12 +325,13 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 	require.NoError(t, err)
 	storageId := "kv.storage"
 	rpcHandler := rpctest.NewTestServer()
+	syncClient := &countingSyncClient{}
 	defaultStorage, err := keyvaluestorage.New(ctx,
 		storageId,
 		anyStore,
 		storage.HeadStorage(),
 		keys,
-		noOpSyncClient{},
+		syncClient,
 		aclList,
 		keyvaluestorage.NoOpIndexer{})
 	require.NoError(t, err)
@@ -312,6 +351,7 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 		keyValueService: service,
 		server:          rpcHandler,
 		ts:              ts,
+		syncClient:      syncClient,
 	}
 }
 
@@ -360,10 +400,19 @@ func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spaces
 
 type testServer struct {
 	spacesyncproto.DRPCSpaceSyncUnimplementedServer
-	service *keyValueService
-	t       *testing.T
-	mu      sync.Mutex
-	sent    []string // KeyPeerIds the server streamed back, in send order
+	service        *keyValueService
+	t              *testing.T
+	mu             sync.Mutex
+	sent           []string // KeyPeerIds the server streamed back, in send order
+	failTerminator bool
+}
+
+// setFailTerminator makes the server's terminator send fail, simulating a
+// stream that breaks after the values were exchanged.
+func (t *testServer) setFailTerminator(fail bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.failTerminator = fail
 }
 
 // sentIds returns a copy of the order in which the server streamed values back.
@@ -391,10 +440,13 @@ type recordingStream struct {
 }
 
 func (r *recordingStream) Send(kv *spacesyncproto.StoreKeyValue) error {
+	r.ts.mu.Lock()
 	if kv.KeyPeerId != "" {
-		r.ts.mu.Lock()
 		r.ts.sent = append(r.ts.sent, kv.KeyPeerId)
+	} else if r.ts.failTerminator {
 		r.ts.mu.Unlock()
+		return errors.New("injected terminator send failure")
 	}
+	r.ts.mu.Unlock()
 	return r.DRPCSpaceSync_StoreElementsStream.Send(kv)
 }

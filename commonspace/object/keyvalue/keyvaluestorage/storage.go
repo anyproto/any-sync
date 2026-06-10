@@ -164,7 +164,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	keyValue := innerstorage.KeyValue{
 		KeyPeerId:      keyPeerId,
 		Key:            key,
-		TimestampMilli: int(timestampMicro),
+		TimestampMicro: timestampMicro,
 		Identity:       identityKey.GetPublic().Account(),
 		PeerId:         peerIdKey.GetPublic().PeerId(),
 		AclId:          headId,
@@ -200,7 +200,12 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	for _, kv := range keyValue {
 		innerKv, err := innerstorage.KeyValueFromProto(kv, true)
 		if err != nil {
-			return err
+			// A value that fails to decode or verify poisons only itself, like the
+			// ACL-skip below: aborting the whole call would let one bad element
+			// block its entire batch — and wedge every pull at the same point,
+			// since values arrive in a deterministic order.
+			log.Warn("skipping invalid key value", zap.String("key", kv.KeyPeerId), zap.Error(err))
+			continue
 		}
 		keyValues = append(keyValues, innerKv)
 	}
@@ -214,7 +219,7 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	for i := range keyValues {
 		el, err := s.inner.Diff().Element(keyValues[i].KeyPeerId)
 		if err == nil {
-			binary.BigEndian.PutUint64(s.byteRepr, uint64(keyValues[i].TimestampMilli))
+			binary.BigEndian.PutUint64(s.byteRepr, uint64(keyValues[i].TimestampMicro))
 			if el.Head >= string(s.byteRepr) {
 				keyValues[i].KeyPeerId = ""
 				continue
@@ -251,9 +256,6 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 func (s *storage) GetAll(ctx context.Context, key string, get func(decryptor Decryptor, values []innerstorage.KeyValue) error) (err error) {
 	var values []innerstorage.KeyValue
 	err = s.inner.IteratePrefix(ctx, key, func(kv innerstorage.KeyValue) error {
-		bytes := make([]byte, len(kv.Value.Value))
-		copy(bytes, kv.Value.Value)
-		kv.Value.Value = bytes
 		values = append(values, kv)
 		return nil
 	})
@@ -329,9 +331,6 @@ func (s *storage) Iterate(ctx context.Context, f func(decryptor Decryptor, key s
 			curKey = kv.Key
 			values = values[:0]
 		}
-		bytes := make([]byte, len(kv.Value.Value))
-		copy(bytes, kv.Value.Value)
-		kv.Value.Value = bytes
 		values = append(values, kv)
 		return true, nil
 	})

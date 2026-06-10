@@ -12,11 +12,14 @@ import (
 var ErrInvalidSignature = errors.New("invalid signature")
 
 type KeyValue struct {
-	KeyPeerId      string
-	ReadKeyId      string
-	Key            string
-	Value          Value
-	TimestampMilli int
+	KeyPeerId string
+	ReadKeyId string
+	Key       string
+	Value     Value
+	// TimestampMicro is the writer-supplied LWW timestamp in microseconds
+	// (StoreKeyInner.TimestampMicro). int64, not int: on 32-bit platforms an
+	// int wraps and breaks both the LWW comparison and newest-first ordering.
+	TimestampMicro int64
 	Identity       string
 	PeerId         string
 	AclId          string
@@ -37,7 +40,7 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	if err = innerValue.UnmarshalVT(proto.Value); err != nil {
 		return kv, err
 	}
-	kv.TimestampMilli = int(innerValue.TimestampMicro)
+	kv.TimestampMicro = innerValue.TimestampMicro
 	identity, err := crypto.UnmarshalEd25519PublicKeyProto(innerValue.Identity)
 	if err != nil {
 		return kv, err
@@ -76,7 +79,9 @@ func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 	obj.Set("k", a.NewString(kv.Key))
 	obj.Set("r", a.NewString(kv.ReadKeyId))
 	obj.Set("v", kv.Value.AnyEnc(a))
-	obj.Set("t", a.NewNumberInt(kv.TimestampMilli))
+	// anyenc numbers are float64: exact for µs timestamps (< 2^53), and int-free
+	// so the value survives 32-bit platforms.
+	obj.Set("t", a.NewNumberFloat64(float64(kv.TimestampMicro)))
 	obj.Set("i", a.NewString(kv.Identity))
 	obj.Set("p", a.NewString(kv.PeerId))
 	return obj

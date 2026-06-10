@@ -1,6 +1,7 @@
 package innerstorage
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -146,18 +147,21 @@ func (s *storage) IteratePrefix(ctx context.Context, prefix string, iterFunc fun
 	return nil
 }
 
+// keyValueFromDoc returns a KeyValue that owns its memory. The byte slices are
+// cloned because GetBytes aliases the doc's parse buffer, which iterator-based
+// callers reuse for the next document (strings are safe: GetString copies).
 func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 	valueObj := doc.Value().GetObject("v")
 	value := Value{
-		Value:             valueObj.Get("v").GetBytes(),
-		PeerSignature:     valueObj.Get("p").GetBytes(),
-		IdentitySignature: valueObj.Get("i").GetBytes(),
+		Value:             bytes.Clone(valueObj.Get("v").GetBytes()),
+		PeerSignature:     bytes.Clone(valueObj.Get("p").GetBytes()),
+		IdentitySignature: bytes.Clone(valueObj.Get("i").GetBytes()),
 	}
 	return KeyValue{
 		KeyPeerId:      doc.Value().GetString("id"),
 		ReadKeyId:      doc.Value().GetString("r"),
 		Value:          value,
-		TimestampMilli: doc.Value().GetInt("t"),
+		TimestampMicro: int64(doc.Value().GetFloat64("t")),
 		Identity:       doc.Value().GetString("i"),
 		PeerId:         doc.Value().GetString("p"),
 		Key:            doc.Value().GetString("k"),
@@ -190,19 +194,38 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 	if err != nil {
 		return
 	}
+	var (
+		elements, prior []ldiff.Element
+		added           []string
+		diffUpdated     bool
+	)
 	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		} else {
+		if err == nil {
 			err = tx.Commit()
+		} else {
+			_ = tx.Rollback()
+		}
+		if err != nil && diffUpdated {
+			// The diff already contains this call's elements but the tx did not
+			// commit: undo the in-memory mutations so the diff never advertises
+			// heads the storage doesn't hold — peers would never re-send those
+			// values. Prior heads are restored in reverse so a duplicate id ends
+			// up at its genuine pre-call state; inserts are then dropped.
+			for i := len(prior) - 1; i >= 0; i-- {
+				s.diff.Set(prior[i])
+			}
+			for _, id := range added {
+				_ = s.diff.RemoveId(id)
+			}
 		}
 	}()
 	ctx = tx.Context()
-	elements, err := s.updateValues(ctx, values...)
+	elements, prior, added, err = s.updateValues(ctx, values...)
 	if err != nil {
 		return
 	}
 	s.diff.Set(elements...)
+	diffUpdated = len(elements) > 0
 	err = s.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
 		Id:    s.storageName,
 		Heads: []string{s.diff.Hash()},
@@ -210,7 +233,10 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 	return
 }
 
-func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (elements []ldiff.Element, err error) {
+// updateValues upserts the values that win their LWW comparison and returns the
+// new diff elements along with what is needed to undo the diff on a failed tx:
+// the replaced elements' prior state and the ids that were not present before.
+func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (elements, prior []ldiff.Element, added []string, err error) {
 	parser := parserPool.Get()
 	defer parserPool.Put(parser)
 	arena := arenaPool.Get()
@@ -225,9 +251,12 @@ func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (element
 			return
 		}
 		if !isNotFound {
-			if doc.Value().GetInt("t") >= value.TimestampMilli {
+			if int64(doc.Value().GetFloat64("t")) >= value.TimestampMicro {
 				continue
 			}
+			prior = append(prior, anyEncToElement(doc.Value()))
+		} else {
+			added = append(added, value.KeyPeerId)
 		}
 		arena.Reset()
 		val := value.AnyEnc(arena)
@@ -241,7 +270,7 @@ func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (element
 
 func anyEncToElement(val *anyenc.Value) ldiff.Element {
 	byteRepr := make([]byte, 8)
-	binary.BigEndian.PutUint64(byteRepr, uint64(val.GetInt("t")))
+	binary.BigEndian.PutUint64(byteRepr, uint64(int64(val.GetFloat64("t"))))
 	return ldiff.Element{
 		Id:   val.GetString("id"),
 		Head: string(byteRepr),
