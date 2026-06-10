@@ -27,6 +27,7 @@ import (
 type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	Init()
+	Run()
 	Close()
 }
 
@@ -69,6 +70,13 @@ type diffSyncer struct {
 func (d *diffSyncer) Init() {
 	d.ctx, d.cancel = context.WithCancel(context.Background())
 	d.headUpdater = newHeadUpdater(d.updateHeads)
+}
+
+// Run starts the headUpdater goroutine and subscribes to head storage updates.
+// It must not be called from Init: if another component fails to Run, the
+// space app never reaches headSync.Close, and a goroutine started in Init
+// would leak together with everything it references (see diffSyncer fields).
+func (d *diffSyncer) Run() {
 	d.storage.HeadStorage().AddObserver(d)
 	d.headUpdater.Run()
 }
