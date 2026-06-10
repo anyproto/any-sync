@@ -89,7 +89,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
-	// TODO: move to run?
 	h.syncer.Init()
 	return nil
 }
@@ -99,6 +98,7 @@ func (h *headSync) Name() (name string) {
 }
 
 func (h *headSync) Run(ctx context.Context) (err error) {
+	h.syncer.Run()
 	if err := h.diffManager.FillDiff(ctx); err != nil {
 		return err
 	}

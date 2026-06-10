@@ -64,6 +64,18 @@ func (mr *MockDiffSyncerMockRecorder) Init() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDiffSyncer)(nil).Init))
 }
 
+// Run mocks base method.
+func (m *MockDiffSyncer) Run() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Run")
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockDiffSyncerMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockDiffSyncer)(nil).Run))
+}
+
 // Sync mocks base method.
 func (m *MockDiffSyncer) Sync(ctx context.Context) error {
 	m.ctrl.T.Helper()

@@ -65,6 +65,7 @@ func (fx *headSyncFixture) initDiffSyncer(t *testing.T) {
 		return fx.clientMock
 	})
 	fx.diffSyncer.Init()
+	fx.diffSyncer.Run()
 }
 
 func TestDiffSyncer(t *testing.T) {
