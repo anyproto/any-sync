@@ -3,12 +3,15 @@ package keyvalue
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
@@ -26,6 +29,12 @@ import (
 )
 
 var ErrUnexpectedMessageType = errors.New("unexpected message type")
+
+// applyBatchSize bounds how many streamed values the client applies per SetRaw
+// during a pull. Because the server streams values newest-first, applying in
+// batches lets the most recent read-markers become queryable before the long
+// tail finishes arriving.
+const applyBatchSize = 100
 
 var log = logger.NewNamed(kvinterfaces.CName)
 
@@ -48,11 +57,13 @@ func (k *keyValueService) DefaultStore() keyvaluestorage.Storage {
 	return k.defaultStore
 }
 
+// SyncWithPeer only schedules the sync: it always returns nil, and any sync
+// error is reported by the scheduled goroutine via the log. The goroutine must
+// not write the named return — that would race with this function returning.
 func (k *keyValueService) SyncWithPeer(p peer.Peer) (err error) {
 	k.limiter.ScheduleRequest(k.ctx, p.Id(), func() {
-		err = k.syncWithPeer(k.ctx, p)
-		if err != nil {
-			log.Error("failed to sync with peer", zap.String("peerId", p.Id()), zap.Error(err))
+		if syncErr := k.syncWithPeer(k.ctx, p); syncErr != nil {
+			log.Error("failed to sync with peer", zap.String("peerId", p.Id()), zap.Error(syncErr))
 		}
 	})
 	return nil
@@ -107,7 +118,12 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 	if err != nil {
 		return err
 	}
-	var messages []*spacesyncproto.StoreKeyValue
+	// Apply incrementally as values stream in (the server sends them newest-first)
+	// so the most recent values become queryable before the long tail arrives.
+	// SetRaw is LWW-idempotent and atomic per call, so an aborted pull just
+	// leaves a consistent prefix that the next sync resumes. SetRaw does not
+	// retain the batch slice, so it is reused between flushes.
+	batch := make([]*spacesyncproto.StoreKeyValue, 0, applyBatchSize)
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
@@ -116,9 +132,15 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 		if msg.KeyPeerId == "" {
 			break
 		}
-		messages = append(messages, msg)
+		batch = append(batch, msg)
+		if len(batch) >= applyBatchSize {
+			if err = k.defaultStore.SetRaw(ctx, batch...); err != nil {
+				return err
+			}
+			batch = batch[:0]
+		}
 	}
-	return k.defaultStore.SetRaw(ctx, messages...)
+	return k.defaultStore.SetRaw(ctx, batch...)
 }
 
 func (k *keyValueService) HandleStoreDiffRequest(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (resp *spacesyncproto.StoreDiffResponse, err error) {
@@ -145,27 +167,55 @@ func (k *keyValueService) HandleStoreElementsRequest(ctx context.Context, stream
 		}
 	}
 	innerStorage := k.defaultStore.InnerStorage()
-	isError := false
-	for _, msg := range messagesToSend {
-		kv, err := innerStorage.GetKeyPeerId(ctx, msg)
+	// Stream the requested values newest-first so a cold-syncing peer gets the
+	// most recent values (e.g. read-markers) before the long tail. SetRaw is
+	// LWW-idempotent, so order never changes the converged set — only when each
+	// value lands. Sorting needs only the ids (the diff stores each element's
+	// write timestamp in its Head), so values are fetched and sent one at a
+	// time, keeping server memory flat regardless of how much is requested.
+	sortIdsNewestFirst(innerStorage.Diff(), messagesToSend)
+	var sendErr error
+	for _, id := range messagesToSend {
+		kv, err := innerStorage.GetKeyPeerId(ctx, id)
 		if err != nil {
-			log.Warn("failed to get key value", zap.String("key", msg), zap.Error(err))
+			log.Warn("failed to get key value", zap.String("key", id), zap.Error(err))
 			continue
 		}
-		err = stream.Send(kv.Proto())
-		if err != nil {
-			log.Warn("failed to send key value", zap.String("key", msg), zap.Error(err))
-			isError = true
+		if sendErr = stream.Send(kv.Proto()); sendErr != nil {
+			log.Warn("failed to send key value", zap.String("key", id), zap.Error(sendErr))
 			break
 		}
 	}
-	if !isError {
-		err = stream.Send(&spacesyncproto.StoreKeyValue{})
-		if err != nil {
-			return err
+	if sendErr == nil {
+		sendErr = stream.Send(&spacesyncproto.StoreKeyValue{})
+	}
+	// Persist the peer's pushed values regardless of any send error above: they
+	// were already received and are independent of streaming our response.
+	if err = k.defaultStore.SetRaw(ctx, messagesToSave...); err != nil {
+		return err
+	}
+	return sendErr
+}
+
+// sortIdsNewestFirst orders ids by write timestamp descending without loading
+// any values: the diff stores each element's timestamp big-endian in its Head,
+// so comparing Heads compares timestamps. Equal timestamps tie-break by id and
+// ids missing from the diff sort last, making the order deterministic. The
+// timestamps are writer-supplied — the same trust LWW conflict resolution
+// already places in them — so newest-first is best-effort, not authoritative.
+func sortIdsNewestFirst(diff ldiff.Diff, ids []string) {
+	heads := make(map[string]string, len(ids))
+	for _, id := range ids {
+		if el, err := diff.Element(id); err == nil {
+			heads[id] = el.Head
 		}
 	}
-	return k.defaultStore.SetRaw(ctx, messagesToSave...)
+	slices.SortFunc(ids, func(a, b string) int {
+		if c := strings.Compare(heads[b], heads[a]); c != 0 {
+			return c
+		}
+		return strings.Compare(a, b)
+	})
 }
 
 func (k *keyValueService) HandleMessage(ctx context.Context, headUpdate drpc.Message) (err error) {
