@@ -275,6 +275,11 @@ func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 	lastUsageConn := connutil.NewLastUsageConn(conn)
 	proto, err := handshake.OutgoingProtoHandshake(ctx, lastUsageConn, defaultHandshakeProto)
 	if err != nil {
+		// OutgoingProtoHandshake closes the conn on I/O errors and ctx
+		// cancellation, but returns without closing on some protocol-level
+		// errors (incompatible/declined/unexpected proto). Close here so the
+		// sub-stream we opened above never leaks. Double close is harmless.
+		_ = lastUsageConn.Close()
 		return nil, err
 	}
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)

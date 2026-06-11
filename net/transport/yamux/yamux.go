@@ -104,24 +104,19 @@ func (y *yamuxTransport) AddListener(lis net.Listener) {
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
 	dialTimeout := time.Duration(y.conf.DialTimeoutSec) * time.Second
-	
-	// Setup abort mechanism for context cancellation
-	done := make(chan struct{})
-	
+	// net.Dialer.Timeout together with DialContext(ctx) already aborts the TCP
+	// connect on timeout or ctx cancellation and closes the underlying fd
+	// through the runtime. We must not abort the socket ourselves: closing the
+	// raw fd that the netpoller owns races with that cleanup and can close an
+	// unrelated, reused descriptor.
 	dialer := &net.Dialer{
 		Timeout: dialTimeout,
-		Control: controlFunc(ctx, done),
 	}
-	
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
-	
-	// Signal the abortor goroutine to exit
-	close(done)
-	
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 	cctx, err := y.secure.SecureOutbound(ctx, conn)
