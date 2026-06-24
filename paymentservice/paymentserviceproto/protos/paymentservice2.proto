@@ -84,6 +84,9 @@ message MembershipV2 {
     uint64 dateEnds = 2;
     bool isAutoRenew = 3;
     Period period = 4;
+    // 0 = not in a trial. Otherwise the Unix timestamp when the free trial ends,
+    // which is also when the first real invoice is charged.
+    uint64 dateTrialEnds = 5;
   }
 
   message ProductStatus {
