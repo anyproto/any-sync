@@ -101,7 +101,12 @@ func (e *entry) setClosing(wait bool) (prevState, curState entryState) {
 	e.mx.Lock()
 	prevState = e.state
 	curState = e.state
-	if e.state == entryStateClosing {
+	// Loop rather than `if`: after waking from <-waitCh another goroutine may
+	// have already moved the entry back to closing (e.g. a busy GC/TryRemove
+	// reverted it to active and a concurrent remover re-acquired it). Re-check
+	// and wait on the new close channel instead of overwriting e.close, which
+	// would let two removers close the same channel twice (GO-7332).
+	for e.state == entryStateClosing {
 		waitCh := e.close
 		e.mx.Unlock()
 		if !wait {
