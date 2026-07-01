@@ -42,6 +42,8 @@ type SpaceCreatePayload struct {
 	Metadata []byte
 	// Options is the ACL space options (e.g. delete restrictions)
 	Options *aclrecordproto.AclSpaceOptions
+	// FileProtoVersion gates the file protocol the space uses (embedded in the signed header)
+	FileProtoVersion spacesyncproto.SpaceFileProtoVersion
 }
 
 type SpaceDerivePayload struct {
@@ -49,6 +51,8 @@ type SpaceDerivePayload struct {
 	MasterKey    crypto.PrivKey
 	SpaceType    string
 	SpacePayload []byte
+	// FileProtoVersion gates the file protocol the space uses (embedded in the signed header)
+	FileProtoVersion spacesyncproto.SpaceFileProtoVersion
 }
 
 const (
@@ -78,6 +82,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
+		FileprotoVersion:   payload.FileProtoVersion,
 	}
 	marshalled, err := header.MarshalVT()
 	if err != nil {
@@ -165,6 +170,7 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
+		FileprotoVersion:   payload.FileProtoVersion,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 	}
 
@@ -261,6 +267,7 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		SpaceType:          payload.SpaceType,
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     repKey,
+		FileprotoVersion:   payload.FileProtoVersion,
 	}
 	marshalled, err := header.MarshalVT()
 	if err != nil {
@@ -340,6 +347,7 @@ func StoragePayloadForSpaceDeriveV1(payload SpaceDerivePayload) (storagePayload 
 		SpaceType:          payload.SpaceType,
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     repKey,
+		FileprotoVersion:   payload.FileProtoVersion,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 	}
 

@@ -924,6 +924,100 @@ func TestStoragePayloadForSpaceDeriveV1(t *testing.T) {
 	})
 }
 
+func decodeSpaceHeader(t *testing.T, out spacestorage.SpaceStorageCreatePayload) *spacesyncproto.SpaceHeader {
+	var raw spacesyncproto.RawSpaceHeader
+	require.NoError(t, raw.UnmarshalVT(out.SpaceHeaderWithId.RawHeader))
+	var h spacesyncproto.SpaceHeader
+	require.NoError(t, h.UnmarshalVT(raw.SpaceHeader))
+	return &h
+}
+
+func TestSpaceHeaderFileProtoVersion(t *testing.T) {
+	newCreatePayload := func(t *testing.T, fpv spacesyncproto.SpaceFileProtoVersion) SpaceCreatePayload {
+		acc, err := accountdata.NewRandom()
+		require.NoError(t, err)
+		master, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		readKey, _ := crypto.NewRandomAES()
+		return SpaceCreatePayload{
+			SigningKey:       acc.SignKey,
+			SpaceType:        "test.space",
+			ReplicationKey:   mrand.Uint64(),
+			SpacePayload:     randBytes(12),
+			MasterKey:        master,
+			ReadKey:          readKey,
+			MetadataKey:      metaKey,
+			Metadata:         randBytes(6),
+			FileProtoVersion: fpv,
+		}
+	}
+
+	t.Run("create v1 carries fileprotoVersion=V2 and survives round-trip", func(t *testing.T) {
+		out, err := StoragePayloadForSpaceCreateV1(newCreatePayload(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2))
+		require.NoError(t, err)
+		require.NoError(t, ValidateSpaceStorageCreatePayload(out))
+		require.Equal(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2, decodeSpaceHeader(t, out).GetFileprotoVersion())
+	})
+
+	t.Run("create v0 carries fileprotoVersion=V2", func(t *testing.T) {
+		out, err := StoragePayloadForSpaceCreate(newCreatePayload(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2))
+		require.NoError(t, err)
+		require.NoError(t, ValidateSpaceStorageCreatePayload(out))
+		require.Equal(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2, decodeSpaceHeader(t, out).GetFileprotoVersion())
+	})
+
+	t.Run("derive v1 carries fileprotoVersion=V2", func(t *testing.T) {
+		acc, err := accountdata.NewRandom()
+		require.NoError(t, err)
+		master, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+		out, err := StoragePayloadForSpaceDeriveV1(SpaceDerivePayload{
+			SigningKey:       acc.SignKey,
+			MasterKey:        master,
+			SpaceType:        "derived.space",
+			SpacePayload:     randBytes(10),
+			FileProtoVersion: spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2,
+		})
+		require.NoError(t, err)
+		require.NoError(t, ValidateSpaceStorageCreatePayload(out))
+		require.Equal(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2, decodeSpaceHeader(t, out).GetFileprotoVersion())
+	})
+
+	t.Run("unset defaults to Unspecified", func(t *testing.T) {
+		out, err := StoragePayloadForSpaceCreateV1(newCreatePayload(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionUnspecified))
+		require.NoError(t, err)
+		require.Equal(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionUnspecified, decodeSpaceHeader(t, out).GetFileprotoVersion())
+	})
+
+	t.Run("fileprotoVersion is covered by the header signature (tamper rejected)", func(t *testing.T) {
+		out, err := StoragePayloadForSpaceCreateV1(newCreatePayload(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionUnspecified))
+		require.NoError(t, err)
+		// original validates
+		_, err = ValidateSpaceHeader(out.SpaceHeaderWithId, nil, out.AclWithId.Payload, out.SpaceSettingsWithId.RawChange)
+		require.NoError(t, err)
+
+		// flip fileprotoVersion inside the signed header body, keep the original signature
+		var raw spacesyncproto.RawSpaceHeader
+		require.NoError(t, raw.UnmarshalVT(out.SpaceHeaderWithId.RawHeader))
+		var h spacesyncproto.SpaceHeader
+		require.NoError(t, h.UnmarshalVT(raw.SpaceHeader))
+		h.FileprotoVersion = spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2
+		raw.SpaceHeader, err = h.MarshalVT()
+		require.NoError(t, err)
+		tamperedRaw, err := raw.MarshalVT()
+		require.NoError(t, err)
+
+		// recompute the cid so we pass the cid check and reach the signature check
+		newCid, err := cidutil.NewCidFromBytes(tamperedRaw)
+		require.NoError(t, err)
+		tampered := &spacesyncproto.RawSpaceHeaderWithId{RawHeader: tamperedRaw, Id: NewSpaceId(newCid, h.ReplicationKey)}
+		_, err = ValidateSpaceHeader(tampered, nil, out.AclWithId.Payload, out.SpaceSettingsWithId.RawChange)
+		require.ErrorIs(t, err, spacestorage.ErrIncorrectSpaceHeader)
+	})
+}
+
 func randBytes(n int) []byte {
 	b := make([]byte, n)
 	rand.Read(b)
