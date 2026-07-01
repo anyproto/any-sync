@@ -6,6 +6,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/net/peer"
 )
 
@@ -51,7 +52,12 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *fullResponseCollector, err error) {
 	collector = createCollector(t.deps)
-	req := t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
+	var req *objectmessages.Request
+	if t.deps.Probe {
+		req = NewProbeRequest(peerId, t.deps.SpaceId, t.treeId)
+	} else {
+		req = t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
+	}
 	err = t.deps.SyncClient.SendTreeRequest(ctx, req, collector)
 	if err != nil {
 		return nil, err

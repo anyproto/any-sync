@@ -9,7 +9,9 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager/mock_peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peer/mock_peer"
@@ -102,5 +104,33 @@ func TestTreeRemoteGetter(t *testing.T) {
 		fx.syncClientMock.EXPECT().SendTreeRequest(tCtx, treeRequest, coll).Return(fmt.Errorf("error"))
 		_, _, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.Error(t, err)
+	})
+
+	t.Run("probe deps send a probe request instead of a full one", func(t *testing.T) {
+		fx := newTreeRemoteGetterFixture(t)
+		defer fx.stop()
+		fx.treeGetter.deps.Probe = true
+		coll := newFullResponseCollector(BuildDeps{})
+		createCollector = func(deps BuildDeps) *fullResponseCollector {
+			return coll
+		}
+		tCtx := peer.CtxWithPeerId(ctx, peerId)
+		fx.syncClientMock.EXPECT().SendTreeRequest(tCtx, gomock.Any(), coll).DoAndReturn(
+			func(_ context.Context, rq any, _ any) error {
+				req, ok := rq.(*objectmessages.Request)
+				require.True(t, ok)
+				protoMsg, err := req.Proto()
+				require.NoError(t, err)
+				treeMsg := &treechangeproto.TreeSyncMessage{}
+				require.NoError(t, treeMsg.UnmarshalVT(protoMsg.(*spacesyncproto.ObjectSyncMessage).Payload))
+				fullReq := treeMsg.GetContent().GetFullSyncRequest()
+				require.NotNil(t, fullReq)
+				require.True(t, fullReq.Probe)
+				return nil
+			})
+		retColl, pId, err := fx.treeGetter.treeRequestLoop(tCtx)
+		require.NoError(t, err)
+		require.Equal(t, peerId, pId)
+		require.Equal(t, coll, retColl)
 	})
 }
