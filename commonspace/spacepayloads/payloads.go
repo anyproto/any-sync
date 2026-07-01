@@ -315,6 +315,89 @@ func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	return
 }
 
+func StoragePayloadForSpaceDeriveV1(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	// marshalling keys
+	identity, err := payload.SigningKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	pubKey, err := payload.SigningKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+
+	// preparing replication key
+	hasher := fnv.New64()
+	_, err = hasher.Write(pubKey)
+	if err != nil {
+		return
+	}
+	repKey := hasher.Sum64()
+
+	// preparing header (acl and settings payloads are embedded below, before signing)
+	header := &spacesyncproto.SpaceHeader{
+		Identity:           identity,
+		SpaceType:          payload.SpaceType,
+		SpaceHeaderPayload: payload.SpacePayload,
+		ReplicationKey:     repKey,
+		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
+	}
+
+	// building acl root (no SpaceId: for v1 the space id derives from the header that embeds this payload)
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, recordverifier.NewValidateFull())
+	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
+		PrivKey:   payload.SigningKey,
+		MasterKey: payload.MasterKey,
+	})
+	if err != nil {
+		return
+	}
+
+	// building settings (deterministic: no seed, no timestamp)
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
+		AclHeadId:  aclRoot.Id,
+		PrivKey:    payload.SigningKey,
+		ChangeType: SpaceReserved,
+	})
+	if err != nil {
+		return
+	}
+
+	// build header
+	header.AclPayload = aclRoot.Payload
+	header.SettingPayload = settingsRoot.RawChange
+
+	marshalled, err := header.MarshalVT()
+	if err != nil {
+		return
+	}
+	signature, err := payload.SigningKey.Sign(marshalled)
+	if err != nil {
+		return
+	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
+	marshalled, err = rawHeader.MarshalVT()
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(marshalled)
+	spaceId := NewSpaceId(id, repKey)
+	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marshalled,
+		Id:        spaceId,
+	}
+
+	// creating storage
+	storagePayload = spacestorage.SpaceStorageCreatePayload{
+		AclWithId:           aclRoot,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: settingsRoot,
+	}
+	return
+}
+
 func makeOneToOneInfo(sharedSk crypto.PrivKey, aPk, bPk crypto.PubKey) (oneToOneInfo aclrecordproto.AclOneToOneInfo, err error) {
 	writers := make([][]byte, 2)
 

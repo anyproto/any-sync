@@ -878,6 +878,52 @@ func TestStoragePayloadForSpaceDerive(t *testing.T) {
 	})
 }
 
+func TestStoragePayloadForSpaceDeriveV1(t *testing.T) {
+	t.Run("success: builds valid v1 derived space payload", func(t *testing.T) {
+		acc, err := accountdata.NewRandom()
+		require.NoError(t, err)
+
+		master, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+
+		pl := SpaceDerivePayload{
+			SigningKey:   acc.SignKey,
+			MasterKey:    master,
+			SpaceType:    "derived.space",
+			SpacePayload: randBytes(10),
+		}
+
+		out, err := StoragePayloadForSpaceDeriveV1(pl)
+		require.NoError(t, err)
+
+		// v1 payload should validate as a set (acl + settings embedded in header).
+		require.NoError(t, ValidateSpaceStorageCreatePayload(out))
+	})
+
+	t.Run("deterministic: same keys yield same space id", func(t *testing.T) {
+		acc, err := accountdata.NewRandom()
+		require.NoError(t, err)
+
+		master, _, err := crypto.GenerateRandomEd25519KeyPair()
+		require.NoError(t, err)
+
+		pl := SpaceDerivePayload{
+			SigningKey:   acc.SignKey,
+			MasterKey:    master,
+			SpaceType:    "derived.space",
+			SpacePayload: []byte("stable-payload"),
+		}
+
+		out1, err := StoragePayloadForSpaceDeriveV1(pl)
+		require.NoError(t, err)
+		out2, err := StoragePayloadForSpaceDeriveV1(pl)
+		require.NoError(t, err)
+
+		require.Equal(t, out1.SpaceHeaderWithId.Id, out2.SpaceHeaderWithId.Id)
+		require.Equal(t, out1.SpaceHeaderWithId.RawHeader, out2.SpaceHeaderWithId.RawHeader)
+	})
+}
+
 func randBytes(n int) []byte {
 	b := make([]byte, n)
 	rand.Read(b)
