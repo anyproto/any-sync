@@ -76,6 +76,14 @@ func (m *StubConf) FilePeers() []string {
 	return nil
 }
 
+func (m *StubConf) FileV2Peers() []string {
+	return nil
+}
+
+func (m *StubConf) FileV2NodeIds(spaceId string) []string {
+	return nil
+}
+
 func (m *StubConf) ConsensusPeers() []string {
 	return nil
 }
