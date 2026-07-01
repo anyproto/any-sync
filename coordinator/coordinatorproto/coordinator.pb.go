@@ -222,6 +222,8 @@ const (
 	// PaymentProcessingAPI supports payment processing api
 	// (see any-pp-node repository)
 	NodeType_PaymentProcessingAPI NodeType = 5
+	// FileV2API supports the v2 file api (filenode v2 broker pool)
+	NodeType_FileV2API NodeType = 6
 )
 
 // Enum value maps for NodeType.
@@ -233,6 +235,7 @@ var (
 		3: "ConsensusAPI",
 		4: "NamingNodeAPI",
 		5: "PaymentProcessingAPI",
+		6: "FileV2API",
 	}
 	NodeType_value = map[string]int32{
 		"TreeAPI":              0,
@@ -241,6 +244,7 @@ var (
 		"ConsensusAPI":         3,
 		"NamingNodeAPI":        4,
 		"PaymentProcessingAPI": 5,
+		"FileV2API":            6,
 	}
 )
 
@@ -3677,14 +3681,15 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x14SpaceStatusNotExists\x10\x04*J\n" +
 	"\x10SpacePermissions\x12\x1b\n" +
 	"\x17SpacePermissionsUnknown\x10\x00\x12\x19\n" +
-	"\x15SpacePermissionsOwner\x10\x01*w\n" +
+	"\x15SpacePermissionsOwner\x10\x01*\x86\x01\n" +
 	"\bNodeType\x12\v\n" +
 	"\aTreeAPI\x10\x00\x12\v\n" +
 	"\aFileAPI\x10\x01\x12\x12\n" +
 	"\x0eCoordinatorAPI\x10\x02\x12\x10\n" +
 	"\fConsensusAPI\x10\x03\x12\x11\n" +
 	"\rNamingNodeAPI\x10\x04\x12\x18\n" +
-	"\x14PaymentProcessingAPI\x10\x05*9\n" +
+	"\x14PaymentProcessingAPI\x10\x05\x12\r\n" +
+	"\tFileV2API\x10\x06*9\n" +
 	"\x13DeletionPayloadType\x12\b\n" +
 	"\x04Tree\x10\x00\x12\v\n" +
 	"\aConfirm\x10\x01\x12\v\n" +
