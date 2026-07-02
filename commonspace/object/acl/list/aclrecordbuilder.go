@@ -1,6 +1,7 @@
 package list
 
 import (
+	"bytes"
 	"errors"
 	"time"
 
@@ -133,15 +134,39 @@ type aclRecordBuilder struct {
 	accountKeys *accountdata.AccountKeys
 	verifier    recordverifier.AcceptorVerifier
 	state       *AclState
+	// ourIdentity is our pubkey marshalled exactly as it appears in AclEncryptedReadKey.Identity — the
+	// canonical fast path for the keep-only-ours decode (nil disables it); ourPubKey backs the semantic match.
+	ourIdentity []byte
+	ourPubKey   crypto.PubKey
 }
 
 func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier recordverifier.AcceptorVerifier) AclRecordBuilder {
-	return &aclRecordBuilder{
+	b := &aclRecordBuilder{
 		id:          id,
 		keyStorage:  keyStorage,
 		accountKeys: keys,
 		verifier:    verifier,
 	}
+	if keys != nil {
+		// Best-effort: if marshalling fails, ourIdentity stays nil and decodeAclData falls back to a full decode.
+		ourPub := keys.SignKey.GetPublic()
+		if ourBytes, err := ourPub.Marshall(); err == nil {
+			b.ourIdentity = ourBytes
+			b.ourPubKey = ourPub
+		}
+	}
+	return b
+}
+
+// isOurIdentity reports whether an AclEncryptedReadKey.Identity belongs to us, mirroring applyReadKeyChange's
+// semantic check (PubKeyFromProto+Equals) with a raw-byte fast path. A semantically-equal but
+// non-canonically-encoded identity must still match, else our own read key would be dropped on rebuild.
+func (a *aclRecordBuilder) isOurIdentity(identity []byte) bool {
+	if bytes.Equal(identity, a.ourIdentity) {
+		return true
+	}
+	pk, err := a.keyStorage.PubKeyFromProto(identity)
+	return err == nil && a.ourPubKey != nil && a.ourPubKey.Equals(pk)
 }
 
 func (a *aclRecordBuilder) BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
@@ -926,6 +951,10 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 	if err != nil {
 		return
 	}
+	// Unmarshall MUST decode in full: its only callers (ValidateRawRecord, preflightCheck) re-validate the
+	// resulting Model with recordverifier.NewValidateFull(), whose validateReadKeyChange asserts accountKeys
+	// covers every active user. keep-only-ours belongs solely on UnmarshallWithId (the build-from-storage
+	// and non-validating ingest paths; see decodeAclData).
 	aclData := &aclrecordproto.AclData{}
 	err = aclData.UnmarshalVT(aclRecord.Data)
 	if err != nil {
@@ -991,8 +1020,8 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 		if err != nil {
 			return
 		}
-		aclData := &aclrecordproto.AclData{}
-		err = aclData.UnmarshalVT(aclRecord.Data)
+		var aclData *aclrecordproto.AclData
+		aclData, err = a.decodeAclData(aclRecord.Data)
 		if err != nil {
 			return
 		}
@@ -1009,6 +1038,25 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 
 	err = verifyRaw(pubKey, rawRec, rawIdRecord)
 	return
+}
+
+// decodeAclData decodes a record's AclData. With a non-validating verifier — which covers both the
+// build-from-storage path AND live ingest (AddRawRecord on production nodes) — it keeps only our own read
+// key and skips every other member's, never allocating them; see unmarshalAclDataKeepIdentity. That is safe
+// because authenticity never depends on this decode (verifyRaw checks the author signature + CID and
+// VerifyAcceptor the acceptor signature, all over the raw bytes), content validation is skipped entirely
+// when the verifier does not validate, and state derivation reads only our own accountKeys entry. The
+// resulting Model is therefore a shrunken view; anything needing the full record must read the raw bytes
+// from storage. A full validator must see every accountKeys entry, so it decodes in full.
+func (a *aclRecordBuilder) decodeAclData(data []byte) (*aclrecordproto.AclData, error) {
+	if a.ourIdentity != nil && a.verifier != nil && !a.verifier.ShouldValidate() {
+		return unmarshalAclDataKeepIdentity(data, a.isOurIdentity)
+	}
+	aclData := &aclrecordproto.AclData{}
+	if err := aclData.UnmarshalVT(data); err != nil {
+		return nil, err
+	}
+	return aclData, nil
 }
 
 func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.RawRecordWithId, err error) {

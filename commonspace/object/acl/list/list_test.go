@@ -406,6 +406,286 @@ func TestAclList_ReadKeyChange(t *testing.T) {
 	})
 }
 
+func addReadKeyChange(t *testing.T, fx *aclFixture) string {
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	rkChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+		MetadataKey: privKey,
+		ReadKey:     newReadKey,
+	})
+	require.NoError(t, err)
+	rec := listtest.WrapAclRecord(rkChange)
+	fx.addRec(t, rec)
+	return rec.Id
+}
+
+// TestAclList_ServesFullRecordsFromStorage locks in the core invariant: storage is the source of truth
+// we serve to peers, and the in-memory list is only a derived view. Even if that view is shrunken (as the
+// planned keep-only-ours decode-skip build will make it — dropping other members' read keys), RecordsAfter
+// (the p2p/serving path) must return the full, signature-valid record read from storage, never the in-memory
+// Model. Do not "optimize" RecordsAfter/RecordsBefore to serve from a.records[].Model: it would ship records
+// missing every other member's read key and break the signature.
+func TestAclList_ServesFullRecordsFromStorage(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
+	rotId := addReadKeyChange(t, fx)
+
+	rebuilt, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+
+	readKeyChangeOf := func(rec *AclRecord) *aclrecordproto.AclReadKeyChange {
+		for _, c := range rec.Model.(*aclrecordproto.AclData).AclContent {
+			if rkc := c.GetReadKeyChange(); rkc != nil {
+				return rkc
+			}
+		}
+		return nil
+	}
+
+	// Simulate a shrunken in-memory view (what the decode-skip build will produce): drop other members'
+	// read keys from the in-memory Model so it diverges from the full record in storage.
+	rotRec, err := rebuilt.Get(rotId)
+	require.NoError(t, err)
+	readKeyChangeOf(rotRec).AccountKeys = nil
+	require.Nil(t, readKeyChangeOf(rotRec).AccountKeys, "precondition: in-memory view is shrunken")
+
+	// The serving path must ignore the view and return the rotation record in full from storage.
+	served, err := rebuilt.RecordsAfter(context.Background(), "")
+	require.NoError(t, err)
+	var rotRaw *consensusproto.RawRecordWithId
+	for _, raw := range served {
+		if raw.Id == rotId {
+			rotRaw = raw
+		}
+	}
+	require.NotNil(t, rotRaw, "rotation record must be served")
+
+	// re-decoding the served bytes also re-verifies the signature (UnmarshallWithId -> verifyRaw):
+	// a record re-marshalled from the shrunken view would fail here OR carry fewer AccountKeys.
+	fresh, err := rebuilt.RecordBuilder().UnmarshallWithId(rotRaw)
+	require.NoError(t, err, "served record must pass signature verification")
+	require.Len(t, readKeyChangeOf(fresh).AccountKeys, 2,
+		"served record must carry every member's encrypted read key (owner + admin), not the shrunken view")
+}
+
+// noValidateVerifier accepts any record and disables content re-validation, modelling the trusted
+// build-from-storage path (records already verified at ingest). This is the path on which the builder
+// uses the keep-only-ours decode.
+type noValidateVerifier struct{}
+
+func (noValidateVerifier) VerifyAcceptor(*consensusproto.RawRecord) error { return nil }
+func (noValidateVerifier) ShouldValidate() bool                           { return false }
+
+func addAccountRemove(t *testing.T, fx *aclFixture, removed crypto.PubKey) string {
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	remove, err := fx.ownerAcl.RecordBuilder().BuildAccountRemove(AccountRemovePayload{
+		Identities: []crypto.PubKey{removed},
+		Change:     ReadKeyChangePayload{MetadataKey: privKey, ReadKey: newReadKey},
+	})
+	require.NoError(t, err)
+	rec := listtest.WrapAclRecord(remove)
+	fx.addRec(t, rec)
+	return rec.Id
+}
+
+func requireSameAclState(t *testing.T, want, got *AclState) {
+	require.Equal(t, want.readKeyChanges, got.readKeyChanges, "readKeyChanges")
+	require.Equal(t, want.lastRecordId, got.lastRecordId, "head/lastRecordId")
+	require.Equal(t, len(want.keys), len(got.keys), "keys count")
+	for id, wk := range want.keys {
+		gk, ok := got.keys[id]
+		require.True(t, ok, "missing key for %s", id)
+		if wk.ReadKey != nil {
+			require.NotNil(t, gk.ReadKey, "read key nil at %s", id)
+			require.True(t, wk.ReadKey.Equals(gk.ReadKey), "read key mismatch at %s", id)
+		} else {
+			require.Nil(t, gk.ReadKey, "read key should be nil at %s", id)
+		}
+	}
+	require.Equal(t, len(want.accountStates), len(got.accountStates), "accountStates count")
+	for k, wa := range want.accountStates {
+		ga, ok := got.accountStates[k]
+		require.True(t, ok, "missing account state")
+		require.Equal(t, wa.Permissions, ga.Permissions, "permissions")
+		require.Equal(t, wa.Status, ga.Status, "status")
+	}
+}
+
+// TestAclList_KeepOnlyOursBuildEquivalentState proves the keep-only-ours decode (non-validating verifier)
+// produces the same derived AclState as a full decode — same read keys, accounts, invites, head — across
+// rotations and a kick (which exercises the nested AclAccountRemove.readKeyChange).
+func TestAclList_KeepOnlyOursBuildEquivalentState(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
+	addReadKeyChange(t, fx)
+	addReadKeyChange(t, fx)
+	addAccountRemove(t, fx, fx.accountKeys.SignKey.GetPublic())
+
+	full, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+	partial, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, noValidateVerifier{})
+	require.NoError(t, err)
+
+	requireSameAclState(t, full.AclState(), partial.AclState())
+
+	// And the owner can still recover (decrypt) every historical read key after keep-only-ours.
+	for id, k := range partial.AclState().Keys() {
+		require.NotNil(t, k.ReadKey, "owner must recover read key at %s", id)
+	}
+}
+
+// TestAclList_KeepOnlyOursBoundsResidentKeys is the fail-loud companion to the heap profile: with no
+// post-build strip, a regressed decoder that kept every member's key would show up here directly. After a
+// keep-only-ours build, resident accountKeys are O(rotations) (one per rotation, ours) — never
+// O(rotations*members) — and strictly fewer than a full decode.
+func TestAclList_KeepOnlyOursBoundsResidentKeys(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin)) // owner + 1 member
+	const rotations = 4
+	for i := 0; i < rotations; i++ {
+		addReadKeyChange(t, fx)
+	}
+
+	countAccountKeys := func(l AclList) int {
+		n := 0
+		for _, rec := range l.Records() {
+			data, ok := rec.Model.(*aclrecordproto.AclData)
+			if !ok {
+				continue
+			}
+			for _, c := range data.AclContent {
+				if rkc := c.GetReadKeyChange(); rkc != nil {
+					n += len(rkc.AccountKeys)
+				}
+				if ar := c.GetAccountRemove(); ar != nil && ar.ReadKeyChange != nil {
+					n += len(ar.ReadKeyChange.AccountKeys)
+				}
+			}
+		}
+		return n
+	}
+
+	full, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+	partial, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, noValidateVerifier{})
+	require.NoError(t, err)
+
+	fullCount := countAccountKeys(full)
+	partialCount := countAccountKeys(partial)
+	require.LessOrEqual(t, partialCount, rotations, "keep-only-ours must be O(rotations), not O(rotations*members)")
+	require.Less(t, partialCount, fullCount, "keep-only-ours must retain strictly fewer keys than a full decode")
+}
+
+// TestAclList_NonValidatingBuilderRotation guards against the decode/validate mismatch: a builder with a
+// non-validating verifier (the production space-ACL build path) must NOT keep-only-ours on the Unmarshall
+// path, because preflightCheck and ValidateRawRecord re-validate the decoded record with NewValidateFull,
+// whose accountKeys-count check (len(accountKeys)==activeUsers) requires every active member's key. With
+// keep-only-ours leaking into Unmarshall this fails with ErrIncorrectNumberOfAccounts.
+func TestAclList_NonValidatingBuilderRotation(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer)) // owner + member = 2 active
+
+	// Build the list with a non-validating verifier (as the production space ACL build does).
+	l, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, noValidateVerifier{})
+	require.NoError(t, err)
+
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+
+	// Blocker 1: BuildReadKeyChange runs preflightCheck (Unmarshall -> NewValidateFull).
+	rkc, err := l.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{MetadataKey: privKey, ReadKey: newReadKey})
+	require.NoError(t, err, "preflightCheck must full-decode, not keep-only-ours")
+
+	// Blocker 2: ValidateRawRecord (the coordinator path) decodes via Unmarshall -> NewValidateFull.
+	require.NoError(t, l.ValidateRawRecord(rkc, nil), "ValidateRawRecord must full-decode, not keep-only-ours")
+}
+
+// TestAclList_BuildDropsRawData verifies the streaming build never retains rec.Data, while the derived state
+// (read keys) stays correct — storage keeps the raw bytes and serves peers from there.
+func TestAclList_BuildDropsRawData(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
+	addReadKeyChange(t, fx)
+	addAccountRemove(t, fx, fx.accountKeys.SignKey.GetPublic())
+
+	rebuilt, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+	for _, rec := range rebuilt.Records() {
+		require.Nil(t, rec.Data, "build must not retain raw Data for %s", rec.Id)
+	}
+	// state intact: the current read key is still recoverable/decryptable.
+	_, err = rebuilt.AclState().CurrentReadKey()
+	require.NoError(t, err)
+}
+
+// TestAclList_ScanMatchesPrevIdWalk proves the GetAfterOrder 'o'-index scan yields the exact same root-first
+// order as the authoritative PrevId walk for healthy storage (so the contiguity guard passes and the fast
+// scan path is used), and that both drop rec.Data.
+func TestAclList_ScanMatchesPrevIdWalk(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
+	addReadKeyChange(t, fx)
+	addAccountRemove(t, fx, fx.accountKeys.SignKey.GetPublic())
+
+	store := fx.ownerAcl.storage
+	rb := fx.ownerAcl.recordBuilder
+	head, err := store.Head(context.Background())
+	require.NoError(t, err)
+
+	scanned, err := loadRecordsByScan(context.Background(), store, rb)
+	require.NoError(t, err)
+	walked, err := loadRecordsByPrevId(context.Background(), store, rb, head)
+	require.NoError(t, err)
+
+	require.Equal(t, len(walked), len(scanned))
+	for i := range walked {
+		require.Equal(t, walked[i].Id, scanned[i].Id, "record %d id mismatch", i)
+		require.Equal(t, walked[i].PrevId, scanned[i].PrevId, "record %d prevId mismatch", i)
+		require.Nil(t, scanned[i].Data)
+		require.Nil(t, walked[i].Data)
+	}
+	require.True(t, isContiguousChain(scanned, fx.ownerAcl.Id(), head), "healthy storage must pass the contiguity guard")
+}
+
+func TestAclList_IsContiguousChain(t *testing.T) {
+	mk := func(id, prev string) *AclRecord { return &AclRecord{Id: id, PrevId: prev} }
+	require.True(t, isContiguousChain([]*AclRecord{mk("root", ""), mk("a", "root"), mk("b", "a")}, "root", "b"))
+	require.False(t, isContiguousChain(nil, "root", "head"), "empty")
+	require.False(t, isContiguousChain([]*AclRecord{mk("x", ""), mk("a", "x")}, "root", "a"), "wrong root")
+	require.False(t, isContiguousChain([]*AclRecord{mk("root", ""), mk("a", "root")}, "root", "b"), "wrong head")
+	require.False(t, isContiguousChain([]*AclRecord{mk("root", ""), mk("a", "root"), mk("b", "wrong")}, "root", "b"), "broken link")
+}
+
+// TestAclList_ScanWorksOnInMemoryStorage is a regression guard: GetAfterOrder has different start-order
+// semantics across Storage impls (inMemoryStorage requires order>=1; order 0 returns nothing). The scan must
+// return the full in-memory log, not silently fall back. With GetAfterOrder(0) this returned empty.
+func TestAclList_ScanWorksOnInMemoryStorage(t *testing.T) {
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	acl, err := NewInMemoryDerivedAcl("spaceId", keys)
+	require.NoError(t, err)
+	al := acl.(*aclList)
+
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	rkc, err := al.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{MetadataKey: privKey, ReadKey: newReadKey})
+	require.NoError(t, err)
+	require.NoError(t, al.AddRawRecord(listtest.WrapAclRecord(rkc)))
+
+	head, err := al.storage.Head(context.Background())
+	require.NoError(t, err)
+	scanned, err := loadRecordsByScan(context.Background(), al.storage, al.recordBuilder)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(scanned), 2, "scan must return the full in-memory log (root + rotation), not empty")
+	require.Equal(t, al.Id(), scanned[0].Id, "root first")
+	require.True(t, isContiguousChain(scanned, al.Id(), head), "scan path must be used (contiguity holds) for in-memory storage")
+}
+
 func TestAclList_PermissionChange(t *testing.T) {
 	fx := newFixture(t)
 	var (
