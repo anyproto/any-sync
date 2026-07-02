@@ -113,6 +113,31 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	if request == nil {
 		return nil, ErrUnexpectedRequestType
 	}
+	if request.Probe {
+		// A probe declares nothing about the requester's state, so no
+		// counter-request — just root + current heads, no change bodies.
+		s.tree.Lock()
+		heads := make([]string, len(s.tree.Heads()))
+		copy(heads, s.tree.Heads())
+		snapshotPath, err := s.tree.SnapshotPath()
+		root := s.tree.Header()
+		s.tree.Unlock()
+		if err != nil {
+			return nil, err
+		}
+		resp := &response.Response{
+			SpaceId:      s.spaceId,
+			ObjectId:     req.ObjectId(),
+			Heads:        heads,
+			SnapshotPath: snapshotPath,
+			Root:         root,
+		}
+		protoResp, err := resp.ProtoMessage()
+		if err != nil {
+			return nil, err
+		}
+		return nil, send(protoResp)
+	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
 	log.Debug("got stream request",

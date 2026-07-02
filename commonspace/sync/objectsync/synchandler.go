@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -31,11 +32,12 @@ var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
 var log = logger.NewNamed(syncdeps.CName)
 
 type objectSync struct {
-	spaceId  string
-	pool     pool.Service
-	manager  objectmanager.ObjectManager
-	status   syncstatus.StatusUpdater
-	keyValue kvinterfaces.KeyValueService
+	spaceId    string
+	pool       pool.Service
+	manager    objectmanager.ObjectManager
+	status     syncstatus.StatusUpdater
+	keyValue   kvinterfaces.KeyValueService
+	pullFilter treesyncer.PullFilter
 }
 
 func New() syncdeps.SyncHandler {
@@ -48,6 +50,8 @@ func (o *objectSync) Init(a *app.App) (err error) {
 	o.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	o.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
+	// optional extension of the registered tree syncer
+	o.pullFilter, _ = a.Component(treesyncer.CName).(treesyncer.PullFilter)
 	return
 }
 
@@ -69,6 +73,9 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	}
 	obj, err := o.manager.GetObject(context.Background(), update.Meta.ObjectId)
 	if err != nil {
+		if o.pullFilter != nil && !o.shouldPull(ctx, update) {
+			return nil, nil
+		}
 		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
@@ -76,6 +83,21 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
 	return objHandler.HandleHeadUpdate(ctx, o.status, update)
+}
+
+// shouldPull consults the pull filter for a locally-missing tree. Head
+// updates carry the tree's raw root change, so the filter can classify the
+// tree without fetching anything. Malformed updates default to pull.
+func (o *objectSync) shouldPull(ctx context.Context, update *objectmessages.HeadUpdate) bool {
+	treeSyncMsg := &treechangeproto.TreeSyncMessage{}
+	if err := treeSyncMsg.UnmarshalVT(update.Bytes); err != nil {
+		return true
+	}
+	contentUpdate := treeSyncMsg.GetContent().GetHeadUpdate()
+	if contentUpdate == nil || treeSyncMsg.RootChange == nil {
+		return true
+	}
+	return o.pullFilter.ShouldPull(ctx, update.Meta.ObjectId, treeSyncMsg.RootChange, contentUpdate.Heads)
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {

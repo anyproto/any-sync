@@ -121,6 +121,10 @@ message TreeFullSyncRequest {
     repeated string heads = 1;
     repeated RawTreeChangeWithId changes = 2;
     repeated string snapshotPath = 3;
+    // probe asks the responder for the tree's root and current heads only,
+    // with no change bodies. Old responders ignore it and stream the full
+    // tree; a probing requester must be ready for both response shapes.
+    bool probe = 4;
 }
 
 // TreeFullSyncResponse is a message sent as a response for a specific full sync

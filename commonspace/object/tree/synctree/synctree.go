@@ -85,6 +85,12 @@ type BuildDeps struct {
 	BuildObjectTree    objecttree.BuildObjectTreeFunc
 	ValidateObjectTree objecttree.ValidatorFunc
 	StatsCollector     *TreeStatsCollector
+	// Probe makes the remote fetch request the tree's root and current
+	// heads only (no change bodies). The response never yields a usable
+	// tree by itself, so Probe callers must supply a ValidateObjectTree
+	// that inspects the payload and returns an error to abort the build.
+	// Old responders ignore the flag and stream the full tree.
+	Probe bool
 }
 
 var newTreeGetter = func(deps BuildDeps, treeId string) treeGetter {

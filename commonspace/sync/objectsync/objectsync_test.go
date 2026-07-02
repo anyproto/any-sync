@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objectmanager/mock_objectmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -79,6 +80,85 @@ func TestObjectSync_HandleHeadUpdate(t *testing.T) {
 		req := synctree.NewRequest(update.Meta.PeerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil)
 		require.Equal(t, req, r)
 	})
+	t.Run("handle head update object missing, pull filter declines, update swallowed", func(t *testing.T) {
+		root := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("rootChange"),
+			Id:        "objectId",
+		}
+		var gotRoot *treechangeproto.RawTreeChangeWithId
+		var gotHeads []string
+		fx := newFixtureWithPullFilter(t, func(_ context.Context, objectId string, rootChange *treechangeproto.RawTreeChangeWithId, heads []string) bool {
+			require.Equal(t, "objectId", objectId)
+			gotRoot = rootChange
+			gotHeads = heads
+			return false
+		})
+		defer fx.close(t)
+		update := headUpdateWithRoot(t, root, []string{"headId"})
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		fx.objectManager.EXPECT().GetObject(context.Background(), "objectId").Return(nil, fmt.Errorf("no object"))
+		r, err := fx.objectSync.HandleHeadUpdate(ctx, update)
+		require.NoError(t, err)
+		require.Nil(t, r)
+		require.Equal(t, root.Id, gotRoot.Id)
+		require.Equal(t, root.RawChange, gotRoot.RawChange)
+		require.Equal(t, []string{"headId"}, gotHeads)
+	})
+	t.Run("handle head update object missing, pull filter accepts, return request", func(t *testing.T) {
+		root := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("rootChange"),
+			Id:        "objectId",
+		}
+		fx := newFixtureWithPullFilter(t, func(_ context.Context, _ string, _ *treechangeproto.RawTreeChangeWithId, _ []string) bool {
+			return true
+		})
+		defer fx.close(t)
+		update := headUpdateWithRoot(t, root, []string{"headId"})
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		fx.objectManager.EXPECT().GetObject(context.Background(), "objectId").Return(nil, fmt.Errorf("no object"))
+		r, err := fx.objectSync.HandleHeadUpdate(ctx, update)
+		require.NoError(t, err)
+		req := synctree.NewRequest("peerId", "spaceId", "objectId", nil, nil, nil)
+		require.Equal(t, req, r)
+	})
+	t.Run("handle head update object missing, no root in update, pull filter skipped, return request", func(t *testing.T) {
+		fx := newFixtureWithPullFilter(t, func(_ context.Context, _ string, _ *treechangeproto.RawTreeChangeWithId, _ []string) bool {
+			require.Fail(t, "filter must not be consulted without a root change")
+			return false
+		})
+		defer fx.close(t)
+		update := &objectmessages.HeadUpdate{
+			Meta: objectmessages.ObjectMeta{
+				PeerId:   "peerId",
+				ObjectId: "objectId",
+				SpaceId:  "spaceId",
+			},
+		}
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		fx.objectManager.EXPECT().GetObject(context.Background(), "objectId").Return(nil, fmt.Errorf("no object"))
+		r, err := fx.objectSync.HandleHeadUpdate(ctx, update)
+		require.NoError(t, err)
+		req := synctree.NewRequest("peerId", "spaceId", "objectId", nil, nil, nil)
+		require.Equal(t, req, r)
+	})
+}
+
+func headUpdateWithRoot(t *testing.T, root *treechangeproto.RawTreeChangeWithId, heads []string) *objectmessages.HeadUpdate {
+	treeHeadUpdate := &treechangeproto.TreeHeadUpdate{
+		Heads:        heads,
+		SnapshotPath: []string{root.Id},
+	}
+	wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, root)
+	marshaled, err := wrapped.MarshalVT()
+	require.NoError(t, err)
+	return &objectmessages.HeadUpdate{
+		Bytes: marshaled,
+		Meta: objectmessages.ObjectMeta{
+			PeerId:   "peerId",
+			ObjectId: "objectId",
+			SpaceId:  "spaceId",
+		},
+	}
 }
 
 func TestObjectSync_HandleStreamRequest(t *testing.T) {
@@ -168,6 +248,31 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureWithPullFilter(t, nil)
+}
+
+// filteringTreeSyncer is a minimal TreeSyncer that also implements the
+// optional treesyncer.PullFilter extension.
+type filteringTreeSyncer struct {
+	shouldPull func(ctx context.Context, objectId string, rootChange *treechangeproto.RawTreeChangeWithId, heads []string) bool
+}
+
+func (f *filteringTreeSyncer) Init(a *app.App) error           { return nil }
+func (f *filteringTreeSyncer) Name() string                    { return treesyncer.CName }
+func (f *filteringTreeSyncer) Run(ctx context.Context) error   { return nil }
+func (f *filteringTreeSyncer) Close(ctx context.Context) error { return nil }
+func (f *filteringTreeSyncer) StartSync()                      {}
+func (f *filteringTreeSyncer) StopSync()                       {}
+func (f *filteringTreeSyncer) ShouldSync(string) bool          { return true }
+func (f *filteringTreeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) error {
+	return nil
+}
+
+func (f *filteringTreeSyncer) ShouldPull(ctx context.Context, objectId string, rootChange *treechangeproto.RawTreeChangeWithId, heads []string) bool {
+	return f.shouldPull(ctx, objectId, rootChange, heads)
+}
+
+func newFixtureWithPullFilter(t *testing.T, shouldPull func(ctx context.Context, objectId string, rootChange *treechangeproto.RawTreeChangeWithId, heads []string) bool) *fixture {
 	fx := &fixture{
 		a: &app.App{},
 	}
@@ -186,6 +291,9 @@ func newFixture(t *testing.T) *fixture {
 		Register(fx.keyValue).
 		Register(syncstatus.NewNoOpSyncStatus()).
 		Register(fx.objectSync)
+	if shouldPull != nil {
+		fx.a.Register(&filteringTreeSyncer{shouldPull: shouldPull})
+	}
 	require.NoError(t, fx.a.Start(context.Background()))
 	return fx
 }
