@@ -24,11 +24,11 @@ const (
 // ErrCodes are WHOLE-RPC (drpc-level) errors, mirroring v1 filesync.ErrCodes.
 // Wired through rpcerr.ErrGroup(ErrCodes_ErrorOffset) in the fileprotov2err
 // package. Returned as a NON-nil drpc error ONLY for auth / malformed /
-// batch-too-large. Never used to report the outcome of an individual item
-// (that is the per-item ErrCode below). Zero value Unexpected=0 registers at
-// offset+0 (=800), so an uncoded server fault reads as Unexpected — exactly as
-// v1 does at 200. Offset 800 is the only free rpcerr block (v1=200, 100/300/
-// 400/500/600/700 are taken).
+// batch-too-large / misrouted. Never used to report the outcome of an
+// individual item (that is the per-item ErrCode below). Zero value
+// Unexpected=0 registers at offset+0 (=800), so an uncoded server fault reads
+// as Unexpected — exactly as v1 does at 200. Offset 800 is the only free
+// rpcerr block (v1=200, 100/300/400/500/600/700 are taken).
 type ErrCodes int32
 
 const (
@@ -36,6 +36,7 @@ const (
 	ErrCodes_Forbidden         ErrCodes = 1   // connection identity is not permitted at all
 	ErrCodes_InvalidRequest    ErrCodes = 2   // malformed: empty spaceId, empty items, bad rootCid bytes
 	ErrCodes_QuerySizeExceeded ErrCodes = 3   // batch too large (too many items in one request)
+	ErrCodes_NotResponsible    ErrCodes = 4   // retryable routing signal: this node is not in the space's chash pair
 	ErrCodes_ErrorOffset       ErrCodes = 800 // rpcerr.ErrGroup base for v2 (constant, never an error)
 )
 
@@ -46,6 +47,7 @@ var (
 		1:   "Forbidden",
 		2:   "InvalidRequest",
 		3:   "QuerySizeExceeded",
+		4:   "NotResponsible",
 		800: "ErrorOffset",
 	}
 	ErrCodes_value = map[string]int32{
@@ -53,6 +55,7 @@ var (
 		"Forbidden":         1,
 		"InvalidRequest":    2,
 		"QuerySizeExceeded": 3,
+		"NotResponsible":    4,
 		"ErrorOffset":       800,
 	}
 )
@@ -95,12 +98,13 @@ func (ErrCodes) EnumDescriptor() ([]byte, []int) {
 type ErrCode int32
 
 const (
-	ErrCode_Ok               ErrCode = 0 // item succeeded; the typed payload is populated
-	ErrCode_ErrUnexpected    ErrCode = 1 // internal error handling this single item
-	ErrCode_ErrCidNotFound   ErrCode = 2 // sign/download: no such stored file for this rootCid
-	ErrCode_ErrForbidden     ErrCode = 3 // identity may not access this item's space/file
-	ErrCode_ErrLimitExceeded ErrCode = 4 // upload rejected: space/account storage limit reached
-	ErrCode_ErrSpaceNotFound ErrCode = 5 // quota-info: unknown/deleted space id
+	ErrCode_Ok                ErrCode = 0 // item succeeded; the typed payload is populated
+	ErrCode_ErrUnexpected     ErrCode = 1 // internal error handling this single item
+	ErrCode_ErrCidNotFound    ErrCode = 2 // sign/download: no such stored file for this rootCid
+	ErrCode_ErrForbidden      ErrCode = 3 // identity may not access this item's space/file
+	ErrCode_ErrLimitExceeded  ErrCode = 4 // upload rejected: space/account storage limit reached
+	ErrCode_ErrSpaceNotFound  ErrCode = 5 // quota-info: unknown/deleted space id
+	ErrCode_ErrNotResponsible ErrCode = 6 // retryable routing signal: this node is not in this item's space chash pair
 )
 
 // Enum value maps for ErrCode.
@@ -112,14 +116,16 @@ var (
 		3: "ErrForbidden",
 		4: "ErrLimitExceeded",
 		5: "ErrSpaceNotFound",
+		6: "ErrNotResponsible",
 	}
 	ErrCode_value = map[string]int32{
-		"Ok":               0,
-		"ErrUnexpected":    1,
-		"ErrCidNotFound":   2,
-		"ErrForbidden":     3,
-		"ErrLimitExceeded": 4,
-		"ErrSpaceNotFound": 5,
+		"Ok":                0,
+		"ErrUnexpected":     1,
+		"ErrCidNotFound":    2,
+		"ErrForbidden":      3,
+		"ErrLimitExceeded":  4,
+		"ErrSpaceNotFound":  5,
+		"ErrNotResponsible": 6,
 	}
 )
 
@@ -1197,21 +1203,23 @@ const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
 	"\x12inflightUsageBytes\x18\x04 \x01(\x04R\x12inflightUsageBytes\x12\x1e\n" +
 	"\n" +
 	"filesCount\x18\x05 \x01(\x04R\n" +
-	"filesCount*f\n" +
+	"filesCount*z\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\r\n" +
 	"\tForbidden\x10\x01\x12\x12\n" +
 	"\x0eInvalidRequest\x10\x02\x12\x15\n" +
-	"\x11QuerySizeExceeded\x10\x03\x12\x10\n" +
-	"\vErrorOffset\x10\xa0\x06*v\n" +
+	"\x11QuerySizeExceeded\x10\x03\x12\x12\n" +
+	"\x0eNotResponsible\x10\x04\x12\x10\n" +
+	"\vErrorOffset\x10\xa0\x06*\x8d\x01\n" +
 	"\aErrCode\x12\x06\n" +
 	"\x02Ok\x10\x00\x12\x11\n" +
 	"\rErrUnexpected\x10\x01\x12\x12\n" +
 	"\x0eErrCidNotFound\x10\x02\x12\x10\n" +
 	"\fErrForbidden\x10\x03\x12\x14\n" +
 	"\x10ErrLimitExceeded\x10\x04\x12\x14\n" +
-	"\x10ErrSpaceNotFound\x10\x052\xbf\x02\n" +
+	"\x10ErrSpaceNotFound\x10\x05\x12\x15\n" +
+	"\x11ErrNotResponsible\x10\x062\xbf\x02\n" +
 	"\x06FileV2\x12?\n" +
 	"\x06Upload\x12\x19.filesyncv2.UploadRequest\x1a\x1a.filesyncv2.UploadResponse\x12N\n" +
 	"\vRequestSign\x12\x1e.filesyncv2.RequestSignRequest\x1a\x1f.filesyncv2.RequestSignResponse\x12Z\n" +

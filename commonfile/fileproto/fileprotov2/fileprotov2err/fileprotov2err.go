@@ -18,6 +18,7 @@ var (
 	ErrForbidden         = errGroup.Register(fmt.Errorf("forbidden"), uint64(fileprotov2.ErrCodes_Forbidden))
 	ErrInvalidRequest    = errGroup.Register(fmt.Errorf("invalid request"), uint64(fileprotov2.ErrCodes_InvalidRequest))
 	ErrQuerySizeExceeded = errGroup.Register(fmt.Errorf("query size exceeded"), uint64(fileprotov2.ErrCodes_QuerySizeExceeded))
+	ErrNotResponsible    = errGroup.Register(fmt.Errorf("node is not responsible for the space"), uint64(fileprotov2.ErrCodes_NotResponsible))
 )
 
 // FromCode maps a whole-RPC ErrCodes value to its registered drpc error so
@@ -31,6 +32,8 @@ func FromCode(code fileprotov2.ErrCodes) error {
 		return ErrInvalidRequest
 	case fileprotov2.ErrCodes_QuerySizeExceeded:
 		return ErrQuerySizeExceeded
+	case fileprotov2.ErrCodes_NotResponsible:
+		return ErrNotResponsible
 	default:
 		return ErrUnexpected
 	}

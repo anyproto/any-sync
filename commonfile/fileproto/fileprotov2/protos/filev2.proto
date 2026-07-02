@@ -26,8 +26,9 @@ option go_package = "commonfile/fileproto/fileprotov2";
 // Two error layers:
 //   1. whole-RPC drpc error (err != nil), carrying an ErrCodes value from the
 //      offset-800 rpcerr registry, returned ONLY for cross-cutting failures:
-//      failed/absent auth (Forbidden), malformed input (InvalidRequest), or an
-//      over-sized batch (QuerySizeExceeded);
+//      failed/absent auth (Forbidden), malformed input (InvalidRequest), an
+//      over-sized batch (QuerySizeExceeded), or a misrouted single-space
+//      request (NotResponsible — retry against the space's responsible pair);
 //   2. per-item business outcome lives in the in-body ErrCode `code` field
 //      (err == nil for the RPC as a whole).
 service FileV2 {
@@ -44,16 +45,17 @@ service FileV2 {
 // ErrCodes are WHOLE-RPC (drpc-level) errors, mirroring v1 filesync.ErrCodes.
 // Wired through rpcerr.ErrGroup(ErrCodes_ErrorOffset) in the fileprotov2err
 // package. Returned as a NON-nil drpc error ONLY for auth / malformed /
-// batch-too-large. Never used to report the outcome of an individual item
-// (that is the per-item ErrCode below). Zero value Unexpected=0 registers at
-// offset+0 (=800), so an uncoded server fault reads as Unexpected — exactly as
-// v1 does at 200. Offset 800 is the only free rpcerr block (v1=200, 100/300/
-// 400/500/600/700 are taken).
+// batch-too-large / misrouted. Never used to report the outcome of an
+// individual item (that is the per-item ErrCode below). Zero value
+// Unexpected=0 registers at offset+0 (=800), so an uncoded server fault reads
+// as Unexpected — exactly as v1 does at 200. Offset 800 is the only free
+// rpcerr block (v1=200, 100/300/400/500/600/700 are taken).
 enum ErrCodes {
     Unexpected = 0;         // unclassified server fault (registry fallback)
     Forbidden = 1;          // connection identity is not permitted at all
     InvalidRequest = 2;     // malformed: empty spaceId, empty items, bad rootCid bytes
     QuerySizeExceeded = 3;  // batch too large (too many items in one request)
+    NotResponsible = 4;     // retryable routing signal: this node is not in the space's chash pair
     ErrorOffset = 800;      // rpcerr.ErrGroup base for v2 (constant, never an error)
 }
 
@@ -72,6 +74,7 @@ enum ErrCode {
     ErrForbidden = 3;       // identity may not access this item's space/file
     ErrLimitExceeded = 4;   // upload rejected: space/account storage limit reached
     ErrSpaceNotFound = 5;   // quota-info: unknown/deleted space id
+    ErrNotResponsible = 6;  // retryable routing signal: this node is not in this item's space chash pair
 }
 
 // ---- Upload ---------------------------------------------------------------
