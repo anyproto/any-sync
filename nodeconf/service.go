@@ -22,6 +22,8 @@ const CName = "common.nodeconf"
 const (
 	PartitionCount    = 3000
 	ReplicationFactor = 3
+	// FileV2ReplicationFactor is the replication factor of the v2 file node pool (07c: RF=2)
+	FileV2ReplicationFactor = 2
 )
 
 var log = logger.NewNamed(CName)
@@ -288,6 +290,18 @@ func (s *service) FilePeers() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.last.FilePeers()
+}
+
+func (s *service) FileV2Peers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.FileV2Peers()
+}
+
+func (s *service) FileV2NodeIds(spaceId string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.FileV2NodeIds(spaceId)
 }
 
 func (s *service) ConsensusPeers() []string {

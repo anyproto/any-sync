@@ -228,6 +228,8 @@ enum NodeType {
   // PaymentProcessingAPI supports payment processing api
   // (see any-pp-node repository)
   PaymentProcessingAPI = 5;
+  // FileV2API supports the v2 file api (filenode v2 broker pool)
+  FileV2API = 6;
 }
 
 // DeletionChangeType determines the type of deletion payload

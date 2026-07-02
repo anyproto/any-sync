@@ -23,6 +23,7 @@ const (
 	NodeTypeTree      NodeType = "tree"
 	NodeTypeConsensus NodeType = "consensus"
 	NodeTypeFile      NodeType = "file"
+	NodeTypeFileV2    NodeType = "fileV2"
 
 	NodeTypeCoordinator           NodeType = "coordinator"
 	NodeTypeNamingNode            NodeType = "namingNode"

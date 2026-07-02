@@ -48,6 +48,8 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 			switch nt {
 			case coordinatorproto.NodeType_FileAPI:
 				types = append(types, nodeconf.NodeTypeFile)
+			case coordinatorproto.NodeType_FileV2API:
+				types = append(types, nodeconf.NodeTypeFileV2)
 			case coordinatorproto.NodeType_CoordinatorAPI:
 				types = append(types, nodeconf.NodeTypeCoordinator)
 			case coordinatorproto.NodeType_TreeAPI:
