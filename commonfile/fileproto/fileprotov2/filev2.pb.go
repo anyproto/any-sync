@@ -1135,6 +1135,91 @@ func (x *SpaceQuota) GetFilesCount() uint64 {
 	return 0
 }
 
+// InfoRequest is deliberately empty: Info is static node metadata,
+// extensible later (capabilities, limits) without a wire break.
+type InfoRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InfoRequest) Reset() {
+	*x = InfoRequest{}
+	mi := &file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InfoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InfoRequest) ProtoMessage() {}
+
+func (x *InfoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InfoRequest.ProtoReflect.Descriptor instead.
+func (*InfoRequest) Descriptor() ([]byte, []int) {
+	return file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDescGZIP(), []int{18}
+}
+
+type InfoResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// publicReadBaseUrl, when non-empty, lets clients construct durable object
+	// URLs as {publicReadBaseUrl}/blob/{spaceId}/{rootCid} with zero broker
+	// round-trips; clients cache it. Empty = no public read: use RequestDownload.
+	PublicReadBaseUrl string `protobuf:"bytes,1,opt,name=publicReadBaseUrl,proto3" json:"publicReadBaseUrl,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *InfoResponse) Reset() {
+	*x = InfoResponse{}
+	mi := &file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InfoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InfoResponse) ProtoMessage() {}
+
+func (x *InfoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InfoResponse.ProtoReflect.Descriptor instead.
+func (*InfoResponse) Descriptor() ([]byte, []int) {
+	return file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *InfoResponse) GetPublicReadBaseUrl() string {
+	if x != nil {
+		return x.PublicReadBaseUrl
+	}
+	return ""
+}
+
 var File_commonfile_fileproto_fileprotov2_protos_filev2_proto protoreflect.FileDescriptor
 
 const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
@@ -1203,7 +1288,10 @@ const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
 	"\x12inflightUsageBytes\x18\x04 \x01(\x04R\x12inflightUsageBytes\x12\x1e\n" +
 	"\n" +
 	"filesCount\x18\x05 \x01(\x04R\n" +
-	"filesCount*z\n" +
+	"filesCount\"\r\n" +
+	"\vInfoRequest\"<\n" +
+	"\fInfoResponse\x12,\n" +
+	"\x11publicReadBaseUrl\x18\x01 \x01(\tR\x11publicReadBaseUrl*z\n" +
 	"\bErrCodes\x12\x0e\n" +
 	"\n" +
 	"Unexpected\x10\x00\x12\r\n" +
@@ -1219,12 +1307,13 @@ const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
 	"\fErrForbidden\x10\x03\x12\x14\n" +
 	"\x10ErrLimitExceeded\x10\x04\x12\x14\n" +
 	"\x10ErrSpaceNotFound\x10\x05\x12\x15\n" +
-	"\x11ErrNotResponsible\x10\x062\xbf\x02\n" +
+	"\x11ErrNotResponsible\x10\x062\xfa\x02\n" +
 	"\x06FileV2\x12?\n" +
 	"\x06Upload\x12\x19.filesyncv2.UploadRequest\x1a\x1a.filesyncv2.UploadResponse\x12N\n" +
 	"\vRequestSign\x12\x1e.filesyncv2.RequestSignRequest\x1a\x1f.filesyncv2.RequestSignResponse\x12Z\n" +
 	"\x0fRequestDownload\x12\".filesyncv2.RequestDownloadRequest\x1a#.filesyncv2.RequestDownloadResponse\x12H\n" +
-	"\tSpaceInfo\x12\x1c.filesyncv2.SpaceInfoRequest\x1a\x1d.filesyncv2.SpaceInfoResponseB\"Z commonfile/fileproto/fileprotov2b\x06proto3"
+	"\tSpaceInfo\x12\x1c.filesyncv2.SpaceInfoRequest\x1a\x1d.filesyncv2.SpaceInfoResponse\x129\n" +
+	"\x04Info\x12\x17.filesyncv2.InfoRequest\x1a\x18.filesyncv2.InfoResponseB\"Z commonfile/fileproto/fileprotov2b\x06proto3"
 
 var (
 	file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDescOnce sync.Once
@@ -1239,7 +1328,7 @@ func file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDescGZIP() []b
 }
 
 var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_goTypes = []any{
 	(ErrCodes)(0),                   // 0: filesyncv2.ErrCodes
 	(ErrCode)(0),                    // 1: filesyncv2.ErrCode
@@ -1261,6 +1350,8 @@ var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_goTypes = []any{
 	(*SpaceInfoResponse)(nil),       // 17: filesyncv2.SpaceInfoResponse
 	(*SpaceInfoResult)(nil),         // 18: filesyncv2.SpaceInfoResult
 	(*SpaceQuota)(nil),              // 19: filesyncv2.SpaceQuota
+	(*InfoRequest)(nil),             // 20: filesyncv2.InfoRequest
+	(*InfoResponse)(nil),            // 21: filesyncv2.InfoResponse
 }
 var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_depIdxs = []int32{
 	3,  // 0: filesyncv2.UploadRequest.items:type_name -> filesyncv2.UploadRequestItem
@@ -1281,12 +1372,14 @@ var file_commonfile_fileproto_fileprotov2_protos_filev2_proto_depIdxs = []int32{
 	8,  // 15: filesyncv2.FileV2.RequestSign:input_type -> filesyncv2.RequestSignRequest
 	12, // 16: filesyncv2.FileV2.RequestDownload:input_type -> filesyncv2.RequestDownloadRequest
 	16, // 17: filesyncv2.FileV2.SpaceInfo:input_type -> filesyncv2.SpaceInfoRequest
-	4,  // 18: filesyncv2.FileV2.Upload:output_type -> filesyncv2.UploadResponse
-	9,  // 19: filesyncv2.FileV2.RequestSign:output_type -> filesyncv2.RequestSignResponse
-	13, // 20: filesyncv2.FileV2.RequestDownload:output_type -> filesyncv2.RequestDownloadResponse
-	17, // 21: filesyncv2.FileV2.SpaceInfo:output_type -> filesyncv2.SpaceInfoResponse
-	18, // [18:22] is the sub-list for method output_type
-	14, // [14:18] is the sub-list for method input_type
+	20, // 18: filesyncv2.FileV2.Info:input_type -> filesyncv2.InfoRequest
+	4,  // 19: filesyncv2.FileV2.Upload:output_type -> filesyncv2.UploadResponse
+	9,  // 20: filesyncv2.FileV2.RequestSign:output_type -> filesyncv2.RequestSignResponse
+	13, // 21: filesyncv2.FileV2.RequestDownload:output_type -> filesyncv2.RequestDownloadResponse
+	17, // 22: filesyncv2.FileV2.SpaceInfo:output_type -> filesyncv2.SpaceInfoResponse
+	21, // 23: filesyncv2.FileV2.Info:output_type -> filesyncv2.InfoResponse
+	19, // [19:24] is the sub-list for method output_type
+	14, // [14:19] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name
@@ -1303,7 +1396,7 @@ func file_commonfile_fileproto_fileprotov2_protos_filev2_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc), len(file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

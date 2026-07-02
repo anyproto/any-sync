@@ -37,6 +37,7 @@ type DRPCFileV2Client interface {
 	RequestSign(ctx context.Context, in *RequestSignRequest) (*RequestSignResponse, error)
 	RequestDownload(ctx context.Context, in *RequestDownloadRequest) (*RequestDownloadResponse, error)
 	SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*SpaceInfoResponse, error)
+	Info(ctx context.Context, in *InfoRequest) (*InfoResponse, error)
 }
 
 type drpcFileV2Client struct {
@@ -85,11 +86,21 @@ func (c *drpcFileV2Client) SpaceInfo(ctx context.Context, in *SpaceInfoRequest) 
 	return out, nil
 }
 
+func (c *drpcFileV2Client) Info(ctx context.Context, in *InfoRequest) (*InfoResponse, error) {
+	out := new(InfoResponse)
+	err := c.cc.Invoke(ctx, "/filesyncv2.FileV2/Info", drpcEncoding_File_commonfile_fileproto_fileprotov2_protos_filev2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCFileV2Server interface {
 	Upload(context.Context, *UploadRequest) (*UploadResponse, error)
 	RequestSign(context.Context, *RequestSignRequest) (*RequestSignResponse, error)
 	RequestDownload(context.Context, *RequestDownloadRequest) (*RequestDownloadResponse, error)
 	SpaceInfo(context.Context, *SpaceInfoRequest) (*SpaceInfoResponse, error)
+	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 }
 
 type DRPCFileV2UnimplementedServer struct{}
@@ -110,9 +121,13 @@ func (s *DRPCFileV2UnimplementedServer) SpaceInfo(context.Context, *SpaceInfoReq
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCFileV2UnimplementedServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCFileV2Description struct{}
 
-func (DRPCFileV2Description) NumMethods() int { return 4 }
+func (DRPCFileV2Description) NumMethods() int { return 5 }
 
 func (DRPCFileV2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -152,6 +167,15 @@ func (DRPCFileV2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver
 						in1.(*SpaceInfoRequest),
 					)
 			}, DRPCFileV2Server.SpaceInfo, true
+	case 4:
+		return "/filesyncv2.FileV2/Info", drpcEncoding_File_commonfile_fileproto_fileprotov2_protos_filev2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileV2Server).
+					Info(
+						ctx,
+						in1.(*InfoRequest),
+					)
+			}, DRPCFileV2Server.Info, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -219,6 +243,22 @@ type drpcFileV2_SpaceInfoStream struct {
 }
 
 func (x *drpcFileV2_SpaceInfoStream) SendAndClose(m *SpaceInfoResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_fileprotov2_protos_filev2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFileV2_InfoStream interface {
+	drpc.Stream
+	SendAndClose(*InfoResponse) error
+}
+
+type drpcFileV2_InfoStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFileV2_InfoStream) SendAndClose(m *InfoResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_fileprotov2_protos_filev2_proto{}); err != nil {
 		return err
 	}

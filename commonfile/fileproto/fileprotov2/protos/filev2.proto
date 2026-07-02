@@ -10,7 +10,7 @@ option go_package = "commonfile/fileproto/fileprotov2";
 // without a Register() panic. The package/service names are load-bearing:
 // method paths are derived from `package filesyncv2` + `service FileV2`.
 //
-// Conventions (ALL four RPCs are BATCH):
+// Conventions (all four SPACE-SCOPED RPCs are BATCH; Info is node-level):
 //   * request carries a single shared spaceId (or repeated spaceIds for
 //     SpaceInfo) + a repeated list of items;
 //   * identity is NEVER a request field — it is taken from the authenticated
@@ -40,6 +40,9 @@ service FileV2 {
     rpc RequestDownload(RequestDownloadRequest) returns (RequestDownloadResponse);
     // SpaceInfo returns quota/usage per requested space (batch quota-info).
     rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
+    // Info returns static node-level metadata (no spaceId, no responsibility
+    // gate, no auth beyond the connection); clients cache it.
+    rpc Info(InfoRequest) returns (InfoResponse);
 }
 
 // ErrCodes are WHOLE-RPC (drpc-level) errors, mirroring v1 filesync.ErrCodes.
@@ -188,4 +191,17 @@ message SpaceQuota {
     uint64 durableUsageBytes = 3;   // bytes fully committed to durable storage
     uint64 inflightUsageBytes = 4;  // bytes reserved by presigned/not-yet-committed uploads
     uint64 filesCount = 5;          // number of file roots stored in the space
+}
+
+// ---- Info (node-level metadata) ---------------------------------------------
+
+// InfoRequest is deliberately empty: Info is static node metadata,
+// extensible later (capabilities, limits) without a wire break.
+message InfoRequest {}
+
+message InfoResponse {
+    // publicReadBaseUrl, when non-empty, lets clients construct durable object
+    // URLs as {publicReadBaseUrl}/blob/{spaceId}/{rootCid} with zero broker
+    // round-trips; clients cache it. Empty = no public read: use RequestDownload.
+    string publicReadBaseUrl = 1;
 }
