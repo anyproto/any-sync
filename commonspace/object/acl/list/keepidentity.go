@@ -1,10 +1,10 @@
 package list
 
 import (
+	"bytes"
 	"errors"
-	"io"
 
-	protohelpers "github.com/planetscale/vtprotobuf/protohelpers"
+	"google.golang.org/protobuf/encoding/protowire"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 )
@@ -25,7 +25,6 @@ const (
 	fieldEncReadKeyIdentity         = 1 // AclEncryptedReadKey.identity
 	fieldEncReadKeyEncryptedKey     = 2 // AclEncryptedReadKey.encryptedReadKey
 	wireBytes                       = 2 // length-delimited wire type
-	wireEndGroup                    = 4 // start/end-group (unused by these messages)
 )
 
 // errNonCanonical signals that the strict fast path hit input it does not handle exactly the way the
@@ -43,8 +42,10 @@ var errNonCanonical = errors.New("keep-identity: non-canonical input")
 // never diverge from the generated decoder (verified exhaustively by FuzzKeepIdentity). `isOurs` must mirror
 // the consumer's semantic identity comparison (see aclRecordBuilder.isOurIdentity), not a raw byte compare.
 //
-// Safe only on the trusted build path (caller gates on !verifier.ShouldValidate()); the record is still
-// authenticated over its raw bytes by the caller, independent of this decode.
+// Runs wherever the verifier does not validate content (caller gates on !verifier.ShouldValidate()): the
+// build-from-storage path and live ingest via AddRawRecord alike. The record is still authenticated over its
+// raw bytes by the caller, independent of this decode, and a non-validating verifier never inspects other
+// members' accountKeys — but the resulting Model is a shrunken view of the wire content.
 func unmarshalAclDataKeepIdentity(dAtA []byte, isOurs func(identity []byte) bool) (*aclrecordproto.AclData, error) {
 	if out, err := keepIdentityFast(dAtA, isOurs); err == nil {
 		return out, nil
@@ -179,19 +180,19 @@ func keepReadKeyChange(dAtA []byte, isOurs func(identity []byte) bool) (*aclreco
 				return nil, errNonCanonical
 			}
 			seenMeta = true
-			out.MetadataPubKey = cloneBytes(body)
+			out.MetadataPubKey = bytes.Clone(body)
 		case fieldRkcEncryptedMetadataPriv:
 			if seenEncMeta {
 				return nil, errNonCanonical
 			}
 			seenEncMeta = true
-			out.EncryptedMetadataPrivKey = cloneBytes(body)
+			out.EncryptedMetadataPrivKey = bytes.Clone(body)
 		case fieldRkcEncryptedOldReadKey:
 			if seenOldKey {
 				return nil, errNonCanonical
 			}
 			seenOldKey = true
-			out.EncryptedOldReadKey = cloneBytes(body)
+			out.EncryptedOldReadKey = bytes.Clone(body)
 		case fieldRkcInviteKeys:
 			ek := &aclrecordproto.AclEncryptedReadKey{}
 			if err := ek.UnmarshalVT(body); err != nil {
@@ -225,7 +226,7 @@ func keepAccountRemove(dAtA []byte, isOurs func(identity []byte) bool) (*aclreco
 		i = ni2
 		switch field {
 		case fieldAccountRemoveIdentities:
-			out.Identities = append(out.Identities, cloneBytes(body))
+			out.Identities = append(out.Identities, bytes.Clone(body))
 		case fieldAccountRemoveReadKeyChange:
 			if seenReadKeyChange {
 				return nil, errNonCanonical // the generated decoder MERGES split submessages; we cannot, so defer
@@ -284,65 +285,25 @@ func encryptedReadKeyMatches(elem []byte, isOurs func(identity []byte) bool) (bo
 	return isOurs(identity), nil
 }
 
-// --- wire helpers ---
+// --- wire helpers (thin wrappers over protowire; exact error values don't matter, any error defers to the
+// authoritative full decode) ---
 
-// readTag reads a field tag, rejecting illegal tags (field number <= 0) and group wire types the way the
-// generated decoder does.
+// readTag reads a field tag, rejecting illegal tags (field number <= 0, via protowire) and group wire types
+// the way the generated decoder does.
 func readTag(dAtA []byte, i int) (field int32, wt int, ni int, err error) {
-	tag, ni, err := readVarint(dAtA, i)
-	if err != nil {
-		return 0, 0, i, err
-	}
-	field = int32(tag >> 3)
-	wt = int(tag & 0x7)
-	if field <= 0 || wt == wireEndGroup || wt == 3 {
+	num, typ, n := protowire.ConsumeTag(dAtA[i:])
+	if n < 0 || typ == protowire.StartGroupType || typ == protowire.EndGroupType {
 		return 0, 0, i, errNonCanonical
 	}
-	return field, wt, ni, nil
-}
-
-func readVarint(dAtA []byte, i int) (uint64, int, error) {
-	var v uint64
-	for shift := uint(0); ; shift += 7 {
-		if shift >= 64 {
-			return 0, i, protohelpers.ErrIntOverflow
-		}
-		if i >= len(dAtA) {
-			return 0, i, io.ErrUnexpectedEOF
-		}
-		b := dAtA[i]
-		i++
-		v |= uint64(b&0x7F) << shift
-		if b < 0x80 {
-			return v, i, nil
-		}
-	}
+	return int32(num), int(typ), i + n, nil
 }
 
 // readBytes reads a length-delimited field's payload as a subslice of dAtA (no copy) and returns the index
 // past it.
 func readBytes(dAtA []byte, i int) ([]byte, int, error) {
-	n, ni, err := readVarint(dAtA, i)
-	if err != nil {
-		return nil, i, err
+	b, n := protowire.ConsumeBytes(dAtA[i:])
+	if n < 0 {
+		return nil, i, errNonCanonical
 	}
-	byteLen := int(n)
-	if byteLen < 0 {
-		return nil, i, protohelpers.ErrInvalidLength
-	}
-	end := ni + byteLen
-	if end < 0 {
-		return nil, i, protohelpers.ErrInvalidLength
-	}
-	if end > len(dAtA) {
-		return nil, i, io.ErrUnexpectedEOF
-	}
-	return dAtA[ni:end], end, nil
-}
-
-// cloneBytes mirrors vtproto's `append(m.X[:0], data...)` for a present bytes field: a non-nil owned copy.
-func cloneBytes(b []byte) []byte {
-	out := make([]byte, len(b))
-	copy(out, b)
-	return out
+	return b, i + n, nil
 }

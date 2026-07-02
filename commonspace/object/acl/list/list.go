@@ -150,7 +150,21 @@ func loadRecords(ctx context.Context, storage Storage, recBuilder AclRecordBuild
 	if err == nil && isContiguousChain(records, rootId, head) {
 		return records, nil
 	}
+	// the fallback re-reads and re-verifies the whole log, so a persistently divergent 'o' index means a
+	// silent 2x cost on every build of this space — surface it
+	log.Warnf("acl %s: order-index scan did not match the PrevId chain (scan err: %v), falling back to head->root walk", rootId, err)
 	return loadRecordsByPrevId(ctx, storage, recBuilder, head)
+}
+
+// unmarshalForState decodes a stored record for the in-memory list and drops its raw Data: the Model is all
+// the state needs, and storage keeps the signed bytes for serving peers.
+func unmarshalForState(recBuilder AclRecordBuilder, raw *consensusproto.RawRecordWithId) (*AclRecord, error) {
+	record, err := recBuilder.UnmarshallWithId(raw)
+	if err != nil {
+		return nil, err
+	}
+	record.Data = nil
+	return record, nil
 }
 
 func loadRecordsByScan(ctx context.Context, storage Storage, recBuilder AclRecordBuilder) ([]*AclRecord, error) {
@@ -158,11 +172,10 @@ func loadRecordsByScan(ctx context.Context, storage Storage, recBuilder AclRecor
 	// Start at order 1 (the root): the anystore storage treats this as o>=1 (all records, root has Order=1),
 	// and inMemoryStorage requires order>=1 (order 0 returns nothing). Both yield the full log, root-first.
 	err := storage.GetAfterOrder(ctx, 1, func(ctx context.Context, sr StorageRecord) (bool, error) {
-		record, err := recBuilder.UnmarshallWithId(sr.RawRecordWithId())
+		record, err := unmarshalForState(recBuilder, sr.RawRecordWithId())
 		if err != nil {
 			return false, err
 		}
-		record.Data = nil
 		records = append(records, record)
 		return true, nil
 	})
@@ -177,22 +190,20 @@ func loadRecordsByPrevId(ctx context.Context, storage Storage, recBuilder AclRec
 	if err != nil {
 		return nil, err
 	}
-	record, err := recBuilder.UnmarshallWithId(rec.RawRecordWithId())
+	record, err := unmarshalForState(recBuilder, rec.RawRecordWithId())
 	if err != nil {
 		return nil, err
 	}
-	record.Data = nil
 	records := []*AclRecord{record}
 	for record.PrevId != "" {
 		rec, err = storage.Get(ctx, record.PrevId)
 		if err != nil {
 			return nil, err
 		}
-		record, err = recBuilder.UnmarshallWithId(rec.RawRecordWithId())
+		record, err = unmarshalForState(recBuilder, rec.RawRecordWithId())
 		if err != nil {
 			return nil, err
 		}
-		record.Data = nil
 		records = append(records, record)
 	}
 	slices.Reverse(records)
@@ -250,7 +261,7 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return ErrRecordAlreadyExists
 	}
-	record, err := a.recordBuilder.UnmarshallWithId(rawRec)
+	record, err := unmarshalForState(a.recordBuilder, rawRec)
 	if err != nil {
 		return
 	}
@@ -258,7 +269,6 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if err = copyState.ApplyRecord(record); err != nil {
 		return
 	}
-	record.Data = nil // not read once Model is set; storage persists rawRec.Payload below (mirrors loadRecords)
 	a.setState(copyState)
 	a.records = append(a.records, record)
 	a.indexes[record.Id] = len(a.records) - 1

@@ -953,7 +953,8 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 	}
 	// Unmarshall MUST decode in full: its only callers (ValidateRawRecord, preflightCheck) re-validate the
 	// resulting Model with recordverifier.NewValidateFull(), whose validateReadKeyChange asserts accountKeys
-	// covers every active user. keep-only-ours belongs solely on UnmarshallWithId (build-from-storage).
+	// covers every active user. keep-only-ours belongs solely on UnmarshallWithId (the build-from-storage
+	// and non-validating ingest paths; see decodeAclData).
 	aclData := &aclrecordproto.AclData{}
 	err = aclData.UnmarshalVT(aclRecord.Data)
 	if err != nil {
@@ -1039,10 +1040,14 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 	return
 }
 
-// decodeAclData decodes a record's AclData. On the trusted build path (a non-validating verifier — content
-// already verified at ingest, read back from our own storage) it keeps only our own read key and skips every
-// other member's, never allocating them; see UnmarshalAclDataKeepIdentity. A full validator must see every
-// accountKeys entry, so it decodes in full.
+// decodeAclData decodes a record's AclData. With a non-validating verifier — which covers both the
+// build-from-storage path AND live ingest (AddRawRecord on production nodes) — it keeps only our own read
+// key and skips every other member's, never allocating them; see unmarshalAclDataKeepIdentity. That is safe
+// because authenticity never depends on this decode (verifyRaw checks the author signature + CID and
+// VerifyAcceptor the acceptor signature, all over the raw bytes), content validation is skipped entirely
+// when the verifier does not validate, and state derivation reads only our own accountKeys entry. The
+// resulting Model is therefore a shrunken view; anything needing the full record must read the raw bytes
+// from storage. A full validator must see every accountKeys entry, so it decodes in full.
 func (a *aclRecordBuilder) decodeAclData(data []byte) (*aclrecordproto.AclData, error) {
 	if a.ourIdentity != nil && a.verifier != nil && !a.verifier.ShouldValidate() {
 		return unmarshalAclDataKeepIdentity(data, a.isOurIdentity)

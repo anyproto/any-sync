@@ -269,7 +269,7 @@ func splitAccountRemove(mine []byte) []byte {
 // FuzzKeepIdentity is the safety gate: for ANY input, the keep-only-ours decode must equal the authoritative
 // full decode + filter. Because unmarshalAclDataKeepIdentity falls back to fullDecodeFilter on any fast-path
 // anomaly, a divergence here means the fast path accepted something it should not have.
-// Run: go test -run x -fuzz FuzzKeepIdentity ./commonspace/object/acl/aclrecordproto/
+// Run: go test -run x -fuzz FuzzKeepIdentity ./commonspace/object/acl/list/
 func FuzzKeepIdentity(f *testing.F) {
 	mine := []byte("me")
 	match := byteMatch(mine)
