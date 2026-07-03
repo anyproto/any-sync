@@ -32,7 +32,9 @@ func (k *keyStorage) PubKeyFromProto(protoBytes []byte) (PubKey, error) {
 		return nil, err
 	}
 	k.keys = append(k.keys, pubKeyEntry{
-		protoKey: protoBytes,
+		// clone: callers may pass a subslice of a larger buffer (e.g. a raw acl record); retaining it
+		// verbatim would pin that whole buffer for the cache's lifetime
+		protoKey: bytes.Clone(protoBytes),
 		key:      key,
 	})
 	return key, nil

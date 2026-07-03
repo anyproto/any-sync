@@ -38,6 +38,7 @@ var (
 	ErrMetadataTooLarge          = errors.New("metadata size too large")
 	ErrOwnerNotFound             = errors.New("owner not found")
 	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
+	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
 )
 
 const MaxMetadataLen = 1024
@@ -287,6 +288,11 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	}
 	// if the model is not cached
 	if record.Model == nil {
+		// build/add paths drop Data once Model is set, so Model==nil here means a record was constructed
+		// without a Model; refuse rather than silently apply an empty AclData decoded from nil Data.
+		if len(record.Data) == 0 {
+			return ErrEmptyAclRecordData
+		}
 		aclData := &aclrecordproto.AclData{}
 		err = aclData.UnmarshalVT(record.Data)
 		if err != nil {
