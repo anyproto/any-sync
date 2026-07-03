@@ -44,7 +44,8 @@ var (
 )
 
 var (
-	defaultCompatibleVersions = []uint32{9, 12, 13}
+	// v0.13.X: accept self ±1 (V-1, V, V+1). Bridge v9 is dropped now that v0.12 has shipped.
+	defaultCompatibleVersions = []uint32{12, 13, 14}
 )
 
 func New() SecureService {
