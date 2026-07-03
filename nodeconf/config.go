@@ -54,8 +54,13 @@ func (n Node) HasType(t NodeType) bool {
 }
 
 type Configuration struct {
-	Id           string    `yaml:"id"`
-	NetworkId    string    `yaml:"networkId"`
-	Nodes        []Node    `yaml:"nodes"`
-	CreationTime time.Time `yaml:"creationTime"`
+	Id        string `yaml:"id"`
+	NetworkId string `yaml:"networkId"`
+	// FileNetworkId is the identity of the NodeTypeFileV2 fleet's shared
+	// signing key (network string encoding, crypto.DecodeNetworkId) —
+	// the key fileV2 durability receipts (networkSign) verify against.
+	// Empty on networks without a fileV2 fleet.
+	FileNetworkId string    `yaml:"fileNetworkId,omitempty"`
+	Nodes         []Node    `yaml:"nodes"`
+	CreationTime  time.Time `yaml:"creationTime"`
 }

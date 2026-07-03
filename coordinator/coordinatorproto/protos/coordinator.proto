@@ -210,6 +210,9 @@ message NetworkConfigurationResponse {
   repeated Node nodes = 3;
   // unix timestamp of the creation time of configuration
   uint64 creationTimeUnix = 4;
+  // identity of the fileV2 fleet's shared receipt-signing key (network
+  // string encoding); empty if the network has no fileV2 fleet
+  string fileNetworkId = 5;
 }
 
 // NodeType determines the type of API that a node supports
