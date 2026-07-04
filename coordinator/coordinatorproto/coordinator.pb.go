@@ -3490,6 +3490,272 @@ func (*AclUploadInviteResponse) Descriptor() ([]byte, []int) {
 	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{51}
 }
 
+type FileLimitsGetRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	SpaceId string                 `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	// Identity is the uploader account identity whose pool bounds are requested
+	Identity      string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileLimitsGetRequest) Reset() {
+	*x = FileLimitsGetRequest{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileLimitsGetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileLimitsGetRequest) ProtoMessage() {}
+
+func (x *FileLimitsGetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileLimitsGetRequest.ProtoReflect.Descriptor instead.
+func (*FileLimitsGetRequest) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *FileLimitsGetRequest) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *FileLimitsGetRequest) GetIdentity() string {
+	if x != nil {
+		return x.Identity
+	}
+	return ""
+}
+
+type FileLimitsGetResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AccountLimitBytes is the identity's total file-storage cap (the common account pool)
+	AccountLimitBytes uint64 `protobuf:"varint,1,opt,name=accountLimitBytes,proto3" json:"accountLimitBytes,omitempty"`
+	// AccountTotalUsageBytes is the coordinator-aggregated durable usage across all the identity's spaces
+	AccountTotalUsageBytes uint64 `protobuf:"varint,2,opt,name=accountTotalUsageBytes,proto3" json:"accountTotalUsageBytes,omitempty"`
+	// SpaceLimitBytes is an optional space-scoped cap; 0 = unset
+	SpaceLimitBytes uint64 `protobuf:"varint,3,opt,name=spaceLimitBytes,proto3" json:"spaceLimitBytes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *FileLimitsGetResponse) Reset() {
+	*x = FileLimitsGetResponse{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileLimitsGetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileLimitsGetResponse) ProtoMessage() {}
+
+func (x *FileLimitsGetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileLimitsGetResponse.ProtoReflect.Descriptor instead.
+func (*FileLimitsGetResponse) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *FileLimitsGetResponse) GetAccountLimitBytes() uint64 {
+	if x != nil {
+		return x.AccountLimitBytes
+	}
+	return 0
+}
+
+func (x *FileLimitsGetResponse) GetAccountTotalUsageBytes() uint64 {
+	if x != nil {
+		return x.AccountTotalUsageBytes
+	}
+	return 0
+}
+
+func (x *FileLimitsGetResponse) GetSpaceLimitBytes() uint64 {
+	if x != nil {
+		return x.SpaceLimitBytes
+	}
+	return 0
+}
+
+type FileUsageReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*FileUsageRow        `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileUsageReportRequest) Reset() {
+	*x = FileUsageReportRequest{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileUsageReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileUsageReportRequest) ProtoMessage() {}
+
+func (x *FileUsageReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileUsageReportRequest.ProtoReflect.Descriptor instead.
+func (*FileUsageReportRequest) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *FileUsageReportRequest) GetRows() []*FileUsageRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+type FileUsageRow struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	SpaceId string                 `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	// Identity is the charged uploader identity (the author of the root's earliest bind row)
+	Identity string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	// DurableBytes is the HEAD-measured durable usage of this (space, identity) slice; in-flight is never reported
+	DurableBytes      uint64 `protobuf:"varint,3,opt,name=durableBytes,proto3" json:"durableBytes,omitempty"`
+	DurableFilesCount uint64 `protobuf:"varint,4,opt,name=durableFilesCount,proto3" json:"durableFilesCount,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *FileUsageRow) Reset() {
+	*x = FileUsageRow{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileUsageRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileUsageRow) ProtoMessage() {}
+
+func (x *FileUsageRow) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileUsageRow.ProtoReflect.Descriptor instead.
+func (*FileUsageRow) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *FileUsageRow) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *FileUsageRow) GetIdentity() string {
+	if x != nil {
+		return x.Identity
+	}
+	return ""
+}
+
+func (x *FileUsageRow) GetDurableBytes() uint64 {
+	if x != nil {
+		return x.DurableBytes
+	}
+	return 0
+}
+
+func (x *FileUsageRow) GetDurableFilesCount() uint64 {
+	if x != nil {
+		return x.DurableFilesCount
+	}
+	return 0
+}
+
+type FileUsageReportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileUsageReportResponse) Reset() {
+	*x = FileUsageReportResponse{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileUsageReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileUsageReportResponse) ProtoMessage() {}
+
+func (x *FileUsageReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileUsageReportResponse.ProtoReflect.Descriptor instead.
+func (*FileUsageReportResponse) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{56}
+}
+
 var File_coordinator_coordinatorproto_protos_coordinator_proto protoreflect.FileDescriptor
 
 const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
@@ -3665,7 +3931,22 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x16AclUploadInviteRequest\x12\x10\n" +
 	"\x03cid\x18\x01 \x01(\fR\x03cid\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\"\x19\n" +
-	"\x17AclUploadInviteResponse*\xba\x02\n" +
+	"\x17AclUploadInviteResponse\"L\n" +
+	"\x14FileLimitsGetRequest\x12\x18\n" +
+	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x1a\n" +
+	"\bidentity\x18\x02 \x01(\tR\bidentity\"\xa7\x01\n" +
+	"\x15FileLimitsGetResponse\x12,\n" +
+	"\x11accountLimitBytes\x18\x01 \x01(\x04R\x11accountLimitBytes\x126\n" +
+	"\x16accountTotalUsageBytes\x18\x02 \x01(\x04R\x16accountTotalUsageBytes\x12(\n" +
+	"\x0fspaceLimitBytes\x18\x03 \x01(\x04R\x0fspaceLimitBytes\"G\n" +
+	"\x16FileUsageReportRequest\x12-\n" +
+	"\x04rows\x18\x01 \x03(\v2\x19.coordinator.FileUsageRowR\x04rows\"\x96\x01\n" +
+	"\fFileUsageRow\x12\x18\n" +
+	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x1a\n" +
+	"\bidentity\x18\x02 \x01(\tR\bidentity\x12\"\n" +
+	"\fdurableBytes\x18\x03 \x01(\x04R\fdurableBytes\x12,\n" +
+	"\x11durableFilesCount\x18\x04 \x01(\x04R\x11durableFilesCount\"\x19\n" +
+	"\x17FileUsageReportResponse*\xba\x02\n" +
 	"\n" +
 	"ErrorCodes\x12\x0e\n" +
 	"\n" +
@@ -3726,7 +4007,7 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x0fNotifyEventType\x12\x14\n" +
 	"\x10UnspecifiedEvent\x10\x00\x12\x18\n" +
 	"\x14InboxNewMessageEvent\x10\x01\x12\x1d\n" +
-	"\x19NetworkConfigChangedEvent\x10\x022\x80\x0e\n" +
+	"\x19NetworkConfigChangedEvent\x10\x022\xb6\x0f\n" +
 	"\vCoordinator\x12J\n" +
 	"\tSpaceSign\x12\x1d.coordinator.SpaceSignRequest\x1a\x1e.coordinator.SpaceSignResponse\x12_\n" +
 	"\x10SpaceStatusCheck\x12$.coordinator.SpaceStatusCheckRequest\x1a%.coordinator.SpaceStatusCheckResponse\x12k\n" +
@@ -3747,7 +4028,9 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"InboxFetch\x12\x1e.coordinator.InboxFetchRequest\x1a\x1f.coordinator.InboxFetchResponse\x12\\\n" +
 	"\x0fInboxAddMessage\x12#.coordinator.InboxAddMessageRequest\x1a$.coordinator.InboxAddMessageResponse\x12[\n" +
 	"\x0fNotifySubscribe\x12#.coordinator.NotifySubscribeRequest\x1a!.coordinator.NotifySubscribeEvent0\x01\x12\\\n" +
-	"\x0fAclUploadInvite\x12#.coordinator.AclUploadInviteRequest\x1a$.coordinator.AclUploadInviteResponseB\x1eZ\x1ccoordinator/coordinatorprotob\x06proto3"
+	"\x0fAclUploadInvite\x12#.coordinator.AclUploadInviteRequest\x1a$.coordinator.AclUploadInviteResponse\x12V\n" +
+	"\rFileLimitsGet\x12!.coordinator.FileLimitsGetRequest\x1a\".coordinator.FileLimitsGetResponse\x12\\\n" +
+	"\x0fFileUsageReport\x12#.coordinator.FileUsageReportRequest\x1a$.coordinator.FileUsageReportResponseB\x1eZ\x1ccoordinator/coordinatorprotob\x06proto3"
 
 var (
 	file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescOnce sync.Once
@@ -3762,7 +4045,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP() []
 }
 
 var file_coordinator_coordinatorproto_protos_coordinator_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
 var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(ErrorCodes)(0),                             // 0: coordinator.ErrorCodes
 	(SpaceStatus)(0),                            // 1: coordinator.SpaceStatus
@@ -3827,6 +4110,11 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(*NotifySubscribeEvent)(nil),                // 60: coordinator.NotifySubscribeEvent
 	(*AclUploadInviteRequest)(nil),              // 61: coordinator.AclUploadInviteRequest
 	(*AclUploadInviteResponse)(nil),             // 62: coordinator.AclUploadInviteResponse
+	(*FileLimitsGetRequest)(nil),                // 63: coordinator.FileLimitsGetRequest
+	(*FileLimitsGetResponse)(nil),               // 64: coordinator.FileLimitsGetResponse
+	(*FileUsageReportRequest)(nil),              // 65: coordinator.FileUsageReportRequest
+	(*FileUsageRow)(nil),                        // 66: coordinator.FileUsageRow
+	(*FileUsageReportResponse)(nil),             // 67: coordinator.FileUsageReportResponse
 }
 var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32{
 	1,  // 0: coordinator.SpaceStatusPayload.status:type_name -> coordinator.SpaceStatus
@@ -3853,49 +4141,54 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32
 	52, // 21: coordinator.InboxAddMessageRequest.message:type_name -> coordinator.InboxMessage
 	10, // 22: coordinator.NotifySubscribeRequest.eventType:type_name -> coordinator.NotifyEventType
 	10, // 23: coordinator.NotifySubscribeEvent.eventType:type_name -> coordinator.NotifyEventType
-	11, // 24: coordinator.Coordinator.SpaceSign:input_type -> coordinator.SpaceSignRequest
-	17, // 25: coordinator.Coordinator.SpaceStatusCheck:input_type -> coordinator.SpaceStatusCheckRequest
-	19, // 26: coordinator.Coordinator.SpaceStatusCheckMany:input_type -> coordinator.SpaceStatusCheckManyRequest
-	22, // 27: coordinator.Coordinator.SpaceStatusChange:input_type -> coordinator.SpaceStatusChangeRequest
-	24, // 28: coordinator.Coordinator.SpaceMakeShareable:input_type -> coordinator.SpaceMakeShareableRequest
-	26, // 29: coordinator.Coordinator.SpaceMakeUnshareable:input_type -> coordinator.SpaceMakeUnshareableRequest
-	28, // 30: coordinator.Coordinator.NetworkConfiguration:input_type -> coordinator.NetworkConfigurationRequest
-	33, // 31: coordinator.Coordinator.DeletionLog:input_type -> coordinator.DeletionLogRequest
-	36, // 32: coordinator.Coordinator.SpaceDelete:input_type -> coordinator.SpaceDeleteRequest
-	38, // 33: coordinator.Coordinator.AccountDelete:input_type -> coordinator.AccountDeleteRequest
-	41, // 34: coordinator.Coordinator.AccountRevertDeletion:input_type -> coordinator.AccountRevertDeletionRequest
-	43, // 35: coordinator.Coordinator.AclAddRecord:input_type -> coordinator.AclAddRecordRequest
-	45, // 36: coordinator.Coordinator.AclGetRecords:input_type -> coordinator.AclGetRecordsRequest
-	47, // 37: coordinator.Coordinator.AccountLimitsSet:input_type -> coordinator.AccountLimitsSetRequest
-	49, // 38: coordinator.Coordinator.AclEventLog:input_type -> coordinator.AclEventLogRequest
-	55, // 39: coordinator.Coordinator.InboxFetch:input_type -> coordinator.InboxFetchRequest
-	57, // 40: coordinator.Coordinator.InboxAddMessage:input_type -> coordinator.InboxAddMessageRequest
-	59, // 41: coordinator.Coordinator.NotifySubscribe:input_type -> coordinator.NotifySubscribeRequest
-	61, // 42: coordinator.Coordinator.AclUploadInvite:input_type -> coordinator.AclUploadInviteRequest
-	14, // 43: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
-	18, // 44: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
-	20, // 45: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
-	23, // 46: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
-	25, // 47: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
-	27, // 48: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
-	29, // 49: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
-	34, // 50: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
-	37, // 51: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
-	40, // 52: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
-	42, // 53: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
-	44, // 54: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
-	46, // 55: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
-	48, // 56: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
-	50, // 57: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
-	56, // 58: coordinator.Coordinator.InboxFetch:output_type -> coordinator.InboxFetchResponse
-	58, // 59: coordinator.Coordinator.InboxAddMessage:output_type -> coordinator.InboxAddMessageResponse
-	60, // 60: coordinator.Coordinator.NotifySubscribe:output_type -> coordinator.NotifySubscribeEvent
-	62, // 61: coordinator.Coordinator.AclUploadInvite:output_type -> coordinator.AclUploadInviteResponse
-	43, // [43:62] is the sub-list for method output_type
-	24, // [24:43] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	66, // 24: coordinator.FileUsageReportRequest.rows:type_name -> coordinator.FileUsageRow
+	11, // 25: coordinator.Coordinator.SpaceSign:input_type -> coordinator.SpaceSignRequest
+	17, // 26: coordinator.Coordinator.SpaceStatusCheck:input_type -> coordinator.SpaceStatusCheckRequest
+	19, // 27: coordinator.Coordinator.SpaceStatusCheckMany:input_type -> coordinator.SpaceStatusCheckManyRequest
+	22, // 28: coordinator.Coordinator.SpaceStatusChange:input_type -> coordinator.SpaceStatusChangeRequest
+	24, // 29: coordinator.Coordinator.SpaceMakeShareable:input_type -> coordinator.SpaceMakeShareableRequest
+	26, // 30: coordinator.Coordinator.SpaceMakeUnshareable:input_type -> coordinator.SpaceMakeUnshareableRequest
+	28, // 31: coordinator.Coordinator.NetworkConfiguration:input_type -> coordinator.NetworkConfigurationRequest
+	33, // 32: coordinator.Coordinator.DeletionLog:input_type -> coordinator.DeletionLogRequest
+	36, // 33: coordinator.Coordinator.SpaceDelete:input_type -> coordinator.SpaceDeleteRequest
+	38, // 34: coordinator.Coordinator.AccountDelete:input_type -> coordinator.AccountDeleteRequest
+	41, // 35: coordinator.Coordinator.AccountRevertDeletion:input_type -> coordinator.AccountRevertDeletionRequest
+	43, // 36: coordinator.Coordinator.AclAddRecord:input_type -> coordinator.AclAddRecordRequest
+	45, // 37: coordinator.Coordinator.AclGetRecords:input_type -> coordinator.AclGetRecordsRequest
+	47, // 38: coordinator.Coordinator.AccountLimitsSet:input_type -> coordinator.AccountLimitsSetRequest
+	49, // 39: coordinator.Coordinator.AclEventLog:input_type -> coordinator.AclEventLogRequest
+	55, // 40: coordinator.Coordinator.InboxFetch:input_type -> coordinator.InboxFetchRequest
+	57, // 41: coordinator.Coordinator.InboxAddMessage:input_type -> coordinator.InboxAddMessageRequest
+	59, // 42: coordinator.Coordinator.NotifySubscribe:input_type -> coordinator.NotifySubscribeRequest
+	61, // 43: coordinator.Coordinator.AclUploadInvite:input_type -> coordinator.AclUploadInviteRequest
+	63, // 44: coordinator.Coordinator.FileLimitsGet:input_type -> coordinator.FileLimitsGetRequest
+	65, // 45: coordinator.Coordinator.FileUsageReport:input_type -> coordinator.FileUsageReportRequest
+	14, // 46: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
+	18, // 47: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
+	20, // 48: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
+	23, // 49: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
+	25, // 50: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
+	27, // 51: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
+	29, // 52: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
+	34, // 53: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
+	37, // 54: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
+	40, // 55: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
+	42, // 56: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
+	44, // 57: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
+	46, // 58: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
+	48, // 59: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
+	50, // 60: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
+	56, // 61: coordinator.Coordinator.InboxFetch:output_type -> coordinator.InboxFetchResponse
+	58, // 62: coordinator.Coordinator.InboxAddMessage:output_type -> coordinator.InboxAddMessageResponse
+	60, // 63: coordinator.Coordinator.NotifySubscribe:output_type -> coordinator.NotifySubscribeEvent
+	62, // 64: coordinator.Coordinator.AclUploadInvite:output_type -> coordinator.AclUploadInviteResponse
+	64, // 65: coordinator.Coordinator.FileLimitsGet:output_type -> coordinator.FileLimitsGetResponse
+	67, // 66: coordinator.Coordinator.FileUsageReport:output_type -> coordinator.FileUsageReportResponse
+	46, // [46:67] is the sub-list for method output_type
+	25, // [25:46] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_coordinator_coordinatorproto_protos_coordinator_proto_init() }
@@ -3909,7 +4202,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc), len(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   52,
+			NumMessages:   57,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
