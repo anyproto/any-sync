@@ -48,6 +48,7 @@ proto:
 	$(call generate_drpc,$(PKGMAP),commonspace/clientspaceproto/protos)
 	$(call generate_drpc,$(PKGMAP),commonfile/fileproto/protos)
 	$(call generate_drpc,,commonfile/fileproto/fileprotov2/protos)
+	$(call generate_drpc,,commonfile/fileproto/filep2p/protos)
 	$(call generate_drpc,$(PKGMAP),net/streampool/testservice/protos)
 	$(call generate_drpc,$(PKGMAP),net/endtoendtest/testpeer/testproto/protos)
 
