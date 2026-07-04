@@ -239,6 +239,18 @@ func (mr *MockServiceMockRecorder) NodeTypes(nodeId any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTypes", reflect.TypeOf((*MockService)(nil).NodeTypes), nodeId)
 }
 
+// ObserveChanges mocks base method.
+func (m *MockService) ObserveChanges(observer nodeconf.ChangeObserver) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ObserveChanges", observer)
+}
+
+// ObserveChanges indicates an expected call of ObserveChanges.
+func (mr *MockServiceMockRecorder) ObserveChanges(observer any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveChanges", reflect.TypeOf((*MockService)(nil).ObserveChanges), observer)
+}
+
 // Partition mocks base method.
 func (m *MockService) Partition(spaceId string) int {
 	m.ctrl.T.Helper()

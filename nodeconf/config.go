@@ -57,4 +57,8 @@ type Configuration struct {
 	NetworkId    string    `yaml:"networkId"`
 	Nodes        []Node    `yaml:"nodes"`
 	CreationTime time.Time `yaml:"creationTime"`
+	// Epoch is a monotonically increasing version of the network configuration.
+	// It is incremented on every published topology change and is 0 for
+	// configurations that predate epoch support.
+	Epoch uint64 `yaml:"epoch,omitempty"`
 }
