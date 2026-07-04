@@ -886,6 +886,16 @@ func (m *SpaceQuota) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.AccountUsageBytes != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.AccountUsageBytes))
+		i--
+		dAtA[i] = 0x38
+	}
+	if m.AccountLimitBytes != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.AccountLimitBytes))
+		i--
+		dAtA[i] = 0x30
+	}
 	if m.FilesCount != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.FilesCount))
 		i--
@@ -1327,6 +1337,12 @@ func (m *SpaceQuota) SizeVT() (n int) {
 	}
 	if m.FilesCount != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.FilesCount))
+	}
+	if m.AccountLimitBytes != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.AccountLimitBytes))
+	}
+	if m.AccountUsageBytes != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.AccountUsageBytes))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -3399,6 +3415,44 @@ func (m *SpaceQuota) UnmarshalVT(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.FilesCount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountLimitBytes", wireType)
+			}
+			m.AccountLimitBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AccountLimitBytes |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountUsageBytes", wireType)
+			}
+			m.AccountUsageBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AccountUsageBytes |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
