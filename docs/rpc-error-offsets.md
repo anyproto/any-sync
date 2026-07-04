@@ -75,7 +75,7 @@ may use offset `0`**:
 | 600 | 600–699 | `payment` | `paymentservice/paymentserviceproto` |
 | 700 | 700–799 | `limiter` | `net/rpc/limiter/limiterproto` |
 | 800 | 800–899 | `filesyncv2` (FileV2, v2 broker) | `commonfile/fileproto/fileprotov2` |
-| 900 | 900–999 | _free_ | — |
+| 900 | 900–999 | `filesyncp2p` (FileP2P, p2p file transfer) | `commonfile/fileproto/filep2p` |
 
 ### Downstream repos (`>= 1000`)
 
