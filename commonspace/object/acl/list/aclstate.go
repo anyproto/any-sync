@@ -2,6 +2,7 @@ package list
 
 import (
 	"errors"
+	"strings"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -39,6 +40,10 @@ var (
 	ErrOwnerNotFound             = errors.New("owner not found")
 	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
 	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
+	ErrChildAlreadyRegistered    = errors.New("child space is already registered")
+	ErrNoSuchChildRegistration   = errors.New("no such child registration")
+	ErrNotChildSpace             = errors.New("space has no legal owner")
+	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
 )
 
 const MaxMetadataLen = 1024
@@ -95,6 +100,16 @@ type AclState struct {
 
 	optionChanges []OptionChange
 	isOneToOne    bool
+
+	// parentSpaceId + legalOwner are set from the root for child (nested) spaces
+	parentSpaceId string
+	// legalOwner is the current legal owner key: pinned at the root, advanced by AclLegalOwnerUpdate
+	legalOwner crypto.PubKey
+	// consumedOwnershipProofs guards AclLegalOwnerUpdate against replaying an already-consumed
+	// parent ownership-change record (keyed by the record cid)
+	consumedOwnershipProofs map[string]struct{}
+	// childRegistrations is a map childSpaceId -> registration for children registered under this (parent) space
+	childRegistrations map[string]ChildRegistration
 }
 
 func newAclStateWithKeys(
@@ -111,6 +126,9 @@ func newAclStateWithKeys(
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
+
+		consumedOwnershipProofs: make(map[string]struct{}),
+		childRegistrations:      make(map[string]ChildRegistration),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -129,6 +147,9 @@ func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
+
+		consumedOwnershipProofs: make(map[string]struct{}),
+		childRegistrations:      make(map[string]ChildRegistration),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -348,6 +369,18 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 			return
 		}
 	}
+	if root.ParentSpaceId != "" || len(root.LegalOwner) > 0 {
+		// both-or-neither: a child space must declare its parent and pin the legal owner together
+		if root.ParentSpaceId == "" || len(root.LegalOwner) == 0 {
+			return ErrIncorrectRoot
+		}
+		legalOwner, err := st.keyStore.PubKeyFromProto(root.LegalOwner)
+		if err != nil {
+			return err
+		}
+		st.parentSpaceId = root.ParentSpaceId
+		st.legalOwner = legalOwner
+	}
 	// adding an account to the list
 	accountState := AccountState{
 		PubKey:          record.Identity,
@@ -437,6 +470,16 @@ func (st *AclState) Copy() *AclState {
 	for k, v := range st.pendingRequests {
 		newSt.pendingRequests[k] = v
 	}
+	newSt.consumedOwnershipProofs = make(map[string]struct{})
+	for k := range st.consumedOwnershipProofs {
+		newSt.consumedOwnershipProofs[k] = struct{}{}
+	}
+	newSt.childRegistrations = make(map[string]ChildRegistration)
+	for k, v := range st.childRegistrations {
+		newSt.childRegistrations[k] = v
+	}
+	newSt.parentSpaceId = st.parentSpaceId
+	newSt.legalOwner = st.legalOwner
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
 	newSt.optionChanges = append(newSt.optionChanges, st.optionChanges...)
 	newSt.list = st.list
@@ -479,6 +522,12 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyPermissionChanges(ch.GetPermissionChanges(), record)
 	case ch.GetSpaceOptionsChange() != nil:
 		return st.applySpaceOptionsChange(ch.GetSpaceOptionsChange(), record)
+	case ch.GetChildRegister() != nil:
+		return st.applyChildRegister(ch.GetChildRegister(), record)
+	case ch.GetChildRegisterRevoke() != nil:
+		return st.applyChildRegisterRevoke(ch.GetChildRegisterRevoke(), record)
+	case ch.GetLegalOwnerUpdate() != nil:
+		return st.applyLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
 		return nil
@@ -500,6 +549,48 @@ func (st *AclState) applyOwnershipChange(ch *aclrecordproto.AclOwnershipChange, 
 	)
 	st.updatePermissions(oldOwnerKey, ch.OldOwnerPermissions, record)
 	st.updatePermissions(newOwnerKey, aclrecordproto.AclUserPermissions_Owner, record)
+	return nil
+}
+
+func (st *AclState) applyChildRegister(ch *aclrecordproto.AclChildRegister, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateChildRegister(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	st.childRegistrations[ch.ChildSpaceId] = ChildRegistration{
+		RecordId:       record.Id,
+		ChildSpaceId:   ch.ChildSpaceId,
+		ChildAclRootId: ch.ChildAclRootId,
+		OrgPermission:  AclPermissions(ch.OrgPermission),
+		Author:         record.Identity,
+	}
+	return nil
+}
+
+func (st *AclState) applyChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateChildRegisterRevoke(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	reg := st.childRegistrations[ch.ChildSpaceId]
+	reg.Revoked = true
+	st.childRegistrations[ch.ChildSpaceId] = reg
+	return nil
+}
+
+func (st *AclState) applyLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateLegalOwnerUpdate(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	for _, raw := range ch.OwnershipChanges {
+		_, newOwner, proofId, err := unmarshalOwnershipChangeProof(st.keyStore, raw)
+		if err != nil {
+			return err
+		}
+		st.consumedOwnershipProofs[proofId] = struct{}{}
+		st.legalOwner = newOwner
+	}
 	return nil
 }
 
@@ -1126,4 +1217,36 @@ func closestPermissions(accountState AccountState, recordId string, isAfter func
 		}
 	}
 	return AclPermissionsNone
+}
+
+// LegalOwner returns the current legal owner key of a child (nested) space, nil for top-level spaces
+func (st *AclState) LegalOwner() crypto.PubKey {
+	return st.legalOwner
+}
+
+// ParentSpaceId returns the declared parent space id, empty for top-level spaces
+func (st *AclState) ParentSpaceId() string {
+	return st.parentSpaceId
+}
+
+// IsChildSpace reports whether this space declared a parent at its root
+func (st *AclState) IsChildSpace() bool {
+	return st.legalOwner != nil
+}
+
+// ChildRegistration returns the registration of the given child space id, if any
+func (st *AclState) ChildRegistration(childSpaceId string) (reg ChildRegistration, ok bool) {
+	reg, ok = st.childRegistrations[childSpaceId]
+	return
+}
+
+// ChildRegistrations returns all child registrations of this (parent) space, sorted by child space id
+func (st *AclState) ChildRegistrations() (regs []ChildRegistration) {
+	for _, reg := range st.childRegistrations {
+		regs = append(regs, reg)
+	}
+	slices.SortFunc(regs, func(a, b ChildRegistration) int {
+		return strings.Compare(a.ChildSpaceId, b.ChildSpaceId)
+	})
+	return
 }

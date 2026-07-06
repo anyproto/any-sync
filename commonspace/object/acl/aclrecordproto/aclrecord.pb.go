@@ -140,8 +140,14 @@ type AclRoot struct {
 	EncryptedOwnerMetadata   []byte                 `protobuf:"bytes,9,opt,name=encryptedOwnerMetadata,proto3" json:"encryptedOwnerMetadata,omitempty"`
 	OneToOneInfo             *AclOneToOneInfo       `protobuf:"bytes,10,opt,name=oneToOneInfo,proto3" json:"oneToOneInfo,omitempty"`
 	Options                  *AclSpaceOptions       `protobuf:"bytes,11,opt,name=options,proto3" json:"options,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// parentSpaceId declares this space a child of the parent space (nested spaces); empty for top-level spaces.
+	// Mirrors SpaceHeader.parentSpaceId so the ACL is self-describing.
+	ParentSpaceId string `protobuf:"bytes,12,opt,name=parentSpaceId,proto3" json:"parentSpaceId,omitempty"`
+	// legalOwner is the public key of the parent space's owner at genesis. It anchors the
+	// signature-induction chain advanced by AclLegalOwnerUpdate; empty for top-level spaces.
+	LegalOwner    []byte `protobuf:"bytes,13,opt,name=legalOwner,proto3" json:"legalOwner,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AclRoot) Reset() {
@@ -247,6 +253,20 @@ func (x *AclRoot) GetOneToOneInfo() *AclOneToOneInfo {
 func (x *AclRoot) GetOptions() *AclSpaceOptions {
 	if x != nil {
 		return x.Options
+	}
+	return nil
+}
+
+func (x *AclRoot) GetParentSpaceId() string {
+	if x != nil {
+		return x.ParentSpaceId
+	}
+	return ""
+}
+
+func (x *AclRoot) GetLegalOwner() []byte {
+	if x != nil {
+		return x.LegalOwner
 	}
 	return nil
 }
@@ -1367,6 +1387,162 @@ func (*AclAccountRequestRemove) Descriptor() ([]byte, []int) {
 	return file_aclrecord_proto_rawDescGZIP(), []int{20}
 }
 
+// AclChildRegister registers a child space under THIS (parent) space
+type AclChildRegister struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	ChildSpaceId string                 `protobuf:"bytes,1,opt,name=childSpaceId,proto3" json:"childSpaceId,omitempty"`
+	// childAclRootId binds the registration to a specific child ACL root record
+	ChildAclRootId string `protobuf:"bytes,2,opt,name=childAclRootId,proto3" json:"childAclRootId,omitempty"`
+	// orgPermission is the permission the parent grants ITSELF in the child (None = keyless governance only)
+	OrgPermission AclUserPermissions `protobuf:"varint,3,opt,name=orgPermission,proto3,enum=aclrecord.AclUserPermissions" json:"orgPermission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AclChildRegister) Reset() {
+	*x = AclChildRegister{}
+	mi := &file_aclrecord_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclChildRegister) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclChildRegister) ProtoMessage() {}
+
+func (x *AclChildRegister) ProtoReflect() protoreflect.Message {
+	mi := &file_aclrecord_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclChildRegister.ProtoReflect.Descriptor instead.
+func (*AclChildRegister) Descriptor() ([]byte, []int) {
+	return file_aclrecord_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *AclChildRegister) GetChildSpaceId() string {
+	if x != nil {
+		return x.ChildSpaceId
+	}
+	return ""
+}
+
+func (x *AclChildRegister) GetChildAclRootId() string {
+	if x != nil {
+		return x.ChildAclRootId
+	}
+	return ""
+}
+
+func (x *AclChildRegister) GetOrgPermission() AclUserPermissions {
+	if x != nil {
+		return x.OrgPermission
+	}
+	return AclUserPermissions_None
+}
+
+// AclChildRegisterRevoke de-lists a previously registered child space
+type AclChildRegisterRevoke struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChildSpaceId  string                 `protobuf:"bytes,1,opt,name=childSpaceId,proto3" json:"childSpaceId,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AclChildRegisterRevoke) Reset() {
+	*x = AclChildRegisterRevoke{}
+	mi := &file_aclrecord_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclChildRegisterRevoke) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclChildRegisterRevoke) ProtoMessage() {}
+
+func (x *AclChildRegisterRevoke) ProtoReflect() protoreflect.Message {
+	mi := &file_aclrecord_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclChildRegisterRevoke.ProtoReflect.Descriptor instead.
+func (*AclChildRegisterRevoke) Descriptor() ([]byte, []int) {
+	return file_aclrecord_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *AclChildRegisterRevoke) GetChildSpaceId() string {
+	if x != nil {
+		return x.ChildSpaceId
+	}
+	return ""
+}
+
+// AclLegalOwnerUpdate advances the stored legalOwner of THIS (child) space after parent ownership transfers.
+// Each entry is a raw consensus record (consensusproto.RawRecord bytes) from the PARENT acl containing exactly
+// one AclOwnershipChange. Validation is signature induction: the first record must be signed by the currently
+// stored legalOwner, each next by the owner the previous one named; the author of this record must be the final owner.
+type AclLegalOwnerUpdate struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	OwnershipChanges [][]byte               `protobuf:"bytes,1,rep,name=ownershipChanges,proto3" json:"ownershipChanges,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *AclLegalOwnerUpdate) Reset() {
+	*x = AclLegalOwnerUpdate{}
+	mi := &file_aclrecord_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclLegalOwnerUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclLegalOwnerUpdate) ProtoMessage() {}
+
+func (x *AclLegalOwnerUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_aclrecord_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclLegalOwnerUpdate.ProtoReflect.Descriptor instead.
+func (*AclLegalOwnerUpdate) Descriptor() ([]byte, []int) {
+	return file_aclrecord_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *AclLegalOwnerUpdate) GetOwnershipChanges() [][]byte {
+	if x != nil {
+		return x.OwnershipChanges
+	}
+	return nil
+}
+
 // AclContentValue contains possible values for Acl
 type AclContentValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1388,6 +1564,9 @@ type AclContentValue struct {
 	//	*AclContentValue_InviteChange
 	//	*AclContentValue_OwnershipChange
 	//	*AclContentValue_SpaceOptionsChange
+	//	*AclContentValue_ChildRegister
+	//	*AclContentValue_ChildRegisterRevoke
+	//	*AclContentValue_LegalOwnerUpdate
 	Value         isAclContentValue_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1395,7 +1574,7 @@ type AclContentValue struct {
 
 func (x *AclContentValue) Reset() {
 	*x = AclContentValue{}
-	mi := &file_aclrecord_proto_msgTypes[21]
+	mi := &file_aclrecord_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1407,7 +1586,7 @@ func (x *AclContentValue) String() string {
 func (*AclContentValue) ProtoMessage() {}
 
 func (x *AclContentValue) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[21]
+	mi := &file_aclrecord_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1420,7 +1599,7 @@ func (x *AclContentValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclContentValue.ProtoReflect.Descriptor instead.
 func (*AclContentValue) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{21}
+	return file_aclrecord_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AclContentValue) GetValue() isAclContentValue_Value {
@@ -1574,6 +1753,33 @@ func (x *AclContentValue) GetSpaceOptionsChange() *AclSpaceOptionsChange {
 	return nil
 }
 
+func (x *AclContentValue) GetChildRegister() *AclChildRegister {
+	if x != nil {
+		if x, ok := x.Value.(*AclContentValue_ChildRegister); ok {
+			return x.ChildRegister
+		}
+	}
+	return nil
+}
+
+func (x *AclContentValue) GetChildRegisterRevoke() *AclChildRegisterRevoke {
+	if x != nil {
+		if x, ok := x.Value.(*AclContentValue_ChildRegisterRevoke); ok {
+			return x.ChildRegisterRevoke
+		}
+	}
+	return nil
+}
+
+func (x *AclContentValue) GetLegalOwnerUpdate() *AclLegalOwnerUpdate {
+	if x != nil {
+		if x, ok := x.Value.(*AclContentValue_LegalOwnerUpdate); ok {
+			return x.LegalOwnerUpdate
+		}
+	}
+	return nil
+}
+
 type isAclContentValue_Value interface {
 	isAclContentValue_Value()
 }
@@ -1643,6 +1849,18 @@ type AclContentValue_SpaceOptionsChange struct {
 	SpaceOptionsChange *AclSpaceOptionsChange `protobuf:"bytes,16,opt,name=spaceOptionsChange,proto3,oneof"`
 }
 
+type AclContentValue_ChildRegister struct {
+	ChildRegister *AclChildRegister `protobuf:"bytes,17,opt,name=childRegister,proto3,oneof"`
+}
+
+type AclContentValue_ChildRegisterRevoke struct {
+	ChildRegisterRevoke *AclChildRegisterRevoke `protobuf:"bytes,18,opt,name=childRegisterRevoke,proto3,oneof"`
+}
+
+type AclContentValue_LegalOwnerUpdate struct {
+	LegalOwnerUpdate *AclLegalOwnerUpdate `protobuf:"bytes,19,opt,name=legalOwnerUpdate,proto3,oneof"`
+}
+
 func (*AclContentValue_Invite) isAclContentValue_Value() {}
 
 func (*AclContentValue_InviteRevoke) isAclContentValue_Value() {}
@@ -1675,6 +1893,12 @@ func (*AclContentValue_OwnershipChange) isAclContentValue_Value() {}
 
 func (*AclContentValue_SpaceOptionsChange) isAclContentValue_Value() {}
 
+func (*AclContentValue_ChildRegister) isAclContentValue_Value() {}
+
+func (*AclContentValue_ChildRegisterRevoke) isAclContentValue_Value() {}
+
+func (*AclContentValue_LegalOwnerUpdate) isAclContentValue_Value() {}
+
 // AclData contains different acl content
 type AclData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1685,7 +1909,7 @@ type AclData struct {
 
 func (x *AclData) Reset() {
 	*x = AclData{}
-	mi := &file_aclrecord_proto_msgTypes[22]
+	mi := &file_aclrecord_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1697,7 +1921,7 @@ func (x *AclData) String() string {
 func (*AclData) ProtoMessage() {}
 
 func (x *AclData) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[22]
+	mi := &file_aclrecord_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1710,7 +1934,7 @@ func (x *AclData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclData.ProtoReflect.Descriptor instead.
 func (*AclData) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{22}
+	return file_aclrecord_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *AclData) GetAclContent() []*AclContentValue {
@@ -1724,7 +1948,7 @@ var File_aclrecord_proto protoreflect.FileDescriptor
 
 const file_aclrecord_proto_rawDesc = "" +
 	"\n" +
-	"\x0faclrecord.proto\x12\taclrecord\"\xe7\x03\n" +
+	"\x0faclrecord.proto\x12\taclrecord\"\xad\x04\n" +
 	"\aAclRoot\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12\x1c\n" +
 	"\tmasterKey\x18\x02 \x01(\fR\tmasterKey\x12\x18\n" +
@@ -1737,7 +1961,11 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x16encryptedOwnerMetadata\x18\t \x01(\fR\x16encryptedOwnerMetadata\x12>\n" +
 	"\foneToOneInfo\x18\n" +
 	" \x01(\v2\x1a.aclrecord.AclOneToOneInfoR\foneToOneInfo\x124\n" +
-	"\aoptions\x18\v \x01(\v2\x1a.aclrecord.AclSpaceOptionsR\aoptions\"=\n" +
+	"\aoptions\x18\v \x01(\v2\x1a.aclrecord.AclSpaceOptionsR\aoptions\x12$\n" +
+	"\rparentSpaceId\x18\f \x01(\tR\rparentSpaceId\x12\x1e\n" +
+	"\n" +
+	"legalOwner\x18\r \x01(\fR\n" +
+	"legalOwner\"=\n" +
 	"\x0fAclSpaceOptions\x12*\n" +
 	"\x10deleteRestricted\x18\x01 \x01(\bR\x10deleteRestricted\"M\n" +
 	"\x15AclSpaceOptionsChange\x124\n" +
@@ -1809,7 +2037,15 @@ const file_aclrecord_proto_rawDesc = "" +
 	"identities\x18\x01 \x03(\fR\n" +
 	"identities\x12A\n" +
 	"\rreadKeyChange\x18\x02 \x01(\v2\x1b.aclrecord.AclReadKeyChangeR\rreadKeyChange\"\x19\n" +
-	"\x17AclAccountRequestRemove\"\xc2\t\n" +
+	"\x17AclAccountRequestRemove\"\xa3\x01\n" +
+	"\x10AclChildRegister\x12\"\n" +
+	"\fchildSpaceId\x18\x01 \x01(\tR\fchildSpaceId\x12&\n" +
+	"\x0echildAclRootId\x18\x02 \x01(\tR\x0echildAclRootId\x12C\n" +
+	"\rorgPermission\x18\x03 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\rorgPermission\"<\n" +
+	"\x16AclChildRegisterRevoke\x12\"\n" +
+	"\fchildSpaceId\x18\x01 \x01(\tR\fchildSpaceId\"A\n" +
+	"\x13AclLegalOwnerUpdate\x12*\n" +
+	"\x10ownershipChanges\x18\x01 \x03(\fR\x10ownershipChanges\"\xac\v\n" +
 	"\x0fAclContentValue\x125\n" +
 	"\x06invite\x18\x01 \x01(\v2\x1b.aclrecord.AclAccountInviteH\x00R\x06invite\x12G\n" +
 	"\finviteRevoke\x18\x02 \x01(\v2!.aclrecord.AclAccountInviteRevokeH\x00R\finviteRevoke\x12D\n" +
@@ -1829,7 +2065,10 @@ const file_aclrecord_proto_rawDesc = "" +
 	"inviteJoin\x12G\n" +
 	"\finviteChange\x18\x0e \x01(\v2!.aclrecord.AclAccountInviteChangeH\x00R\finviteChange\x12I\n" +
 	"\x0fownershipChange\x18\x0f \x01(\v2\x1d.aclrecord.AclOwnershipChangeH\x00R\x0fownershipChange\x12R\n" +
-	"\x12spaceOptionsChange\x18\x10 \x01(\v2 .aclrecord.AclSpaceOptionsChangeH\x00R\x12spaceOptionsChangeB\a\n" +
+	"\x12spaceOptionsChange\x18\x10 \x01(\v2 .aclrecord.AclSpaceOptionsChangeH\x00R\x12spaceOptionsChange\x12C\n" +
+	"\rchildRegister\x18\x11 \x01(\v2\x1b.aclrecord.AclChildRegisterH\x00R\rchildRegister\x12U\n" +
+	"\x13childRegisterRevoke\x18\x12 \x01(\v2!.aclrecord.AclChildRegisterRevokeH\x00R\x13childRegisterRevoke\x12L\n" +
+	"\x10legalOwnerUpdate\x18\x13 \x01(\v2\x1e.aclrecord.AclLegalOwnerUpdateH\x00R\x10legalOwnerUpdateB\a\n" +
 	"\x05value\"E\n" +
 	"\aAclData\x12:\n" +
 	"\n" +
@@ -1861,7 +2100,7 @@ func file_aclrecord_proto_rawDescGZIP() []byte {
 }
 
 var file_aclrecord_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_aclrecord_proto_goTypes = []any{
 	(AclInviteType)(0),                  // 0: aclrecord.AclInviteType
 	(AclUserPermissions)(0),             // 1: aclrecord.AclUserPermissions
@@ -1886,8 +2125,11 @@ var file_aclrecord_proto_goTypes = []any{
 	(*AclReadKeyChange)(nil),            // 20: aclrecord.AclReadKeyChange
 	(*AclAccountRemove)(nil),            // 21: aclrecord.AclAccountRemove
 	(*AclAccountRequestRemove)(nil),     // 22: aclrecord.AclAccountRequestRemove
-	(*AclContentValue)(nil),             // 23: aclrecord.AclContentValue
-	(*AclData)(nil),                     // 24: aclrecord.AclData
+	(*AclChildRegister)(nil),            // 23: aclrecord.AclChildRegister
+	(*AclChildRegisterRevoke)(nil),      // 24: aclrecord.AclChildRegisterRevoke
+	(*AclLegalOwnerUpdate)(nil),         // 25: aclrecord.AclLegalOwnerUpdate
+	(*AclContentValue)(nil),             // 26: aclrecord.AclContentValue
+	(*AclData)(nil),                     // 27: aclrecord.AclData
 }
 var file_aclrecord_proto_depIdxs = []int32{
 	5,  // 0: aclrecord.AclRoot.oneToOneInfo:type_name -> aclrecord.AclOneToOneInfo
@@ -1906,28 +2148,32 @@ var file_aclrecord_proto_depIdxs = []int32{
 	14, // 13: aclrecord.AclReadKeyChange.accountKeys:type_name -> aclrecord.AclEncryptedReadKey
 	14, // 14: aclrecord.AclReadKeyChange.inviteKeys:type_name -> aclrecord.AclEncryptedReadKey
 	20, // 15: aclrecord.AclAccountRemove.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	6,  // 16: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
-	13, // 17: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
-	9,  // 18: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
-	11, // 19: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
-	19, // 20: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
-	21, // 21: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
-	20, // 22: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
-	12, // 23: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
-	22, // 24: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
-	15, // 25: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
-	16, // 26: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
-	18, // 27: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
-	10, // 28: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
-	7,  // 29: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
-	8,  // 30: aclrecord.AclContentValue.ownershipChange:type_name -> aclrecord.AclOwnershipChange
-	4,  // 31: aclrecord.AclContentValue.spaceOptionsChange:type_name -> aclrecord.AclSpaceOptionsChange
-	23, // 32: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
-	33, // [33:33] is the sub-list for method output_type
-	33, // [33:33] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	1,  // 16: aclrecord.AclChildRegister.orgPermission:type_name -> aclrecord.AclUserPermissions
+	6,  // 17: aclrecord.AclContentValue.invite:type_name -> aclrecord.AclAccountInvite
+	13, // 18: aclrecord.AclContentValue.inviteRevoke:type_name -> aclrecord.AclAccountInviteRevoke
+	9,  // 19: aclrecord.AclContentValue.requestJoin:type_name -> aclrecord.AclAccountRequestJoin
+	11, // 20: aclrecord.AclContentValue.requestAccept:type_name -> aclrecord.AclAccountRequestAccept
+	19, // 21: aclrecord.AclContentValue.permissionChange:type_name -> aclrecord.AclAccountPermissionChange
+	21, // 22: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
+	20, // 23: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
+	12, // 24: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
+	22, // 25: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
+	15, // 26: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
+	16, // 27: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
+	18, // 28: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
+	10, // 29: aclrecord.AclContentValue.inviteJoin:type_name -> aclrecord.AclAccountInviteJoin
+	7,  // 30: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
+	8,  // 31: aclrecord.AclContentValue.ownershipChange:type_name -> aclrecord.AclOwnershipChange
+	4,  // 32: aclrecord.AclContentValue.spaceOptionsChange:type_name -> aclrecord.AclSpaceOptionsChange
+	23, // 33: aclrecord.AclContentValue.childRegister:type_name -> aclrecord.AclChildRegister
+	24, // 34: aclrecord.AclContentValue.childRegisterRevoke:type_name -> aclrecord.AclChildRegisterRevoke
+	25, // 35: aclrecord.AclContentValue.legalOwnerUpdate:type_name -> aclrecord.AclLegalOwnerUpdate
+	26, // 36: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_aclrecord_proto_init() }
@@ -1935,7 +2181,7 @@ func file_aclrecord_proto_init() {
 	if File_aclrecord_proto != nil {
 		return
 	}
-	file_aclrecord_proto_msgTypes[21].OneofWrappers = []any{
+	file_aclrecord_proto_msgTypes[24].OneofWrappers = []any{
 		(*AclContentValue_Invite)(nil),
 		(*AclContentValue_InviteRevoke)(nil),
 		(*AclContentValue_RequestJoin)(nil),
@@ -1952,6 +2198,9 @@ func file_aclrecord_proto_init() {
 		(*AclContentValue_InviteChange)(nil),
 		(*AclContentValue_OwnershipChange)(nil),
 		(*AclContentValue_SpaceOptionsChange)(nil),
+		(*AclContentValue_ChildRegister)(nil),
+		(*AclContentValue_ChildRegisterRevoke)(nil),
+		(*AclContentValue_LegalOwnerUpdate)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1959,7 +2208,7 @@ func file_aclrecord_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_aclrecord_proto_rawDesc), len(file_aclrecord_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   23,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

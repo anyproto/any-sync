@@ -5,6 +5,8 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -26,6 +28,9 @@ type ContentValidator interface {
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 	ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error)
+	ValidateChildRegister(ch *aclrecordproto.AclChildRegister, authorIdentity crypto.PubKey) (err error)
+	ValidateChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, authorIdentity crypto.PubKey) (err error)
+	ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error)
 }
 
 type contentValidator struct {
@@ -206,6 +211,12 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateAccountsAdd(ch.GetAccountsAdd(), authorIdentity)
 	case ch.GetSpaceOptionsChange() != nil:
 		return c.ValidateSpaceOptionsChange(ch.GetSpaceOptionsChange(), authorIdentity)
+	case ch.GetChildRegister() != nil:
+		return c.ValidateChildRegister(ch.GetChildRegister(), authorIdentity)
+	case ch.GetChildRegisterRevoke() != nil:
+		return c.ValidateChildRegisterRevoke(ch.GetChildRegisterRevoke(), authorIdentity)
+	case ch.GetLegalOwnerUpdate() != nil:
+		return c.ValidateLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -564,5 +575,119 @@ func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	if !slices.Equal(activeUsers, updatedUsers) || !slices.Equal(activeInvites, updatedInvites) {
 		return ErrIncorrectNumberOfAccounts
 	}
+	return
+}
+
+func (c *contentValidator) ValidateChildRegister(ch *aclrecordproto.AclChildRegister, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	if ch.ChildSpaceId == "" || ch.ChildAclRootId == "" {
+		return ErrNoSuchChildRegistration
+	}
+	if AclPermissions(ch.OrgPermission).IsOwner() {
+		return ErrIsOwner
+	}
+	if reg, ok := c.aclState.childRegistrations[ch.ChildSpaceId]; ok && !reg.Revoked {
+		return ErrChildAlreadyRegistered
+	}
+	return nil
+}
+
+func (c *contentValidator) ValidateChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	reg, ok := c.aclState.childRegistrations[ch.ChildSpaceId]
+	if !ok || reg.Revoked {
+		return ErrNoSuchChildRegistration
+	}
+	return nil
+}
+
+// ValidateLegalOwnerUpdate checks the signature-induction chain: the first embedded parent
+// ownership-change must be signed by the currently stored legal owner, each next one by the
+// owner the previous one named, and the author of this record must be the final owner.
+// Consumed proofs are rejected so a cycled ownership cannot be replayed by an ex-owner.
+func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if c.aclState.legalOwner == nil {
+		return ErrNotChildSpace
+	}
+	if len(ch.OwnershipChanges) == 0 {
+		return ErrInvalidLegalOwnerProof
+	}
+	var (
+		expected = c.aclState.legalOwner
+		inBatch  = map[string]struct{}{}
+	)
+	for _, raw := range ch.OwnershipChanges {
+		author, newOwner, proofId, err := unmarshalOwnershipChangeProof(c.keyStore, raw)
+		if err != nil {
+			return err
+		}
+		if !author.Equals(expected) {
+			return ErrInvalidLegalOwnerProof
+		}
+		if _, consumed := c.aclState.consumedOwnershipProofs[proofId]; consumed {
+			return ErrInvalidLegalOwnerProof
+		}
+		if _, dup := inBatch[proofId]; dup {
+			return ErrInvalidLegalOwnerProof
+		}
+		inBatch[proofId] = struct{}{}
+		expected = newOwner
+	}
+	if !authorIdentity.Equals(expected) {
+		return ErrInsufficientPermissions
+	}
+	return nil
+}
+
+// unmarshalOwnershipChangeProof decodes one embedded parent acl record (consensusproto.RawRecord bytes),
+// verifies the author signature over its payload and requires it to contain exactly one AclOwnershipChange.
+// Returns the record author, the new owner it names and the record cid (the replay-guard key).
+func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId string, err error) {
+	rawRec := &consensusproto.RawRecord{}
+	if err = rawRec.UnmarshalVT(raw); err != nil {
+		return
+	}
+	rec := &consensusproto.Record{}
+	if err = rec.UnmarshalVT(rawRec.Payload); err != nil {
+		return
+	}
+	author, err = keyStore.PubKeyFromProto(rec.Identity)
+	if err != nil {
+		return
+	}
+	res, err := author.Verify(rawRec.Payload, rawRec.Signature)
+	if err != nil {
+		return
+	}
+	if !res {
+		err = ErrInvalidSignature
+		return
+	}
+	aclData := &aclrecordproto.AclData{}
+	if err = aclData.UnmarshalVT(rec.Data); err != nil {
+		return
+	}
+	if len(aclData.AclContent) != 1 || aclData.AclContent[0].GetOwnershipChange() == nil {
+		err = ErrInvalidLegalOwnerProof
+		return
+	}
+	newOwner, err = keyStore.PubKeyFromProto(aclData.AclContent[0].GetOwnershipChange().NewOwnerIdentity)
+	if err != nil {
+		return
+	}
+	proofId, err = cidutil.NewCidFromBytes(raw)
 	return
 }

@@ -20,6 +20,10 @@ type RootContent struct {
 	Change    ReadKeyChangePayload
 	Metadata  []byte
 	Options   *aclrecordproto.AclSpaceOptions
+	// ParentSpaceId + LegalOwner declare this space a child of another space (nested spaces);
+	// both must be set together, LegalOwner being the parent's owner key at creation time
+	ParentSpaceId string
+	LegalOwner    crypto.PubKey
 }
 
 type RequestJoinPayload struct {
@@ -76,6 +80,19 @@ type OwnershipChangePayload struct {
 	OldOwnerPermissions AclPermissions
 }
 
+type ChildRegisterPayload struct {
+	ChildSpaceId   string
+	ChildAclRootId string
+	// OrgPermission is the permission the parent grants ITSELF in the child (None = keyless governance only)
+	OrgPermission AclPermissions
+}
+
+// LegalOwnerUpdatePayload carries raw parent acl records (consensusproto.RawRecord bytes), each with
+// exactly one AclOwnershipChange, ordered from the currently stored legal owner to the new one
+type LegalOwnerUpdatePayload struct {
+	OwnershipChanges [][]byte
+}
+
 type BatchRequestPayload struct {
 	Additions     []AccountAdd
 	Changes       []PermissionChangePayload
@@ -126,6 +143,9 @@ type AclRecordBuilder interface {
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildSpaceOptionsChange(options *aclrecordproto.AclSpaceOptions) (rawRecord *consensusproto.RawRecord, err error)
+	BuildChildRegister(payload ChildRegisterPayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildChildRegisterRevoke(childSpaceId string) (rawRecord *consensusproto.RawRecord, err error)
+	BuildLegalOwnerUpdate(payload LegalOwnerUpdatePayload) (rawRecord *consensusproto.RawRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -1113,6 +1133,17 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	if content.Options != nil {
 		aclRoot.Options = content.Options
 	}
+	if content.ParentSpaceId != "" || content.LegalOwner != nil {
+		if content.ParentSpaceId == "" || content.LegalOwner == nil {
+			return nil, ErrIncorrectRoot
+		}
+		legalOwner, err := content.LegalOwner.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		aclRoot.ParentSpaceId = content.ParentSpaceId
+		aclRoot.LegalOwner = legalOwner
+	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }
 
@@ -1190,4 +1221,39 @@ func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWit
 		Id:      aclHeadId,
 	}
 	return
+}
+
+func (a *aclRecordBuilder) BuildChildRegister(payload ChildRegisterPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_ChildRegister{
+			ChildRegister: &aclrecordproto.AclChildRegister{
+				ChildSpaceId:   payload.ChildSpaceId,
+				ChildAclRootId: payload.ChildAclRootId,
+				OrgPermission:  aclrecordproto.AclUserPermissions(payload.OrgPermission),
+			},
+		},
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildChildRegisterRevoke(childSpaceId string) (rawRecord *consensusproto.RawRecord, err error) {
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_ChildRegisterRevoke{
+			ChildRegisterRevoke: &aclrecordproto.AclChildRegisterRevoke{
+				ChildSpaceId: childSpaceId,
+			},
+		},
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildLegalOwnerUpdate(payload LegalOwnerUpdatePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_LegalOwnerUpdate{
+			LegalOwnerUpdate: &aclrecordproto.AclLegalOwnerUpdate{
+				OwnershipChanges: payload.OwnershipChanges,
+			},
+		},
+	}
+	return a.buildRecord(content)
 }

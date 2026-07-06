@@ -15,6 +15,12 @@ message AclRoot {
     bytes encryptedOwnerMetadata = 9;
     AclOneToOneInfo oneToOneInfo = 10;
     AclSpaceOptions options = 11;
+    // parentSpaceId declares this space a child of the parent space (nested spaces); empty for top-level spaces.
+    // Mirrors SpaceHeader.parentSpaceId so the ACL is self-describing.
+    string parentSpaceId = 12;
+    // legalOwner is the public key of the parent space's owner at genesis. It anchors the
+    // signature-induction chain advanced by AclLegalOwnerUpdate; empty for top-level spaces.
+    bytes legalOwner = 13;
 }
 
 // AclSpaceOptions contains space-level toggles/options
@@ -156,6 +162,28 @@ message AclAccountRemove {
 message AclAccountRequestRemove {
 }
 
+// AclChildRegister registers a child space under THIS (parent) space
+message AclChildRegister {
+    string childSpaceId = 1;
+    // childAclRootId binds the registration to a specific child ACL root record
+    string childAclRootId = 2;
+    // orgPermission is the permission the parent grants ITSELF in the child (None = keyless governance only)
+    AclUserPermissions orgPermission = 3;
+}
+
+// AclChildRegisterRevoke de-lists a previously registered child space
+message AclChildRegisterRevoke {
+    string childSpaceId = 1;
+}
+
+// AclLegalOwnerUpdate advances the stored legalOwner of THIS (child) space after parent ownership transfers.
+// Each entry is a raw consensus record (consensusproto.RawRecord bytes) from the PARENT acl containing exactly
+// one AclOwnershipChange. Validation is signature induction: the first record must be signed by the currently
+// stored legalOwner, each next by the owner the previous one named; the author of this record must be the final owner.
+message AclLegalOwnerUpdate {
+    repeated bytes ownershipChanges = 1;
+}
+
 // AclContentValue contains possible values for Acl
 message AclContentValue {
     oneof value {
@@ -176,6 +204,9 @@ message AclContentValue {
         AclAccountInviteChange inviteChange = 14;
         AclOwnershipChange ownershipChange = 15;
         AclSpaceOptionsChange spaceOptionsChange = 16;
+        AclChildRegister childRegister = 17;
+        AclChildRegisterRevoke childRegisterRevoke = 18;
+        AclLegalOwnerUpdate legalOwnerUpdate = 19;
     }
 }
 

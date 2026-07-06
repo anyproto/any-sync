@@ -50,6 +50,16 @@ type PermissionChange struct {
 	Permission AclPermissions
 }
 
+// ChildRegistration is a child space registered in this (parent) space via AclChildRegister
+type ChildRegistration struct {
+	RecordId       string
+	ChildSpaceId   string
+	ChildAclRootId string
+	OrgPermission  AclPermissions
+	Author         crypto.PubKey
+	Revoked        bool
+}
+
 type OptionChange struct {
 	RecordId string
 	Options  *aclrecordproto.AclSpaceOptions
