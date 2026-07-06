@@ -66,6 +66,8 @@ type SpaceSignPayload struct {
 	SpaceId      string
 	SpaceHeader  []byte
 	ForceRequest bool
+	// ParentAclRecordId points at the AclChildRegister record in the parent acl (nested spaces)
+	ParentAclRecordId string
 }
 
 type coordinatorClient struct {
@@ -192,9 +194,10 @@ func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (st
 func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceSign(ctx, &coordinatorproto.SpaceSignRequest{
-			SpaceId:      payload.SpaceId,
-			Header:       payload.SpaceHeader,
-			ForceRequest: payload.ForceRequest,
+			SpaceId:           payload.SpaceId,
+			Header:            payload.SpaceHeader,
+			ForceRequest:      payload.ForceRequest,
+			ParentAclRecordId: payload.ParentAclRecordId,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
