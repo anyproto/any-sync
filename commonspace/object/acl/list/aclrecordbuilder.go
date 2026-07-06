@@ -109,6 +109,11 @@ type AccountRemovePayload struct {
 	Change     ReadKeyChangePayload
 }
 
+// AccountRemoveNoRotatePayload is the keyless-governance removal authored by a child space's legalOwner
+type AccountRemoveNoRotatePayload struct {
+	Identities []crypto.PubKey
+}
+
 type InviteResult struct {
 	InviteRec *consensusproto.RawRecord
 	InviteKey crypto.PrivKey
@@ -146,6 +151,7 @@ type AclRecordBuilder interface {
 	BuildChildRegister(payload ChildRegisterPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildChildRegisterRevoke(childSpaceId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildLegalOwnerUpdate(payload LegalOwnerUpdatePayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildAccountRemoveNoRotate(payload AccountRemoveNoRotatePayload) (rawRecord *consensusproto.RawRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -792,8 +798,15 @@ func (a *aclRecordBuilder) BuildPermissionChange(payload PermissionChangePayload
 
 func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
-		err = ErrInsufficientPermissions
-		return
+		// mirrors ValidateReadKeyChange: a Writer may build the rotation that completes a
+		// pending keyless removal when the space opted in via AclSpaceOptions
+		opts := a.state.CurrentOptions()
+		editorAllowed := opts != nil && opts.EditorsCanCompleteKeylessRotation &&
+			a.state.Permissions(a.state.pubKey).CanWrite() && a.state.HasPendingKeylessRemovals()
+		if !editorAllowed {
+			err = ErrInsufficientPermissions
+			return
+		}
 	}
 	rkChange, err := a.buildReadKeyChange(payload, nil)
 	if err != nil {
@@ -1252,6 +1265,25 @@ func (a *aclRecordBuilder) BuildLegalOwnerUpdate(payload LegalOwnerUpdatePayload
 		Value: &aclrecordproto.AclContentValue_LegalOwnerUpdate{
 			LegalOwnerUpdate: &aclrecordproto.AclLegalOwnerUpdate{
 				OwnershipChanges: payload.OwnershipChanges,
+			},
+		},
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildAccountRemoveNoRotate(payload AccountRemoveNoRotatePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	var identities [][]byte
+	for _, identity := range payload.Identities {
+		protoIdentity, err := identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		identities = append(identities, protoIdentity)
+	}
+	content := &aclrecordproto.AclContentValue{
+		Value: &aclrecordproto.AclContentValue_AccountRemoveNoRotate{
+			AccountRemoveNoRotate: &aclrecordproto.AclAccountRemoveNoRotate{
+				Identities: identities,
 			},
 		},
 	}

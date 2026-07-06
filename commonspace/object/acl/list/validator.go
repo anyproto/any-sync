@@ -31,6 +31,7 @@ type ContentValidator interface {
 	ValidateChildRegister(ch *aclrecordproto.AclChildRegister, authorIdentity crypto.PubKey) (err error)
 	ValidateChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, authorIdentity crypto.PubKey) (err error)
 	ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error)
 }
 
 type contentValidator struct {
@@ -217,6 +218,8 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateChildRegisterRevoke(ch.GetChildRegisterRevoke(), authorIdentity)
 	case ch.GetLegalOwnerUpdate() != nil:
 		return c.ValidateLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), authorIdentity)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return c.ValidateAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -498,8 +501,16 @@ func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
-		return ErrInsufficientPermissions
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
+		// a Writer may author the rotation that completes a pending keyless removal,
+		// but only when the space opted in via AclSpaceOptions
+		opts := c.aclState.CurrentOptions()
+		editorAllowed := opts != nil && opts.EditorsCanCompleteKeylessRotation &&
+			authorPerms.CanWrite() && c.aclState.HasPendingKeylessRemovals()
+		if !editorAllowed {
+			return ErrInsufficientPermissions
+		}
 	}
 	return c.validateReadKeyChange(ch, nil)
 }
@@ -690,4 +701,45 @@ func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (auth
 	}
 	proofId, err = cidutil.NewCidFromBytes(raw)
 	return
+}
+
+// ValidateAccountRemoveNoRotate admits the keyless-governance removal: only the current legalOwner
+// of a child (nested) space may author it, even though it holds no permissions in this acl.
+func (c *contentValidator) ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if c.aclState.legalOwner == nil {
+		return ErrNotChildSpace
+	}
+	if !authorIdentity.Equals(c.aclState.legalOwner) {
+		return ErrInsufficientPermissions
+	}
+	if len(ch.Identities) == 0 {
+		return ErrIncorrectNumberOfAccounts
+	}
+	seenIdentities := map[string]struct{}{}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		if identity.Equals(authorIdentity) {
+			return ErrInsufficientPermissions
+		}
+		permissions := c.aclState.Permissions(identity)
+		if permissions.NoPermissions() {
+			return ErrNoSuchAccount
+		}
+		if permissions.IsOwner() {
+			// the legalOwner governs members, not the child's owner; deleting the space is its lever there
+			return ErrInsufficientPermissions
+		}
+		idKey := mapKeyFromPubKey(identity)
+		if _, exists := seenIdentities[idKey]; exists {
+			return ErrDuplicateAccounts
+		}
+		seenIdentities[idKey] = struct{}{}
+	}
+	return nil
 }

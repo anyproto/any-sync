@@ -631,9 +631,12 @@ type SpaceSignRequest struct {
 	// Deprecated: Marked as deprecated in coordinator/coordinatorproto/protos/coordinator.proto.
 	NewIdentitySignature []byte `protobuf:"bytes,4,opt,name=newIdentitySignature,proto3" json:"newIdentitySignature,omitempty"`
 	// ForceRequest if true, forces the creating space receipt even if the space is deleted before
-	ForceRequest  bool `protobuf:"varint,5,opt,name=forceRequest,proto3" json:"forceRequest,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ForceRequest bool `protobuf:"varint,5,opt,name=forceRequest,proto3" json:"forceRequest,omitempty"`
+	// ParentAclRecordId points at the AclChildRegister record in the parent space's acl (nested spaces);
+	// required when the signed header carries a parentSpaceId
+	ParentAclRecordId string `protobuf:"bytes,6,opt,name=parentAclRecordId,proto3" json:"parentAclRecordId,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SpaceSignRequest) Reset() {
@@ -701,6 +704,13 @@ func (x *SpaceSignRequest) GetForceRequest() bool {
 		return x.ForceRequest
 	}
 	return false
+}
+
+func (x *SpaceSignRequest) GetParentAclRecordId() string {
+	if x != nil {
+		return x.ParentAclRecordId
+	}
+	return ""
 }
 
 type SpaceLimits struct {
@@ -3760,13 +3770,14 @@ var File_coordinator_coordinatorproto_protos_coordinator_proto protoreflect.File
 
 const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\n" +
-	"5coordinator/coordinatorproto/protos/coordinator.proto\x12\vcoordinator\"\xc6\x01\n" +
+	"5coordinator/coordinatorproto/protos/coordinator.proto\x12\vcoordinator\"\xf4\x01\n" +
 	"\x10SpaceSignRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x16\n" +
 	"\x06header\x18\x02 \x01(\fR\x06header\x12$\n" +
 	"\voldIdentity\x18\x03 \x01(\fB\x02\x18\x01R\voldIdentity\x126\n" +
 	"\x14newIdentitySignature\x18\x04 \x01(\fB\x02\x18\x01R\x14newIdentitySignature\x12\"\n" +
-	"\fforceRequest\x18\x05 \x01(\bR\fforceRequest\"S\n" +
+	"\fforceRequest\x18\x05 \x01(\bR\fforceRequest\x12,\n" +
+	"\x11parentAclRecordId\x18\x06 \x01(\tR\x11parentAclRecordId\"S\n" +
 	"\vSpaceLimits\x12 \n" +
 	"\vreadMembers\x18\x01 \x01(\rR\vreadMembers\x12\"\n" +
 	"\fwriteMembers\x18\x02 \x01(\rR\fwriteMembers\"\x83\x02\n" +

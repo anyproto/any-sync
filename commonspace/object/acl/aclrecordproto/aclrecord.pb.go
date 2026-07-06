@@ -275,8 +275,11 @@ func (x *AclRoot) GetLegalOwner() []byte {
 type AclSpaceOptions struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	DeleteRestricted bool                   `protobuf:"varint,1,opt,name=deleteRestricted,proto3" json:"deleteRestricted,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// editorsCanCompleteKeylessRotation lets Writers author the standalone read-key rotation
+	// that completes a pending keyless removal (nested spaces); off = admins/owner only
+	EditorsCanCompleteKeylessRotation bool `protobuf:"varint,2,opt,name=editorsCanCompleteKeylessRotation,proto3" json:"editorsCanCompleteKeylessRotation,omitempty"`
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *AclSpaceOptions) Reset() {
@@ -312,6 +315,13 @@ func (*AclSpaceOptions) Descriptor() ([]byte, []int) {
 func (x *AclSpaceOptions) GetDeleteRestricted() bool {
 	if x != nil {
 		return x.DeleteRestricted
+	}
+	return false
+}
+
+func (x *AclSpaceOptions) GetEditorsCanCompleteKeylessRotation() bool {
+	if x != nil {
+		return x.EditorsCanCompleteKeylessRotation
 	}
 	return false
 }
@@ -1350,6 +1360,54 @@ func (x *AclAccountRemove) GetReadKeyChange() *AclReadKeyChange {
 	return nil
 }
 
+// AclAccountRemoveNoRotate removes accounts WITHOUT a read-key rotation. Only the legalOwner of a
+// child (nested) space may author it — it is the keyless-governance removal: membership drops to
+// None immediately, and the space enters a pending-rotation state until a key-holding member
+// authors a standard AclReadKeyChange. Never use for ordinary removals — use AclAccountRemove.
+type AclAccountRemoveNoRotate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Identities    [][]byte               `protobuf:"bytes,1,rep,name=identities,proto3" json:"identities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AclAccountRemoveNoRotate) Reset() {
+	*x = AclAccountRemoveNoRotate{}
+	mi := &file_aclrecord_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AclAccountRemoveNoRotate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AclAccountRemoveNoRotate) ProtoMessage() {}
+
+func (x *AclAccountRemoveNoRotate) ProtoReflect() protoreflect.Message {
+	mi := &file_aclrecord_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AclAccountRemoveNoRotate.ProtoReflect.Descriptor instead.
+func (*AclAccountRemoveNoRotate) Descriptor() ([]byte, []int) {
+	return file_aclrecord_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *AclAccountRemoveNoRotate) GetIdentities() [][]byte {
+	if x != nil {
+		return x.Identities
+	}
+	return nil
+}
+
 // AclAccountRequestRemove adds a request to remove an account
 type AclAccountRequestRemove struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1359,7 +1417,7 @@ type AclAccountRequestRemove struct {
 
 func (x *AclAccountRequestRemove) Reset() {
 	*x = AclAccountRequestRemove{}
-	mi := &file_aclrecord_proto_msgTypes[20]
+	mi := &file_aclrecord_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1371,7 +1429,7 @@ func (x *AclAccountRequestRemove) String() string {
 func (*AclAccountRequestRemove) ProtoMessage() {}
 
 func (x *AclAccountRequestRemove) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[20]
+	mi := &file_aclrecord_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1384,7 +1442,7 @@ func (x *AclAccountRequestRemove) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclAccountRequestRemove.ProtoReflect.Descriptor instead.
 func (*AclAccountRequestRemove) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{20}
+	return file_aclrecord_proto_rawDescGZIP(), []int{21}
 }
 
 // AclChildRegister registers a child space under THIS (parent) space
@@ -1401,7 +1459,7 @@ type AclChildRegister struct {
 
 func (x *AclChildRegister) Reset() {
 	*x = AclChildRegister{}
-	mi := &file_aclrecord_proto_msgTypes[21]
+	mi := &file_aclrecord_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1413,7 +1471,7 @@ func (x *AclChildRegister) String() string {
 func (*AclChildRegister) ProtoMessage() {}
 
 func (x *AclChildRegister) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[21]
+	mi := &file_aclrecord_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1426,7 +1484,7 @@ func (x *AclChildRegister) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclChildRegister.ProtoReflect.Descriptor instead.
 func (*AclChildRegister) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{21}
+	return file_aclrecord_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AclChildRegister) GetChildSpaceId() string {
@@ -1460,7 +1518,7 @@ type AclChildRegisterRevoke struct {
 
 func (x *AclChildRegisterRevoke) Reset() {
 	*x = AclChildRegisterRevoke{}
-	mi := &file_aclrecord_proto_msgTypes[22]
+	mi := &file_aclrecord_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1472,7 +1530,7 @@ func (x *AclChildRegisterRevoke) String() string {
 func (*AclChildRegisterRevoke) ProtoMessage() {}
 
 func (x *AclChildRegisterRevoke) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[22]
+	mi := &file_aclrecord_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1485,7 +1543,7 @@ func (x *AclChildRegisterRevoke) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclChildRegisterRevoke.ProtoReflect.Descriptor instead.
 func (*AclChildRegisterRevoke) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{22}
+	return file_aclrecord_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AclChildRegisterRevoke) GetChildSpaceId() string {
@@ -1508,7 +1566,7 @@ type AclLegalOwnerUpdate struct {
 
 func (x *AclLegalOwnerUpdate) Reset() {
 	*x = AclLegalOwnerUpdate{}
-	mi := &file_aclrecord_proto_msgTypes[23]
+	mi := &file_aclrecord_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1520,7 +1578,7 @@ func (x *AclLegalOwnerUpdate) String() string {
 func (*AclLegalOwnerUpdate) ProtoMessage() {}
 
 func (x *AclLegalOwnerUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[23]
+	mi := &file_aclrecord_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1533,7 +1591,7 @@ func (x *AclLegalOwnerUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclLegalOwnerUpdate.ProtoReflect.Descriptor instead.
 func (*AclLegalOwnerUpdate) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{23}
+	return file_aclrecord_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AclLegalOwnerUpdate) GetOwnershipChanges() [][]byte {
@@ -1567,6 +1625,7 @@ type AclContentValue struct {
 	//	*AclContentValue_ChildRegister
 	//	*AclContentValue_ChildRegisterRevoke
 	//	*AclContentValue_LegalOwnerUpdate
+	//	*AclContentValue_AccountRemoveNoRotate
 	Value         isAclContentValue_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1574,7 +1633,7 @@ type AclContentValue struct {
 
 func (x *AclContentValue) Reset() {
 	*x = AclContentValue{}
-	mi := &file_aclrecord_proto_msgTypes[24]
+	mi := &file_aclrecord_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1586,7 +1645,7 @@ func (x *AclContentValue) String() string {
 func (*AclContentValue) ProtoMessage() {}
 
 func (x *AclContentValue) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[24]
+	mi := &file_aclrecord_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1599,7 +1658,7 @@ func (x *AclContentValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclContentValue.ProtoReflect.Descriptor instead.
 func (*AclContentValue) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{24}
+	return file_aclrecord_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *AclContentValue) GetValue() isAclContentValue_Value {
@@ -1780,6 +1839,15 @@ func (x *AclContentValue) GetLegalOwnerUpdate() *AclLegalOwnerUpdate {
 	return nil
 }
 
+func (x *AclContentValue) GetAccountRemoveNoRotate() *AclAccountRemoveNoRotate {
+	if x != nil {
+		if x, ok := x.Value.(*AclContentValue_AccountRemoveNoRotate); ok {
+			return x.AccountRemoveNoRotate
+		}
+	}
+	return nil
+}
+
 type isAclContentValue_Value interface {
 	isAclContentValue_Value()
 }
@@ -1861,6 +1929,10 @@ type AclContentValue_LegalOwnerUpdate struct {
 	LegalOwnerUpdate *AclLegalOwnerUpdate `protobuf:"bytes,19,opt,name=legalOwnerUpdate,proto3,oneof"`
 }
 
+type AclContentValue_AccountRemoveNoRotate struct {
+	AccountRemoveNoRotate *AclAccountRemoveNoRotate `protobuf:"bytes,20,opt,name=accountRemoveNoRotate,proto3,oneof"`
+}
+
 func (*AclContentValue_Invite) isAclContentValue_Value() {}
 
 func (*AclContentValue_InviteRevoke) isAclContentValue_Value() {}
@@ -1899,6 +1971,8 @@ func (*AclContentValue_ChildRegisterRevoke) isAclContentValue_Value() {}
 
 func (*AclContentValue_LegalOwnerUpdate) isAclContentValue_Value() {}
 
+func (*AclContentValue_AccountRemoveNoRotate) isAclContentValue_Value() {}
+
 // AclData contains different acl content
 type AclData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1909,7 +1983,7 @@ type AclData struct {
 
 func (x *AclData) Reset() {
 	*x = AclData{}
-	mi := &file_aclrecord_proto_msgTypes[25]
+	mi := &file_aclrecord_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1921,7 +1995,7 @@ func (x *AclData) String() string {
 func (*AclData) ProtoMessage() {}
 
 func (x *AclData) ProtoReflect() protoreflect.Message {
-	mi := &file_aclrecord_proto_msgTypes[25]
+	mi := &file_aclrecord_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1934,7 +2008,7 @@ func (x *AclData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclData.ProtoReflect.Descriptor instead.
 func (*AclData) Descriptor() ([]byte, []int) {
-	return file_aclrecord_proto_rawDescGZIP(), []int{25}
+	return file_aclrecord_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *AclData) GetAclContent() []*AclContentValue {
@@ -1965,9 +2039,10 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\rparentSpaceId\x18\f \x01(\tR\rparentSpaceId\x12\x1e\n" +
 	"\n" +
 	"legalOwner\x18\r \x01(\fR\n" +
-	"legalOwner\"=\n" +
+	"legalOwner\"\x8b\x01\n" +
 	"\x0fAclSpaceOptions\x12*\n" +
-	"\x10deleteRestricted\x18\x01 \x01(\bR\x10deleteRestricted\"M\n" +
+	"\x10deleteRestricted\x18\x01 \x01(\bR\x10deleteRestricted\x12L\n" +
+	"!editorsCanCompleteKeylessRotation\x18\x02 \x01(\bR!editorsCanCompleteKeylessRotation\"M\n" +
 	"\x15AclSpaceOptionsChange\x124\n" +
 	"\aoptions\x18\x01 \x01(\v2\x1a.aclrecord.AclSpaceOptionsR\aoptions\"A\n" +
 	"\x0fAclOneToOneInfo\x12\x14\n" +
@@ -2036,7 +2111,11 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\n" +
 	"identities\x18\x01 \x03(\fR\n" +
 	"identities\x12A\n" +
-	"\rreadKeyChange\x18\x02 \x01(\v2\x1b.aclrecord.AclReadKeyChangeR\rreadKeyChange\"\x19\n" +
+	"\rreadKeyChange\x18\x02 \x01(\v2\x1b.aclrecord.AclReadKeyChangeR\rreadKeyChange\":\n" +
+	"\x18AclAccountRemoveNoRotate\x12\x1e\n" +
+	"\n" +
+	"identities\x18\x01 \x03(\fR\n" +
+	"identities\"\x19\n" +
 	"\x17AclAccountRequestRemove\"\xa3\x01\n" +
 	"\x10AclChildRegister\x12\"\n" +
 	"\fchildSpaceId\x18\x01 \x01(\tR\fchildSpaceId\x12&\n" +
@@ -2045,7 +2124,7 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x16AclChildRegisterRevoke\x12\"\n" +
 	"\fchildSpaceId\x18\x01 \x01(\tR\fchildSpaceId\"A\n" +
 	"\x13AclLegalOwnerUpdate\x12*\n" +
-	"\x10ownershipChanges\x18\x01 \x03(\fR\x10ownershipChanges\"\xac\v\n" +
+	"\x10ownershipChanges\x18\x01 \x03(\fR\x10ownershipChanges\"\x89\f\n" +
 	"\x0fAclContentValue\x125\n" +
 	"\x06invite\x18\x01 \x01(\v2\x1b.aclrecord.AclAccountInviteH\x00R\x06invite\x12G\n" +
 	"\finviteRevoke\x18\x02 \x01(\v2!.aclrecord.AclAccountInviteRevokeH\x00R\finviteRevoke\x12D\n" +
@@ -2068,7 +2147,8 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x12spaceOptionsChange\x18\x10 \x01(\v2 .aclrecord.AclSpaceOptionsChangeH\x00R\x12spaceOptionsChange\x12C\n" +
 	"\rchildRegister\x18\x11 \x01(\v2\x1b.aclrecord.AclChildRegisterH\x00R\rchildRegister\x12U\n" +
 	"\x13childRegisterRevoke\x18\x12 \x01(\v2!.aclrecord.AclChildRegisterRevokeH\x00R\x13childRegisterRevoke\x12L\n" +
-	"\x10legalOwnerUpdate\x18\x13 \x01(\v2\x1e.aclrecord.AclLegalOwnerUpdateH\x00R\x10legalOwnerUpdateB\a\n" +
+	"\x10legalOwnerUpdate\x18\x13 \x01(\v2\x1e.aclrecord.AclLegalOwnerUpdateH\x00R\x10legalOwnerUpdate\x12[\n" +
+	"\x15accountRemoveNoRotate\x18\x14 \x01(\v2#.aclrecord.AclAccountRemoveNoRotateH\x00R\x15accountRemoveNoRotateB\a\n" +
 	"\x05value\"E\n" +
 	"\aAclData\x12:\n" +
 	"\n" +
@@ -2100,7 +2180,7 @@ func file_aclrecord_proto_rawDescGZIP() []byte {
 }
 
 var file_aclrecord_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_aclrecord_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_aclrecord_proto_goTypes = []any{
 	(AclInviteType)(0),                  // 0: aclrecord.AclInviteType
 	(AclUserPermissions)(0),             // 1: aclrecord.AclUserPermissions
@@ -2124,12 +2204,13 @@ var file_aclrecord_proto_goTypes = []any{
 	(*AclAccountPermissionChange)(nil),  // 19: aclrecord.AclAccountPermissionChange
 	(*AclReadKeyChange)(nil),            // 20: aclrecord.AclReadKeyChange
 	(*AclAccountRemove)(nil),            // 21: aclrecord.AclAccountRemove
-	(*AclAccountRequestRemove)(nil),     // 22: aclrecord.AclAccountRequestRemove
-	(*AclChildRegister)(nil),            // 23: aclrecord.AclChildRegister
-	(*AclChildRegisterRevoke)(nil),      // 24: aclrecord.AclChildRegisterRevoke
-	(*AclLegalOwnerUpdate)(nil),         // 25: aclrecord.AclLegalOwnerUpdate
-	(*AclContentValue)(nil),             // 26: aclrecord.AclContentValue
-	(*AclData)(nil),                     // 27: aclrecord.AclData
+	(*AclAccountRemoveNoRotate)(nil),    // 22: aclrecord.AclAccountRemoveNoRotate
+	(*AclAccountRequestRemove)(nil),     // 23: aclrecord.AclAccountRequestRemove
+	(*AclChildRegister)(nil),            // 24: aclrecord.AclChildRegister
+	(*AclChildRegisterRevoke)(nil),      // 25: aclrecord.AclChildRegisterRevoke
+	(*AclLegalOwnerUpdate)(nil),         // 26: aclrecord.AclLegalOwnerUpdate
+	(*AclContentValue)(nil),             // 27: aclrecord.AclContentValue
+	(*AclData)(nil),                     // 28: aclrecord.AclData
 }
 var file_aclrecord_proto_depIdxs = []int32{
 	5,  // 0: aclrecord.AclRoot.oneToOneInfo:type_name -> aclrecord.AclOneToOneInfo
@@ -2157,7 +2238,7 @@ var file_aclrecord_proto_depIdxs = []int32{
 	21, // 22: aclrecord.AclContentValue.accountRemove:type_name -> aclrecord.AclAccountRemove
 	20, // 23: aclrecord.AclContentValue.readKeyChange:type_name -> aclrecord.AclReadKeyChange
 	12, // 24: aclrecord.AclContentValue.requestDecline:type_name -> aclrecord.AclAccountRequestDecline
-	22, // 25: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
+	23, // 25: aclrecord.AclContentValue.accountRequestRemove:type_name -> aclrecord.AclAccountRequestRemove
 	15, // 26: aclrecord.AclContentValue.permissionChanges:type_name -> aclrecord.AclAccountPermissionChanges
 	16, // 27: aclrecord.AclContentValue.accountsAdd:type_name -> aclrecord.AclAccountsAdd
 	18, // 28: aclrecord.AclContentValue.requestCancel:type_name -> aclrecord.AclAccountRequestCancel
@@ -2165,15 +2246,16 @@ var file_aclrecord_proto_depIdxs = []int32{
 	7,  // 30: aclrecord.AclContentValue.inviteChange:type_name -> aclrecord.AclAccountInviteChange
 	8,  // 31: aclrecord.AclContentValue.ownershipChange:type_name -> aclrecord.AclOwnershipChange
 	4,  // 32: aclrecord.AclContentValue.spaceOptionsChange:type_name -> aclrecord.AclSpaceOptionsChange
-	23, // 33: aclrecord.AclContentValue.childRegister:type_name -> aclrecord.AclChildRegister
-	24, // 34: aclrecord.AclContentValue.childRegisterRevoke:type_name -> aclrecord.AclChildRegisterRevoke
-	25, // 35: aclrecord.AclContentValue.legalOwnerUpdate:type_name -> aclrecord.AclLegalOwnerUpdate
-	26, // 36: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
-	37, // [37:37] is the sub-list for method output_type
-	37, // [37:37] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	24, // 33: aclrecord.AclContentValue.childRegister:type_name -> aclrecord.AclChildRegister
+	25, // 34: aclrecord.AclContentValue.childRegisterRevoke:type_name -> aclrecord.AclChildRegisterRevoke
+	26, // 35: aclrecord.AclContentValue.legalOwnerUpdate:type_name -> aclrecord.AclLegalOwnerUpdate
+	22, // 36: aclrecord.AclContentValue.accountRemoveNoRotate:type_name -> aclrecord.AclAccountRemoveNoRotate
+	27, // 37: aclrecord.AclData.aclContent:type_name -> aclrecord.AclContentValue
+	38, // [38:38] is the sub-list for method output_type
+	38, // [38:38] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_aclrecord_proto_init() }
@@ -2181,7 +2263,7 @@ func file_aclrecord_proto_init() {
 	if File_aclrecord_proto != nil {
 		return
 	}
-	file_aclrecord_proto_msgTypes[24].OneofWrappers = []any{
+	file_aclrecord_proto_msgTypes[25].OneofWrappers = []any{
 		(*AclContentValue_Invite)(nil),
 		(*AclContentValue_InviteRevoke)(nil),
 		(*AclContentValue_RequestJoin)(nil),
@@ -2201,6 +2283,7 @@ func file_aclrecord_proto_init() {
 		(*AclContentValue_ChildRegister)(nil),
 		(*AclContentValue_ChildRegisterRevoke)(nil),
 		(*AclContentValue_LegalOwnerUpdate)(nil),
+		(*AclContentValue_AccountRemoveNoRotate)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2208,7 +2291,7 @@ func file_aclrecord_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_aclrecord_proto_rawDesc), len(file_aclrecord_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

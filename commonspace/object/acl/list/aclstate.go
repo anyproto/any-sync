@@ -110,6 +110,9 @@ type AclState struct {
 	consumedOwnershipProofs map[string]struct{}
 	// childRegistrations is a map childSpaceId -> registration for children registered under this (parent) space
 	childRegistrations map[string]ChildRegistration
+	// pendingKeylessRemovals holds identities removed via AclAccountRemoveNoRotate and not yet
+	// covered by a read-key rotation (keyed by identity map key); cleared on any read-key change
+	pendingKeylessRemovals map[string]struct{}
 }
 
 func newAclStateWithKeys(
@@ -129,6 +132,7 @@ func newAclStateWithKeys(
 
 		consumedOwnershipProofs: make(map[string]struct{}),
 		childRegistrations:      make(map[string]ChildRegistration),
+		pendingKeylessRemovals:  make(map[string]struct{}),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -150,6 +154,7 @@ func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier
 
 		consumedOwnershipProofs: make(map[string]struct{}),
 		childRegistrations:      make(map[string]ChildRegistration),
+		pendingKeylessRemovals:  make(map[string]struct{}),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -478,6 +483,10 @@ func (st *AclState) Copy() *AclState {
 	for k, v := range st.childRegistrations {
 		newSt.childRegistrations[k] = v
 	}
+	newSt.pendingKeylessRemovals = make(map[string]struct{})
+	for k := range st.pendingKeylessRemovals {
+		newSt.pendingKeylessRemovals[k] = struct{}{}
+	}
 	newSt.parentSpaceId = st.parentSpaceId
 	newSt.legalOwner = st.legalOwner
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
@@ -528,6 +537,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyChildRegisterRevoke(ch.GetChildRegisterRevoke(), record)
 	case ch.GetLegalOwnerUpdate() != nil:
 		return st.applyLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), record)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return st.applyAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
 		return nil
@@ -966,6 +977,38 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
 }
 
+func (st *AclState) applyAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, record *AclRecord) error {
+	err := st.contentValidator.ValidateAccountRemoveNoRotate(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := st.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		idKey := mapKeyFromPubKey(identity)
+		accSt, exists := st.accountStates[idKey]
+		if !exists {
+			return ErrNoSuchAccount
+		}
+		accSt.Status = StatusRemoved
+		accSt.Permissions = AclPermissionsNone
+		accSt.PermissionChanges = append(accSt.PermissionChanges, PermissionChange{
+			RecordId:   record.Id,
+			Permission: AclPermissionsNone,
+		})
+		st.accountStates[idKey] = accSt
+		recId, exists := st.pendingRequests[idKey]
+		if exists {
+			delete(st.pendingRequests, idKey)
+			delete(st.requestRecords, recId)
+		}
+		st.pendingKeylessRemovals[idKey] = struct{}{}
+	}
+	return nil
+}
+
 func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, record *AclRecord, validate bool) error {
 	if validate {
 		err := st.contentValidator.ValidateReadKeyChange(ch, record.Identity)
@@ -974,6 +1017,8 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		}
 	}
 	st.readKeyChanges = append(st.readKeyChanges, record.Id)
+	// a rotation restores forward secrecy: pending keyless removals are now covered
+	st.pendingKeylessRemovals = make(map[string]struct{})
 	mkPubKey, err := st.keyStore.PubKeyFromProto(ch.MetadataPubKey)
 	if err != nil {
 		return err
@@ -1249,4 +1294,20 @@ func (st *AclState) ChildRegistrations() (regs []ChildRegistration) {
 		return strings.Compare(a.ChildSpaceId, b.ChildSpaceId)
 	})
 	return
+}
+
+// PendingKeylessRemovals returns the identities removed via AclAccountRemoveNoRotate that are not
+// yet covered by a read-key rotation. Non-empty means a key-holding member should rotate.
+func (st *AclState) PendingKeylessRemovals() (identities []crypto.PubKey) {
+	for idKey := range st.pendingKeylessRemovals {
+		if accSt, exists := st.accountStates[idKey]; exists {
+			identities = append(identities, accSt.PubKey)
+		}
+	}
+	return
+}
+
+// HasPendingKeylessRemovals reports whether a keyless removal awaits a completing read-key rotation
+func (st *AclState) HasPendingKeylessRemovals() bool {
+	return len(st.pendingKeylessRemovals) > 0
 }

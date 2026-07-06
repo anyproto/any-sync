@@ -26,6 +26,9 @@ message AclRoot {
 // AclSpaceOptions contains space-level toggles/options
 message AclSpaceOptions {
     bool deleteRestricted = 1;
+    // editorsCanCompleteKeylessRotation lets Writers author the standalone read-key rotation
+    // that completes a pending keyless removal (nested spaces); off = admins/owner only
+    bool editorsCanCompleteKeylessRotation = 2;
 }
 
 // AclSpaceOptionsChange changes space options (owner-only)
@@ -158,6 +161,14 @@ message AclAccountRemove {
     AclReadKeyChange readKeyChange = 2;
 }
 
+// AclAccountRemoveNoRotate removes accounts WITHOUT a read-key rotation. Only the legalOwner of a
+// child (nested) space may author it — it is the keyless-governance removal: membership drops to
+// None immediately, and the space enters a pending-rotation state until a key-holding member
+// authors a standard AclReadKeyChange. Never use for ordinary removals — use AclAccountRemove.
+message AclAccountRemoveNoRotate {
+    repeated bytes identities = 1;
+}
+
 // AclAccountRequestRemove adds a request to remove an account
 message AclAccountRequestRemove {
 }
@@ -207,6 +218,7 @@ message AclContentValue {
         AclChildRegister childRegister = 17;
         AclChildRegisterRevoke childRegisterRevoke = 18;
         AclLegalOwnerUpdate legalOwnerUpdate = 19;
+        AclAccountRemoveNoRotate accountRemoveNoRotate = 20;
     }
 }
 
