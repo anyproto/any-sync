@@ -40,13 +40,14 @@ func newChildAclFixture(t *testing.T, options *aclrecordproto.AclSpaceOptions) *
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
 	root, err := newTestAclRecordBuilder(ownerKeys).BuildRoot(RootContent{
-		PrivKey:       ownerKeys.SignKey,
-		MasterKey:     masterKey,
-		Change:        newTestReadKeyChangePayload(),
-		Metadata:      []byte("m"),
-		Options:       options,
-		ParentSpaceId: "parent.id",
-		LegalOwner:    legalOwnerKeys.SignKey.GetPublic(),
+		PrivKey:         ownerKeys.SignKey,
+		MasterKey:       masterKey,
+		Change:          newTestReadKeyChangePayload(),
+		Metadata:        []byte("m"),
+		Options:         options,
+		ParentSpaceId:   "parent.id",
+		LegalOwner:      legalOwnerKeys.SignKey.GetPublic(),
+		ParentAclRootId: testParentAclRootId,
 	})
 	require.NoError(t, err)
 

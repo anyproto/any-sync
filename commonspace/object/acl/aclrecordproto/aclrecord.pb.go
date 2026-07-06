@@ -145,9 +145,12 @@ type AclRoot struct {
 	ParentSpaceId string `protobuf:"bytes,12,opt,name=parentSpaceId,proto3" json:"parentSpaceId,omitempty"`
 	// legalOwner is the public key of the parent space's owner at genesis. It anchors the
 	// signature-induction chain advanced by AclLegalOwnerUpdate; empty for top-level spaces.
-	LegalOwner    []byte `protobuf:"bytes,13,opt,name=legalOwner,proto3" json:"legalOwner,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	LegalOwner []byte `protobuf:"bytes,13,opt,name=legalOwner,proto3" json:"legalOwner,omitempty"`
+	// parentAclRootId is the parent space's acl root record id — the binding scope for
+	// AclLegalOwnerUpdate proofs; set together with parentSpaceId/legalOwner.
+	ParentAclRootId string `protobuf:"bytes,14,opt,name=parentAclRootId,proto3" json:"parentAclRootId,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AclRoot) Reset() {
@@ -269,6 +272,13 @@ func (x *AclRoot) GetLegalOwner() []byte {
 		return x.LegalOwner
 	}
 	return nil
+}
+
+func (x *AclRoot) GetParentAclRootId() string {
+	if x != nil {
+		return x.ParentAclRootId
+	}
+	return ""
 }
 
 // AclSpaceOptions contains space-level toggles/options
@@ -563,8 +573,13 @@ type AclOwnershipChange struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	NewOwnerIdentity    []byte                 `protobuf:"bytes,1,opt,name=newOwnerIdentity,proto3" json:"newOwnerIdentity,omitempty"`
 	OldOwnerPermissions AclUserPermissions     `protobuf:"varint,2,opt,name=oldOwnerPermissions,proto3,enum=aclrecord.AclUserPermissions" json:"oldOwnerPermissions,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// aclRootId binds the transfer to the acl it belongs to (the acl root record id).
+	// Optional for backward compatibility, but REQUIRED for a record to serve as an
+	// AclLegalOwnerUpdate proof — without it a genuine transfer of any other space
+	// signed by the same key could be replayed to take over a child's governance.
+	AclRootId     string `protobuf:"bytes,3,opt,name=aclRootId,proto3" json:"aclRootId,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AclOwnershipChange) Reset() {
@@ -609,6 +624,13 @@ func (x *AclOwnershipChange) GetOldOwnerPermissions() AclUserPermissions {
 		return x.OldOwnerPermissions
 	}
 	return AclUserPermissions_None
+}
+
+func (x *AclOwnershipChange) GetAclRootId() string {
+	if x != nil {
+		return x.AclRootId
+	}
+	return ""
 }
 
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
@@ -2032,7 +2054,7 @@ var File_aclrecord_proto protoreflect.FileDescriptor
 
 const file_aclrecord_proto_rawDesc = "" +
 	"\n" +
-	"\x0faclrecord.proto\x12\taclrecord\"\xad\x04\n" +
+	"\x0faclrecord.proto\x12\taclrecord\"\xd7\x04\n" +
 	"\aAclRoot\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12\x1c\n" +
 	"\tmasterKey\x18\x02 \x01(\fR\tmasterKey\x12\x18\n" +
@@ -2049,7 +2071,8 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\rparentSpaceId\x18\f \x01(\tR\rparentSpaceId\x12\x1e\n" +
 	"\n" +
 	"legalOwner\x18\r \x01(\fR\n" +
-	"legalOwner\"\xcb\x01\n" +
+	"legalOwner\x12(\n" +
+	"\x0fparentAclRootId\x18\x0e \x01(\tR\x0fparentAclRootId\"\xcb\x01\n" +
 	"\x0fAclSpaceOptions\x12*\n" +
 	"\x10deleteRestricted\x18\x01 \x01(\bR\x10deleteRestricted\x12L\n" +
 	"!editorsCanCompleteKeylessRotation\x18\x02 \x01(\bR!editorsCanCompleteKeylessRotation\x12>\n" +
@@ -2068,10 +2091,11 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\x10encryptedReadKey\x18\x04 \x01(\fR\x10encryptedReadKey\"\x81\x01\n" +
 	"\x16AclAccountInviteChange\x12&\n" +
 	"\x0einviteRecordId\x18\x01 \x01(\tR\x0einviteRecordId\x12?\n" +
-	"\vpermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\vpermissions\"\x91\x01\n" +
+	"\vpermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\vpermissions\"\xaf\x01\n" +
 	"\x12AclOwnershipChange\x12*\n" +
 	"\x10newOwnerIdentity\x18\x01 \x01(\fR\x10newOwnerIdentity\x12O\n" +
-	"\x13oldOwnerPermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\x13oldOwnerPermissions\"\xbd\x01\n" +
+	"\x13oldOwnerPermissions\x18\x02 \x01(\x0e2\x1d.aclrecord.AclUserPermissionsR\x13oldOwnerPermissions\x12\x1c\n" +
+	"\taclRootId\x18\x03 \x01(\tR\taclRootId\"\xbd\x01\n" +
 	"\x15AclAccountRequestJoin\x12&\n" +
 	"\x0einviteIdentity\x18\x01 \x01(\fR\x0einviteIdentity\x12&\n" +
 	"\x0einviteRecordId\x18\x02 \x01(\tR\x0einviteRecordId\x128\n" +

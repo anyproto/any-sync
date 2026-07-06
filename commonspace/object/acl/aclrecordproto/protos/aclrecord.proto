@@ -21,6 +21,9 @@ message AclRoot {
     // legalOwner is the public key of the parent space's owner at genesis. It anchors the
     // signature-induction chain advanced by AclLegalOwnerUpdate; empty for top-level spaces.
     bytes legalOwner = 13;
+    // parentAclRootId is the parent space's acl root record id — the binding scope for
+    // AclLegalOwnerUpdate proofs; set together with parentSpaceId/legalOwner.
+    string parentAclRootId = 14;
 }
 
 // AclSpaceOptions contains space-level toggles/options
@@ -70,6 +73,11 @@ enum AclInviteType {
 message AclOwnershipChange {
     bytes newOwnerIdentity = 1;
     AclUserPermissions oldOwnerPermissions = 2;
+    // aclRootId binds the transfer to the acl it belongs to (the acl root record id).
+    // Optional for backward compatibility, but REQUIRED for a record to serve as an
+    // AclLegalOwnerUpdate proof — without it a genuine transfer of any other space
+    // signed by the same key could be replayed to take over a child's governance.
+    string aclRootId = 3;
 }
 
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key

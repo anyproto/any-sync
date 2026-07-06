@@ -29,9 +29,10 @@ func newChildSpaceCreatePayload(t *testing.T, parentSpaceId string, legalOwner c
 		MasterKey:      master,
 		ReadKey:        readKey,
 		MetadataKey:    metaKey,
-		Metadata:       randBytes(6),
-		ParentSpaceId:  parentSpaceId,
-		LegalOwner:     legalOwner,
+		Metadata:        randBytes(6),
+		ParentSpaceId:   parentSpaceId,
+		LegalOwner:      legalOwner,
+		ParentAclRootId: "parent-acl-root-id",
 	}
 }
 

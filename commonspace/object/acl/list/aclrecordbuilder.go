@@ -24,6 +24,8 @@ type RootContent struct {
 	// both must be set together, LegalOwner being the parent's owner key at creation time
 	ParentSpaceId string
 	LegalOwner    crypto.PubKey
+	// ParentAclRootId is the parent space's acl root id — the binding scope for legalOwner proofs
+	ParentAclRootId string
 }
 
 type RequestJoinPayload struct {
@@ -204,7 +206,9 @@ func (a *aclRecordBuilder) BuildOwnershipChange(ownershipChange OwnershipChangeP
 		Value: &aclrecordproto.AclContentValue_OwnershipChange{
 			&aclrecordproto.AclOwnershipChange{
 				NewOwnerIdentity:    newOwnerBytes,
-				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions)},
+				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions),
+				// bind the transfer to this acl so it can serve as a legalOwner proof in a child space
+				AclRootId: a.id},
 		},
 	}
 	return a.buildRecord(content)
@@ -1156,6 +1160,7 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 		}
 		aclRoot.ParentSpaceId = content.ParentSpaceId
 		aclRoot.LegalOwner = legalOwner
+		aclRoot.ParentAclRootId = content.ParentAclRootId
 	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }

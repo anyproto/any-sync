@@ -42,7 +42,7 @@ var (
 	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
 	ErrChildAlreadyRegistered    = errors.New("child space is already registered")
 	ErrNoSuchChildRegistration   = errors.New("no such child registration")
-	ErrNotChildSpace             = errors.New("space has no legal owner")
+	ErrNotChildSpace             = errors.New("space is not a child space")
 	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
 	ErrChildrenCreationDisallowed = errors.New("children creation is disallowed in this space")
 )
@@ -106,6 +106,9 @@ type AclState struct {
 	parentSpaceId string
 	// legalOwner is the current legal owner key: pinned at the root, advanced by AclLegalOwnerUpdate
 	legalOwner crypto.PubKey
+	// parentAclRootId is the parent space's acl root id — the binding scope every
+	// AclLegalOwnerUpdate proof (an ownership change from the parent) must carry
+	parentAclRootId string
 	// consumedOwnershipProofs guards AclLegalOwnerUpdate against replaying an already-consumed
 	// parent ownership-change record (keyed by the record cid)
 	consumedOwnershipProofs map[string]struct{}
@@ -375,9 +378,10 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 			return
 		}
 	}
-	if root.ParentSpaceId != "" || len(root.LegalOwner) > 0 {
-		// both-or-neither: a child space must declare its parent and pin the legal owner together
-		if root.ParentSpaceId == "" || len(root.LegalOwner) == 0 {
+	if root.ParentSpaceId != "" || len(root.LegalOwner) > 0 || root.ParentAclRootId != "" {
+		// all-or-none: a child space must declare its parent, pin the legal owner,
+		// and pin the parent acl root (the binding scope for legalOwner proofs) together
+		if root.ParentSpaceId == "" || len(root.LegalOwner) == 0 || root.ParentAclRootId == "" {
 			return ErrIncorrectRoot
 		}
 		legalOwner, err := st.keyStore.PubKeyFromProto(root.LegalOwner)
@@ -386,6 +390,7 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		}
 		st.parentSpaceId = root.ParentSpaceId
 		st.legalOwner = legalOwner
+		st.parentAclRootId = root.ParentAclRootId
 	}
 	// adding an account to the list
 	accountState := AccountState{
@@ -490,6 +495,7 @@ func (st *AclState) Copy() *AclState {
 	}
 	newSt.parentSpaceId = st.parentSpaceId
 	newSt.legalOwner = st.legalOwner
+	newSt.parentAclRootId = st.parentAclRootId
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
 	newSt.optionChanges = append(newSt.optionChanges, st.optionChanges...)
 	newSt.list = st.list
@@ -584,7 +590,12 @@ func (st *AclState) applyChildRegisterRevoke(ch *aclrecordproto.AclChildRegister
 	if err != nil {
 		return err
 	}
-	reg := st.childRegistrations[ch.ChildSpaceId]
+	reg, ok := st.childRegistrations[ch.ChildSpaceId]
+	if !ok {
+		// on the non-validating (node) path a revoke for an unknown child would
+		// otherwise synthesize a phantom entry with an empty ChildSpaceId
+		return nil
+	}
 	reg.Revoked = true
 	st.childRegistrations[ch.ChildSpaceId] = reg
 	return nil
@@ -596,7 +607,7 @@ func (st *AclState) applyLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate
 		return err
 	}
 	for _, raw := range ch.OwnershipChanges {
-		_, newOwner, proofId, err := unmarshalOwnershipChangeProof(st.keyStore, raw)
+		_, newOwner, proofId, _, err := unmarshalOwnershipChangeProof(st.keyStore, raw)
 		if err != nil {
 			return err
 		}

@@ -13,6 +13,9 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
+// testParentAclRootId is the binding scope shared by newChildAcl roots and makeOwnershipProof proofs
+const testParentAclRootId = "parent-acl-root-id"
+
 // newChildAcl builds a child-space acl whose root pins the given legal owner
 func newChildAcl(t *testing.T, parentSpaceId string, legalOwner crypto.PubKey) (*accountdata.AccountKeys, AclList) {
 	keys, err := accountdata.NewRandom()
@@ -20,12 +23,13 @@ func newChildAcl(t *testing.T, parentSpaceId string, legalOwner crypto.PubKey) (
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
 	root, err := newTestAclRecordBuilder(keys).BuildRoot(RootContent{
-		PrivKey:       keys.SignKey,
-		MasterKey:     masterKey,
-		Change:        newTestReadKeyChangePayload(),
-		Metadata:      []byte("m"),
-		ParentSpaceId: parentSpaceId,
-		LegalOwner:    legalOwner,
+		PrivKey:         keys.SignKey,
+		MasterKey:       masterKey,
+		Change:          newTestReadKeyChangePayload(),
+		Metadata:        []byte("m"),
+		ParentSpaceId:   parentSpaceId,
+		LegalOwner:      legalOwner,
+		ParentAclRootId: testParentAclRootId,
 	})
 	require.NoError(t, err)
 	acl, err := newInMemoryAclWithRoot(keys, root)
@@ -54,8 +58,14 @@ func buildAclRecordSignedBy(t *testing.T, prevId string, keys *accountdata.Accou
 	return listtest.WrapAclRecord(&consensusproto.RawRecord{Payload: marshalledRec, Signature: sig})
 }
 
-// makeOwnershipProof produces raw parent-acl record bytes carrying one AclOwnershipChange signed by signer
+// makeOwnershipProof produces raw parent-acl record bytes carrying one AclOwnershipChange signed by
+// signer, bound to the parent acl root testParentAclRootId
 func makeOwnershipProof(t *testing.T, signer *accountdata.AccountKeys, newOwner crypto.PubKey) []byte {
+	return makeOwnershipProofFor(t, signer, newOwner, testParentAclRootId)
+}
+
+// makeOwnershipProofFor is makeOwnershipProof with an explicit binding scope (for cross-space tests)
+func makeOwnershipProofFor(t *testing.T, signer *accountdata.AccountKeys, newOwner crypto.PubKey, aclRootId string) []byte {
 	newOwnerProto, err := newOwner.Marshall()
 	require.NoError(t, err)
 	content := &aclrecordproto.AclContentValue{
@@ -63,6 +73,7 @@ func makeOwnershipProof(t *testing.T, signer *accountdata.AccountKeys, newOwner 
 			OwnershipChange: &aclrecordproto.AclOwnershipChange{
 				NewOwnerIdentity:    newOwnerProto,
 				OldOwnerPermissions: aclrecordproto.AclUserPermissions_Admin,
+				AclRootId:           aclRootId,
 			},
 		},
 	}
@@ -245,6 +256,25 @@ func TestNestedSpaces_LegalOwnerUpdateRejections(t *testing.T) {
 		_, childAcl := newChildAcl(t, "parent.id", aliceKeys.SignKey.GetPublic())
 		proof := makeOwnershipProof(t, strangerKeys, bobKeys.SignKey.GetPublic())
 		update := buildAclRecordSignedBy(t, childAcl.Head().Id, bobKeys, legalOwnerUpdateContent(proof))
+		require.ErrorIs(t, childAcl.AddRawRecord(update), ErrInvalidLegalOwnerProof)
+	})
+
+	t.Run("cross-space proof rejected — ownership change from a DIFFERENT acl", func(t *testing.T) {
+		// Alice (the stored legalOwner, owner of parent P) also owns some other
+		// space Q and legitimately transfers Q to Mallory. Mallory lifts that
+		// signed record and tries to advance THIS child's legalOwner with it.
+		_, childAcl := newChildAcl(t, "parent.id", aliceKeys.SignKey.GetPublic())
+		mallory := bobKeys // stand-in attacker
+		foreignProof := makeOwnershipProofFor(t, aliceKeys, mallory.SignKey.GetPublic(), "some-other-space-acl-root")
+		update := buildAclRecordSignedBy(t, childAcl.Head().Id, mallory, legalOwnerUpdateContent(foreignProof))
+		require.ErrorIs(t, childAcl.AddRawRecord(update), ErrInvalidLegalOwnerProof)
+		require.True(t, childAcl.AclState().LegalOwner().Equals(aliceKeys.SignKey.GetPublic()), "legalOwner unchanged")
+	})
+
+	t.Run("proof with no aclRootId binding rejected", func(t *testing.T) {
+		_, childAcl := newChildAcl(t, "parent.id", aliceKeys.SignKey.GetPublic())
+		unbound := makeOwnershipProofFor(t, aliceKeys, bobKeys.SignKey.GetPublic(), "")
+		update := buildAclRecordSignedBy(t, childAcl.Head().Id, bobKeys, legalOwnerUpdateContent(unbound))
 		require.ErrorIs(t, childAcl.AddRawRecord(update), ErrInvalidLegalOwnerProof)
 	})
 

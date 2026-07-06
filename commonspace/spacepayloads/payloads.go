@@ -48,6 +48,8 @@ type SpaceCreatePayload struct {
 	ParentSpaceId string
 	// LegalOwner is the parent space owner key pinned into the child acl root; required with ParentSpaceId
 	LegalOwner crypto.PubKey
+	// ParentAclRootId is the parent space's acl root id — the binding scope for legalOwner proofs; required with ParentSpaceId
+	ParentAclRootId string
 }
 
 type SpaceDerivePayload struct {
@@ -195,10 +197,11 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 			MetadataKey: payload.MetadataKey,
 			ReadKey:     payload.ReadKey,
 		},
-		Metadata:      payload.Metadata,
-		Options:       payload.Options,
-		ParentSpaceId: payload.ParentSpaceId,
-		LegalOwner:    payload.LegalOwner,
+		Metadata:        payload.Metadata,
+		Options:         payload.Options,
+		ParentSpaceId:   payload.ParentSpaceId,
+		LegalOwner:      payload.LegalOwner,
+		ParentAclRootId: payload.ParentAclRootId,
 	})
 	if err != nil {
 		return
@@ -717,7 +720,8 @@ func NewSpaceId(id string, repKey uint64) string {
 // validateParentLink cross-checks the nested-spaces declaration between the signed header and the acl root:
 // header.parentSpaceId and the root's parentSpaceId/legalOwner must all be set together and agree
 func validateParentLink(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, aclRoot *aclrecordproto.AclRoot) (err error) {
-	if (aclRoot.ParentSpaceId == "") != (len(aclRoot.LegalOwner) == 0) {
+	isChild := aclRoot.ParentSpaceId != "" || len(aclRoot.LegalOwner) != 0 || aclRoot.ParentAclRootId != ""
+	if isChild && (aclRoot.ParentSpaceId == "" || len(aclRoot.LegalOwner) == 0 || aclRoot.ParentAclRootId == "") {
 		return ErrIncorrectParentLink
 	}
 	var rawHeader spacesyncproto.RawSpaceHeader

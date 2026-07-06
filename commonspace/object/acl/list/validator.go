@@ -644,9 +644,14 @@ func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalO
 		inBatch  = map[string]struct{}{}
 	)
 	for _, raw := range ch.OwnershipChanges {
-		author, newOwner, proofId, err := unmarshalOwnershipChangeProof(c.keyStore, raw)
+		author, newOwner, proofId, aclRootId, err := unmarshalOwnershipChangeProof(c.keyStore, raw)
 		if err != nil {
 			return err
+		}
+		// bind the proof to the parent space: an ownership change from any OTHER
+		// acl (even one signed by the same key) must not advance this child's owner
+		if aclRootId == "" || aclRootId != c.aclState.parentAclRootId {
+			return ErrInvalidLegalOwnerProof
 		}
 		if !author.Equals(expected) {
 			return ErrInvalidLegalOwnerProof
@@ -669,7 +674,7 @@ func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalO
 // unmarshalOwnershipChangeProof decodes one embedded parent acl record (consensusproto.RawRecord bytes),
 // verifies the author signature over its payload and requires it to contain exactly one AclOwnershipChange.
 // Returns the record author, the new owner it names and the record cid (the replay-guard key).
-func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId string, err error) {
+func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
 	rawRec := &consensusproto.RawRecord{}
 	if err = rawRec.UnmarshalVT(raw); err != nil {
 		return
@@ -698,10 +703,12 @@ func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (auth
 		err = ErrInvalidLegalOwnerProof
 		return
 	}
-	newOwner, err = keyStore.PubKeyFromProto(aclData.AclContent[0].GetOwnershipChange().NewOwnerIdentity)
+	ownershipChange := aclData.AclContent[0].GetOwnershipChange()
+	newOwner, err = keyStore.PubKeyFromProto(ownershipChange.NewOwnerIdentity)
 	if err != nil {
 		return
 	}
+	aclRootId = ownershipChange.AclRootId
 	proofId, err = cidutil.NewCidFromBytes(raw)
 	return
 }
