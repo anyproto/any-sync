@@ -163,6 +163,35 @@ func (mr *MockCoordinatorClientMockRecorder) DeletionLog(ctx, lastRecordId, limi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), ctx, lastRecordId, limit)
 }
 
+// FileLimitsGet mocks base method.
+func (m *MockCoordinatorClient) FileLimitsGet(ctx context.Context, spaceId, identity string) (*coordinatorproto.FileLimitsGetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileLimitsGet", ctx, spaceId, identity)
+	ret0, _ := ret[0].(*coordinatorproto.FileLimitsGetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FileLimitsGet indicates an expected call of FileLimitsGet.
+func (mr *MockCoordinatorClientMockRecorder) FileLimitsGet(ctx, spaceId, identity any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileLimitsGet", reflect.TypeOf((*MockCoordinatorClient)(nil).FileLimitsGet), ctx, spaceId, identity)
+}
+
+// FileUsageReport mocks base method.
+func (m *MockCoordinatorClient) FileUsageReport(ctx context.Context, rows []*coordinatorproto.FileUsageRow) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileUsageReport", ctx, rows)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FileUsageReport indicates an expected call of FileUsageReport.
+func (mr *MockCoordinatorClientMockRecorder) FileUsageReport(ctx, rows any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileUsageReport", reflect.TypeOf((*MockCoordinatorClient)(nil).FileUsageReport), ctx, rows)
+}
+
 // IdentityRepoGet mocks base method.
 func (m *MockCoordinatorClient) IdentityRepoGet(ctx context.Context, identities, kinds []string) ([]*identityrepoproto.DataWithIdentity, error) {
 	m.ctrl.T.Helper()

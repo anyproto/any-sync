@@ -186,11 +186,16 @@ message SpaceInfoResult {
 }
 
 message SpaceQuota {
-    uint64 limitBytes = 1;          // effective storage limit for this space
+    uint64 limitBytes = 1;          // effective storage limit for the requester in this space
     uint64 totalUsageBytes = 2;     // counted usage == durableUsageBytes + inflightUsageBytes
     uint64 durableUsageBytes = 3;   // bytes fully committed to durable storage
     uint64 inflightUsageBytes = 4;  // bytes reserved by presigned/not-yet-committed uploads
     uint64 filesCount = 5;          // number of file roots stored in the space
+    // account-pool view for the requesting identity (files are charged to
+    // their uploader; all the identity's spaces share one pool). Zero when
+    // the node has no coordinator-backed limits (self-hosted fallback).
+    uint64 accountLimitBytes = 6;   // the identity's total file-storage cap
+    uint64 accountUsageBytes = 7;   // aggregated durable usage across the identity's spaces
 }
 
 // ---- Info (node-level metadata) ---------------------------------------------

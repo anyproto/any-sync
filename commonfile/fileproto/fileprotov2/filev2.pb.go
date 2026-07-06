@@ -1061,13 +1061,18 @@ func (x *SpaceInfoResult) GetQuota() *SpaceQuota {
 
 type SpaceQuota struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	LimitBytes         uint64                 `protobuf:"varint,1,opt,name=limitBytes,proto3" json:"limitBytes,omitempty"`                 // effective storage limit for this space
+	LimitBytes         uint64                 `protobuf:"varint,1,opt,name=limitBytes,proto3" json:"limitBytes,omitempty"`                 // effective storage limit for the requester in this space
 	TotalUsageBytes    uint64                 `protobuf:"varint,2,opt,name=totalUsageBytes,proto3" json:"totalUsageBytes,omitempty"`       // counted usage == durableUsageBytes + inflightUsageBytes
 	DurableUsageBytes  uint64                 `protobuf:"varint,3,opt,name=durableUsageBytes,proto3" json:"durableUsageBytes,omitempty"`   // bytes fully committed to durable storage
 	InflightUsageBytes uint64                 `protobuf:"varint,4,opt,name=inflightUsageBytes,proto3" json:"inflightUsageBytes,omitempty"` // bytes reserved by presigned/not-yet-committed uploads
 	FilesCount         uint64                 `protobuf:"varint,5,opt,name=filesCount,proto3" json:"filesCount,omitempty"`                 // number of file roots stored in the space
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// account-pool view for the requesting identity (files are charged to
+	// their uploader; all the identity's spaces share one pool). Zero when
+	// the node has no coordinator-backed limits (self-hosted fallback).
+	AccountLimitBytes uint64 `protobuf:"varint,6,opt,name=accountLimitBytes,proto3" json:"accountLimitBytes,omitempty"` // the identity's total file-storage cap
+	AccountUsageBytes uint64 `protobuf:"varint,7,opt,name=accountUsageBytes,proto3" json:"accountUsageBytes,omitempty"` // aggregated durable usage across the identity's spaces
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SpaceQuota) Reset() {
@@ -1131,6 +1136,20 @@ func (x *SpaceQuota) GetInflightUsageBytes() uint64 {
 func (x *SpaceQuota) GetFilesCount() uint64 {
 	if x != nil {
 		return x.FilesCount
+	}
+	return 0
+}
+
+func (x *SpaceQuota) GetAccountLimitBytes() uint64 {
+	if x != nil {
+		return x.AccountLimitBytes
+	}
+	return 0
+}
+
+func (x *SpaceQuota) GetAccountUsageBytes() uint64 {
+	if x != nil {
+		return x.AccountUsageBytes
 	}
 	return 0
 }
@@ -1277,7 +1296,7 @@ const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
 	"\x0fSpaceInfoResult\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12'\n" +
 	"\x04code\x18\x02 \x01(\x0e2\x13.filesyncv2.ErrCodeR\x04code\x12,\n" +
-	"\x05quota\x18\x03 \x01(\v2\x16.filesyncv2.SpaceQuotaR\x05quota\"\xd4\x01\n" +
+	"\x05quota\x18\x03 \x01(\v2\x16.filesyncv2.SpaceQuotaR\x05quota\"\xb0\x02\n" +
 	"\n" +
 	"SpaceQuota\x12\x1e\n" +
 	"\n" +
@@ -1288,7 +1307,9 @@ const file_commonfile_fileproto_fileprotov2_protos_filev2_proto_rawDesc = "" +
 	"\x12inflightUsageBytes\x18\x04 \x01(\x04R\x12inflightUsageBytes\x12\x1e\n" +
 	"\n" +
 	"filesCount\x18\x05 \x01(\x04R\n" +
-	"filesCount\"\r\n" +
+	"filesCount\x12,\n" +
+	"\x11accountLimitBytes\x18\x06 \x01(\x04R\x11accountLimitBytes\x12,\n" +
+	"\x11accountUsageBytes\x18\a \x01(\x04R\x11accountUsageBytes\"\r\n" +
 	"\vInfoRequest\"<\n" +
 	"\fInfoResponse\x12,\n" +
 	"\x11publicReadBaseUrl\x18\x01 \x01(\tR\x11publicReadBaseUrl*z\n" +
