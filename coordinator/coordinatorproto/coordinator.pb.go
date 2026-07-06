@@ -2634,8 +2634,11 @@ type AccountLimitsSetRequest struct {
 	SpaceMembersRead      uint32                 `protobuf:"varint,4,opt,name=spaceMembersRead,proto3" json:"spaceMembersRead,omitempty"`
 	SpaceMembersWrite     uint32                 `protobuf:"varint,5,opt,name=spaceMembersWrite,proto3" json:"spaceMembersWrite,omitempty"`
 	SharedSpacesLimit     uint32                 `protobuf:"varint,6,opt,name=sharedSpacesLimit,proto3" json:"sharedSpacesLimit,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// externalSeatsLimit caps the distinct non-org identities admitted across all
+	// child spaces of the identity's spaces (nested spaces / paid external seats)
+	ExternalSeatsLimit uint32 `protobuf:"varint,7,opt,name=externalSeatsLimit,proto3" json:"externalSeatsLimit,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AccountLimitsSetRequest) Reset() {
@@ -2710,6 +2713,13 @@ func (x *AccountLimitsSetRequest) GetSharedSpacesLimit() uint32 {
 	return 0
 }
 
+func (x *AccountLimitsSetRequest) GetExternalSeatsLimit() uint32 {
+	if x != nil {
+		return x.ExternalSeatsLimit
+	}
+	return 0
+}
+
 type AccountLimitsSetResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -2746,6 +2756,86 @@ func (*AccountLimitsSetResponse) Descriptor() ([]byte, []int) {
 	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{37}
 }
 
+type ExternalCompartmentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExternalCompartmentsRequest) Reset() {
+	*x = ExternalCompartmentsRequest{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExternalCompartmentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExternalCompartmentsRequest) ProtoMessage() {}
+
+func (x *ExternalCompartmentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExternalCompartmentsRequest.ProtoReflect.Descriptor instead.
+func (*ExternalCompartmentsRequest) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{38}
+}
+
+type ExternalCompartmentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SpaceIds      []string               `protobuf:"bytes,1,rep,name=spaceIds,proto3" json:"spaceIds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExternalCompartmentsResponse) Reset() {
+	*x = ExternalCompartmentsResponse{}
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExternalCompartmentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExternalCompartmentsResponse) ProtoMessage() {}
+
+func (x *ExternalCompartmentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExternalCompartmentsResponse.ProtoReflect.Descriptor instead.
+func (*ExternalCompartmentsResponse) Descriptor() ([]byte, []int) {
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ExternalCompartmentsResponse) GetSpaceIds() []string {
+	if x != nil {
+		return x.SpaceIds
+	}
+	return nil
+}
+
 type AclEventLogRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	AccountIdentity string                 `protobuf:"bytes,1,opt,name=accountIdentity,proto3" json:"accountIdentity,omitempty"`
@@ -2759,7 +2849,7 @@ type AclEventLogRequest struct {
 
 func (x *AclEventLogRequest) Reset() {
 	*x = AclEventLogRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[38]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2771,7 +2861,7 @@ func (x *AclEventLogRequest) String() string {
 func (*AclEventLogRequest) ProtoMessage() {}
 
 func (x *AclEventLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[38]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2784,7 +2874,7 @@ func (x *AclEventLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclEventLogRequest.ProtoReflect.Descriptor instead.
 func (*AclEventLogRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{38}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *AclEventLogRequest) GetAccountIdentity() string {
@@ -2820,7 +2910,7 @@ type AclEventLogResponse struct {
 
 func (x *AclEventLogResponse) Reset() {
 	*x = AclEventLogResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[39]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2832,7 +2922,7 @@ func (x *AclEventLogResponse) String() string {
 func (*AclEventLogResponse) ProtoMessage() {}
 
 func (x *AclEventLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[39]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2845,7 +2935,7 @@ func (x *AclEventLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclEventLogResponse.ProtoReflect.Descriptor instead.
 func (*AclEventLogResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{39}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AclEventLogResponse) GetRecords() []*AclEventLogRecord {
@@ -2880,7 +2970,7 @@ type AclEventLogRecord struct {
 
 func (x *AclEventLogRecord) Reset() {
 	*x = AclEventLogRecord{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[40]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2892,7 +2982,7 @@ func (x *AclEventLogRecord) String() string {
 func (*AclEventLogRecord) ProtoMessage() {}
 
 func (x *AclEventLogRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[40]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2905,7 +2995,7 @@ func (x *AclEventLogRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclEventLogRecord.ProtoReflect.Descriptor instead.
 func (*AclEventLogRecord) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{40}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *AclEventLogRecord) GetId() string {
@@ -2954,7 +3044,7 @@ type InboxMessage struct {
 
 func (x *InboxMessage) Reset() {
 	*x = InboxMessage{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2966,7 +3056,7 @@ func (x *InboxMessage) String() string {
 func (*InboxMessage) ProtoMessage() {}
 
 func (x *InboxMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[41]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2979,7 +3069,7 @@ func (x *InboxMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxMessage.ProtoReflect.Descriptor instead.
 func (*InboxMessage) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{41}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *InboxMessage) GetId() string {
@@ -3016,7 +3106,7 @@ type InboxPacket struct {
 
 func (x *InboxPacket) Reset() {
 	*x = InboxPacket{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3028,7 +3118,7 @@ func (x *InboxPacket) String() string {
 func (*InboxPacket) ProtoMessage() {}
 
 func (x *InboxPacket) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[42]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3041,7 +3131,7 @@ func (x *InboxPacket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxPacket.ProtoReflect.Descriptor instead.
 func (*InboxPacket) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{42}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *InboxPacket) GetKeyType() InboxKeyType {
@@ -3090,7 +3180,7 @@ type InboxPayload struct {
 
 func (x *InboxPayload) Reset() {
 	*x = InboxPayload{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[43]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3102,7 +3192,7 @@ func (x *InboxPayload) String() string {
 func (*InboxPayload) ProtoMessage() {}
 
 func (x *InboxPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[43]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3115,7 +3205,7 @@ func (x *InboxPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxPayload.ProtoReflect.Descriptor instead.
 func (*InboxPayload) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{43}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *InboxPayload) GetPayloadType() InboxPayloadType {
@@ -3148,7 +3238,7 @@ type InboxFetchRequest struct {
 
 func (x *InboxFetchRequest) Reset() {
 	*x = InboxFetchRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[44]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3160,7 +3250,7 @@ func (x *InboxFetchRequest) String() string {
 func (*InboxFetchRequest) ProtoMessage() {}
 
 func (x *InboxFetchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[44]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3173,7 +3263,7 @@ func (x *InboxFetchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxFetchRequest.ProtoReflect.Descriptor instead.
 func (*InboxFetchRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{44}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *InboxFetchRequest) GetOffset() string {
@@ -3193,7 +3283,7 @@ type InboxFetchResponse struct {
 
 func (x *InboxFetchResponse) Reset() {
 	*x = InboxFetchResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[45]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3205,7 +3295,7 @@ func (x *InboxFetchResponse) String() string {
 func (*InboxFetchResponse) ProtoMessage() {}
 
 func (x *InboxFetchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[45]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3218,7 +3308,7 @@ func (x *InboxFetchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxFetchResponse.ProtoReflect.Descriptor instead.
 func (*InboxFetchResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{45}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *InboxFetchResponse) GetMessages() []*InboxMessage {
@@ -3244,7 +3334,7 @@ type InboxAddMessageRequest struct {
 
 func (x *InboxAddMessageRequest) Reset() {
 	*x = InboxAddMessageRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[46]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3256,7 +3346,7 @@ func (x *InboxAddMessageRequest) String() string {
 func (*InboxAddMessageRequest) ProtoMessage() {}
 
 func (x *InboxAddMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[46]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3269,7 +3359,7 @@ func (x *InboxAddMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxAddMessageRequest.ProtoReflect.Descriptor instead.
 func (*InboxAddMessageRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{46}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *InboxAddMessageRequest) GetMessage() *InboxMessage {
@@ -3287,7 +3377,7 @@ type InboxAddMessageResponse struct {
 
 func (x *InboxAddMessageResponse) Reset() {
 	*x = InboxAddMessageResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[47]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3299,7 +3389,7 @@ func (x *InboxAddMessageResponse) String() string {
 func (*InboxAddMessageResponse) ProtoMessage() {}
 
 func (x *InboxAddMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[47]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3312,7 +3402,7 @@ func (x *InboxAddMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxAddMessageResponse.ProtoReflect.Descriptor instead.
 func (*InboxAddMessageResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{47}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{49}
 }
 
 // Request to subscribe to notifications
@@ -3325,7 +3415,7 @@ type NotifySubscribeRequest struct {
 
 func (x *NotifySubscribeRequest) Reset() {
 	*x = NotifySubscribeRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[48]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3337,7 +3427,7 @@ func (x *NotifySubscribeRequest) String() string {
 func (*NotifySubscribeRequest) ProtoMessage() {}
 
 func (x *NotifySubscribeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[48]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3350,7 +3440,7 @@ func (x *NotifySubscribeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotifySubscribeRequest.ProtoReflect.Descriptor instead.
 func (*NotifySubscribeRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{48}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *NotifySubscribeRequest) GetEventType() NotifyEventType {
@@ -3370,7 +3460,7 @@ type NotifySubscribeEvent struct {
 
 func (x *NotifySubscribeEvent) Reset() {
 	*x = NotifySubscribeEvent{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[49]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3382,7 +3472,7 @@ func (x *NotifySubscribeEvent) String() string {
 func (*NotifySubscribeEvent) ProtoMessage() {}
 
 func (x *NotifySubscribeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[49]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3395,7 +3485,7 @@ func (x *NotifySubscribeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotifySubscribeEvent.ProtoReflect.Descriptor instead.
 func (*NotifySubscribeEvent) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{49}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *NotifySubscribeEvent) GetEventType() NotifyEventType {
@@ -3422,7 +3512,7 @@ type AclUploadInviteRequest struct {
 
 func (x *AclUploadInviteRequest) Reset() {
 	*x = AclUploadInviteRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[50]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3434,7 +3524,7 @@ func (x *AclUploadInviteRequest) String() string {
 func (*AclUploadInviteRequest) ProtoMessage() {}
 
 func (x *AclUploadInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[50]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3447,7 +3537,7 @@ func (x *AclUploadInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclUploadInviteRequest.ProtoReflect.Descriptor instead.
 func (*AclUploadInviteRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{50}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *AclUploadInviteRequest) GetCid() []byte {
@@ -3472,7 +3562,7 @@ type AclUploadInviteResponse struct {
 
 func (x *AclUploadInviteResponse) Reset() {
 	*x = AclUploadInviteResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[51]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3484,7 +3574,7 @@ func (x *AclUploadInviteResponse) String() string {
 func (*AclUploadInviteResponse) ProtoMessage() {}
 
 func (x *AclUploadInviteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[51]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3497,7 +3587,7 @@ func (x *AclUploadInviteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclUploadInviteResponse.ProtoReflect.Descriptor instead.
 func (*AclUploadInviteResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{51}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{53}
 }
 
 type FileLimitsGetRequest struct {
@@ -3511,7 +3601,7 @@ type FileLimitsGetRequest struct {
 
 func (x *FileLimitsGetRequest) Reset() {
 	*x = FileLimitsGetRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3523,7 +3613,7 @@ func (x *FileLimitsGetRequest) String() string {
 func (*FileLimitsGetRequest) ProtoMessage() {}
 
 func (x *FileLimitsGetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[52]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3536,7 +3626,7 @@ func (x *FileLimitsGetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileLimitsGetRequest.ProtoReflect.Descriptor instead.
 func (*FileLimitsGetRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{52}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *FileLimitsGetRequest) GetSpaceId() string {
@@ -3567,7 +3657,7 @@ type FileLimitsGetResponse struct {
 
 func (x *FileLimitsGetResponse) Reset() {
 	*x = FileLimitsGetResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3579,7 +3669,7 @@ func (x *FileLimitsGetResponse) String() string {
 func (*FileLimitsGetResponse) ProtoMessage() {}
 
 func (x *FileLimitsGetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[53]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3592,7 +3682,7 @@ func (x *FileLimitsGetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileLimitsGetResponse.ProtoReflect.Descriptor instead.
 func (*FileLimitsGetResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{53}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *FileLimitsGetResponse) GetAccountLimitBytes() uint64 {
@@ -3625,7 +3715,7 @@ type FileUsageReportRequest struct {
 
 func (x *FileUsageReportRequest) Reset() {
 	*x = FileUsageReportRequest{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3637,7 +3727,7 @@ func (x *FileUsageReportRequest) String() string {
 func (*FileUsageReportRequest) ProtoMessage() {}
 
 func (x *FileUsageReportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[54]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3650,7 +3740,7 @@ func (x *FileUsageReportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileUsageReportRequest.ProtoReflect.Descriptor instead.
 func (*FileUsageReportRequest) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{54}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *FileUsageReportRequest) GetRows() []*FileUsageRow {
@@ -3674,7 +3764,7 @@ type FileUsageRow struct {
 
 func (x *FileUsageRow) Reset() {
 	*x = FileUsageRow{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3686,7 +3776,7 @@ func (x *FileUsageRow) String() string {
 func (*FileUsageRow) ProtoMessage() {}
 
 func (x *FileUsageRow) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[55]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3699,7 +3789,7 @@ func (x *FileUsageRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileUsageRow.ProtoReflect.Descriptor instead.
 func (*FileUsageRow) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{55}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *FileUsageRow) GetSpaceId() string {
@@ -3738,7 +3828,7 @@ type FileUsageReportResponse struct {
 
 func (x *FileUsageReportResponse) Reset() {
 	*x = FileUsageReportResponse{}
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3750,7 +3840,7 @@ func (x *FileUsageReportResponse) String() string {
 func (*FileUsageReportResponse) ProtoMessage() {}
 
 func (x *FileUsageReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[56]
+	mi := &file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3763,7 +3853,7 @@ func (x *FileUsageReportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileUsageReportResponse.ProtoReflect.Descriptor instead.
 func (*FileUsageReportResponse) Descriptor() ([]byte, []int) {
-	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{56}
+	return file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP(), []int{58}
 }
 
 var File_coordinator_coordinatorproto_protos_coordinator_proto protoreflect.FileDescriptor
@@ -3888,15 +3978,19 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x18\n" +
 	"\aaclHead\x18\x02 \x01(\tR\aaclHead\"1\n" +
 	"\x15AclGetRecordsResponse\x12\x18\n" +
-	"\arecords\x18\x01 \x03(\fR\arecords\"\x8b\x02\n" +
+	"\arecords\x18\x01 \x03(\fR\arecords\"\xbb\x02\n" +
 	"\x17AccountLimitsSetRequest\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\tR\bidentity\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x124\n" +
 	"\x15fileStorageLimitBytes\x18\x03 \x01(\x04R\x15fileStorageLimitBytes\x12*\n" +
 	"\x10spaceMembersRead\x18\x04 \x01(\rR\x10spaceMembersRead\x12,\n" +
 	"\x11spaceMembersWrite\x18\x05 \x01(\rR\x11spaceMembersWrite\x12,\n" +
-	"\x11sharedSpacesLimit\x18\x06 \x01(\rR\x11sharedSpacesLimit\"\x1a\n" +
-	"\x18AccountLimitsSetResponse\"n\n" +
+	"\x11sharedSpacesLimit\x18\x06 \x01(\rR\x11sharedSpacesLimit\x12.\n" +
+	"\x12externalSeatsLimit\x18\a \x01(\rR\x12externalSeatsLimit\"\x1a\n" +
+	"\x18AccountLimitsSetResponse\"\x1d\n" +
+	"\x1bExternalCompartmentsRequest\":\n" +
+	"\x1cExternalCompartmentsResponse\x12\x1a\n" +
+	"\bspaceIds\x18\x01 \x03(\tR\bspaceIds\"n\n" +
 	"\x12AclEventLogRequest\x12(\n" +
 	"\x0faccountIdentity\x18\x01 \x01(\tR\x0faccountIdentity\x12\x18\n" +
 	"\aafterId\x18\x02 \x01(\tR\aafterId\x12\x14\n" +
@@ -4018,7 +4112,7 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x0fNotifyEventType\x12\x14\n" +
 	"\x10UnspecifiedEvent\x10\x00\x12\x18\n" +
 	"\x14InboxNewMessageEvent\x10\x01\x12\x1d\n" +
-	"\x19NetworkConfigChangedEvent\x10\x022\xb6\x0f\n" +
+	"\x19NetworkConfigChangedEvent\x10\x022\xa3\x10\n" +
 	"\vCoordinator\x12J\n" +
 	"\tSpaceSign\x12\x1d.coordinator.SpaceSignRequest\x1a\x1e.coordinator.SpaceSignResponse\x12_\n" +
 	"\x10SpaceStatusCheck\x12$.coordinator.SpaceStatusCheckRequest\x1a%.coordinator.SpaceStatusCheckResponse\x12k\n" +
@@ -4033,7 +4127,8 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\x15AccountRevertDeletion\x12).coordinator.AccountRevertDeletionRequest\x1a*.coordinator.AccountRevertDeletionResponse\x12S\n" +
 	"\fAclAddRecord\x12 .coordinator.AclAddRecordRequest\x1a!.coordinator.AclAddRecordResponse\x12V\n" +
 	"\rAclGetRecords\x12!.coordinator.AclGetRecordsRequest\x1a\".coordinator.AclGetRecordsResponse\x12_\n" +
-	"\x10AccountLimitsSet\x12$.coordinator.AccountLimitsSetRequest\x1a%.coordinator.AccountLimitsSetResponse\x12P\n" +
+	"\x10AccountLimitsSet\x12$.coordinator.AccountLimitsSetRequest\x1a%.coordinator.AccountLimitsSetResponse\x12k\n" +
+	"\x14ExternalCompartments\x12(.coordinator.ExternalCompartmentsRequest\x1a).coordinator.ExternalCompartmentsResponse\x12P\n" +
 	"\vAclEventLog\x12\x1f.coordinator.AclEventLogRequest\x1a .coordinator.AclEventLogResponse\x12M\n" +
 	"\n" +
 	"InboxFetch\x12\x1e.coordinator.InboxFetchRequest\x1a\x1f.coordinator.InboxFetchResponse\x12\\\n" +
@@ -4056,7 +4151,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_rawDescGZIP() []
 }
 
 var file_coordinator_coordinatorproto_protos_coordinator_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
-var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
+var file_coordinator_coordinatorproto_protos_coordinator_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(ErrorCodes)(0),                             // 0: coordinator.ErrorCodes
 	(SpaceStatus)(0),                            // 1: coordinator.SpaceStatus
@@ -4107,25 +4202,27 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_goTypes = []any{
 	(*AclGetRecordsResponse)(nil),               // 46: coordinator.AclGetRecordsResponse
 	(*AccountLimitsSetRequest)(nil),             // 47: coordinator.AccountLimitsSetRequest
 	(*AccountLimitsSetResponse)(nil),            // 48: coordinator.AccountLimitsSetResponse
-	(*AclEventLogRequest)(nil),                  // 49: coordinator.AclEventLogRequest
-	(*AclEventLogResponse)(nil),                 // 50: coordinator.AclEventLogResponse
-	(*AclEventLogRecord)(nil),                   // 51: coordinator.AclEventLogRecord
-	(*InboxMessage)(nil),                        // 52: coordinator.InboxMessage
-	(*InboxPacket)(nil),                         // 53: coordinator.InboxPacket
-	(*InboxPayload)(nil),                        // 54: coordinator.InboxPayload
-	(*InboxFetchRequest)(nil),                   // 55: coordinator.InboxFetchRequest
-	(*InboxFetchResponse)(nil),                  // 56: coordinator.InboxFetchResponse
-	(*InboxAddMessageRequest)(nil),              // 57: coordinator.InboxAddMessageRequest
-	(*InboxAddMessageResponse)(nil),             // 58: coordinator.InboxAddMessageResponse
-	(*NotifySubscribeRequest)(nil),              // 59: coordinator.NotifySubscribeRequest
-	(*NotifySubscribeEvent)(nil),                // 60: coordinator.NotifySubscribeEvent
-	(*AclUploadInviteRequest)(nil),              // 61: coordinator.AclUploadInviteRequest
-	(*AclUploadInviteResponse)(nil),             // 62: coordinator.AclUploadInviteResponse
-	(*FileLimitsGetRequest)(nil),                // 63: coordinator.FileLimitsGetRequest
-	(*FileLimitsGetResponse)(nil),               // 64: coordinator.FileLimitsGetResponse
-	(*FileUsageReportRequest)(nil),              // 65: coordinator.FileUsageReportRequest
-	(*FileUsageRow)(nil),                        // 66: coordinator.FileUsageRow
-	(*FileUsageReportResponse)(nil),             // 67: coordinator.FileUsageReportResponse
+	(*ExternalCompartmentsRequest)(nil),         // 49: coordinator.ExternalCompartmentsRequest
+	(*ExternalCompartmentsResponse)(nil),        // 50: coordinator.ExternalCompartmentsResponse
+	(*AclEventLogRequest)(nil),                  // 51: coordinator.AclEventLogRequest
+	(*AclEventLogResponse)(nil),                 // 52: coordinator.AclEventLogResponse
+	(*AclEventLogRecord)(nil),                   // 53: coordinator.AclEventLogRecord
+	(*InboxMessage)(nil),                        // 54: coordinator.InboxMessage
+	(*InboxPacket)(nil),                         // 55: coordinator.InboxPacket
+	(*InboxPayload)(nil),                        // 56: coordinator.InboxPayload
+	(*InboxFetchRequest)(nil),                   // 57: coordinator.InboxFetchRequest
+	(*InboxFetchResponse)(nil),                  // 58: coordinator.InboxFetchResponse
+	(*InboxAddMessageRequest)(nil),              // 59: coordinator.InboxAddMessageRequest
+	(*InboxAddMessageResponse)(nil),             // 60: coordinator.InboxAddMessageResponse
+	(*NotifySubscribeRequest)(nil),              // 61: coordinator.NotifySubscribeRequest
+	(*NotifySubscribeEvent)(nil),                // 62: coordinator.NotifySubscribeEvent
+	(*AclUploadInviteRequest)(nil),              // 63: coordinator.AclUploadInviteRequest
+	(*AclUploadInviteResponse)(nil),             // 64: coordinator.AclUploadInviteResponse
+	(*FileLimitsGetRequest)(nil),                // 65: coordinator.FileLimitsGetRequest
+	(*FileLimitsGetResponse)(nil),               // 66: coordinator.FileLimitsGetResponse
+	(*FileUsageReportRequest)(nil),              // 67: coordinator.FileUsageReportRequest
+	(*FileUsageRow)(nil),                        // 68: coordinator.FileUsageRow
+	(*FileUsageReportResponse)(nil),             // 69: coordinator.FileUsageReportResponse
 }
 var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32{
 	1,  // 0: coordinator.SpaceStatusPayload.status:type_name -> coordinator.SpaceStatus
@@ -4141,18 +4238,18 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32
 	3,  // 10: coordinator.Node.types:type_name -> coordinator.NodeType
 	35, // 11: coordinator.DeletionLogResponse.records:type_name -> coordinator.DeletionLogRecord
 	5,  // 12: coordinator.DeletionLogRecord.status:type_name -> coordinator.DeletionLogRecordStatus
-	51, // 13: coordinator.AclEventLogResponse.records:type_name -> coordinator.AclEventLogRecord
+	53, // 13: coordinator.AclEventLogResponse.records:type_name -> coordinator.AclEventLogRecord
 	6,  // 14: coordinator.AclEventLogRecord.type:type_name -> coordinator.AclEventLogRecordType
 	7,  // 15: coordinator.InboxMessage.packetType:type_name -> coordinator.InboxPacketType
-	53, // 16: coordinator.InboxMessage.packet:type_name -> coordinator.InboxPacket
+	55, // 16: coordinator.InboxMessage.packet:type_name -> coordinator.InboxPacket
 	8,  // 17: coordinator.InboxPacket.keyType:type_name -> coordinator.InboxKeyType
-	54, // 18: coordinator.InboxPacket.payload:type_name -> coordinator.InboxPayload
+	56, // 18: coordinator.InboxPacket.payload:type_name -> coordinator.InboxPayload
 	9,  // 19: coordinator.InboxPayload.payloadType:type_name -> coordinator.InboxPayloadType
-	52, // 20: coordinator.InboxFetchResponse.messages:type_name -> coordinator.InboxMessage
-	52, // 21: coordinator.InboxAddMessageRequest.message:type_name -> coordinator.InboxMessage
+	54, // 20: coordinator.InboxFetchResponse.messages:type_name -> coordinator.InboxMessage
+	54, // 21: coordinator.InboxAddMessageRequest.message:type_name -> coordinator.InboxMessage
 	10, // 22: coordinator.NotifySubscribeRequest.eventType:type_name -> coordinator.NotifyEventType
 	10, // 23: coordinator.NotifySubscribeEvent.eventType:type_name -> coordinator.NotifyEventType
-	66, // 24: coordinator.FileUsageReportRequest.rows:type_name -> coordinator.FileUsageRow
+	68, // 24: coordinator.FileUsageReportRequest.rows:type_name -> coordinator.FileUsageRow
 	11, // 25: coordinator.Coordinator.SpaceSign:input_type -> coordinator.SpaceSignRequest
 	17, // 26: coordinator.Coordinator.SpaceStatusCheck:input_type -> coordinator.SpaceStatusCheckRequest
 	19, // 27: coordinator.Coordinator.SpaceStatusCheckMany:input_type -> coordinator.SpaceStatusCheckManyRequest
@@ -4167,36 +4264,38 @@ var file_coordinator_coordinatorproto_protos_coordinator_proto_depIdxs = []int32
 	43, // 36: coordinator.Coordinator.AclAddRecord:input_type -> coordinator.AclAddRecordRequest
 	45, // 37: coordinator.Coordinator.AclGetRecords:input_type -> coordinator.AclGetRecordsRequest
 	47, // 38: coordinator.Coordinator.AccountLimitsSet:input_type -> coordinator.AccountLimitsSetRequest
-	49, // 39: coordinator.Coordinator.AclEventLog:input_type -> coordinator.AclEventLogRequest
-	55, // 40: coordinator.Coordinator.InboxFetch:input_type -> coordinator.InboxFetchRequest
-	57, // 41: coordinator.Coordinator.InboxAddMessage:input_type -> coordinator.InboxAddMessageRequest
-	59, // 42: coordinator.Coordinator.NotifySubscribe:input_type -> coordinator.NotifySubscribeRequest
-	61, // 43: coordinator.Coordinator.AclUploadInvite:input_type -> coordinator.AclUploadInviteRequest
-	63, // 44: coordinator.Coordinator.FileLimitsGet:input_type -> coordinator.FileLimitsGetRequest
-	65, // 45: coordinator.Coordinator.FileUsageReport:input_type -> coordinator.FileUsageReportRequest
-	14, // 46: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
-	18, // 47: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
-	20, // 48: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
-	23, // 49: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
-	25, // 50: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
-	27, // 51: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
-	29, // 52: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
-	34, // 53: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
-	37, // 54: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
-	40, // 55: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
-	42, // 56: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
-	44, // 57: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
-	46, // 58: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
-	48, // 59: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
-	50, // 60: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
-	56, // 61: coordinator.Coordinator.InboxFetch:output_type -> coordinator.InboxFetchResponse
-	58, // 62: coordinator.Coordinator.InboxAddMessage:output_type -> coordinator.InboxAddMessageResponse
-	60, // 63: coordinator.Coordinator.NotifySubscribe:output_type -> coordinator.NotifySubscribeEvent
-	62, // 64: coordinator.Coordinator.AclUploadInvite:output_type -> coordinator.AclUploadInviteResponse
-	64, // 65: coordinator.Coordinator.FileLimitsGet:output_type -> coordinator.FileLimitsGetResponse
-	67, // 66: coordinator.Coordinator.FileUsageReport:output_type -> coordinator.FileUsageReportResponse
-	46, // [46:67] is the sub-list for method output_type
-	25, // [25:46] is the sub-list for method input_type
+	49, // 39: coordinator.Coordinator.ExternalCompartments:input_type -> coordinator.ExternalCompartmentsRequest
+	51, // 40: coordinator.Coordinator.AclEventLog:input_type -> coordinator.AclEventLogRequest
+	57, // 41: coordinator.Coordinator.InboxFetch:input_type -> coordinator.InboxFetchRequest
+	59, // 42: coordinator.Coordinator.InboxAddMessage:input_type -> coordinator.InboxAddMessageRequest
+	61, // 43: coordinator.Coordinator.NotifySubscribe:input_type -> coordinator.NotifySubscribeRequest
+	63, // 44: coordinator.Coordinator.AclUploadInvite:input_type -> coordinator.AclUploadInviteRequest
+	65, // 45: coordinator.Coordinator.FileLimitsGet:input_type -> coordinator.FileLimitsGetRequest
+	67, // 46: coordinator.Coordinator.FileUsageReport:input_type -> coordinator.FileUsageReportRequest
+	14, // 47: coordinator.Coordinator.SpaceSign:output_type -> coordinator.SpaceSignResponse
+	18, // 48: coordinator.Coordinator.SpaceStatusCheck:output_type -> coordinator.SpaceStatusCheckResponse
+	20, // 49: coordinator.Coordinator.SpaceStatusCheckMany:output_type -> coordinator.SpaceStatusCheckManyResponse
+	23, // 50: coordinator.Coordinator.SpaceStatusChange:output_type -> coordinator.SpaceStatusChangeResponse
+	25, // 51: coordinator.Coordinator.SpaceMakeShareable:output_type -> coordinator.SpaceMakeShareableResponse
+	27, // 52: coordinator.Coordinator.SpaceMakeUnshareable:output_type -> coordinator.SpaceMakeUnshareableResponse
+	29, // 53: coordinator.Coordinator.NetworkConfiguration:output_type -> coordinator.NetworkConfigurationResponse
+	34, // 54: coordinator.Coordinator.DeletionLog:output_type -> coordinator.DeletionLogResponse
+	37, // 55: coordinator.Coordinator.SpaceDelete:output_type -> coordinator.SpaceDeleteResponse
+	40, // 56: coordinator.Coordinator.AccountDelete:output_type -> coordinator.AccountDeleteResponse
+	42, // 57: coordinator.Coordinator.AccountRevertDeletion:output_type -> coordinator.AccountRevertDeletionResponse
+	44, // 58: coordinator.Coordinator.AclAddRecord:output_type -> coordinator.AclAddRecordResponse
+	46, // 59: coordinator.Coordinator.AclGetRecords:output_type -> coordinator.AclGetRecordsResponse
+	48, // 60: coordinator.Coordinator.AccountLimitsSet:output_type -> coordinator.AccountLimitsSetResponse
+	50, // 61: coordinator.Coordinator.ExternalCompartments:output_type -> coordinator.ExternalCompartmentsResponse
+	52, // 62: coordinator.Coordinator.AclEventLog:output_type -> coordinator.AclEventLogResponse
+	58, // 63: coordinator.Coordinator.InboxFetch:output_type -> coordinator.InboxFetchResponse
+	60, // 64: coordinator.Coordinator.InboxAddMessage:output_type -> coordinator.InboxAddMessageResponse
+	62, // 65: coordinator.Coordinator.NotifySubscribe:output_type -> coordinator.NotifySubscribeEvent
+	64, // 66: coordinator.Coordinator.AclUploadInvite:output_type -> coordinator.AclUploadInviteResponse
+	66, // 67: coordinator.Coordinator.FileLimitsGet:output_type -> coordinator.FileLimitsGetResponse
+	69, // 68: coordinator.Coordinator.FileUsageReport:output_type -> coordinator.FileUsageReportResponse
+	47, // [47:69] is the sub-list for method output_type
+	25, // [25:47] is the sub-list for method input_type
 	25, // [25:25] is the sub-list for extension type_name
 	25, // [25:25] is the sub-list for extension extendee
 	0,  // [0:25] is the sub-list for field type_name
@@ -4213,7 +4312,7 @@ func file_coordinator_coordinatorproto_protos_coordinator_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc), len(file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc)),
 			NumEnums:      11,
-			NumMessages:   57,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

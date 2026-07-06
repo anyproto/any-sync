@@ -32,6 +32,7 @@ func New() CoordinatorClient {
 }
 
 type CoordinatorClient interface {
+	ExternalCompartments(ctx context.Context) (spaceIds []string, err error)
 	SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error)
 	AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error)
 	AccountRevertDeletion(ctx context.Context) (err error)
@@ -203,6 +204,20 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayl
 			return rpcerr.Unwrap(err)
 		}
 		receipt = resp.Receipt
+		return nil
+	})
+	return
+}
+
+// ExternalCompartments lists the child (nested) spaces the calling identity holds an
+// external seat in (identities that are not members of the parent space).
+func (c *coordinatorClient) ExternalCompartments(ctx context.Context) (spaceIds []string, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.ExternalCompartments(ctx, &coordinatorproto.ExternalCompartmentsRequest{})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		spaceIds = resp.SpaceIds
 		return nil
 	})
 	return
