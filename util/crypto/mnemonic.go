@@ -8,8 +8,6 @@ import (
 
 	"github.com/anyproto/go-bip39"
 	"github.com/anyproto/go-slip10"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/hdkeychain"
 
 	"github.com/anyproto/any-sync/util/ethereum/accounts"
 )
@@ -216,24 +214,18 @@ func genKey(node slip10.Node) (key PrivKey, err error) {
 	return
 }
 
-func derivePrivateKey(masterKey *hdkeychain.ExtendedKey, path accounts.DerivationPath) (*ecdsa.PrivateKey, error) {
+func derivePrivateKey(masterKey *hdKey, path accounts.DerivationPath) (*ecdsa.PrivateKey, error) {
 	var err error
 	key := masterKey
 	for _, n := range path {
-		key, err = key.DeriveNonStandard(n)
+		key, err = key.deriveNonStandard(n)
 
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	privateKey, err := key.ECPrivKey()
-	privateKeyECDSA := privateKey.ToECDSA()
-	if err != nil {
-		return nil, err
-	}
-
-	return privateKeyECDSA, nil
+	return key.ecdsaPrivateKey(), nil
 }
 
 func (m Mnemonic) ethereumKeyFromMnemonic(index uint32, path string) (pk *ecdsa.PrivateKey, err error) {
@@ -242,7 +234,7 @@ func (m Mnemonic) ethereumKeyFromMnemonic(index uint32, path string) (pk *ecdsa.
 		return
 	}
 
-	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	masterKey, err := newMasterHDKey(seed)
 	if err != nil {
 		return nil, err
 	}
