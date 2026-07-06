@@ -39,7 +39,7 @@ var (
 	// ProtoVersion 10 - reserved (not used, version alignment gap)
 	// ProtoVersion 11 - reserved (not used, version alignment gap)
 	// ProtoVersion 12 aligns with v0.12.X
-	// ProtoVersion 13 - files v2 (v2 filenodes, chash routing, space header fileprotoVersion), aligns with v0.13.X
+	// ProtoVersion 13 - files v2 (v2 filenodes, chash routing, space header fileprotoVersion), space exchange v2 (token-based LAN discovery), aligns with v0.13.X
 	ProtoVersion = uint32(13)
 )
 

@@ -34,6 +34,7 @@ type DRPCClientSpaceClient interface {
 	DRPCConn() drpc.Conn
 
 	SpaceExchange(ctx context.Context, in *SpaceExchangeRequest) (*SpaceExchangeResponse, error)
+	SpaceExchangeV2(ctx context.Context, in *SpaceExchangeV2Request) (*SpaceExchangeV2Response, error)
 }
 
 type drpcClientSpaceClient struct {
@@ -55,8 +56,18 @@ func (c *drpcClientSpaceClient) SpaceExchange(ctx context.Context, in *SpaceExch
 	return out, nil
 }
 
+func (c *drpcClientSpaceClient) SpaceExchangeV2(ctx context.Context, in *SpaceExchangeV2Request) (*SpaceExchangeV2Response, error) {
+	out := new(SpaceExchangeV2Response)
+	err := c.cc.Invoke(ctx, "/clientspace.ClientSpace/SpaceExchangeV2", drpcEncoding_File_commonspace_clientspaceproto_protos_clientspace_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCClientSpaceServer interface {
 	SpaceExchange(context.Context, *SpaceExchangeRequest) (*SpaceExchangeResponse, error)
+	SpaceExchangeV2(context.Context, *SpaceExchangeV2Request) (*SpaceExchangeV2Response, error)
 }
 
 type DRPCClientSpaceUnimplementedServer struct{}
@@ -65,9 +76,13 @@ func (s *DRPCClientSpaceUnimplementedServer) SpaceExchange(context.Context, *Spa
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCClientSpaceUnimplementedServer) SpaceExchangeV2(context.Context, *SpaceExchangeV2Request) (*SpaceExchangeV2Response, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCClientSpaceDescription struct{}
 
-func (DRPCClientSpaceDescription) NumMethods() int { return 1 }
+func (DRPCClientSpaceDescription) NumMethods() int { return 2 }
 
 func (DRPCClientSpaceDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -80,6 +95,15 @@ func (DRPCClientSpaceDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceExchangeRequest),
 					)
 			}, DRPCClientSpaceServer.SpaceExchange, true
+	case 1:
+		return "/clientspace.ClientSpace/SpaceExchangeV2", drpcEncoding_File_commonspace_clientspaceproto_protos_clientspace_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientSpaceServer).
+					SpaceExchangeV2(
+						ctx,
+						in1.(*SpaceExchangeV2Request),
+					)
+			}, DRPCClientSpaceServer.SpaceExchangeV2, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -99,6 +123,22 @@ type drpcClientSpace_SpaceExchangeStream struct {
 }
 
 func (x *drpcClientSpace_SpaceExchangeStream) SendAndClose(m *SpaceExchangeResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonspace_clientspaceproto_protos_clientspace_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientSpace_SpaceExchangeV2Stream interface {
+	drpc.Stream
+	SendAndClose(*SpaceExchangeV2Response) error
+}
+
+type drpcClientSpace_SpaceExchangeV2Stream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientSpace_SpaceExchangeV2Stream) SendAndClose(m *SpaceExchangeV2Response) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonspace_clientspaceproto_protos_clientspace_proto{}); err != nil {
 		return err
 	}
