@@ -320,3 +320,38 @@ func TestNestedSpaces_StateCopyKeepsNestedFields(t *testing.T) {
 	require.NoError(t, err)
 	require.ErrorIs(t, cp.ApplyRecord(rec), ErrInvalidLegalOwnerProof)
 }
+
+func TestNestedSpaces_ChildRegisterDisallowedByOptions(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	for _, cmd := range []string{
+		"a.init::a",
+		"a.space_options::restrict_delete", // any options change keeps children allowed (zero value)
+	} {
+		require.NoError(t, a.Execute(cmd))
+	}
+	ownerAcl := a.ActualAccounts()["a"].Acl
+
+	// forbid children via options
+	optsChange, err := ownerAcl.RecordBuilder().BuildSpaceOptionsChange(&aclrecordproto.AclSpaceOptions{
+		ChildrenCreationDisallowed: true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, ownerAcl.AddRawRecord(listtest.WrapAclRecord(optsChange)))
+
+	_, err = ownerAcl.RecordBuilder().BuildChildRegister(ChildRegisterPayload{
+		ChildSpaceId:   "child.1",
+		ChildAclRootId: "childroot1",
+	})
+	require.ErrorIs(t, err, ErrChildrenCreationDisallowed)
+
+	// re-allow and register
+	optsChange, err = ownerAcl.RecordBuilder().BuildSpaceOptionsChange(&aclrecordproto.AclSpaceOptions{})
+	require.NoError(t, err)
+	require.NoError(t, ownerAcl.AddRawRecord(listtest.WrapAclRecord(optsChange)))
+	reg, err := ownerAcl.RecordBuilder().BuildChildRegister(ChildRegisterPayload{
+		ChildSpaceId:   "child.1",
+		ChildAclRootId: "childroot1",
+	})
+	require.NoError(t, err)
+	require.NoError(t, ownerAcl.AddRawRecord(listtest.WrapAclRecord(reg)))
+}

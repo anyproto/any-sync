@@ -596,6 +596,9 @@ func (c *contentValidator) ValidateChildRegister(ch *aclrecordproto.AclChildRegi
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
+	if opts := c.aclState.CurrentOptions(); opts != nil && opts.ChildrenCreationDisallowed {
+		return ErrChildrenCreationDisallowed
+	}
 	if ch.ChildSpaceId == "" || ch.ChildAclRootId == "" {
 		return ErrNoSuchChildRegistration
 	}

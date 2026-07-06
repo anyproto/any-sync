@@ -278,8 +278,11 @@ type AclSpaceOptions struct {
 	// editorsCanCompleteKeylessRotation lets Writers author the standalone read-key rotation
 	// that completes a pending keyless removal (nested spaces); off = admins/owner only
 	EditorsCanCompleteKeylessRotation bool `protobuf:"varint,2,opt,name=editorsCanCompleteKeylessRotation,proto3" json:"editorsCanCompleteKeylessRotation,omitempty"`
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// childrenCreationDisallowed forbids registering child spaces under this space (nested spaces);
+	// zero value = children allowed, Admin+ may register
+	ChildrenCreationDisallowed bool `protobuf:"varint,3,opt,name=childrenCreationDisallowed,proto3" json:"childrenCreationDisallowed,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *AclSpaceOptions) Reset() {
@@ -322,6 +325,13 @@ func (x *AclSpaceOptions) GetDeleteRestricted() bool {
 func (x *AclSpaceOptions) GetEditorsCanCompleteKeylessRotation() bool {
 	if x != nil {
 		return x.EditorsCanCompleteKeylessRotation
+	}
+	return false
+}
+
+func (x *AclSpaceOptions) GetChildrenCreationDisallowed() bool {
+	if x != nil {
+		return x.ChildrenCreationDisallowed
 	}
 	return false
 }
@@ -2039,10 +2049,11 @@ const file_aclrecord_proto_rawDesc = "" +
 	"\rparentSpaceId\x18\f \x01(\tR\rparentSpaceId\x12\x1e\n" +
 	"\n" +
 	"legalOwner\x18\r \x01(\fR\n" +
-	"legalOwner\"\x8b\x01\n" +
+	"legalOwner\"\xcb\x01\n" +
 	"\x0fAclSpaceOptions\x12*\n" +
 	"\x10deleteRestricted\x18\x01 \x01(\bR\x10deleteRestricted\x12L\n" +
-	"!editorsCanCompleteKeylessRotation\x18\x02 \x01(\bR!editorsCanCompleteKeylessRotation\"M\n" +
+	"!editorsCanCompleteKeylessRotation\x18\x02 \x01(\bR!editorsCanCompleteKeylessRotation\x12>\n" +
+	"\x1achildrenCreationDisallowed\x18\x03 \x01(\bR\x1achildrenCreationDisallowed\"M\n" +
 	"\x15AclSpaceOptionsChange\x124\n" +
 	"\aoptions\x18\x01 \x01(\v2\x1a.aclrecord.AclSpaceOptionsR\aoptions\"A\n" +
 	"\x0fAclOneToOneInfo\x12\x14\n" +

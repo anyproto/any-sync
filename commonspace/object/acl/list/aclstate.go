@@ -44,6 +44,7 @@ var (
 	ErrNoSuchChildRegistration   = errors.New("no such child registration")
 	ErrNotChildSpace             = errors.New("space has no legal owner")
 	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
+	ErrChildrenCreationDisallowed = errors.New("children creation is disallowed in this space")
 )
 
 const MaxMetadataLen = 1024

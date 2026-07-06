@@ -29,6 +29,9 @@ message AclSpaceOptions {
     // editorsCanCompleteKeylessRotation lets Writers author the standalone read-key rotation
     // that completes a pending keyless removal (nested spaces); off = admins/owner only
     bool editorsCanCompleteKeylessRotation = 2;
+    // childrenCreationDisallowed forbids registering child spaces under this space (nested spaces);
+    // zero value = children allowed, Admin+ may register
+    bool childrenCreationDisallowed = 3;
 }
 
 // AclSpaceOptionsChange changes space options (owner-only)
