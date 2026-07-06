@@ -53,6 +53,7 @@ proto:
 
 	$(call generate_drpc,,net/secureservice/handshake/handshakeproto/protos)
 	$(call generate_drpc,,net/rpc/limiter/limiterproto/protos)
+	$(call generate_drpc,,commonspace/pubsub/pubsubproto/protos)
 	$(call generate_drpc,$(PKGMAP),coordinator/coordinatorproto/protos)
 	$(call generate_drpc,,consensus/consensusproto/protos)
 	$(call generate_drpc,,identityrepo/identityrepoproto/protos)

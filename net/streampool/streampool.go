@@ -33,6 +33,48 @@ func New() StreamPool {
 	}
 }
 
+// Option configures a standalone pool created with NewStreamPool.
+type Option func(*streamPool)
+
+// WithStreamCloseHook registers a callback invoked after a stream is removed from
+// the pool, outside the pool lock, with the closed stream's id, peerId and the
+// tags it carried. The streamId lets a handler clean up per-stream state keyed on
+// CtxStreamId even when several streams share a peerId.
+func WithStreamCloseHook(hook func(streamId uint32, peerId string, tags []string)) Option {
+	return func(s *streamPool) {
+		s.closeHook = hook
+	}
+}
+
+// WithMetric registers the standalone pool's prometheus metrics under the given
+// prefix, so a service that owns a private pool (e.g. pubsub) is observable even
+// though it never runs the app-component Init.
+func WithMetric(m metric.Metric, prefix string) Option {
+	return func(s *streamPool) {
+		if m == nil {
+			return
+		}
+		s.metric = m
+		m.RegisterStreamPoolSyncMetric(s)
+		registerMetrics(m.Registry(), s, prefix)
+	}
+}
+
+// NewStreamPool creates a standalone pool with explicit dependencies, for services
+// that own a private pool (e.g. pubsub) instead of sharing the app-level component.
+// The caller must not register it in the app and is responsible for calling
+// Run(ctx) and Close(ctx); Init must not be called.
+func NewStreamPool(handler streamhandler.StreamHandler, cfg StreamConfig, opts ...Option) StreamPool {
+	s := New().(*streamPool)
+	s.handler = handler
+	s.streamConfig = cfg
+	s.statService = debugstat.NewNoOp()
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
 type configGetter interface {
 	GetStreamConfig() StreamConfig
 }
@@ -64,6 +106,9 @@ type StreamPool interface {
 	AddTagsCtx(ctx context.Context, tags ...string) error
 	// RemoveTagsCtx removes tags from stream, stream will be extracted from ctx
 	RemoveTagsCtx(ctx context.Context, tags ...string) error
+	// RemoveTagsById removes tags from a specific stream by id, for callers that
+	// track streamId out of band. Missing streams and tags are ignored.
+	RemoveTagsById(streamId uint32, tags ...string) error
 	// Streams gets all streams for specific tags
 	Streams(tags ...string) (streams []drpc.Stream)
 }
@@ -78,6 +123,7 @@ type streamPool struct {
 	opening         map[string]*openingProcess
 	streamConfig    StreamConfig
 	dial            *ExecPool
+	closeHook       func(streamId uint32, peerId string, tags []string)
 	mu              sync.Mutex
 	writeQueueSize  int
 	lastStreamId    uint32
@@ -360,8 +406,19 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error) {
 	s.mu.Lock()
 	var streams []*stream
+	var seen map[uint32]struct{}
+	if len(tags) > 1 {
+		seen = make(map[uint32]struct{})
+	}
 	for _, tag := range tags {
 		for _, streamId := range s.streamIdsByTag[tag] {
+			if seen != nil {
+				if _, ok := seen[streamId]; ok {
+					// a stream subscribed to several matching tags gets one copy
+					continue
+				}
+				seen[streamId] = struct{}{}
+			}
 			streams = append(streams, s.streams[streamId])
 		}
 	}
@@ -428,12 +485,36 @@ func (s *streamPool) RemoveTagsCtx(ctx context.Context, tags ...string) error {
 	return nil
 }
 
-func (s *streamPool) removeStream(streamId uint32) {
+func (s *streamPool) RemoveTagsById(streamId uint32, tags ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	st, ok := s.streams[streamId]
+	if !ok {
+		return nil
+	}
+	var filtered = st.tags[:0]
+	var toRemove = make([]string, 0, len(tags))
+	for _, t := range st.tags {
+		if slices.Contains(tags, t) {
+			toRemove = append(toRemove, t)
+		} else {
+			filtered = append(filtered, t)
+		}
+	}
+	st.tags = filtered
+	for _, t := range toRemove {
+		removeStream(s.streamIdsByTag, t, streamId)
+	}
+	return nil
+}
+
+func (s *streamPool) removeStream(streamId uint32) {
+	s.mu.Lock()
 	st := s.streams[streamId]
 	if st == nil {
+		s.mu.Unlock()
 		log.Fatal("removeStream: stream does not exist", zap.Uint32("streamId", streamId))
+		return
 	}
 
 	removeStream(s.streamIdsByPeer, st.peerId, streamId)
@@ -442,7 +523,15 @@ func (s *streamPool) removeStream(streamId uint32) {
 	}
 
 	delete(s.streams, streamId)
-	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
+	var closedTags []string
+	if s.closeHook != nil {
+		closedTags = slices.Clone(st.tags)
+	}
+	s.mu.Unlock()
+	st.l.Debug("stream removed", zap.Strings("tags", closedTags))
+	if s.closeHook != nil {
+		s.closeHook(streamId, st.peerId, closedTags)
+	}
 }
 
 func (s *streamPool) Close(ctx context.Context) (err error) {
