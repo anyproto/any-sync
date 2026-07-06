@@ -177,6 +177,40 @@ func TestEvictMemberStopsDelivery(t *testing.T) {
 	expectSilence(t, n.clientA, 400*time.Millisecond)
 }
 
+// TestRevalidateMembersEvictsNonMembers verifies the node-side ACL-change hook:
+// RevalidateMembers evicts subscribers whose account no longer passes the member
+// predicate while keeping current members subscribed.
+func TestRevalidateMembersEvictsNonMembers(t *testing.T) {
+	n := newNetFx(t)
+	defer n.finish()
+
+	_, err := n.clientA.svc.Subscribe(testSpace, "chat/>", n.clientA.handler())
+	require.NoError(t, err)
+	_, err = n.clientC.svc.Subscribe(testSpace, "chat/>", n.clientC.handler())
+	require.NoError(t, err)
+	waitMatchCount(t, n.nodeB, testSpace, "chat/x", 1)
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		n.nodeB.svc.remoteMu.Lock()
+		nstreams := len(n.nodeB.svc.streams)
+		n.nodeB.svc.remoteMu.Unlock()
+		if nstreams == 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// only clientC remains a member; clientA is evicted in one pass
+	keep := n.clientC.identity().Account()
+	n.nodeB.svc.RevalidateMembers(testSpace, func(account string) bool {
+		return account == keep
+	})
+
+	require.NoError(t, n.clientC.svc.Publish(testCtx, testSpace, "chat/x", []byte("survivors")))
+	require.Equal(t, "survivors", waitReceived(t, n.clientC).payload)
+	expectSilence(t, n.clientA, 400*time.Millisecond)
+}
+
 // TestCloseSpaceDropsInterest verifies CloseSpace tears down both local and
 // serving-side interest so a global service retains nothing for a closed space.
 func TestCloseSpaceDropsInterest(t *testing.T) {

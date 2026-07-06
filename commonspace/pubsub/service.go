@@ -51,6 +51,10 @@ type Service interface {
 	// enforcing DESIGN §6.4 (active drop on ACL removal). Nodes wire it to their
 	// ACL-update hook. No-op on clients (they hold no serving interest).
 	EvictMember(spaceId string, identity crypto.PubKey)
+	// RevalidateMembers evicts every subscriber of the space whose account no
+	// longer passes isMember. Nodes call it on an ACL change to cut off all
+	// removed members in one pass. No-op on clients.
+	RevalidateMembers(spaceId string, isMember func(account string) bool)
 	// HandleStream serves an inbound PubSubStream; blocks for the stream lifetime.
 	HandleStream(stream drpc.Stream) error
 }
@@ -374,14 +378,29 @@ func (s *service) CloseSpace(spaceId string) {
 
 func (s *service) EvictMember(spaceId string, identity crypto.PubKey) {
 	account := identity.Account()
+	s.evictSpaceStreams(spaceId, func(strm *streamInterest) bool {
+		return strm.account == account
+	})
+}
+
+// RevalidateMembers evicts every subscriber of the space whose account no longer
+// passes isMember. A node calls it on an ACL change to actively cut off removed
+// members (DESIGN §6.4) rather than waiting for their streams to close.
+func (s *service) RevalidateMembers(spaceId string, isMember func(account string) bool) {
+	s.evictSpaceStreams(spaceId, func(strm *streamInterest) bool {
+		return !isMember(strm.account)
+	})
+}
+
+// evictSpaceStreams drops the space interest of every stream matching evict,
+// stripping its routing tags so delivery stops even while the stream stays open.
+func (s *service) evictSpaceStreams(spaceId string, evict func(*streamInterest) bool) {
 	s.remoteMu.Lock()
+	defer s.remoteMu.Unlock()
 	si := s.remote[spaceId]
 	for streamId, strm := range s.streams {
-		if strm.account != account {
-			continue
-		}
 		spacePatterns := strm.bySpace[spaceId]
-		if len(spacePatterns) == 0 {
+		if len(spacePatterns) == 0 || !evict(strm) {
 			continue
 		}
 		tags := make([]string, 0, len(spacePatterns))
@@ -401,7 +420,6 @@ func (s *service) EvictMember(spaceId string, identity crypto.PubKey) {
 	if si != nil {
 		s.pruneSpace(spaceId, si)
 	}
-	s.remoteMu.Unlock()
 }
 
 func (s *service) sendInterest(spaceId string, patterns []string, subscribe bool) {
