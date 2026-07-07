@@ -683,7 +683,9 @@ func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalO
 
 // unmarshalOwnershipChangeProof decodes one embedded parent acl record (consensusproto.RawRecord bytes),
 // verifies the author signature over its payload and requires it to contain exactly one AclOwnershipChange.
-// Returns the record author, the new owner it names and the record cid (the replay-guard key).
+// Returns the record author, the new owner it names and the replay-guard key: the cid of the SIGNED
+// payload, not of the whole envelope — acceptor fields sit outside the signature, so an envelope-keyed
+// guard could be bypassed by re-serializing a consumed proof with a mutated acceptor field.
 func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
 	rawRec := &consensusproto.RawRecord{}
 	if err = rawRec.UnmarshalVT(raw); err != nil {
@@ -719,7 +721,7 @@ func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (auth
 		return
 	}
 	aclRootId = ownershipChange.AclRootId
-	proofId, err = cidutil.NewCidFromBytes(raw)
+	proofId, err = cidutil.NewCidFromBytes(rawRec.Payload)
 	return
 }
 

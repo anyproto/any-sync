@@ -309,6 +309,32 @@ func TestNestedSpaces_LegalOwnerUpdateRejections(t *testing.T) {
 		require.ErrorIs(t, childAcl.AddRawRecord(replay), ErrInvalidLegalOwnerProof)
 	})
 
+	t.Run("consumed proof with mutated unsigned envelope field cannot be replayed", func(t *testing.T) {
+		// acceptor fields live outside the author-signed payload: re-serializing a consumed
+		// proof with a different acceptor field keeps the signature valid but changes the raw
+		// bytes, so a guard keyed on the envelope cid would treat it as a fresh proof
+		_, childAcl := newChildAcl(t, "parent.id", aliceKeys.SignKey.GetPublic())
+		aliceToBob := makeOwnershipProof(t, aliceKeys, bobKeys.SignKey.GetPublic())
+		bobToAlice := makeOwnershipProof(t, bobKeys, aliceKeys.SignKey.GetPublic())
+
+		update := buildAclRecordSignedBy(t, childAcl.Head().Id, bobKeys, legalOwnerUpdateContent(aliceToBob))
+		require.NoError(t, childAcl.AddRawRecord(update))
+		update = buildAclRecordSignedBy(t, childAcl.Head().Id, aliceKeys, legalOwnerUpdateContent(bobToAlice))
+		require.NoError(t, childAcl.AddRawRecord(update))
+
+		var raw consensusproto.RawRecord
+		require.NoError(t, raw.UnmarshalVT(aliceToBob))
+		raw.AcceptorTimestamp++
+		raw.AcceptorIdentity = []byte("mutated")
+		mutated, err := raw.MarshalVT()
+		require.NoError(t, err)
+		require.NotEqual(t, aliceToBob, mutated)
+
+		replay := buildAclRecordSignedBy(t, childAcl.Head().Id, bobKeys, legalOwnerUpdateContent(mutated))
+		require.ErrorIs(t, childAcl.AddRawRecord(replay), ErrInvalidLegalOwnerProof)
+		require.True(t, childAcl.AclState().LegalOwner().Equals(aliceKeys.SignKey.GetPublic()), "legalOwner unchanged")
+	})
+
 	t.Run("duplicate proof within one update", func(t *testing.T) {
 		_, childAcl := newChildAcl(t, "parent.id", aliceKeys.SignKey.GetPublic())
 		proof := makeOwnershipProof(t, aliceKeys, aliceKeys.SignKey.GetPublic())
