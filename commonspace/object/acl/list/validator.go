@@ -607,8 +607,10 @@ func (c *contentValidator) ValidateChildRegister(ch *aclrecordproto.AclChildRegi
 	if ch.ChildSpaceId == "" || ch.ChildAclRootId == "" {
 		return ErrNoSuchChildRegistration
 	}
-	if AclPermissions(ch.OrgPermission).IsOwner() {
-		return ErrIsOwner
+	if !AclPermissions(ch.OrgPermission).NoPermissions() {
+		// reserved: nothing yet adds the org to the child acl or encrypts the read key to it,
+		// so a non-None value would record an access claim no code path can honor
+		return ErrOrgPermissionUnsupported
 	}
 	if reg, ok := c.aclState.childRegistrations[ch.ChildSpaceId]; ok && !reg.Revoked {
 		return ErrChildAlreadyRegistered

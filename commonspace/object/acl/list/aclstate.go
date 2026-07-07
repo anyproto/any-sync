@@ -45,6 +45,7 @@ var (
 	ErrNotChildSpace             = errors.New("space is not a child space")
 	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
 	ErrIncorrectAclRootId        = errors.New("ownership change is bound to a different acl root")
+	ErrOrgPermissionUnsupported  = errors.New("child registration org permission is reserved and must be None")
 	ErrChildrenCreationDisallowed = errors.New("children creation is disallowed in this space")
 )
 

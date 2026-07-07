@@ -148,13 +148,16 @@ func TestNestedSpaces_ChildRegister(t *testing.T) {
 	})
 	require.ErrorIs(t, err, ErrChildAlreadyRegistered)
 
-	// org cannot grant itself ownership of the child
-	_, err = ownerAcl.RecordBuilder().BuildChildRegister(ChildRegisterPayload{
-		ChildSpaceId:   "child.2",
-		ChildAclRootId: "childroot2",
-		OrgPermission:  AclPermissionsOwner,
-	})
-	require.ErrorIs(t, err, ErrIsOwner)
+	// orgPermission is reserved: any non-None value is rejected until the org
+	// access grant is actually implemented
+	for _, perm := range []AclPermissions{AclPermissionsOwner, AclPermissionsReader} {
+		_, err = ownerAcl.RecordBuilder().BuildChildRegister(ChildRegisterPayload{
+			ChildSpaceId:   "child.2",
+			ChildAclRootId: "childroot2",
+			OrgPermission:  perm,
+		})
+		require.ErrorIs(t, err, ErrOrgPermissionUnsupported)
+	}
 
 	// revoke, then re-register
 	revoke, err := ownerAcl.RecordBuilder().BuildChildRegisterRevoke("child.1")

@@ -85,7 +85,9 @@ type OwnershipChangePayload struct {
 type ChildRegisterPayload struct {
 	ChildSpaceId   string
 	ChildAclRootId string
-	// OrgPermission is the permission the parent grants ITSELF in the child (None = keyless governance only)
+	// OrgPermission is reserved for the permission the parent grants ITSELF in the child.
+	// Only None (keyless governance) is accepted: nothing yet adds the org to the child
+	// acl or encrypts the read key to it, so any other value would be a false access claim.
 	OrgPermission AclPermissions
 }
 
