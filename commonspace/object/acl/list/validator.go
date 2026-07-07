@@ -627,8 +627,18 @@ func (c *contentValidator) ValidateChildRegisterRevoke(ch *aclrecordproto.AclChi
 
 // ValidateLegalOwnerUpdate checks the signature-induction chain: the first embedded parent
 // ownership-change must be signed by the currently stored legal owner, each next one by the
-// owner the previous one named, and the author of this record must be the final owner.
-// Consumed proofs are rejected so a cycled ownership cannot be replayed by an ex-owner.
+// owner the previous one named, and the author of this record must be the final owner. Each
+// proof must be bound to the parent acl (aclRootId == the child's pinned parentAclRootId), and
+// already-consumed proof CIDs are rejected so a cycled ownership cannot be REPLAYED.
+//
+// This induction is self-contained (verifiable offline, e.g. by external-seat members who do
+// not replicate the parent acl) but proofs are only author-signature-checked here — they are
+// NOT verified to have been accepted into the parent acl. A stored legal owner could therefore
+// mint a FRESH (never-accepted) ownership change to a key of its choosing. The authoritative
+// guard against that is the coordinator gate (verifyKeylessGovernanceRecord), which requires an
+// AclLegalOwnerUpdate to be authored by the parent's CURRENT owner; this client-side check is
+// defense-in-depth. Fully closing the offline gap needs an acceptor-inclusion proof (not
+// available on the ValidateFull path, whose VerifyAcceptor is a no-op).
 func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error) {
 	if !c.verifier.ShouldValidate() {
 		return nil
