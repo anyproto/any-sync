@@ -44,6 +44,7 @@ var (
 	ErrNoSuchChildRegistration   = errors.New("no such child registration")
 	ErrNotChildSpace             = errors.New("space is not a child space")
 	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
+	ErrIncorrectAclRootId        = errors.New("ownership change is bound to a different acl root")
 	ErrChildrenCreationDisallowed = errors.New("children creation is disallowed in this space")
 )
 
@@ -581,6 +582,14 @@ func (st *AclState) applyChildRegister(ch *aclrecordproto.AclChildRegister, reco
 	if err != nil {
 		return err
 	}
+	if ch.ChildSpaceId == "" {
+		// on the non-validating (node) path an empty id would otherwise synthesize a phantom entry
+		return nil
+	}
+	if reg, ok := st.childRegistrations[ch.ChildSpaceId]; ok && !reg.Revoked {
+		// on the non-validating path a duplicate would otherwise silently overwrite the live entry
+		return nil
+	}
 	st.childRegistrations[ch.ChildSpaceId] = ChildRegistration{
 		RecordId:       record.Id,
 		ChildSpaceId:   ch.ChildSpaceId,
@@ -613,7 +622,9 @@ func (st *AclState) applyLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate
 		return err
 	}
 	for _, raw := range ch.OwnershipChanges {
-		_, newOwner, proofId, _, err := unmarshalOwnershipChangeProof(st.keyStore, raw)
+		// decode only: the validator already signature-checked the proofs when validation is
+		// on, and a non-validating node must not reject a coordinator-accepted record here
+		_, newOwner, proofId, _, err := decodeOwnershipChangeProof(st.keyStore, raw, false)
 		if err != nil {
 			return err
 		}

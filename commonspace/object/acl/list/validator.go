@@ -68,6 +68,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 	if !c.aclState.Permissions(authorIdentity).IsOwner() {
 		return ErrInsufficientPermissions
 	}
+	// AclRootId binds the transfer to the acl it was accepted into so it can later serve as a
+	// legalOwner proof in child spaces; a record claiming a foreign acl must not be accepted
+	if ch.AclRootId != "" && ch.AclRootId != c.aclState.id {
+		return ErrIncorrectAclRootId
+	}
 	identity, err := c.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
 	if err != nil {
 		return err
@@ -687,6 +692,13 @@ func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalO
 // payload, not of the whole envelope — acceptor fields sit outside the signature, so an envelope-keyed
 // guard could be bypassed by re-serializing a consumed proof with a mutated acceptor field.
 func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
+	return decodeOwnershipChangeProof(keyStore, raw, true)
+}
+
+// decodeOwnershipChangeProof is the shared decode: the validator passes verifySignature=true, the
+// state-apply path passes false so a non-validating (acceptor-trust) node never does or fails
+// signature-dependent work on a record its coordinator already accepted.
+func decodeOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte, verifySignature bool) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
 	rawRec := &consensusproto.RawRecord{}
 	if err = rawRec.UnmarshalVT(raw); err != nil {
 		return
@@ -699,13 +711,16 @@ func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (auth
 	if err != nil {
 		return
 	}
-	res, err := author.Verify(rawRec.Payload, rawRec.Signature)
-	if err != nil {
-		return
-	}
-	if !res {
-		err = ErrInvalidSignature
-		return
+	if verifySignature {
+		var res bool
+		res, err = author.Verify(rawRec.Payload, rawRec.Signature)
+		if err != nil {
+			return
+		}
+		if !res {
+			err = ErrInvalidSignature
+			return
+		}
 	}
 	aclData := &aclrecordproto.AclData{}
 	if err = aclData.UnmarshalVT(rec.Data); err != nil {

@@ -355,6 +355,37 @@ func TestNestedSpaces_LegalOwnerUpdateRejections(t *testing.T) {
 	})
 }
 
+func TestOwnershipChange_AclRootIdBinding(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	for _, cmd := range []string{
+		"a.init::a",
+		"a.invite::inv",
+		"b.join::inv",
+		"a.approve::b,adm",
+	} {
+		require.NoError(t, a.Execute(cmd))
+	}
+	ownerAcl := a.ActualAccounts()["a"].Acl
+	ownerKeys := a.ActualAccounts()["a"].Keys
+	newOwnerProto, err := a.ActualAccounts()["b"].Keys.SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	forge := func(aclRootId string) *consensusproto.RawRecordWithId {
+		content := &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_OwnershipChange{
+				OwnershipChange: &aclrecordproto.AclOwnershipChange{
+					NewOwnerIdentity:    newOwnerProto,
+					OldOwnerPermissions: aclrecordproto.AclUserPermissions_Admin,
+					AclRootId:           aclRootId,
+				},
+			},
+		}
+		return buildAclRecordSignedBy(t, ownerAcl.Head().Id, ownerKeys, content)
+	}
+	require.ErrorIs(t, ownerAcl.AddRawRecord(forge("some-other-acl-root")), ErrIncorrectAclRootId)
+	// empty binding stays accepted (records predating the field), own root id is the built path
+	require.NoError(t, ownerAcl.AddRawRecord(forge(ownerAcl.Id())))
+}
+
 func TestNestedSpaces_StateCopyKeepsNestedFields(t *testing.T) {
 	aliceKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
