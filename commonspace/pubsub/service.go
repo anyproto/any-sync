@@ -103,7 +103,6 @@ type spaceInterest struct {
 // so a stream close can withdraw exactly its own contribution regardless of what
 // tags the pool recorded.
 type streamInterest struct {
-	peerId  string
 	account string                         // subscriber account id, for member eviction
 	bySpace map[string]map[string]struct{} // spaceId -> patterns
 	total   int                            // total patterns across spaces on this stream
@@ -545,7 +544,7 @@ func (s *service) handleSubscribe(ctx context.Context, peerId string, sub *pubsu
 	}
 	strm := s.streams[streamId]
 	if strm == nil {
-		strm = &streamInterest{peerId: peerId, account: identity.Account(), bySpace: make(map[string]map[string]struct{})}
+		strm = &streamInterest{account: identity.Account(), bySpace: make(map[string]map[string]struct{})}
 		s.streams[streamId] = strm
 	}
 	spacePatterns := strm.bySpace[sub.SpaceId]
@@ -553,14 +552,14 @@ func (s *service) handleSubscribe(ctx context.Context, peerId string, sub *pubsu
 		spacePatterns = make(map[string]struct{})
 		strm.bySpace[sub.SpaceId] = spacePatterns
 	}
-	var accepted []string
-	var capExceeded bool
-	for _, pattern := range sub.Topics {
+	var accepted, rejected []string
+	for i, pattern := range sub.Topics {
 		if _, exists := spacePatterns[pattern]; exists {
 			continue
 		}
 		if len(spacePatterns) >= s.cfg.MaxPatternsPerSpace || strm.total >= s.cfg.MaxPatternsPerStream {
-			capExceeded = true
+			// cap hit: this pattern and every remaining one are rejected
+			rejected = sub.Topics[i:]
 			break
 		}
 		spacePatterns[pattern] = struct{}{}
@@ -585,8 +584,8 @@ func (s *service) handleSubscribe(ctx context.Context, peerId string, sub *pubsu
 	}
 	s.remoteMu.Unlock()
 
-	if capExceeded {
-		s.sendStatus(ctx, peerId, sub.SpaceId, sub.Topics, pubsubproto.ErrCodes_TooManyTopics)
+	if len(rejected) > 0 {
+		s.sendStatus(ctx, peerId, sub.SpaceId, rejected, pubsubproto.ErrCodes_TooManyTopics)
 	}
 }
 

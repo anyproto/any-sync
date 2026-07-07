@@ -32,7 +32,7 @@ that dies with the connection.
 | Payload confidentiality | Encrypted client-side with current space ReadKey + `keyId` indirection (push-server pattern). Removed member loses access at next key rotation. |
 | Authenticity | Per-message account-key signature, verified by receivers. Protects against a semi-trusted node forging/reattributing messages. |
 | Topology | Publisher → its responsible node (+ direct LAN peers). Node relays once to the other responsible nodes (`relayed` flag, never re-forwarded → loop-free). |
-| Duplicate suppression | Receiver-side bounded LRU keyed by `msgId` (duplicate paths exist by design: LAN + node). |
+| Duplicate suppression | Receiver-side bounded FIFO ring keyed by `msgId` (duplicate paths exist by design: LAN + node). |
 | Backpressure | Bounded queues, `TryAdd` drop-on-overflow end to end — the existing streampool discipline. Slow subscriber ⇒ dropped messages, never memory growth. |
 | Queue groups (1-of-N) | Non-goal v1. |
 | Catch-up / replay / retained messages | Non-goal, by definition of stateless. Reconnect ⇒ resubscribe ⇒ only new messages. |
@@ -45,7 +45,7 @@ that dies with the connection.
   transport or TLS handshake (`net/peer/peer.go:134`, `net/transport/transport.go:40-64`).
 - **R2 (memory-effective):** per-stream bounded `mb.MB` queues with drop-on-overflow
   (`net/streampool/stream.go:32-44`), interest state = stream tags + pattern trie, both
-  O(active subscriptions), fixed-size dedup LRU, per-peer publish token bucket, caps on
+  O(active subscriptions), fixed-size dedup FIFO ring, per-peer publish token bucket, caps on
   pattern count and topic/payload size. No path grows with message volume or offline
   duration.
 - **R3 (ACL-aware):** node gates subscribe *and* publish on space membership at the current
@@ -59,7 +59,7 @@ that dies with the connection.
 
 - **At-most-once.** A publish reaching the relay is copied into bounded per-subscriber
   queues; overflow drops. No acks, no retransmit, no ordering across publishers, no dedup
-  beyond the duplicate-path LRU.
+  beyond the duplicate-path ring.
 - **Fire-and-forget.** A publish with no subscribers is discarded. Nothing is stored.
 - **Decoupled.** Publishers don't know subscribers. Subscriber set is whoever holds a live
   tagged stream at the instant of fan-out.
@@ -78,9 +78,9 @@ that dies with the connection.
   a hard guarantee). Net effect = NATS `no_echo` semantics without a wire flag. (NATS
   echoes by default with per-connection opt-out; we don't need the option because dedup
   already exists.)
-- **Delivery is best-effort, duplicates possible in theory** (LRU eviction under extreme
+- **Delivery is best-effort, duplicates possible in theory** (ring eviction under extreme
   rates), so payload design must be idempotent/last-write-wins at the app level. In
-  practice the LRU makes duplicates vanishingly rare.
+  practice the ring makes duplicates vanishingly rare.
 
 ---
 
@@ -221,7 +221,7 @@ Relay rules (complete):
    same way nodes do (they hold the ACL).
 
 Duplicate paths are expected (a subscriber may get the same message from a LAN peer and
-from its node). The **receiver** suppresses via a fixed-size LRU keyed by `msgId`
+from its node). The **receiver** suppresses via a fixed-size FIFO ring keyed by `msgId`
 (default 4096 entries ≈ 64 KiB of ids). Publishers self-suppress echoes by msgId too
 (§2, Echo).
 
@@ -302,7 +302,7 @@ fan out locally only (same trie match). The `identity == ctxIdentity` rule does 
 (the forwarding node is not the author) — authenticity is the receiver's signature check
 (§6.3).
 
-**Receive** (client) — dedup by msgId LRU → verify signature against `identity` → check
+**Receive** (client) — dedup by msgId ring → verify signature against `identity` → check
 `identity` is a member at the local ACL head → if the topic is in the `acc/` namespace,
 check its last segment equals `identity.Account()` (end-to-end enforcement: the signature
 covers the topic, so not even a malicious relay can inject into someone else's self-owned
@@ -391,9 +391,9 @@ payload, signature still required.
 | Outbound per-stream buffer | `queueSize` msgs (default 100) | `mb.MB` + `TryAdd` drop (`net/streampool/stream.go:39`) |
 | Interest table | ≤1000 patterns/stream, ≤100/space/stream | reject with `TooManyTopics`; state dies with stream |
 | Pattern trie (§4.1) | O(total live patterns × segments), segments ≤16 | same caps as interest table; lazily pruned when a pattern's tag has no live streams |
-| Publish rate | token bucket per peer per stream (default 30 msg/s, burst 60) | checked in pubsub handler — **inside** the stream, because the RPC limiter only gates stream-open (`net/rpc/limiter/limiter.go:96-106`). Deliberate divergence from core NATS, which has no publish rate limiting (maintainers punt to network throughput) and instead disconnects slow consumers — acceptable for a trusted-client broker, not for our semi-trusted multi-tenant relays. We also drop rather than disconnect slow subscribers, which fits at-most-once ephemera |
+| Publish rate | token bucket **per peer** (default 30 msg/s, burst 60) | checked in pubsub handler — **inside** the stream, because the RPC limiter only gates stream-open (`net/rpc/limiter/limiter.go:96-106`). One bucket per peer (all of a peer's streams share it — stricter than per-stream, so a peer can't multiply its budget by opening streams). Deliberate divergence from core NATS, which has no publish rate limiting (maintainers punt to network throughput) and instead disconnects slow consumers — acceptable for a trusted-client broker, not for our semi-trusted multi-tenant relays. We also drop rather than disconnect slow subscribers, which fits at-most-once ephemera |
 | Payload size | ≤64 KiB | reject `InvalidMessage` |
-| Dedup cache | fixed LRU, 4096 msgIds | evicts oldest, O(1) |
+| Dedup cache | fixed FIFO ring, 4096 msgIds | evicts oldest, O(1) |
 | Fan-out amplification | 1 upload → ≤2 node-node copies → N subscriber queues | node-side copy (publisher uploads once); `peerMessage.Copy()` pattern reuses the existing per-destination stamping (`stream.go:32-37`) |
 | Idle streams | closed with the sub-connection; tags GC'd in `removeStream` (`streampool.go:431-446`) | existing |
 | Zombie subscribers | stream in continuous queue-overflow for > 30 s is closed | NATS disconnects slow consumers outright to protect the system; we drop first (fits at-most-once), but a *persistently* full queue means a dead/wedged reader burning fan-out work — shed it and let the client reconnect fresh |
@@ -422,7 +422,7 @@ structs (mirror `objectmessages` `sync.Pool` usage, `headupdate.go:13-38`).
      hook → per-space pattern trie (§4.1) + tags;
    - publish path: validate → trie match + cross-pattern stream dedup → broadcast →
      optional forward hook;
-   - receive path: dedup LRU → verify → decrypt → handler dispatch;
+   - receive path: dedup ring → verify → decrypt → handler dispatch;
    - pluggable interfaces so layering stays clean:
      `MembershipChecker` (backed by `AclState`), `Crypto` (ReadKey encrypt/decrypt via the
      space's `Acl()`), `Forwarder` (node-only), `RateLimiter`.
@@ -475,7 +475,7 @@ structs (mirror `objectmessages` `sync.Pool` usage, `headupdate.go:13-38`).
 | max topics per stream | 1000 (100 per space) |
 | publish rate per peer | 30 msg/s, burst 60 |
 | per-stream write queue | 100 (client), 500 (node outbound) — match sync-side sizes |
-| dedup LRU | 4096 msgIds |
+| dedup ring | 4096 msgIds |
 | received-timestamp staleness window | 5 min (enforced at receive, `Config.MaxTimestampSkew`) |
 | client interest resync interval | 20 s (`Config.ResyncInterval`) |
 | pubsub stream peer TTL | 1 h (`Config.PeerTTL`) |
@@ -514,8 +514,11 @@ switch-to-interest-only threshold — not full RS+/RS- interest replication (v2,
    after the first notice (flood of statuses is itself amplification — leaning: notify
    once per window).
 3. Metrics surface (per-topic counters are unbounded-cardinality; per-space is safe).
-   The private pool is now observable via `Deps.Metric` (`WithMetric(m, "pubsub")`); the
-   remaining work is the pubsub-specific counters below.
+   The private pool is observable via `Deps.Metric` (`WithMetric(m, "pubsub")`), which
+   registers namespaced prometheus gauges (stream/tag/dial counts). It deliberately does
+   **not** register into the shared single-slot sync-metric (`RegisterStreamPoolSyncMetric`)
+   — that belongs to the app-level sync streampool, and a second pool there would overwrite
+   and, on Close, null it. The remaining work is the pubsub-specific counters below.
 
 ## 12. Implementation status (v1 in any-sync)
 
@@ -558,6 +561,15 @@ Deferred (documented, not silent):
   overflow episode, close-reason strings) — §11.3.
 - **`MembershipChecker` returning a permission level** rather than a bare member/not — a
   one-way door kept simple for v1 (current-head `!NoPermissions()`).
+- **Close blocks on in-flight dispatch handlers.** `Close` waits for the dispatch loop to
+  drain; a handler that violates the "must not block" contract wedges shutdown (no timeout).
+  Acceptable given the contract; a stuck app handler is an app bug, and adding a Close
+  timeout would mask it.
+- **Resync coverage for many-space clients.** Each resync pass fires one dial task per local
+  space through the bounded dial queue (`DialQueueSize`, default 100); a client with more
+  spaces than that drops the overflow for that tick and restores their interest on a later
+  tick (self-correcting, no leak — re-sends are idempotent). Heart should size
+  `DialQueueSize` to its expected open-space count.
 
 Downstream wiring (separate repos, per §8.2/§8.3): any-sync-node `pubsubrelay` component
 (`Relay`/`Membership` from nodeconf + hosted ACL, `RegisterRpc`, `EvictMember` on ACL

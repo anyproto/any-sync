@@ -46,16 +46,21 @@ func WithStreamCloseHook(hook func(streamId uint32, peerId string, tags []string
 	}
 }
 
-// WithMetric registers the standalone pool's prometheus metrics under the given
-// prefix, so a service that owns a private pool (e.g. pubsub) is observable even
-// though it never runs the app-component Init.
+// WithMetric registers the standalone pool's prometheus gauges (stream_count,
+// tag_count, dial_queue) under the given namespace prefix, so a service that owns
+// a private pool (e.g. pubsub) is observable even though it never runs the
+// app-component Init.
+//
+// It deliberately does NOT call RegisterStreamPoolSyncMetric: that feeds a single
+// shared slot on the metric component meant for the one app-level sync streampool,
+// and registering a second pool there would overwrite (and, on Close, null) the
+// sync pool's OutgoingMsg telemetry. The namespaced gauges below give the private
+// pool independent observability without touching that slot.
 func WithMetric(m metric.Metric, prefix string) Option {
 	return func(s *streamPool) {
 		if m == nil {
 			return
 		}
-		s.metric = m
-		m.RegisterStreamPoolSyncMetric(s)
 		registerMetrics(m.Registry(), s, prefix)
 	}
 }
@@ -523,10 +528,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 	}
 
 	delete(s.streams, streamId)
-	var closedTags []string
-	if s.closeHook != nil {
-		closedTags = slices.Clone(st.tags)
-	}
+	closedTags := slices.Clone(st.tags)
 	s.mu.Unlock()
 	st.l.Debug("stream removed", zap.Strings("tags", closedTags))
 	if s.closeHook != nil {

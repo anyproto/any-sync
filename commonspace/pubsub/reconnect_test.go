@@ -117,6 +117,41 @@ func TestStreamCloseDrainsInterest(t *testing.T) {
 	require.Empty(t, node.svc.remote)
 }
 
+// TestCapExceededReportsOnlyRejected verifies that when a subscribe exceeds the
+// per-space pattern cap mid-batch, the TooManyTopics status echoes only the
+// rejected patterns, and the ones accepted before the cap stay live.
+func TestCapExceededReportsOnlyRejected(t *testing.T) {
+	membership := &fakeMembership{}
+	relay := &fakeRelay{}
+	node := newEngineFx(t, "node", membership, relay)
+	defer node.finish()
+	// tiny per-space cap so a 3-topic subscribe trips it after 2
+	node.svc.cfg.MaxPatternsPerSpace = 2
+	client := newEngineFx(t, "client", membership, nil)
+	defer client.finish()
+	membership.allow(client.identity())
+
+	s := rawStream(t, client, node)
+	require.NoError(t, s.Send(&pubsubproto.PubSubMessage{Content: &pubsubproto.PubSubMessage_Subscribe{
+		Subscribe: &pubsubproto.Subscribe{SpaceId: testSpace, Topics: []string{"a", "b", "c"}},
+	}}))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		msg, err := s.Recv()
+		require.NoError(t, err)
+		if st := msg.GetStatus(); st != nil {
+			require.Equal(t, pubsubproto.ErrCodes_TooManyTopics, st.Code)
+			require.Equal(t, []string{"c"}, st.Topics, "only the rejected topic is reported")
+			// the two accepted before the cap are live
+			require.Equal(t, 1, remoteMatchCount(node, testSpace, "a"))
+			require.Equal(t, 1, remoteMatchCount(node, testSpace, "b"))
+			return
+		}
+	}
+	t.Fatal("no TooManyTopics status received")
+}
+
 // TestInvalidSpaceIdRejected ensures a spaceId containing '/' (which would break
 // tag parsing) is rejected at subscribe with InvalidTopic.
 func TestInvalidSpaceIdRejected(t *testing.T) {
