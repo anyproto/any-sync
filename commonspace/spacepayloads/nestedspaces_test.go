@@ -75,4 +75,26 @@ func TestStoragePayloadForChildSpaceCreateV1(t *testing.T) {
 		_, err := StoragePayloadForSpaceCreate(pl)
 		require.ErrorIs(t, err, ErrIncorrectParentLink)
 	})
+
+	t.Run("validateParentLink rejects a non-V1 header carrying a parent link", func(t *testing.T) {
+		legalOwner, err := parentOwner.GetPublic().Marshall()
+		require.NoError(t, err)
+		aclRoot := &aclrecordproto.AclRoot{
+			ParentSpaceId:   "parent.id",
+			LegalOwner:      legalOwner,
+			ParentAclRootId: "parent-acl-root-id",
+		}
+		mkHeader := func(version spacesyncproto.SpaceHeaderVersion) *spacesyncproto.RawSpaceHeaderWithId {
+			h := &spacesyncproto.SpaceHeader{ParentSpaceId: "parent.id", Version: version}
+			hb, err := h.MarshalVT()
+			require.NoError(t, err)
+			raw, err := (&spacesyncproto.RawSpaceHeader{SpaceHeader: hb}).MarshalVT()
+			require.NoError(t, err)
+			return &spacesyncproto.RawSpaceHeaderWithId{RawHeader: raw}
+		}
+		// V0 child header is rejected...
+		require.ErrorIs(t, validateParentLink(mkHeader(spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion0), aclRoot), ErrIncorrectParentLink)
+		// ...V1 with the matching parent link passes
+		require.NoError(t, validateParentLink(mkHeader(spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1), aclRoot))
+	})
 }

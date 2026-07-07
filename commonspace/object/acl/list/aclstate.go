@@ -172,6 +172,12 @@ func (st *AclState) Identity() crypto.PubKey {
 	return st.pubKey
 }
 
+// Id returns the acl root record id (same value as AclList.Id()). It is the binding
+// scope a child space pins as parentAclRootId for legalOwner proofs.
+func (st *AclState) Id() string {
+	return st.id
+}
+
 func (st *AclState) Validator() ContentValidator {
 	return st.contentValidator
 }

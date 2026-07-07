@@ -735,7 +735,14 @@ func validateParentLink(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, ac
 	if header.ParentSpaceId != aclRoot.ParentSpaceId {
 		return ErrIncorrectParentLink
 	}
-	if len(aclRoot.LegalOwner) != 0 {
+	if isChild {
+		// nested spaces REQUIRE the V1 header: only V1 binds the acl root into the signed
+		// header (bytes.Equal(aclPayload, header.AclPayload) in ValidateSpaceHeader). Without
+		// it a non-V1 child could be signed against one acl root and pushed with another,
+		// letting an attacker pin themselves as legalOwner in the canonical acl.
+		if header.Version != spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1 {
+			return ErrIncorrectParentLink
+		}
 		if _, err = crypto.UnmarshalEd25519PublicKeyProto(aclRoot.LegalOwner); err != nil {
 			return ErrIncorrectParentLink
 		}
