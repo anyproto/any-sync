@@ -904,7 +904,12 @@ func (m *NetworkConfigurationResponse) MarshalToSizedBufferVT(dAtA []byte) (int,
 		copy(dAtA[i:], m.FileNetworkId)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.FileNetworkId)))
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x32
+	}
+	if m.Epoch != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Epoch))
+		i--
+		dAtA[i] = 0x28
 	}
 	if m.CreationTimeUnix != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.CreationTimeUnix))
@@ -3129,6 +3134,9 @@ func (m *NetworkConfigurationResponse) SizeVT() (n int) {
 	}
 	if m.CreationTimeUnix != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.CreationTimeUnix))
+	}
+	if m.Epoch != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.Epoch))
 	}
 	l = len(m.FileNetworkId)
 	if l > 0 {
@@ -5937,6 +5945,25 @@ func (m *NetworkConfigurationResponse) UnmarshalVT(dAtA []byte) error {
 				}
 			}
 		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Epoch", wireType)
+			}
+			m.Epoch = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Epoch |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field FileNetworkId", wireType)
 			}

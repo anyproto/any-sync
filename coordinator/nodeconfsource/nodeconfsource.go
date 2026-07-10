@@ -75,5 +75,6 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 		FileNetworkId: res.FileNetworkId,
 		Nodes:         nodes,
 		CreationTime:  time.Unix(int64(res.CreationTimeUnix), 0),
+		Epoch:         res.Epoch,
 	}, nil
 }

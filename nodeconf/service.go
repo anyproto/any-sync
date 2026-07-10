@@ -45,8 +45,16 @@ func New() Service {
 type Service interface {
 	NodeConf
 	NetworkCompatibilityStatus() NetworkCompatibilityStatus
+	// ObserveChanges registers an observer called every time the active network
+	// configuration is replaced. It is not called for the initial configuration.
+	// Observers are called sequentially from the configuration update flow and
+	// must not block for long.
+	ObserveChanges(observer ChangeObserver)
 	app.ComponentRunnable
 }
+
+// ChangeObserver is called with the previous and the new active configuration.
+type ChangeObserver func(prev, cur NodeConf)
 
 type NetworkProtoVersionChecker interface {
 	IsNetworkNeedsUpdate(ctx context.Context) (bool, error)
@@ -60,6 +68,7 @@ type service struct {
 	last      NodeConf
 	mu        sync.RWMutex
 	sync      periodicsync.PeriodicSync
+	observers []ChangeObserver
 
 	compatibilityStatus        NetworkCompatibilityStatus
 	networkProtoVersionChecker NetworkProtoVersionChecker
@@ -238,28 +247,45 @@ func (s *service) setCompatibilityStatusByErr(err error) {
 
 func (s *service) setLastConfiguration(c Configuration) (err error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.last != nil && s.last.Id() == c.Id {
+		s.mu.Unlock()
 		return
 	}
 
 	nc, err := сonfigurationToNodeConf(c)
 	if err != nil {
+		s.mu.Unlock()
 		return
 	}
 	nc.accountId = s.accountId
 
-	var beforeId = ""
-	if s.last != nil {
-		beforeId = s.last.Id()
-	}
-	if s.last != nil {
-		log.Info("net configuration changed", zap.String("before", beforeId), zap.String("after", nc.Id()))
+	prev := s.last
+	if prev != nil {
+		log.Info("net configuration changed",
+			zap.String("before", prev.Id()),
+			zap.String("after", nc.Id()),
+			zap.Uint64("beforeEpoch", prev.Configuration().Epoch),
+			zap.Uint64("afterEpoch", nc.Configuration().Epoch))
 	} else {
 		log.Info("net configuration applied", zap.String("netId", nc.Configuration().NetworkId), zap.String("id", nc.Id()))
 	}
 	s.last = nc
+	observers := make([]ChangeObserver, len(s.observers))
+	copy(observers, s.observers)
+	s.mu.Unlock()
+
+	if prev != nil {
+		for _, observer := range observers {
+			observer(prev, nc)
+		}
+	}
 	return
+}
+
+func (s *service) ObserveChanges(observer ChangeObserver) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.observers = append(s.observers, observer)
 }
 
 func (s *service) Id() string {

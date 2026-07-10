@@ -181,6 +181,8 @@ func (m *mockConf) Name() (name string) {
 	return nodeconf.CName
 }
 
+func (m *mockConf) ObserveChanges(observer nodeconf.ChangeObserver) {}
+
 func (m *mockConf) Run(ctx context.Context) (err error) {
 	return nil
 }

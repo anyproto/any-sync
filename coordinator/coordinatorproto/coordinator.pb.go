@@ -1583,9 +1583,11 @@ type NetworkConfigurationResponse struct {
 	Nodes []*Node `protobuf:"bytes,3,rep,name=nodes,proto3" json:"nodes,omitempty"`
 	// unix timestamp of the creation time of configuration
 	CreationTimeUnix uint64 `protobuf:"varint,4,opt,name=creationTimeUnix,proto3" json:"creationTimeUnix,omitempty"`
+	// monotonically increasing version of the configuration, 0 if the coordinator predates epoch support
+	Epoch uint64 `protobuf:"varint,5,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	// identity of the fileV2 fleet's shared receipt-signing key (network
 	// string encoding); empty if the network has no fileV2 fleet
-	FileNetworkId string `protobuf:"bytes,5,opt,name=fileNetworkId,proto3" json:"fileNetworkId,omitempty"`
+	FileNetworkId string `protobuf:"bytes,6,opt,name=fileNetworkId,proto3" json:"fileNetworkId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1644,6 +1646,13 @@ func (x *NetworkConfigurationResponse) GetNodes() []*Node {
 func (x *NetworkConfigurationResponse) GetCreationTimeUnix() uint64 {
 	if x != nil {
 		return x.CreationTimeUnix
+	}
+	return 0
+}
+
+func (x *NetworkConfigurationResponse) GetEpoch() uint64 {
+	if x != nil {
+		return x.Epoch
 	}
 	return 0
 }
@@ -3815,13 +3824,14 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\aaclHead\x18\x02 \x01(\tR\aaclHead\"\x1e\n" +
 	"\x1cSpaceMakeUnshareableResponse\";\n" +
 	"\x1bNetworkConfigurationRequest\x12\x1c\n" +
-	"\tcurrentId\x18\x01 \x01(\tR\tcurrentId\"\xe1\x01\n" +
+	"\tcurrentId\x18\x01 \x01(\tR\tcurrentId\"\xf7\x01\n" +
 	"\x1cNetworkConfigurationResponse\x12(\n" +
 	"\x0fconfigurationId\x18\x01 \x01(\tR\x0fconfigurationId\x12\x1c\n" +
 	"\tnetworkId\x18\x02 \x01(\tR\tnetworkId\x12'\n" +
 	"\x05nodes\x18\x03 \x03(\v2\x11.coordinator.NodeR\x05nodes\x12*\n" +
-	"\x10creationTimeUnix\x18\x04 \x01(\x04R\x10creationTimeUnix\x12$\n" +
-	"\rfileNetworkId\x18\x05 \x01(\tR\rfileNetworkId\"i\n" +
+	"\x10creationTimeUnix\x18\x04 \x01(\x04R\x10creationTimeUnix\x12\x14\n" +
+	"\x05epoch\x18\x05 \x01(\x04R\x05epoch\x12$\n" +
+	"\rfileNetworkId\x18\x06 \x01(\tR\rfileNetworkId\"i\n" +
 	"\x04Node\x12\x16\n" +
 	"\x06peerId\x18\x01 \x01(\tR\x06peerId\x12\x1c\n" +
 	"\taddresses\x18\x02 \x03(\tR\taddresses\x12+\n" +
