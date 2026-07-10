@@ -268,17 +268,13 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, a
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	authorPerms := c.aclState.Permissions(authorIdentity)
-	if !authorPerms.CanManageAccounts() {
+	if !c.aclState.Permissions(authorIdentity).IsOwner() {
+		// only the owner can create an invite (FR3)
 		return ErrInsufficientPermissions
 	}
 	permissions := AclPermissions(ch.Permissions)
 	if ch.InviteType == aclrecordproto.AclInviteType_AnyoneCanJoin {
 		if permissions.IsOwner() || permissions.NoPermissions() || permissions.IsGuest() {
-			return ErrInsufficientPermissions
-		}
-		if permissions.IsAdmin() && !authorPerms.IsOwner() {
-			// only the owner can issue an Admin-granting invite (FR1)
 			return ErrInsufficientPermissions
 		}
 		if ch.EncryptedReadKey == nil {

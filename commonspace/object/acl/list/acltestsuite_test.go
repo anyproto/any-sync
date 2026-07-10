@@ -87,8 +87,9 @@ func TestAclExecutor(t *testing.T) {
 		{"a.add::y,adm,m2", nil},
 		// y (admin) can change permission of a non-admin
 		{"y.changes::x,rw", nil},
-		// e can generate another invite
-		{"e.invite::inv1Id", nil},
+		// e (admin) can no longer generate an invite, only the owner can
+		{"e.invite::inv1Id", ErrInsufficientPermissions},
+		{"a.invite::inv1Id", nil},
 		// b tries to join again
 		{"b.join::inv1Id", nil},
 		// e approves b
@@ -118,8 +119,11 @@ func TestAclExecutor(t *testing.T) {
 		{"a.batch::remove:e,y;add:z,rw,mz|u,r,mu;revoke:inv1Id;approve:l,r;approve:p,adm;decline:s", nil},
 		{"p.remove::l", nil},
 		{"s.join::inv1Id", ErrNoSuchInvite},
-		{"p.invite::i1", nil},
-		{"p.invite::i2", nil},
+		// p (admin) can no longer generate invites either
+		{"p.invite::i1", ErrInsufficientPermissions},
+		{"a.invite::i1", nil},
+		{"p.invite::i2", ErrInsufficientPermissions},
+		{"a.invite::i2", nil},
 		{"r.join::i1", nil},
 		{"q.join::i2", nil},
 		{"p.batch::revoke:i1;revoke:i2", nil},

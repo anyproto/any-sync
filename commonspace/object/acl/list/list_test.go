@@ -920,6 +920,31 @@ func TestAclList_AdminCannotApproveAsAdmin(t *testing.T) {
 	}
 }
 
+// FR3: only the owner can create an invite, regardless of the permission level it grants.
+func TestAclList_AdminCannotCreateInvite(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	cmds := []struct {
+		cmd string
+		err error
+	}{
+		{"a.init::a", nil},
+		{"a.invite::invId", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
+		// e (admin) cannot create a request-to-join invite
+		{"e.invite::eReqInv", ErrInsufficientPermissions},
+		// e (admin) cannot create an anyone-can-join invite, even at Reader or Writer level
+		{"e.invite_anyone::eAnyInvReader,r", ErrInsufficientPermissions},
+		{"e.invite_anyone::eAnyInvWriter,rw", ErrInsufficientPermissions},
+		// owner can still create invites of any kind
+		{"a.invite::aReqInv", nil},
+		{"a.invite_anyone::aAnyInv,rw", nil},
+	}
+	for _, c := range cmds {
+		require.Equal(t, c.err, a.Execute(c.cmd), c.cmd)
+	}
+}
+
 // FR2: only the owner can remove an Admin (revoking via account removal).
 func TestAclList_AdminCannotRemoveAdmin(t *testing.T) {
 	a := NewAclExecutor("spaceId")
