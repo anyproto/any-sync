@@ -272,8 +272,8 @@ message StorageHeader {
 // DiffType is a type of diff
 enum DiffType {
     Initial = 0;
-    V1 = 1;
-    V2 = 2;
+    V1 = 1; // deprecated, not supported anymore
+    V2 = 2; // deprecated, not supported anymore
     V3 = 3;
 }
 
