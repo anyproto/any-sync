@@ -115,8 +115,7 @@ func TestDiffManager_FillDiff(t *testing.T) {
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: hash1,
-		})
-		fx.diffMock.EXPECT().Set(ldiff.Element{
+		}, ldiff.Element{
 			Id:   "id2",
 			Head: hash2,
 		})
@@ -507,4 +506,40 @@ func TestDiffManager_AllIds(t *testing.T) {
 		ids := fx.diffManager.AllIds()
 		require.Equal(t, expectedIds, ids)
 	})
+}
+
+// TestDiffManager_HashStability pins the V3 space hash for a scenario covering
+// every head-entry class. The golden value was produced by the pre-V2-removal
+// DiffManager (dual old/new diffs) on the same input: if this test fails, the
+// change breaks hash compatibility with deployed peers and will force a
+// network-wide resync — see the skip conditions in FillDiff and UpdateHeads.
+func TestDiffManager_HashStability(t *testing.T) {
+	fx := newDiffManagerFixture(t)
+	defer fx.stop()
+
+	fx.stateStorage.EXPECT().SetHash(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	fx.aclMock.EXPECT().Id().Return("aclId").AnyTimes()
+	fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "headId"}).AnyTimes()
+	fx.deletionStateMock.EXPECT().Exists(gomock.Any()).Return(false).AnyTimes()
+
+	fx.expectIterateEntries([]headstorage.HeadsEntry{
+		{Id: "A", Heads: []string{"h1", "h2"}, CommonSnapshot: "s"},
+		{Id: "B", Heads: []string{"h3"}, CommonSnapshot: ""},
+		{Id: "C", Heads: []string{"C"}, CommonSnapshot: "s"},
+		{Id: "D", Heads: []string{"D"}, CommonSnapshot: "s", IsDerived: true},
+		{Id: "E", Heads: []string{"E"}, CommonSnapshot: ""},
+	})
+
+	diff := ldiff.New(32, 256)
+	dm := NewDiffManager(diff, fx.storageMock, fx.aclMock, logger.NewNamed("test"), context.Background(), fx.deletionStateMock)
+	require.NoError(t, dm.FillDiff(context.Background()))
+	for _, u := range []headstorage.HeadsEntry{
+		{Id: "A", Heads: []string{"h1", "h2", "h5"}},
+		{Id: "G", Heads: []string{"G"}},
+		{Id: "store", Heads: []string{"k1"}},
+		{Id: "B", DeletedStatus: headstorage.DeletedStatusDeleted},
+	} {
+		dm.UpdateHeads(u)
+	}
+	require.Equal(t, "9d2101bbe6775d7cd4f1d322d0f227e48ccc27ae3bc745dbda5d05bd4ba61fc1", diff.Hash())
 }

@@ -32,10 +32,15 @@ const (
 	stateCollectionKey = "state"
 	idKey              = "id"
 	newHashKey         = "nh"
-	legacyHashKey      = "h"
-	headerKey          = "e"
-	aclIdKey           = "a"
-	settingsIdKey      = "s"
+	// oldHashKey held the removed V2-diff hash; it is still mirrored on write because
+	// releases before the V2 removal treat a doc with an empty "oh" as legacy format
+	// and misread NewHash as empty (see their stateFromDoc). Drop the mirror once
+	// downgrades/coldsync to those releases are out of support.
+	oldHashKey    = "oh"
+	legacyHashKey = "h"
+	headerKey     = "e"
+	aclIdKey      = "a"
+	settingsIdKey = "s"
 )
 
 type stateStorage struct {
@@ -70,6 +75,10 @@ func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		if storeutil.ModifyKey(v, newHashKey, a.NewString(hash)) {
+			modified = true
+		}
+
+		if storeutil.ModifyKey(v, oldHashKey, a.NewString(hash)) {
 			modified = true
 		}
 

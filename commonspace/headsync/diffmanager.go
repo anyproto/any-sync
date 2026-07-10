@@ -24,6 +24,11 @@ import (
 // and by resp.DiffType in remote.DiffTypeCheck, so that the newest common
 // type wins. The old type can be dropped once the secureservice
 // compatibleVersions exclude all peers that don't support the new one.
+//
+// Note for that future upgrade: V3-only responders (this code and the node's
+// HeadSync handler) reject unknown diff types with an error instead of
+// answering with their best supported type, so a V(n+1) requester must treat
+// such an error as "type unsupported" and fall back to requesting V(n).
 type DiffManager struct {
 	diff          ldiff.Diff
 	storage       spacestorage.SpaceStorage
@@ -53,14 +58,18 @@ func NewDiffManager(
 
 func (dm *DiffManager) FillDiff(ctx context.Context) error {
 	els := make([]ldiff.Element, 0, 100)
+	hasher := ldiff.NewHasher()
+	defer ldiff.ReleaseHasher(hasher)
 	err := dm.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
-		// empty roots shouldn't be set in the diff
-		if entry.Heads[0] == entry.Id && (entry.IsDerived || entry.CommonSnapshot != "") {
+		// skip empty roots, except non-derived ones without a common snapshot:
+		// those have historically been part of the diff and must stay to keep
+		// the space hash stable (UpdateHeads deliberately differs, see there)
+		if len(entry.Heads) > 0 && entry.Heads[0] == entry.Id && (entry.IsDerived || entry.CommonSnapshot != "") {
 			return true, nil
 		}
 		els = append(els, ldiff.Element{
 			Id:   entry.Id,
-			Head: concatStrings(entry.Heads),
+			Head: hasher.HashId(concatStrings(entry.Heads)),
 		})
 		return true, nil
 	})
@@ -68,14 +77,9 @@ func (dm *DiffManager) FillDiff(ctx context.Context) error {
 		return err
 	}
 	log.Debug("setting acl", zap.String("aclId", dm.syncAcl.Id()), zap.String("headId", dm.syncAcl.Head().Id))
-	hasher := ldiff.NewHasher()
-	for _, el := range els {
-		dm.diff.Set(ldiff.Element{
-			Id:   el.Id,
-			Head: hasher.HashId(el.Head),
-		})
+	if len(els) > 0 {
+		dm.diff.Set(els...)
 	}
-	ldiff.ReleaseHasher(hasher)
 	if err := dm.storage.StateStorage().SetHash(ctx, dm.diff.Hash()); err != nil {
 		dm.log.Error("can't write space hash", zap.Error(err))
 		return err
@@ -106,7 +110,10 @@ func (dm *DiffManager) UpdateHeads(update headstorage.HeadsEntry) {
 		if dm.deletionState.Exists(update.Id) {
 			return
 		}
-		// empty roots shouldn't be set in the diff
+		// live updates never add empty roots; unlike FillDiff there is no
+		// common-snapshot exception here — this asymmetry predates the V2
+		// removal and both conditions must stay as is, or every existing
+		// space hash changes
 		if len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}

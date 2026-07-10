@@ -206,8 +206,7 @@ func TestHeadSync(t *testing.T) {
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: hash1,
-		})
-		fx.diffMock.EXPECT().Set(ldiff.Element{
+		}, ldiff.Element{
 			Id:   "id2",
 			Head: hash2,
 		})
