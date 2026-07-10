@@ -803,10 +803,14 @@ func (x *TreeHeadUpdate) GetSnapshotPath() []string {
 
 // TreeHeadUpdate is a message sent when document needs full sync
 type TreeFullSyncRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Heads         []string               `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
-	Changes       []*RawTreeChangeWithId `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
-	SnapshotPath  []string               `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Heads        []string               `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
+	Changes      []*RawTreeChangeWithId `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
+	SnapshotPath []string               `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
+	// probe asks the responder for the tree's root and current heads only,
+	// with no change bodies. Old responders ignore it and stream the full
+	// tree; a probing requester must be ready for both response shapes.
+	Probe         bool `protobuf:"varint,4,opt,name=probe,proto3" json:"probe,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -860,6 +864,13 @@ func (x *TreeFullSyncRequest) GetSnapshotPath() []string {
 		return x.SnapshotPath
 	}
 	return nil
+}
+
+func (x *TreeFullSyncRequest) GetProbe() bool {
+	if x != nil {
+		return x.Probe
+	}
+	return false
 }
 
 // TreeFullSyncResponse is a message sent as a response for a specific full sync
@@ -1096,11 +1107,12 @@ const file_treechange_proto_rawDesc = "" +
 	"\x0eTreeHeadUpdate\x12\x14\n" +
 	"\x05heads\x18\x01 \x03(\tR\x05heads\x129\n" +
 	"\achanges\x18\x02 \x03(\v2\x1f.treechange.RawTreeChangeWithIdR\achanges\x12\"\n" +
-	"\fsnapshotPath\x18\x03 \x03(\tR\fsnapshotPath\"\x8a\x01\n" +
+	"\fsnapshotPath\x18\x03 \x03(\tR\fsnapshotPath\"\xa0\x01\n" +
 	"\x13TreeFullSyncRequest\x12\x14\n" +
 	"\x05heads\x18\x01 \x03(\tR\x05heads\x129\n" +
 	"\achanges\x18\x02 \x03(\v2\x1f.treechange.RawTreeChangeWithIdR\achanges\x12\"\n" +
-	"\fsnapshotPath\x18\x03 \x03(\tR\fsnapshotPath\"\x8b\x01\n" +
+	"\fsnapshotPath\x18\x03 \x03(\tR\fsnapshotPath\x12\x14\n" +
+	"\x05probe\x18\x04 \x01(\bR\x05probe\"\x8b\x01\n" +
 	"\x14TreeFullSyncResponse\x12\x14\n" +
 	"\x05heads\x18\x01 \x03(\tR\x05heads\x129\n" +
 	"\achanges\x18\x02 \x03(\v2\x1f.treechange.RawTreeChangeWithIdR\achanges\x12\"\n" +

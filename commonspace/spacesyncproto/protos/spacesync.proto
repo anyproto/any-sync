@@ -125,6 +125,13 @@ enum SpaceHeaderVersion {
   SpaceHeaderVersion1 = 1;
 }
 
+// SpaceFileProtoVersion gates the file protocol a space uses. It lives in the signed,
+// immutable header so it can't be stripped/downgraded without invalidating the owner signature.
+enum SpaceFileProtoVersion {
+  SpaceFileProtoVersionUnspecified = 0;
+  SpaceFileProtoVersionV2 = 2;
+}
+
 // SpaceHeader is a header for a space
 message SpaceHeader {
     bytes identity = 1;
@@ -137,6 +144,9 @@ message SpaceHeader {
     // since v1 fields
     bytes aclPayload = 7;
     bytes settingPayload = 8;
+
+    // fileprotoVersion gates the file protocol (v2 = filenode v2 + S3-direct + networkSign)
+    SpaceFileProtoVersion fileprotoVersion = 9;
 
     SpaceHeaderVersion version = 100;
 }
@@ -262,8 +272,8 @@ message StorageHeader {
 // DiffType is a type of diff
 enum DiffType {
     Initial = 0;
-    V1 = 1;
-    V2 = 2;
+    V1 = 1; // deprecated, not supported anymore
+    V2 = 2; // deprecated, not supported anymore
     V3 = 3;
 }
 

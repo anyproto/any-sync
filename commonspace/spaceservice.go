@@ -127,9 +127,7 @@ func (s *spaceService) buildRecordVerifier() (recordverifier.RecordVerifier, err
 }
 
 func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (id string, err error) {
-	// TODO: switch to SpaceCreatePayloadV1 after next proto update
-	// storageCreate, err := spacepayloads.StoragePayloadForSpaceCreateV1(payload)
-	storageCreate, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceCreateV1(payload)
 	if err != nil {
 		return
 	}
@@ -145,7 +143,7 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.Sp
 }
 
 func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDeriveV1(payload)
 	if err != nil {
 		return
 	}
@@ -154,7 +152,7 @@ func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.Space
 }
 
 func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDeriveV1(payload)
 	if err != nil {
 		return
 	}

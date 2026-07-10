@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response/mock_response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
@@ -335,6 +336,61 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		require.Equal(t, returnReq, req)
 		require.Equal(t, 1, callCount)
 	})
+}
+
+func TestSyncHandler_HandleStreamRequest_Probe(t *testing.T) {
+	t.Run("probe request, we send root and heads without changes, no request", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		fullRequest := &treechangeproto.TreeFullSyncRequest{
+			Probe: true,
+		}
+		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
+		marshaled, err := wrapped.MarshalVT()
+		require.NoError(t, err)
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		root := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("rootChange"),
+			Id:        "objectId",
+		}
+		fx.tree.EXPECT().Heads().AnyTimes().Return([]string{"curHead"})
+		fx.tree.EXPECT().SnapshotPath().Return([]string{"objectId"}, nil)
+		fx.tree.EXPECT().Header().Return(root)
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		callCount := 0
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
+			callCount++
+			msg, ok := resp.(*spacesyncproto.ObjectSyncMessage)
+			require.True(t, ok)
+			treeMsg := &treechangeproto.TreeSyncMessage{}
+			require.NoError(t, treeMsg.UnmarshalVT(msg.Payload))
+			fullResp := treeMsg.GetContent().GetFullSyncResponse()
+			require.NotNil(t, fullResp)
+			require.Equal(t, []string{"curHead"}, fullResp.Heads)
+			require.Empty(t, fullResp.Changes)
+			require.Equal(t, root.Id, treeMsg.RootChange.Id)
+			require.Equal(t, root.RawChange, treeMsg.RootChange.RawChange)
+			return nil
+		})
+		require.NoError(t, err)
+		require.Nil(t, req)
+		require.Equal(t, 1, callCount)
+	})
+}
+
+func TestNewProbeRequest(t *testing.T) {
+	req := NewProbeRequest("peerId", "spaceId", "objectId")
+	protoMsg, err := req.Proto()
+	require.NoError(t, err)
+	msg, ok := protoMsg.(*spacesyncproto.ObjectSyncMessage)
+	require.True(t, ok)
+	treeMsg := &treechangeproto.TreeSyncMessage{}
+	require.NoError(t, treeMsg.UnmarshalVT(msg.Payload))
+	fullReq := treeMsg.GetContent().GetFullSyncRequest()
+	require.NotNil(t, fullReq)
+	require.True(t, fullReq.Probe)
+	require.Empty(t, fullReq.Heads)
+	require.Empty(t, fullReq.Changes)
 }
 
 func TestSyncHandler_HandleResponse(t *testing.T) {

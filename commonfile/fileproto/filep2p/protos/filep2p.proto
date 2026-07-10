@@ -1,0 +1,92 @@
+syntax = "proto3";
+package filesyncp2p;
+
+option go_package = "commonfile/fileproto/filep2p";
+
+// FileP2P is the peer-to-peer file transfer service. It is served
+// READ-ONLY by a client to other LAN peers so a device can fetch a file's
+// encrypted CAR object directly from a nearby peer that already holds it,
+// instead of the file-node / object-storage path — enabling local-network
+// file sync, offline (no reachable node) reads, and durability takeover
+// (a peer re-uploading a file whose creator never made it durable).
+//
+// drpc route prefix is "/filesyncp2p.FileP2P/..." — DISTINCT from v1
+// "/filesync.File/..." and v2 "/filesyncv2.FileV2/...", so all three can be
+// mounted on one drpc mux. Names are load-bearing: method paths derive from
+// `package filesyncp2p` + `service FileP2P`.
+//
+// Model: a client stores one immutable, content-addressed CARv2 object per
+// file, byte-identical to the object the S3/public-read path serves. So a peer
+// is simply an ALTERNATE SOURCE of that same object: ObjectRead returns object
+// byte RANGES exactly like an HTTP Range GET, and the fetcher's existing
+// seed/verify path (parse header+index, then verify every block against its
+// cid) is reused unchanged. Because a partial local copy has holes, ObjectRead
+// is served only by peers that hold the file in FULL; FileCheck reports which.
+//
+// Conventions:
+//   * requests are ROOT-SCOPED (rootCid) — the store is one CAR per root, keyed
+//     by rootCid, with no global block-CID index;
+//   * identity is NEVER a request field — it is the authenticated connection;
+//     authorization (may this peer read this space) is the server's job;
+//   * object bytes are CIPHERTEXT (the file layer is encrypted before the DAG
+//     is built), so serving them discloses no plaintext; the FETCHER verifies
+//     every block against its cid (nothing on this wire does).
+service FileP2P {
+    // FileCheck reports, per requested rootCid, whether the server holds the
+    // file fully, partially, or not at all — so a client can pick a FULL peer
+    // to ObjectRead from without first knowing the object geometry.
+    rpc FileCheck(FileCheckRequest) returns (FileCheckResponse);
+    // ObjectRead returns a byte range of the file's CARv2 object. Mirrors an
+    // HTTP Range GET: totalSize echoes the whole-object size (for the head
+    // probe / index-tail read). Served only when the file is held in full.
+    rpc ObjectRead(ObjectReadRequest) returns (ObjectReadResponse);
+}
+
+// ErrCodes are WHOLE-RPC (drpc-level) errors, mirroring v1 filesync.ErrCodes
+// and v2's fileprotov2.ErrCodes. Wired through rpcerr.ErrGroup(ErrorOffset) in
+// the filep2perr package. Offset 900 is the next free rpcerr block (v1=200,
+// v2=800). Zero value Unexpected=0 registers at offset+0 so an uncoded fault
+// reads as Unexpected.
+enum ErrCodes {
+    Unexpected = 0;      // unclassified server fault (registry fallback)
+    Forbidden = 1;       // connection identity may not read this space
+    InvalidRequest = 2;  // malformed: empty spaceId, bad rootCid, bad range
+    FileNotFound = 3;    // server does not hold this (spaceId, rootCid) in full
+    ErrorOffset = 900;   // rpcerr.ErrGroup base (constant, never an error)
+}
+
+// ---- FileCheck (availability) ---------------------------------------------
+
+message FileCheckRequest {
+    string spaceId = 1;           // auth scope
+    repeated bytes rootCids = 2;  // files to report on (result match key)
+}
+
+message FileCheckResponse {
+    repeated FileAvailability files = 1;  // one per requested rootCid, keyed by rootCid
+}
+
+message FileAvailability {
+    bytes rootCid = 1;      // echoes the requested rootCid (match key)
+    Availability have = 2;  // how much of the file the server holds
+}
+
+enum Availability {
+    None = 0;     // server has no block of this file
+    Partial = 1;  // server has some but not all blocks (cannot ObjectRead yet)
+    Full = 2;     // server has every block; ObjectRead will serve
+}
+
+// ---- ObjectRead (ranged CAR bytes) ----------------------------------------
+
+message ObjectReadRequest {
+    string spaceId = 1;  // auth scope
+    bytes rootCid = 2;   // file root — selects the CAR object to read from
+    uint64 offset = 3;   // start byte within the object
+    uint32 length = 4;   // number of bytes requested from offset
+}
+
+message ObjectReadResponse {
+    bytes data = 1;        // the requested bytes (short only at object end)
+    uint64 totalSize = 2;  // whole-object size (like HTTP Content-Range total)
+}
