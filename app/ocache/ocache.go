@@ -204,6 +204,16 @@ func (c *oCache) Remove(ctx context.Context, id string) (ok bool, err error) {
 	return c.remove(ctx, e)
 }
 
+// closeAndDelete finalizes a closing entry under c.mu. The deferred unlock
+// guarantees c.mu is released even if setClosed panics, so a panic in the
+// close path can never leave the whole cache wedged (GO-7332 hardening).
+func (c *oCache) closeAndDelete(e *entry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e.setClosed()
+	delete(c.data, e.id)
+}
+
 func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 	if _, err = e.waitLoad(ctx, e.id); err != nil {
 		return false, err
@@ -212,10 +222,7 @@ func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 	if curState == entryStateClosing {
 		ok = true
 		err = e.value.Close()
-		c.mu.Lock()
-		e.setClosed()
-		delete(c.data, e.id)
-		c.mu.Unlock()
+		c.closeAndDelete(e)
 	}
 	return
 }
@@ -272,10 +279,7 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 		return false, nil
 	}
 
-	c.mu.Lock()
-	e.setClosed()
-	delete(c.data, e.id)
-	c.mu.Unlock()
+	c.closeAndDelete(e)
 	return true, nil
 }
 
@@ -366,10 +370,7 @@ func (c *oCache) GC() {
 			continue
 		} else {
 			closedNum++
-			c.mu.Lock()
-			e.setClosed()
-			delete(c.data, e.id)
-			c.mu.Unlock()
+			c.closeAndDelete(e)
 		}
 	}
 	c.metricsClosed(closedNum, size)

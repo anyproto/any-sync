@@ -104,32 +104,10 @@ func build(deps internalDeps) (list AclList, err error) {
 		return
 	}
 
-	rec, err := storage.Get(ctx, head)
+	records, err := loadRecords(ctx, storage, recBuilder, id, head)
 	if err != nil {
 		return
 	}
-
-	record, err := recBuilder.UnmarshallWithId(rec.RawRecordWithId())
-	if err != nil {
-		return
-	}
-	records := []*AclRecord{record}
-
-	for record.PrevId != "" {
-		rec, err = storage.Get(ctx, record.PrevId)
-		if err != nil {
-			return
-		}
-
-		record, err = recBuilder.UnmarshallWithId(rec.RawRecordWithId())
-		if err != nil {
-			return
-		}
-		records = append(records, record)
-	}
-
-	// Reverse records so the first record goes first
-	slices.Reverse(records)
 	indexes := make(map[string]int, len(records))
 	for i, rec := range records {
 		indexes[rec.Id] = i
@@ -160,6 +138,91 @@ func build(deps internalDeps) (list AclList, err error) {
 	recBuilder.(*aclRecordBuilder).state = state
 	state.list = list.(*aclList)
 	return
+}
+
+// loadRecords reads the acl log root-first for build() and drops each record's raw Data (storage keeps the
+// signed bytes and serves peers from there; the in-memory Model is all the state needs). It tries a single
+// ascending GetAfterOrder scan instead of N PrevId point-lookups, trusting the 'o'-index order only after
+// verifying it matches the authoritative PrevId chain; on divergence (e.g. a migrated db) it falls back to
+// the head->root walk.
+func loadRecords(ctx context.Context, storage Storage, recBuilder AclRecordBuilder, rootId, head string) ([]*AclRecord, error) {
+	records, err := loadRecordsByScan(ctx, storage, recBuilder)
+	if err == nil && isContiguousChain(records, rootId, head) {
+		return records, nil
+	}
+	// the fallback re-reads and re-verifies the whole log, so a persistently divergent 'o' index means a
+	// silent 2x cost on every build of this space — surface it
+	log.Warnf("acl %s: order-index scan did not match the PrevId chain (scan err: %v), falling back to head->root walk", rootId, err)
+	return loadRecordsByPrevId(ctx, storage, recBuilder, head)
+}
+
+// unmarshalForState decodes a stored record for the in-memory list and drops its raw Data: the Model is all
+// the state needs, and storage keeps the signed bytes for serving peers.
+func unmarshalForState(recBuilder AclRecordBuilder, raw *consensusproto.RawRecordWithId) (*AclRecord, error) {
+	record, err := recBuilder.UnmarshallWithId(raw)
+	if err != nil {
+		return nil, err
+	}
+	record.Data = nil
+	return record, nil
+}
+
+func loadRecordsByScan(ctx context.Context, storage Storage, recBuilder AclRecordBuilder) ([]*AclRecord, error) {
+	var records []*AclRecord
+	// Start at order 1 (the root): the anystore storage treats this as o>=1 (all records, root has Order=1),
+	// and inMemoryStorage requires order>=1 (order 0 returns nothing). Both yield the full log, root-first.
+	err := storage.GetAfterOrder(ctx, 1, func(ctx context.Context, sr StorageRecord) (bool, error) {
+		record, err := unmarshalForState(recBuilder, sr.RawRecordWithId())
+		if err != nil {
+			return false, err
+		}
+		records = append(records, record)
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+func loadRecordsByPrevId(ctx context.Context, storage Storage, recBuilder AclRecordBuilder, head string) ([]*AclRecord, error) {
+	rec, err := storage.Get(ctx, head)
+	if err != nil {
+		return nil, err
+	}
+	record, err := unmarshalForState(recBuilder, rec.RawRecordWithId())
+	if err != nil {
+		return nil, err
+	}
+	records := []*AclRecord{record}
+	for record.PrevId != "" {
+		rec, err = storage.Get(ctx, record.PrevId)
+		if err != nil {
+			return nil, err
+		}
+		record, err = unmarshalForState(recBuilder, rec.RawRecordWithId())
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+	slices.Reverse(records)
+	return records, nil
+}
+
+// isContiguousChain verifies the scanned records form the exact head->root PrevId chain: root first, head
+// last, and each record's PrevId equal to its predecessor's Id. If this holds, the 'o'-index scan order is
+// the cryptographically authoritative order; otherwise the caller falls back to the PrevId walk.
+func isContiguousChain(records []*AclRecord, rootId, head string) bool {
+	if len(records) == 0 || records[0].Id != rootId || records[len(records)-1].Id != head {
+		return false
+	}
+	for i := 1; i < len(records); i++ {
+		if records[i].PrevId != records[i-1].Id {
+			return false
+		}
+	}
+	return true
 }
 
 func (a *aclList) RecordBuilder() AclRecordBuilder {
@@ -198,7 +261,7 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return ErrRecordAlreadyExists
 	}
-	record, err := a.recordBuilder.UnmarshallWithId(rawRec)
+	record, err := unmarshalForState(a.recordBuilder, rawRec)
 	if err != nil {
 		return
 	}
@@ -294,6 +357,10 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 	}
 }
 
+// RecordsAfter and RecordsBefore serve records to peers and MUST read raw signed bytes from storage, never
+// from a.records[].Model/.Data — the in-memory Model is a shrunken view (keep-only-ours) missing other
+// members' read keys, and re-marshalling it would break the record signature. Storage is the source of
+// truth. Guarded by TestAclList_ServesFullRecordsFromStorage.
 func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
 	var recIdx int
 	if id == "" {
@@ -352,4 +419,3 @@ func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 func (a *aclList) Close(ctx context.Context) (err error) {
 	return nil
 }
-

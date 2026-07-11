@@ -640,3 +640,111 @@ func TestOCache_RemoveSame(t *testing.T) {
 		require.False(t, ok)
 	})
 }
+
+// busyRevertObject deterministically drives the
+// active -> closing -> active "busy revert" path: TryClose blocks until
+// release is closed, then reports "not closed" (busy) so the cache reverts
+// the entry to active via setActive(true). Close is benign/idempotent on
+// purpose, so a double removal surfaces as the close-channel double-close
+// (the production panic) rather than masking it.
+type busyRevertObject struct {
+	release chan struct{}
+}
+
+func (o *busyRevertObject) Close() (err error) {
+	// Hold the entry between setClosing and setClosed long enough for a
+	// second parked remover to observe it mid-close and overwrite e.close.
+	time.Sleep(2 * time.Millisecond)
+	return nil
+}
+
+func (o *busyRevertObject) TryClose(objectTTL time.Duration) (res bool, err error) {
+	<-o.release
+	return false, nil
+}
+
+// TestOCache_RemoveBusyRevertDoubleClose reproduces a panic that crashes the
+// process on laptop wake (GO-7332): when a busy TryRemove/GC reverts an entry
+// back to active while two or more Remove callers are parked on its close
+// channel, every woken remover re-enters the closing path. The second one
+// overwrites e.close, and both call setClosed -> close(e.close) on the same
+// channel: "panic: close of closed channel".
+//
+// Covered combinations: the revert is driven by both TryRemove and GC (the two
+// setActive(true) call sites), against 2 and 3 parked removers (3 removers is
+// also what surfaces the pre-fix cache-wide deadlock when setClosed panics
+// while holding c.mu).
+func TestOCache_RemoveBusyRevertDoubleClose(t *testing.T) {
+	reverters := []struct {
+		name string
+		ttl  time.Duration // 0 makes the Added entry eligible for GC immediately
+		fn   func(c *oCache)
+	}{
+		{"TryRemove", time.Minute, func(c *oCache) { _, _ = c.TryRemove("id") }},
+		{"GC", 0, func(c *oCache) { c.GC() }},
+	}
+	for _, rev := range reverters {
+		for _, removers := range []int{2, 3} {
+			rev, removers := rev, removers
+			t.Run(fmt.Sprintf("%s/%dremovers", rev.name, removers), func(t *testing.T) {
+				obj := &busyRevertObject{release: make(chan struct{})}
+				c := New(
+					func(ctx context.Context, id string) (Object, error) { return obj, nil },
+					WithGCPeriod(0), // no background GC; we drive the revert manually
+					WithTTL(rev.ttl),
+				).(*oCache)
+				require.NoError(t, c.Add("id", obj))
+
+				// 1) busy reverter: marks the entry closing (creates the close
+				//    channel), then blocks in TryClose holding it in closing.
+				revDone := make(chan struct{})
+				go func() {
+					defer close(revDone)
+					rev.fn(c)
+				}()
+
+				// wait until the entry is actually in the closing state
+				require.Eventually(t, func() bool {
+					c.mu.Lock()
+					e, ok := c.data["id"]
+					c.mu.Unlock()
+					if !ok {
+						return false
+					}
+					e.mx.Lock()
+					st := e.state
+					e.mx.Unlock()
+					return st == entryStateClosing
+				}, time.Second, time.Millisecond)
+
+				// 2) removers park on the closing channel.
+				var panicMsg atomic.Value
+				var wg sync.WaitGroup
+				wg.Add(removers)
+				for i := 0; i < removers; i++ {
+					go func() {
+						defer wg.Done()
+						defer func() {
+							if r := recover(); r != nil {
+								panicMsg.Store(fmt.Sprint(r))
+							}
+						}()
+						_, _ = c.Remove(ctx, "id")
+					}()
+				}
+				time.Sleep(20 * time.Millisecond) // let removers park on <-e.close
+
+				// 3) release TryClose -> "busy" -> setActive(true) closes the
+				//    channel and reverts to active, waking the removers.
+				close(obj.release)
+
+				<-revDone
+				wg.Wait()
+
+				if msg := panicMsg.Load(); msg != nil {
+					t.Fatalf("Remove double-closed the entry's close channel: panic %q", msg)
+				}
+			})
+		}
+	}
+}
