@@ -21,7 +21,7 @@ require (
 	github.com/huandu/skiplist v1.2.1
 	github.com/ipfs/boxo v0.41.0
 	github.com/ipfs/go-block-format v0.2.3
-	github.com/ipfs/go-cid v0.6.1
+	github.com/ipfs/go-cid v0.6.2
 	github.com/ipfs/go-ipld-format v0.6.3
 	github.com/libp2p/go-libp2p v0.48.0
 	github.com/mr-tron/base58 v1.3.0
