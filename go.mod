@@ -40,7 +40,7 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/exp v0.0.0-20260603202125-055de637280b
 	golang.org/x/net v0.56.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.46.0
 	golang.org/x/time v0.15.0
 	golang.org/x/tools v0.47.0
