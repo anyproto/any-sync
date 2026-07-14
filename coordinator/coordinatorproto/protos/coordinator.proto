@@ -57,6 +57,9 @@ service Coordinator {
   rpc NotifySubscribe(NotifySubscribeRequest) returns (stream NotifySubscribeEvent);
   // AclUploadInvite uploads invite binary data to the filenodes
   rpc AclUploadInvite(AclUploadInviteRequest) returns (AclUploadInviteResponse);
+  // AclDeleteInvite permanently removes an invite file from the filenodes.
+  // The caller must be the space owner and the invite must be revoked in the acl.
+  rpc AclDeleteInvite(AclDeleteInviteRequest) returns (AclDeleteInviteResponse);
 }
 
 
@@ -87,6 +90,7 @@ enum ErrorCodes {
   SpaceNotShareable = 10;
   InboxMessageVerifyFailed = 11;
   SubscribePeerAlreadySubscribed = 12;
+  InviteStillActive = 13;
   ErrorOffset = 300;
 }
 
@@ -492,6 +496,22 @@ message NotifySubscribeEvent {
 message AclUploadInviteRequest {
   bytes cid = 1;
   bytes data = 2;
+  // spaceId and invitePubKey bind the uploaded file to its invite, so that AclDeleteInvite
+  // can later remove it.
+  string spaceId = 3;
+  // invitePubKey is the PUBLIC part of the invite key. For a guest invite it is the public
+  // part of the guest key.
+  bytes invitePubKey = 4;
 }
 
 message AclUploadInviteResponse {}
+
+// AclDeleteInviteRequest asks the coordinator to remove a revoked invite's file from the
+// filenodes. The coordinator resolves the cid to its invite through the binding made by
+// AclUploadInvite and refuses to remove one that still grants access.
+message AclDeleteInviteRequest {
+  string spaceId = 1;
+  bytes inviteCid = 2;
+}
+
+message AclDeleteInviteResponse {}

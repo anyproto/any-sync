@@ -22,4 +22,5 @@ var (
 	ErrSpaceNotShareable              = errGroup.Register(errors.New("space not shareable"), uint64(ErrorCodes_SpaceNotShareable))
 	ErrInboxMessageVerifyFailed       = errGroup.Register(errors.New("inbox message verification failed"), uint64(ErrorCodes_InboxMessageVerifyFailed))
 	ErrSubscribePeerAlreadySubscribed = errGroup.Register(errors.New("peer already subscribed"), uint64(ErrorCodes_SubscribePeerAlreadySubscribed))
+	ErrInviteStillActive              = errGroup.Register(errors.New("invite is still active"), uint64(ErrorCodes_InviteStillActive))
 )
