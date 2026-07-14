@@ -148,6 +148,9 @@ message SpaceHeader {
     // fileprotoVersion gates the file protocol (v2 = filenode v2 + S3-direct + networkSign)
     SpaceFileProtoVersion fileprotoVersion = 9;
 
+    // parentSpaceId declares this space a child of another space (nested spaces); empty for top-level spaces
+    string parentSpaceId = 10;
+
     SpaceHeaderVersion version = 100;
 }
 

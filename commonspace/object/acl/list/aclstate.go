@@ -2,6 +2,7 @@ package list
 
 import (
 	"errors"
+	"strings"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -39,6 +40,13 @@ var (
 	ErrOwnerNotFound             = errors.New("owner not found")
 	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
 	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
+	ErrChildAlreadyRegistered    = errors.New("child space is already registered")
+	ErrNoSuchChildRegistration   = errors.New("no such child registration")
+	ErrNotChildSpace             = errors.New("space is not a child space")
+	ErrInvalidLegalOwnerProof    = errors.New("invalid legal owner ownership proof")
+	ErrIncorrectAclRootId        = errors.New("ownership change is bound to a different acl root")
+	ErrOrgPermissionUnsupported  = errors.New("child registration org permission is reserved and must be None")
+	ErrChildrenCreationDisallowed = errors.New("children creation is disallowed in this space")
 )
 
 const MaxMetadataLen = 1024
@@ -95,6 +103,22 @@ type AclState struct {
 
 	optionChanges []OptionChange
 	isOneToOne    bool
+
+	// parentSpaceId + legalOwner are set from the root for child (nested) spaces
+	parentSpaceId string
+	// legalOwner is the current legal owner key: pinned at the root, advanced by AclLegalOwnerUpdate
+	legalOwner crypto.PubKey
+	// parentAclRootId is the parent space's acl root id — the binding scope every
+	// AclLegalOwnerUpdate proof (an ownership change from the parent) must carry
+	parentAclRootId string
+	// consumedOwnershipProofs guards AclLegalOwnerUpdate against replaying an already-consumed
+	// parent ownership-change record (keyed by the record cid)
+	consumedOwnershipProofs map[string]struct{}
+	// childRegistrations is a map childSpaceId -> registration for children registered under this (parent) space
+	childRegistrations map[string]ChildRegistration
+	// pendingKeylessRemovals holds identities removed via AclAccountRemoveNoRotate and not yet
+	// covered by a read-key rotation (keyed by identity map key); cleared on any read-key change
+	pendingKeylessRemovals map[string]struct{}
 }
 
 func newAclStateWithKeys(
@@ -111,6 +135,10 @@ func newAclStateWithKeys(
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
+
+		consumedOwnershipProofs: make(map[string]struct{}),
+		childRegistrations:      make(map[string]ChildRegistration),
+		pendingKeylessRemovals:  make(map[string]struct{}),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -129,6 +157,10 @@ func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
+
+		consumedOwnershipProofs: make(map[string]struct{}),
+		childRegistrations:      make(map[string]ChildRegistration),
+		pendingKeylessRemovals:  make(map[string]struct{}),
 	}
 	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
@@ -140,6 +172,12 @@ func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier
 
 func (st *AclState) Identity() crypto.PubKey {
 	return st.pubKey
+}
+
+// Id returns the acl root record id (same value as AclList.Id()). It is the binding
+// scope a child space pins as parentAclRootId for legalOwner proofs.
+func (st *AclState) Id() string {
+	return st.id
 }
 
 func (st *AclState) Validator() ContentValidator {
@@ -348,6 +386,20 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 			return
 		}
 	}
+	if root.ParentSpaceId != "" || len(root.LegalOwner) > 0 || root.ParentAclRootId != "" {
+		// all-or-none: a child space must declare its parent, pin the legal owner,
+		// and pin the parent acl root (the binding scope for legalOwner proofs) together
+		if root.ParentSpaceId == "" || len(root.LegalOwner) == 0 || root.ParentAclRootId == "" {
+			return ErrIncorrectRoot
+		}
+		legalOwner, err := st.keyStore.PubKeyFromProto(root.LegalOwner)
+		if err != nil {
+			return err
+		}
+		st.parentSpaceId = root.ParentSpaceId
+		st.legalOwner = legalOwner
+		st.parentAclRootId = root.ParentAclRootId
+	}
 	// adding an account to the list
 	accountState := AccountState{
 		PubKey:          record.Identity,
@@ -437,6 +489,21 @@ func (st *AclState) Copy() *AclState {
 	for k, v := range st.pendingRequests {
 		newSt.pendingRequests[k] = v
 	}
+	newSt.consumedOwnershipProofs = make(map[string]struct{})
+	for k := range st.consumedOwnershipProofs {
+		newSt.consumedOwnershipProofs[k] = struct{}{}
+	}
+	newSt.childRegistrations = make(map[string]ChildRegistration)
+	for k, v := range st.childRegistrations {
+		newSt.childRegistrations[k] = v
+	}
+	newSt.pendingKeylessRemovals = make(map[string]struct{})
+	for k := range st.pendingKeylessRemovals {
+		newSt.pendingKeylessRemovals[k] = struct{}{}
+	}
+	newSt.parentSpaceId = st.parentSpaceId
+	newSt.legalOwner = st.legalOwner
+	newSt.parentAclRootId = st.parentAclRootId
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
 	newSt.optionChanges = append(newSt.optionChanges, st.optionChanges...)
 	newSt.list = st.list
@@ -479,6 +546,14 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyPermissionChanges(ch.GetPermissionChanges(), record)
 	case ch.GetSpaceOptionsChange() != nil:
 		return st.applySpaceOptionsChange(ch.GetSpaceOptionsChange(), record)
+	case ch.GetChildRegister() != nil:
+		return st.applyChildRegister(ch.GetChildRegister(), record)
+	case ch.GetChildRegisterRevoke() != nil:
+		return st.applyChildRegisterRevoke(ch.GetChildRegisterRevoke(), record)
+	case ch.GetLegalOwnerUpdate() != nil:
+		return st.applyLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), record)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return st.applyAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
 		return nil
@@ -500,6 +575,63 @@ func (st *AclState) applyOwnershipChange(ch *aclrecordproto.AclOwnershipChange, 
 	)
 	st.updatePermissions(oldOwnerKey, ch.OldOwnerPermissions, record)
 	st.updatePermissions(newOwnerKey, aclrecordproto.AclUserPermissions_Owner, record)
+	return nil
+}
+
+func (st *AclState) applyChildRegister(ch *aclrecordproto.AclChildRegister, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateChildRegister(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	if ch.ChildSpaceId == "" {
+		// on the non-validating (node) path an empty id would otherwise synthesize a phantom entry
+		return nil
+	}
+	if reg, ok := st.childRegistrations[ch.ChildSpaceId]; ok && !reg.Revoked {
+		// on the non-validating path a duplicate would otherwise silently overwrite the live entry
+		return nil
+	}
+	st.childRegistrations[ch.ChildSpaceId] = ChildRegistration{
+		RecordId:       record.Id,
+		ChildSpaceId:   ch.ChildSpaceId,
+		ChildAclRootId: ch.ChildAclRootId,
+		OrgPermission:  AclPermissions(ch.OrgPermission),
+		Author:         record.Identity,
+	}
+	return nil
+}
+
+func (st *AclState) applyChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateChildRegisterRevoke(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	reg, ok := st.childRegistrations[ch.ChildSpaceId]
+	if !ok {
+		// on the non-validating (node) path a revoke for an unknown child would
+		// otherwise synthesize a phantom entry with an empty ChildSpaceId
+		return nil
+	}
+	reg.Revoked = true
+	st.childRegistrations[ch.ChildSpaceId] = reg
+	return nil
+}
+
+func (st *AclState) applyLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateLegalOwnerUpdate(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	for _, raw := range ch.OwnershipChanges {
+		// decode only: the validator already signature-checked the proofs when validation is
+		// on, and a non-validating node must not reject a coordinator-accepted record here
+		_, newOwner, proofId, _, err := decodeOwnershipChangeProof(st.keyStore, raw, false)
+		if err != nil {
+			return err
+		}
+		st.consumedOwnershipProofs[proofId] = struct{}{}
+		st.legalOwner = newOwner
+	}
 	return nil
 }
 
@@ -875,6 +1007,38 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
 }
 
+func (st *AclState) applyAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, record *AclRecord) error {
+	err := st.contentValidator.ValidateAccountRemoveNoRotate(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := st.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		idKey := mapKeyFromPubKey(identity)
+		accSt, exists := st.accountStates[idKey]
+		if !exists {
+			return ErrNoSuchAccount
+		}
+		accSt.Status = StatusRemoved
+		accSt.Permissions = AclPermissionsNone
+		accSt.PermissionChanges = append(accSt.PermissionChanges, PermissionChange{
+			RecordId:   record.Id,
+			Permission: AclPermissionsNone,
+		})
+		st.accountStates[idKey] = accSt
+		recId, exists := st.pendingRequests[idKey]
+		if exists {
+			delete(st.pendingRequests, idKey)
+			delete(st.requestRecords, recId)
+		}
+		st.pendingKeylessRemovals[idKey] = struct{}{}
+	}
+	return nil
+}
+
 func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, record *AclRecord, validate bool) error {
 	if validate {
 		err := st.contentValidator.ValidateReadKeyChange(ch, record.Identity)
@@ -883,6 +1047,8 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		}
 	}
 	st.readKeyChanges = append(st.readKeyChanges, record.Id)
+	// a rotation restores forward secrecy: pending keyless removals are now covered
+	st.pendingKeylessRemovals = make(map[string]struct{})
 	mkPubKey, err := st.keyStore.PubKeyFromProto(ch.MetadataPubKey)
 	if err != nil {
 		return err
@@ -1126,4 +1292,52 @@ func closestPermissions(accountState AccountState, recordId string, isAfter func
 		}
 	}
 	return AclPermissionsNone
+}
+
+// LegalOwner returns the current legal owner key of a child (nested) space, nil for top-level spaces
+func (st *AclState) LegalOwner() crypto.PubKey {
+	return st.legalOwner
+}
+
+// ParentSpaceId returns the declared parent space id, empty for top-level spaces
+func (st *AclState) ParentSpaceId() string {
+	return st.parentSpaceId
+}
+
+// IsChildSpace reports whether this space declared a parent at its root
+func (st *AclState) IsChildSpace() bool {
+	return st.legalOwner != nil
+}
+
+// ChildRegistration returns the registration of the given child space id, if any
+func (st *AclState) ChildRegistration(childSpaceId string) (reg ChildRegistration, ok bool) {
+	reg, ok = st.childRegistrations[childSpaceId]
+	return
+}
+
+// ChildRegistrations returns all child registrations of this (parent) space, sorted by child space id
+func (st *AclState) ChildRegistrations() (regs []ChildRegistration) {
+	for _, reg := range st.childRegistrations {
+		regs = append(regs, reg)
+	}
+	slices.SortFunc(regs, func(a, b ChildRegistration) int {
+		return strings.Compare(a.ChildSpaceId, b.ChildSpaceId)
+	})
+	return
+}
+
+// PendingKeylessRemovals returns the identities removed via AclAccountRemoveNoRotate that are not
+// yet covered by a read-key rotation. Non-empty means a key-holding member should rotate.
+func (st *AclState) PendingKeylessRemovals() (identities []crypto.PubKey) {
+	for idKey := range st.pendingKeylessRemovals {
+		if accSt, exists := st.accountStates[idKey]; exists {
+			identities = append(identities, accSt.PubKey)
+		}
+	}
+	return
+}
+
+// HasPendingKeylessRemovals reports whether a keyless removal awaits a completing read-key rotation
+func (st *AclState) HasPendingKeylessRemovals() bool {
+	return len(st.pendingKeylessRemovals) > 0
 }

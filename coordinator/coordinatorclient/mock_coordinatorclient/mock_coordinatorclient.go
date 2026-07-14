@@ -163,6 +163,21 @@ func (mr *MockCoordinatorClientMockRecorder) DeletionLog(ctx, lastRecordId, limi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), ctx, lastRecordId, limit)
 }
 
+// ExternalCompartments mocks base method.
+func (m *MockCoordinatorClient) ExternalCompartments(ctx context.Context) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExternalCompartments", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExternalCompartments indicates an expected call of ExternalCompartments.
+func (mr *MockCoordinatorClientMockRecorder) ExternalCompartments(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExternalCompartments", reflect.TypeOf((*MockCoordinatorClient)(nil).ExternalCompartments), ctx)
+}
+
 // FileLimitsGet mocks base method.
 func (m *MockCoordinatorClient) FileLimitsGet(ctx context.Context, spaceId, identity string) (*coordinatorproto.FileLimitsGetResponse, error) {
 	m.ctrl.T.Helper()

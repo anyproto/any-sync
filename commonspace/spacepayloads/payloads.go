@@ -44,6 +44,12 @@ type SpaceCreatePayload struct {
 	Options *aclrecordproto.AclSpaceOptions
 	// FileProtoVersion gates the file protocol the space uses (embedded in the signed header)
 	FileProtoVersion spacesyncproto.SpaceFileProtoVersion
+	// ParentSpaceId declares the space a child of another space (nested spaces); requires LegalOwner and a V1 header
+	ParentSpaceId string
+	// LegalOwner is the parent space owner key pinned into the child acl root; required with ParentSpaceId
+	LegalOwner crypto.PubKey
+	// ParentAclRootId is the parent space's acl root id — the binding scope for legalOwner proofs; required with ParentSpaceId
+	ParentAclRootId string
 }
 
 type SpaceDerivePayload struct {
@@ -60,9 +66,15 @@ const (
 )
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
+var ErrIncorrectParentLink = errors.New("incorrect parent space link")
 var ErrIncorrectOneToOnePayload = errors.New("incorrect onetoone payload")
 
 func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	if payload.ParentSpaceId != "" {
+		// nested spaces require the V1 header (the acl root with the parent link is part of the signed header)
+		err = ErrIncorrectParentLink
+		return
+	}
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
@@ -171,6 +183,7 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
 		FileprotoVersion:   payload.FileProtoVersion,
+		ParentSpaceId:      payload.ParentSpaceId,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 	}
 
@@ -184,8 +197,11 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 			MetadataKey: payload.MetadataKey,
 			ReadKey:     payload.ReadKey,
 		},
-		Metadata: payload.Metadata,
-		Options:  payload.Options,
+		Metadata:        payload.Metadata,
+		Options:         payload.Options,
+		ParentSpaceId:   payload.ParentSpaceId,
+		LegalOwner:      payload.LegalOwner,
+		ParentAclRootId: payload.ParentAclRootId,
 	})
 	if err != nil {
 		return
@@ -538,8 +554,11 @@ func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 	if err != nil {
 		return
 	}
-	aclSpaceId, err := validateCreateSpaceAclPayload(payload.AclWithId)
+	aclRoot, aclSpaceId, err := parseValidateCreateSpaceAclPayload(payload.AclWithId)
 	if err != nil {
+		return
+	}
+	if err = validateParentLink(payload.SpaceHeaderWithId, aclRoot); err != nil {
 		return
 	}
 	aclHeadId, settingsSpaceId, err := validateCreateSpaceSettingsPayload(payload.SpaceSettingsWithId)
@@ -617,6 +636,11 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 }
 
 func validateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (spaceId string, err error) {
+	_, spaceId, err = parseValidateCreateSpaceAclPayload(rawWithId)
+	return
+}
+
+func parseValidateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (root *aclrecordproto.AclRoot, spaceId string, err error) {
 	if !cidutil.VerifyCid(rawWithId.Payload, rawWithId.Id) {
 		err = objecttree.ErrIncorrectCid
 		return
@@ -654,6 +678,7 @@ func validateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (s
 		return
 	}
 	spaceId = aclRoot.SpaceId
+	root = &aclRoot
 
 	return
 }
@@ -690,4 +715,37 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 
 func NewSpaceId(id string, repKey uint64) string {
 	return id + "." + strconv.FormatUint(repKey, 36)
+}
+
+// validateParentLink cross-checks the nested-spaces declaration between the signed header and the acl root:
+// header.parentSpaceId and the root's parentSpaceId/legalOwner must all be set together and agree
+func validateParentLink(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, aclRoot *aclrecordproto.AclRoot) (err error) {
+	isChild := aclRoot.ParentSpaceId != "" || len(aclRoot.LegalOwner) != 0 || aclRoot.ParentAclRootId != ""
+	if isChild && (aclRoot.ParentSpaceId == "" || len(aclRoot.LegalOwner) == 0 || aclRoot.ParentAclRootId == "") {
+		return ErrIncorrectParentLink
+	}
+	var rawHeader spacesyncproto.RawSpaceHeader
+	if err = rawHeader.UnmarshalVT(rawHeaderWithId.RawHeader); err != nil {
+		return
+	}
+	var header spacesyncproto.SpaceHeader
+	if err = header.UnmarshalVT(rawHeader.SpaceHeader); err != nil {
+		return
+	}
+	if header.ParentSpaceId != aclRoot.ParentSpaceId {
+		return ErrIncorrectParentLink
+	}
+	if isChild {
+		// nested spaces REQUIRE the V1 header: only V1 binds the acl root into the signed
+		// header (bytes.Equal(aclPayload, header.AclPayload) in ValidateSpaceHeader). Without
+		// it a non-V1 child could be signed against one acl root and pushed with another,
+		// letting an attacker pin themselves as legalOwner in the canonical acl.
+		if header.Version != spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1 {
+			return ErrIncorrectParentLink
+		}
+		if _, err = crypto.UnmarshalEd25519PublicKeyProto(aclRoot.LegalOwner); err != nil {
+			return ErrIncorrectParentLink
+		}
+	}
+	return nil
 }

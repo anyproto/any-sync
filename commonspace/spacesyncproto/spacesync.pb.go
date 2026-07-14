@@ -1051,9 +1051,11 @@ type SpaceHeader struct {
 	SettingPayload []byte `protobuf:"bytes,8,opt,name=settingPayload,proto3" json:"settingPayload,omitempty"`
 	// fileprotoVersion gates the file protocol (v2 = filenode v2 + S3-direct + networkSign)
 	FileprotoVersion SpaceFileProtoVersion `protobuf:"varint,9,opt,name=fileprotoVersion,proto3,enum=spacesync.SpaceFileProtoVersion" json:"fileprotoVersion,omitempty"`
-	Version          SpaceHeaderVersion    `protobuf:"varint,100,opt,name=version,proto3,enum=spacesync.SpaceHeaderVersion" json:"version,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// parentSpaceId declares this space a child of another space (nested spaces); empty for top-level spaces
+	ParentSpaceId string             `protobuf:"bytes,10,opt,name=parentSpaceId,proto3" json:"parentSpaceId,omitempty"`
+	Version       SpaceHeaderVersion `protobuf:"varint,100,opt,name=version,proto3,enum=spacesync.SpaceHeaderVersion" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SpaceHeader) Reset() {
@@ -1147,6 +1149,13 @@ func (x *SpaceHeader) GetFileprotoVersion() SpaceFileProtoVersion {
 		return x.FileprotoVersion
 	}
 	return SpaceFileProtoVersion_SpaceFileProtoVersionUnspecified
+}
+
+func (x *SpaceHeader) GetParentSpaceId() string {
+	if x != nil {
+		return x.ParentSpaceId
+	}
+	return ""
 }
 
 func (x *SpaceHeader) GetVersion() SpaceHeaderVersion {
@@ -2261,7 +2270,7 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"aclPayload\x12\"\n" +
 	"\faclPayloadId\x18\x03 \x01(\tR\faclPayloadId\x122\n" +
 	"\x14spaceSettingsPayload\x18\x04 \x01(\fR\x14spaceSettingsPayload\x126\n" +
-	"\x16spaceSettingsPayloadId\x18\x05 \x01(\tR\x16spaceSettingsPayloadId\"\xa0\x03\n" +
+	"\x16spaceSettingsPayloadId\x18\x05 \x01(\tR\x16spaceSettingsPayloadId\"\xc6\x03\n" +
 	"\vSpaceHeader\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\fR\bidentity\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x1c\n" +
@@ -2273,7 +2282,9 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"aclPayload\x18\a \x01(\fR\n" +
 	"aclPayload\x12&\n" +
 	"\x0esettingPayload\x18\b \x01(\fR\x0esettingPayload\x12L\n" +
-	"\x10fileprotoVersion\x18\t \x01(\x0e2 .spacesync.SpaceFileProtoVersionR\x10fileprotoVersion\x127\n" +
+	"\x10fileprotoVersion\x18\t \x01(\x0e2 .spacesync.SpaceFileProtoVersionR\x10fileprotoVersion\x12$\n" +
+	"\rparentSpaceId\x18\n" +
+	" \x01(\tR\rparentSpaceId\x127\n" +
 	"\aversion\x18d \x01(\x0e2\x1d.spacesync.SpaceHeaderVersionR\aversion\"P\n" +
 	"\x0eRawSpaceHeader\x12 \n" +
 	"\vspaceHeader\x18\x01 \x01(\fR\vspaceHeader\x12\x1c\n" +

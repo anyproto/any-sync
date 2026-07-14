@@ -44,6 +44,11 @@ service Coordinator {
   // AccountLimitsSet sets limits to the account. Can be used only by a network config member
   rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
 
+  // ExternalCompartments lists the child (nested) spaces the CALLING identity was admitted
+  // to as an external seat — the discovery surface for identities that are not members of
+  // the parent space and therefore cannot read its registrations
+  rpc ExternalCompartments(ExternalCompartmentsRequest) returns (ExternalCompartmentsResponse);
+
   // EventLog gets the latest event log records
   rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
 
@@ -77,6 +82,9 @@ message SpaceSignRequest {
   bytes newIdentitySignature = 4 [deprecated = true];
   // ForceRequest if true, forces the creating space receipt even if the space is deleted before
   bool forceRequest = 5;
+  // ParentAclRecordId points at the AclChildRegister record in the parent space's acl (nested spaces);
+  // required when the signed header carries a parentSpaceId
+  string parentAclRecordId = 6;
 }
 
 enum ErrorCodes {
@@ -394,9 +402,18 @@ message AccountLimitsSetRequest {
   uint32 spaceMembersRead = 4;
   uint32 spaceMembersWrite = 5;
   uint32 sharedSpacesLimit = 6;
+  // externalSeatsLimit caps the distinct non-org identities admitted across all
+  // child spaces of the identity's spaces (nested spaces / paid external seats)
+  uint32 externalSeatsLimit = 7;
 }
 
 message AccountLimitsSetResponse {}
+
+message ExternalCompartmentsRequest {}
+
+message ExternalCompartmentsResponse {
+  repeated string spaceIds = 1;
+}
 
 message AclEventLogRequest {
   string accountIdentity = 1;

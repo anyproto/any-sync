@@ -5,6 +5,8 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -26,6 +28,10 @@ type ContentValidator interface {
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 	ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error)
+	ValidateChildRegister(ch *aclrecordproto.AclChildRegister, authorIdentity crypto.PubKey) (err error)
+	ValidateChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, authorIdentity crypto.PubKey) (err error)
+	ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error)
 }
 
 type contentValidator struct {
@@ -61,6 +67,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 	}
 	if !c.aclState.Permissions(authorIdentity).IsOwner() {
 		return ErrInsufficientPermissions
+	}
+	// AclRootId binds the transfer to the acl it was accepted into so it can later serve as a
+	// legalOwner proof in child spaces; a record claiming a foreign acl must not be accepted
+	if ch.AclRootId != "" && ch.AclRootId != c.aclState.id {
+		return ErrIncorrectAclRootId
 	}
 	identity, err := c.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
 	if err != nil {
@@ -206,6 +217,14 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateAccountsAdd(ch.GetAccountsAdd(), authorIdentity)
 	case ch.GetSpaceOptionsChange() != nil:
 		return c.ValidateSpaceOptionsChange(ch.GetSpaceOptionsChange(), authorIdentity)
+	case ch.GetChildRegister() != nil:
+		return c.ValidateChildRegister(ch.GetChildRegister(), authorIdentity)
+	case ch.GetChildRegisterRevoke() != nil:
+		return c.ValidateChildRegisterRevoke(ch.GetChildRegisterRevoke(), authorIdentity)
+	case ch.GetLegalOwnerUpdate() != nil:
+		return c.ValidateLegalOwnerUpdate(ch.GetLegalOwnerUpdate(), authorIdentity)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return c.ValidateAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -487,8 +506,16 @@ func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	if !c.verifier.ShouldValidate() {
 		return nil
 	}
-	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
-		return ErrInsufficientPermissions
+	authorPerms := c.aclState.Permissions(authorIdentity)
+	if !authorPerms.CanManageAccounts() {
+		// a Writer may author the rotation that completes a pending keyless removal,
+		// but only when the space opted in via AclSpaceOptions
+		opts := c.aclState.CurrentOptions()
+		editorAllowed := opts != nil && opts.EditorsCanCompleteKeylessRotation &&
+			authorPerms.CanWrite() && c.aclState.HasPendingKeylessRemovals()
+		if !editorAllowed {
+			return ErrInsufficientPermissions
+		}
 	}
 	return c.validateReadKeyChange(ch, nil)
 }
@@ -565,4 +592,193 @@ func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 		return ErrIncorrectNumberOfAccounts
 	}
 	return
+}
+
+func (c *contentValidator) ValidateChildRegister(ch *aclrecordproto.AclChildRegister, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	if opts := c.aclState.CurrentOptions(); opts != nil && opts.ChildrenCreationDisallowed {
+		return ErrChildrenCreationDisallowed
+	}
+	if ch.ChildSpaceId == "" || ch.ChildAclRootId == "" {
+		return ErrNoSuchChildRegistration
+	}
+	if !AclPermissions(ch.OrgPermission).NoPermissions() {
+		// reserved: nothing yet adds the org to the child acl or encrypts the read key to it,
+		// so a non-None value would record an access claim no code path can honor
+		return ErrOrgPermissionUnsupported
+	}
+	if reg, ok := c.aclState.childRegistrations[ch.ChildSpaceId]; ok && !reg.Revoked {
+		return ErrChildAlreadyRegistered
+	}
+	return nil
+}
+
+func (c *contentValidator) ValidateChildRegisterRevoke(ch *aclrecordproto.AclChildRegisterRevoke, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	reg, ok := c.aclState.childRegistrations[ch.ChildSpaceId]
+	if !ok || reg.Revoked {
+		return ErrNoSuchChildRegistration
+	}
+	return nil
+}
+
+// ValidateLegalOwnerUpdate checks the signature-induction chain: the first embedded parent
+// ownership-change must be signed by the currently stored legal owner, each next one by the
+// owner the previous one named, and the author of this record must be the final owner. Each
+// proof must be bound to the parent acl (aclRootId == the child's pinned parentAclRootId), and
+// already-consumed proof CIDs are rejected so a cycled ownership cannot be REPLAYED.
+//
+// This induction is self-contained (verifiable offline, e.g. by external-seat members who do
+// not replicate the parent acl) but proofs are only author-signature-checked here — they are
+// NOT verified to have been accepted into the parent acl. A stored legal owner could therefore
+// mint a FRESH (never-accepted) ownership change to a key of its choosing. The authoritative
+// guard against that is the coordinator gate (verifyKeylessGovernanceRecord), which requires an
+// AclLegalOwnerUpdate to be authored by the parent's CURRENT owner; this client-side check is
+// defense-in-depth. Fully closing the offline gap needs an acceptor-inclusion proof (not
+// available on the ValidateFull path, whose VerifyAcceptor is a no-op).
+func (c *contentValidator) ValidateLegalOwnerUpdate(ch *aclrecordproto.AclLegalOwnerUpdate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if c.aclState.legalOwner == nil {
+		return ErrNotChildSpace
+	}
+	if len(ch.OwnershipChanges) == 0 {
+		return ErrInvalidLegalOwnerProof
+	}
+	var (
+		expected = c.aclState.legalOwner
+		inBatch  = map[string]struct{}{}
+	)
+	for _, raw := range ch.OwnershipChanges {
+		author, newOwner, proofId, aclRootId, err := unmarshalOwnershipChangeProof(c.keyStore, raw)
+		if err != nil {
+			return err
+		}
+		// bind the proof to the parent space: an ownership change from any OTHER
+		// acl (even one signed by the same key) must not advance this child's owner
+		if aclRootId == "" || aclRootId != c.aclState.parentAclRootId {
+			return ErrInvalidLegalOwnerProof
+		}
+		if !author.Equals(expected) {
+			return ErrInvalidLegalOwnerProof
+		}
+		if _, consumed := c.aclState.consumedOwnershipProofs[proofId]; consumed {
+			return ErrInvalidLegalOwnerProof
+		}
+		if _, dup := inBatch[proofId]; dup {
+			return ErrInvalidLegalOwnerProof
+		}
+		inBatch[proofId] = struct{}{}
+		expected = newOwner
+	}
+	if !authorIdentity.Equals(expected) {
+		return ErrInsufficientPermissions
+	}
+	return nil
+}
+
+// unmarshalOwnershipChangeProof decodes one embedded parent acl record (consensusproto.RawRecord bytes),
+// verifies the author signature over its payload and requires it to contain exactly one AclOwnershipChange.
+// Returns the record author, the new owner it names and the replay-guard key: the cid of the SIGNED
+// payload, not of the whole envelope — acceptor fields sit outside the signature, so an envelope-keyed
+// guard could be bypassed by re-serializing a consumed proof with a mutated acceptor field.
+func unmarshalOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
+	return decodeOwnershipChangeProof(keyStore, raw, true)
+}
+
+// decodeOwnershipChangeProof is the shared decode: the validator passes verifySignature=true, the
+// state-apply path passes false so a non-validating (acceptor-trust) node never does or fails
+// signature-dependent work on a record its coordinator already accepted.
+func decodeOwnershipChangeProof(keyStore crypto.KeyStorage, raw []byte, verifySignature bool) (author, newOwner crypto.PubKey, proofId, aclRootId string, err error) {
+	rawRec := &consensusproto.RawRecord{}
+	if err = rawRec.UnmarshalVT(raw); err != nil {
+		return
+	}
+	rec := &consensusproto.Record{}
+	if err = rec.UnmarshalVT(rawRec.Payload); err != nil {
+		return
+	}
+	author, err = keyStore.PubKeyFromProto(rec.Identity)
+	if err != nil {
+		return
+	}
+	if verifySignature {
+		var res bool
+		res, err = author.Verify(rawRec.Payload, rawRec.Signature)
+		if err != nil {
+			return
+		}
+		if !res {
+			err = ErrInvalidSignature
+			return
+		}
+	}
+	aclData := &aclrecordproto.AclData{}
+	if err = aclData.UnmarshalVT(rec.Data); err != nil {
+		return
+	}
+	if len(aclData.AclContent) != 1 || aclData.AclContent[0].GetOwnershipChange() == nil {
+		err = ErrInvalidLegalOwnerProof
+		return
+	}
+	ownershipChange := aclData.AclContent[0].GetOwnershipChange()
+	newOwner, err = keyStore.PubKeyFromProto(ownershipChange.NewOwnerIdentity)
+	if err != nil {
+		return
+	}
+	aclRootId = ownershipChange.AclRootId
+	proofId, err = cidutil.NewCidFromBytes(rawRec.Payload)
+	return
+}
+
+// ValidateAccountRemoveNoRotate admits the keyless-governance removal: only the current legalOwner
+// of a child (nested) space may author it, even though it holds no permissions in this acl.
+func (c *contentValidator) ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if c.aclState.legalOwner == nil {
+		return ErrNotChildSpace
+	}
+	if !authorIdentity.Equals(c.aclState.legalOwner) {
+		return ErrInsufficientPermissions
+	}
+	if len(ch.Identities) == 0 {
+		return ErrIncorrectNumberOfAccounts
+	}
+	seenIdentities := map[string]struct{}{}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		if identity.Equals(authorIdentity) {
+			return ErrInsufficientPermissions
+		}
+		permissions := c.aclState.Permissions(identity)
+		if permissions.NoPermissions() {
+			return ErrNoSuchAccount
+		}
+		if permissions.IsOwner() {
+			// the legalOwner governs members, not the child's owner; deleting the space is its lever there
+			return ErrInsufficientPermissions
+		}
+		idKey := mapKeyFromPubKey(identity)
+		if _, exists := seenIdentities[idKey]; exists {
+			return ErrDuplicateAccounts
+		}
+		seenIdentities[idKey] = struct{}{}
+	}
+	return nil
 }
