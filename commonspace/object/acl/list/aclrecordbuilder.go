@@ -85,6 +85,13 @@ type BatchRequestPayload struct {
 	InviteRevokes []string
 	InviteChanges []InviteChangePayload
 	NewInvites    []AclPermissions
+	// ReadKeyChange, when set, rotates the read key in the same record as the invite revokes, excluding
+	// the invites in InviteRevokes from the new key. This is how an anyone-can-join invite — which
+	// embeds the current read key — is truly retired: revoking it stops new joins, and the rotation
+	// makes the key it exposed useless for future content. It may accompany only InviteRevokes and
+	// Declines: rotating alongside a membership change or a new invite would desync the new key's
+	// coverage or hand a fresh invite the pre-rotation key.
+	ReadKeyChange *ReadKeyChangePayload
 }
 
 type AccountRemovePayload struct {
@@ -189,6 +196,14 @@ func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (batch
 		contentList []*aclrecordproto.AclContentValue
 		content     *aclrecordproto.AclContentValue
 	)
+	if payload.ReadKeyChange != nil {
+		// the rotation must be the only thing here beyond revokes and declines: a membership change would
+		// desync the new key's coverage, and a new invite would be handed the pre-rotation key
+		if len(payload.Additions) > 0 || len(payload.Removals.Identities) > 0 || len(payload.Approvals) > 0 ||
+			len(payload.Changes) > 0 || len(payload.InviteChanges) > 0 || len(payload.NewInvites) > 0 {
+			return batchResult, ErrReadKeyChangeNotAlone
+		}
+	}
 	if len(payload.Removals.Identities) > 0 {
 		content, err = a.buildAccountRemove(payload.Removals)
 		if err != nil {
@@ -230,6 +245,23 @@ func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (batch
 			return
 		}
 		contentList = append(contentList, content)
+	}
+	if payload.ReadKeyChange != nil {
+		// emitted after the revokes so that, when the record is applied in order, the invites are already
+		// gone from the state by the time the rotation lands — which is what lets the new key legitimately
+		// omit them and still validate.
+		revoked := make(map[string]struct{}, len(payload.InviteRevokes))
+		for _, id := range payload.InviteRevokes {
+			revoked[id] = struct{}{}
+		}
+		var rkChange *aclrecordproto.AclReadKeyChange
+		rkChange, err = a.buildReadKeyChange(*payload.ReadKeyChange, nil, revoked)
+		if err != nil {
+			return
+		}
+		contentList = append(contentList, &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_ReadKeyChange{ReadKeyChange: rkChange},
+		})
 	}
 	for _, invite := range payload.InviteChanges {
 		content, err = a.buildInviteChange(invite)
@@ -775,7 +807,7 @@ func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (raw
 		err = ErrInsufficientPermissions
 		return
 	}
-	rkChange, err := a.buildReadKeyChange(payload, nil)
+	rkChange, err := a.buildReadKeyChange(payload, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -783,7 +815,12 @@ func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (raw
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, removedIdentities map[string]struct{}) (*aclrecordproto.AclReadKeyChange, error) {
+// buildReadKeyChange re-encrypts a new read key for every current member and every current
+// AnyoneCanJoin invite. removedIdentities are members excluded from the new key (they are being
+// removed in the same record); revokedInvites, keyed by invite record id, are invites excluded from
+// the new key (they are being revoked in the same record). Excluding a revoked invite is what makes
+// rotating away from it meaningful: the new key is never encrypted to the invite key being killed.
+func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, removedIdentities, revokedInvites map[string]struct{}) (*aclrecordproto.AclReadKeyChange, error) {
 	// encrypting new read key with all keys of users
 	protoKey, err := payload.ReadKey.Marshall()
 	if err != nil {
@@ -815,8 +852,11 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 			EncryptedReadKey: enc,
 		})
 	}
-	for _, invite := range a.state.invites {
+	for inviteRecordId, invite := range a.state.invites {
 		if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
+			continue
+		}
+		if _, revoked := revokedInvites[inviteRecordId]; revoked {
 			continue
 		}
 		protoIdentity, err := invite.Key.Marshall()
@@ -900,7 +940,7 @@ func (a *aclRecordBuilder) buildAccountRemove(payload AccountRemovePayload) (val
 		}
 		marshalledIdentities = append(marshalledIdentities, protoIdentity)
 	}
-	rkChange, err := a.buildReadKeyChange(payload.Change, deletedMap)
+	rkChange, err := a.buildReadKeyChange(payload.Change, deletedMap, nil)
 	if err != nil {
 		return nil, err
 	}
