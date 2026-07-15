@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	blocks "github.com/ipfs/go-block-format"
+	"github.com/ipfs/go-cid"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
@@ -18,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/cidutil"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "common.coordinator.coordinatorclient"
@@ -54,7 +56,8 @@ type CoordinatorClient interface {
 
 	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
 
-	AclUploadInvite(ctx context.Context, block blocks.Block) (err error)
+	AclUploadInvite(ctx context.Context, spaceId string, inviteKey crypto.PubKey, block blocks.Block) (err error)
+	AclDeleteInvite(ctx context.Context, spaceId string, inviteCid cid.Cid) (err error)
 
 	app.Component
 }
@@ -335,11 +338,36 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 	return
 }
 
-func (c *coordinatorClient) AclUploadInvite(ctx context.Context, block blocks.Block) error {
+// AclUploadInvite uploads an invite file and binds it to the invite it belongs to, so the
+// coordinator can delete the file once the invite is revoked. inviteKey is the PUBLIC part of
+// the invite key — of the guest key, for a guest invite.
+func (c *coordinatorClient) AclUploadInvite(ctx context.Context, spaceId string, inviteKey crypto.PubKey, block blocks.Block) error {
+	rawInviteKey, err := inviteKey.Marshall()
+	if err != nil {
+		return err
+	}
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		_, err := cl.AclUploadInvite(ctx, &coordinatorproto.AclUploadInviteRequest{
-			Cid:  block.Cid().Bytes(),
-			Data: block.RawData(),
+			Cid:          block.Cid().Bytes(),
+			Data:         block.RawData(),
+			SpaceId:      spaceId,
+			InvitePubKey: rawInviteKey,
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+// AclDeleteInvite deletes a revoked invite's file from the filenodes. The coordinator resolves
+// the cid through the binding made by AclUploadInvite, and refuses an invite that still grants
+// access.
+func (c *coordinatorClient) AclDeleteInvite(ctx context.Context, spaceId string, inviteCid cid.Cid) error {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.AclDeleteInvite(ctx, &coordinatorproto.AclDeleteInviteRequest{
+			SpaceId:   spaceId,
+			InviteCid: inviteCid.Bytes(),
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
