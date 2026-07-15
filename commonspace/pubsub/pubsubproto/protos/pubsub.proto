@@ -24,7 +24,9 @@ enum ErrCodes {
     TopicNotOwned = 6;
     // InvalidTopic - malformed topic or pattern: bad wildcard placement, reserved chars, non-canonical form
     InvalidTopic = 7;
-    ErrorOffset = 800;
+    // ErrorOffset - error-code band for this proto package; see docs/rpc-error-offsets.md
+    // (100..900 are the any-sync core bands; pubsub uses 1100)
+    ErrorOffset = 1100;
 }
 
 // PubSubMessage is the single frame type carried by PubSubStream

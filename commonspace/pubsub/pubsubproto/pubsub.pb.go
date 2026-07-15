@@ -39,21 +39,21 @@ const (
 	ErrCodes_TopicNotOwned ErrCodes = 6
 	// InvalidTopic - malformed topic or pattern: bad wildcard placement, reserved chars, non-canonical form
 	ErrCodes_InvalidTopic ErrCodes = 7
-	ErrCodes_ErrorOffset  ErrCodes = 800
+	ErrCodes_ErrorOffset  ErrCodes = 1100
 )
 
 // Enum value maps for ErrCodes.
 var (
 	ErrCodes_name = map[int32]string{
-		0:   "Unexpected",
-		1:   "NotAMember",
-		2:   "NotResponsible",
-		3:   "RateLimited",
-		4:   "TooManyTopics",
-		5:   "InvalidMessage",
-		6:   "TopicNotOwned",
-		7:   "InvalidTopic",
-		800: "ErrorOffset",
+		0:    "Unexpected",
+		1:    "NotAMember",
+		2:    "NotResponsible",
+		3:    "RateLimited",
+		4:    "TooManyTopics",
+		5:    "InvalidMessage",
+		6:    "TopicNotOwned",
+		7:    "InvalidTopic",
+		1100: "ErrorOffset",
 	}
 	ErrCodes_value = map[string]int32{
 		"Unexpected":     0,
@@ -64,7 +64,7 @@ var (
 		"InvalidMessage": 5,
 		"TopicNotOwned":  6,
 		"InvalidTopic":   7,
-		"ErrorOffset":    800,
+		"ErrorOffset":    1100,
 	}
 )
 
@@ -550,7 +550,7 @@ const file_commonspace_pubsub_pubsubproto_protos_pubsub_proto_rawDesc = "" +
 	"\x0eInvalidMessage\x10\x05\x12\x11\n" +
 	"\rTopicNotOwned\x10\x06\x12\x10\n" +
 	"\fInvalidTopic\x10\a\x12\x10\n" +
-	"\vErrorOffset\x10\xa0\x062J\n" +
+	"\vErrorOffset\x10\xcc\x082J\n" +
 	"\x06PubSub\x12@\n" +
 	"\fPubSubStream\x12\x15.pubsub.PubSubMessage\x1a\x15.pubsub.PubSubMessage(\x010\x01B Z\x1ecommonspace/pubsub/pubsubprotob\x06proto3"
 
