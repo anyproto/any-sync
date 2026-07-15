@@ -11,7 +11,7 @@ require (
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/anyproto/lexid v0.0.6
 	github.com/cespare/xxhash v1.1.0
-	github.com/cheggaaa/mb/v3 v3.0.2
+	github.com/cheggaaa/mb/v3 v3.0.3
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.2.10
