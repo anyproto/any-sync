@@ -396,6 +396,20 @@ func (mr *MockAclSpaceClientMockRecorder) RevokeAllInvites(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAllInvites", reflect.TypeOf((*MockAclSpaceClient)(nil).RevokeAllInvites), ctx)
 }
 
+// RevokeAllInvitesAndRotate mocks base method.
+func (m *MockAclSpaceClient) RevokeAllInvitesAndRotate(ctx context.Context, readKeyChange list.ReadKeyChangePayload) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeAllInvitesAndRotate", ctx, readKeyChange)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeAllInvitesAndRotate indicates an expected call of RevokeAllInvitesAndRotate.
+func (mr *MockAclSpaceClientMockRecorder) RevokeAllInvitesAndRotate(ctx, readKeyChange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAllInvitesAndRotate", reflect.TypeOf((*MockAclSpaceClient)(nil).RevokeAllInvitesAndRotate), ctx, readKeyChange)
+}
+
 // RevokeInvite mocks base method.
 func (m *MockAclSpaceClient) RevokeInvite(ctx context.Context, inviteRecordId string) error {
 	m.ctrl.T.Helper()
@@ -408,6 +422,20 @@ func (m *MockAclSpaceClient) RevokeInvite(ctx context.Context, inviteRecordId st
 func (mr *MockAclSpaceClientMockRecorder) RevokeInvite(ctx, inviteRecordId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeInvite", reflect.TypeOf((*MockAclSpaceClient)(nil).RevokeInvite), ctx, inviteRecordId)
+}
+
+// RevokeInviteAndRotate mocks base method.
+func (m *MockAclSpaceClient) RevokeInviteAndRotate(ctx context.Context, inviteRecordId string, readKeyChange list.ReadKeyChangePayload) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeInviteAndRotate", ctx, inviteRecordId, readKeyChange)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeInviteAndRotate indicates an expected call of RevokeInviteAndRotate.
+func (mr *MockAclSpaceClientMockRecorder) RevokeInviteAndRotate(ctx, inviteRecordId, readKeyChange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeInviteAndRotate", reflect.TypeOf((*MockAclSpaceClient)(nil).RevokeInviteAndRotate), ctx, inviteRecordId, readKeyChange)
 }
 
 // StopSharing mocks base method.

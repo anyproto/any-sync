@@ -397,7 +397,7 @@ func TestAclList_ReadKeyChange(t *testing.T) {
 		rkChange, err := accRecBuilder.buildReadKeyChange(ReadKeyChangePayload{
 			MetadataKey: privKey,
 			ReadKey:     newReadKey,
-		}, nil)
+		}, nil, nil)
 		require.NoError(t, err)
 		content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_ReadKeyChange{ReadKeyChange: rkChange}}
 		_, err = accRecBuilder.buildRecord(content)
