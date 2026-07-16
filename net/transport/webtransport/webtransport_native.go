@@ -5,10 +5,12 @@ package webtransport
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -36,8 +38,10 @@ type wtTransport struct {
 	accepter    transport.Accepter
 	conf        Config
 
-	server   *wt.Server
-	udpConns []net.PacketConn
+	server    *wt.Server
+	udpConns  []net.PacketConn
+	listeners []*quic.EarlyListener
+	serveWg   sync.WaitGroup
 
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
@@ -126,17 +130,43 @@ func (t *wtTransport) Run(ctx context.Context) (err error) {
 		}
 		t.udpConns = append(t.udpConns, udpConn)
 
+		// listen and accept ourselves instead of wt.Server.Serve: Serve registers itself
+		// in the server's internal WaitGroup from this goroutine, which races with
+		// Close when the transport is shut down before the goroutine is scheduled
+		ln, err := quic.ListenEarly(udpConn, tlsConf, quicConf)
+		if err != nil {
+			return fmt.Errorf("listen quic %q: %w", addr, err)
+		}
+		t.listeners = append(t.listeners, ln)
+
 		log.Info("webtransport listener started",
 			zap.String("addr", udpConn.LocalAddr().String()),
 			zap.String("path", t.conf.Path),
 		)
+		t.serveWg.Add(1)
 		go func() {
-			if err := t.server.Serve(udpConn); err != nil {
-				log.Debug("webtransport server stopped", zap.Error(err))
-			}
+			defer t.serveWg.Done()
+			t.serveListener(ln)
 		}()
 	}
 	return nil
+}
+
+func (t *wtTransport) serveListener(ln *quic.EarlyListener) {
+	for {
+		qconn, err := ln.Accept(t.listCtx)
+		if err != nil {
+			log.Debug("webtransport server stopped", zap.Error(err))
+			return
+		}
+		t.serveWg.Add(1)
+		go func() {
+			defer t.serveWg.Done()
+			if err := t.server.ServeQUICConn(qconn); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Debug("webtransport connection closed", zap.Error(err))
+			}
+		}()
+	}
 }
 
 func (t *wtTransport) handleUpgrade(w http.ResponseWriter, r *http.Request) {
@@ -255,7 +285,13 @@ func (t *wtTransport) Close(ctx context.Context) error {
 		t.listCtxCancel()
 	}
 	if t.server != nil {
+		// closes established sessions gracefully while the udp sockets are still open
+		// and cancels the server context, unblocking ServeQUICConn calls
 		_ = t.server.Close()
+	}
+	t.serveWg.Wait()
+	for _, ln := range t.listeners {
+		_ = ln.Close()
 	}
 	for _, c := range t.udpConns {
 		_ = c.Close()
