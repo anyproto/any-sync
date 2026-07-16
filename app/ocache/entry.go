@@ -23,10 +23,16 @@ type entry struct {
 	lastUsage time.Time
 	load      chan struct{}
 	loadErr   error
-	value     Object
-	close     chan struct{}
-	mx        sync.Mutex
-	cancel    context.CancelFunc
+	// loadAborted marks a failed load whose OWN context was already done
+	// when the loadFunc returned — the load was killed (its first caller
+	// went away, or the cache is closing), not refused by the loadFunc.
+	// Written by oCache.load before the load channel closes; read only
+	// after <-load, like loadErr.
+	loadAborted bool
+	value       Object
+	close       chan struct{}
+	mx          sync.Mutex
+	cancel      context.CancelFunc
 }
 
 func newEntry(id string, value Object, state entryState) *entry {
