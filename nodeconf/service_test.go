@@ -316,7 +316,11 @@ func TestService_ObserveChanges(t *testing.T) {
 	})
 
 	fx.run(t)
-	time.Sleep(time.Millisecond * 10)
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return calls > 0
+	}, time.Second*5, time.Millisecond*5)
 
 	mu.Lock()
 	defer mu.Unlock()
