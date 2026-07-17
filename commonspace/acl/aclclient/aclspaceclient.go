@@ -41,7 +41,9 @@ type AclSpaceClient interface {
 	ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error)
 	RequestSelfRemove(ctx context.Context) (err error)
 	RevokeInvite(ctx context.Context, inviteRecordId string) (err error)
+	RevokeInviteAndRotate(ctx context.Context, inviteRecordId string, readKeyChange list.ReadKeyChangePayload) (err error)
 	RevokeAllInvites(ctx context.Context) (err error)
+	RevokeAllInvitesAndRotate(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error)
 	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
 	OwnershipChange(ctx context.Context, identity crypto.PubKey, oldOwnerPermissions list.AclPermissions) (err error)
 	ChangeSpaceOptions(ctx context.Context, options *aclrecordproto.AclSpaceOptions) error
@@ -77,6 +79,24 @@ func (c *aclSpaceClient) RevokeInvite(ctx context.Context, inviteRecordId string
 	}
 	c.acl.Unlock()
 	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+// RevokeInviteAndRotate revokes a single invite and rotates the read key in one record, withholding
+// the new key from that invite. Use it to retire one anyone-can-join invite — which handed its
+// holders the current read key — without disturbing any other invite the space still offers.
+func (c *aclSpaceClient) RevokeInviteAndRotate(ctx context.Context, inviteRecordId string, readKeyChange list.ReadKeyChangePayload) (err error) {
+	c.acl.Lock()
+	payload := list.BatchRequestPayload{
+		InviteRevokes: []string{inviteRecordId},
+		ReadKeyChange: &readKeyChange,
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res.Rec)
 }
 
 func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
@@ -127,6 +147,30 @@ func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
 	c.acl.Lock()
 	payload := list.BatchRequestPayload{
 		InviteRevokes: c.acl.AclState().InviteIds(),
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res.Rec)
+}
+
+// RevokeAllInvitesAndRotate revokes every invite and rotates the read key in one record, so that an
+// anyone-can-join invite — which handed its holders the current read key — can no longer decrypt
+// content created after the revocation. The new key is re-encrypted for every remaining member but
+// for none of the revoked invites.
+//
+// It rotates unconditionally, so the caller should only reach for it when an anyone-can-join invite
+// is actually present: with no invites, or only request-to-join ones (which never exposed the read
+// key), the rotation re-keys every member for no security gain. Use RevokeAllInvites when no
+// rotation is warranted.
+func (c *aclSpaceClient) RevokeAllInvitesAndRotate(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error) {
+	c.acl.Lock()
+	payload := list.BatchRequestPayload{
+		InviteRevokes: c.acl.AclState().InviteIds(),
+		ReadKeyChange: &readKeyChange,
 	}
 	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {
