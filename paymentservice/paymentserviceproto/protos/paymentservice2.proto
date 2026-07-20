@@ -128,6 +128,10 @@ message MembershipV2 {
     uint64 date = 2;
     Amount total = 3;
     Status status = 4;
+    // Stripe hosted-invoice payment page for an OPEN (unpaid) invoice the user
+    // must pay to keep access — set during the reverse-trial grace period.
+    // Empty when no action is required.
+    string paymentUrl = 5;
   }
 
   message Cart {
