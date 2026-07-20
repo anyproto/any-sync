@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/app/olddiff"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
@@ -67,12 +66,6 @@ func TestBenchRemoteWithDifferentCounts(t *testing.T) {
 			return ldiff.New(32, 256)
 		}, 32)
 	})
-	//old has higher head lengths because of hashes
-	t.Run("OldLdiff", func(t *testing.T) {
-		benchmarkDifferentDiffs(t, func() ldiff.Diff {
-			return olddiff.New(32, 256)
-		}, 100)
-	})
 }
 
 type mockClient struct {
@@ -108,31 +101,24 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V3}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
-		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+		needsSync, err := rd.DiffTypeCheck(ctx, contLocal)
 
 		require.NoError(t, err)
 		require.False(t, needsSync)
-		require.Equal(t, contLocal, diff)
 	})
 
 	t.Run("diff type check with V2", func(t *testing.T) {
 		ctx := context.Background()
+		contLocal := ldiff.New(32, 256)
 		contRemote := ldiff.New(32, 256)
-		oldDiff := ldiff.New(32, 256)
-
-		oldDiff.Set(ldiff.Element{Id: "1", Head: "head1"})
-		contRemote.Set(ldiff.Element{Id: "1", Head: "head1"})
 
 		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V2}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(ldiff.New(32, 256), oldDiff)
-		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+		_, err := rd.DiffTypeCheck(ctx, contLocal)
 
-		require.NoError(t, err)
-		require.False(t, needsSync)
-		require.Equal(t, oldDiff, diff)
+		require.Error(t, err)
+		require.Equal(t, spacesyncproto.ErrUnexpected, err)
 	})
 
 	t.Run("diff type check with unsupported type", func(t *testing.T) {
@@ -143,8 +129,7 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V1}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
-		_, _, err := rd.DiffTypeCheck(ctx, container)
+		_, err := rd.DiffTypeCheck(ctx, contLocal)
 
 		require.Error(t, err)
 		require.Equal(t, spacesyncproto.ErrUnexpected, err)
@@ -161,12 +146,10 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 		mockClient := &mockClientWithDiffType{t: t, l: contRemote, diffType: spacesyncproto.DiffType_V3}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
-		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+		needsSync, err := rd.DiffTypeCheck(ctx, contLocal)
 
 		require.NoError(t, err)
 		require.True(t, needsSync)
-		require.Equal(t, contLocal, diff)
 	})
 
 	t.Run("head sync request fails", func(t *testing.T) {
@@ -176,12 +159,10 @@ func TestRemoteDiffTypeCheck(t *testing.T) {
 		mockClient := &mockClientWithError{err: fmt.Errorf("network error")}
 		rd := NewRemoteDiff("space1", mockClient)
 
-		container := ldiff.NewDiffContainer(contLocal, ldiff.New(32, 256))
-		needsSync, diff, err := rd.DiffTypeCheck(ctx, container)
+		needsSync, err := rd.DiffTypeCheck(ctx, contLocal)
 
 		require.Error(t, err)
 		require.False(t, needsSync)
-		require.Nil(t, diff)
 	})
 }
 

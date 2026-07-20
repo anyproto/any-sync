@@ -15,8 +15,9 @@ type Client interface {
 }
 
 type RemoteDiff interface {
-	ldiff.RemoteTypeChecker
 	ldiff.Remote
+	// DiffTypeCheck asks the remote for its total hash and compares it with the local diff
+	DiffTypeCheck(ctx context.Context, diff ldiff.Diff) (needsSync bool, err error)
 }
 
 func NewRemoteDiff(spaceId string, client Client) RemoteDiff {
@@ -27,9 +28,8 @@ func NewRemoteDiff(spaceId string, client Client) RemoteDiff {
 }
 
 type remote struct {
-	spaceId  string
-	client   Client
-	diffType spacesyncproto.DiffType
+	spaceId string
+	client  Client
 }
 
 func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
@@ -46,7 +46,7 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 	req := &spacesyncproto.HeadSyncRequest{
 		SpaceId:  r.spaceId,
 		Ranges:   pbRanges,
-		DiffType: r.diffType,
+		DiffType: spacesyncproto.DiffType_V3,
 	}
 	resp, err := r.client.HeadSync(ctx, req)
 	if err != nil {
@@ -72,7 +72,7 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 	return
 }
 
-func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
+func (r *remote) DiffTypeCheck(ctx context.Context, diff ldiff.Diff) (needsSync bool, err error) {
 	req := &spacesyncproto.HeadSyncRequest{
 		SpaceId:  r.spaceId,
 		DiffType: spacesyncproto.DiffType_V3,
@@ -82,34 +82,21 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 	if err != nil {
 		return
 	}
-	needsSync = true
-	checkHash := func(diff ldiff.Diff) (bool, error) {
-		hashB, err := hex.DecodeString(diff.Hash())
-		if err != nil {
-			return false, err
-		}
-		if len(resp.Results) != 0 && bytes.Equal(hashB, resp.Results[0].Hash) {
-			return false, nil
-		}
-		return true, nil
+	if resp.DiffType != spacesyncproto.DiffType_V3 {
+		return false, spacesyncproto.ErrUnexpected
 	}
-	r.diffType = resp.DiffType
-	switch resp.DiffType {
-	case spacesyncproto.DiffType_V3:
-		diff = diffContainer.NewDiff()
-		needsSync, err = checkHash(diff)
-	case spacesyncproto.DiffType_V2:
-		diff = diffContainer.OldDiff()
-		needsSync, err = checkHash(diff)
-	default:
-		err = spacesyncproto.ErrUnexpected
+	hashB, err := hex.DecodeString(diff.Hash())
+	if err != nil {
+		return false, err
 	}
-	return
+	if len(resp.Results) != 0 && bytes.Equal(hashB, resp.Results[0].Hash) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	ranges := make([]ldiff.Range, 0, len(req.Ranges))
-	// basically we gather data applicable for both diffs
 	for _, reqRange := range req.Ranges {
 		ranges = append(ranges, ldiff.Range{
 			From:     reqRange.From,

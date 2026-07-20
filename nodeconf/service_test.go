@@ -289,3 +289,43 @@ func TestService_mergeCoordinatorAddrs(t *testing.T) {
 		assert.Equal(t, "192.168.1.1:8833", confStored.Nodes[0].Addresses[1])
 	})
 }
+
+func TestService_ObserveChanges(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+
+	newConf := newTestConf().Configuration
+	newConf.Id = "updated"
+	newConf.Epoch = 2
+	fx.testSource.conf = newConf
+
+	var (
+		mu       sync.Mutex
+		prevId   string
+		curId    string
+		curEpoch uint64
+		calls    int
+	)
+	fx.ObserveChanges(func(prev, cur NodeConf) {
+		mu.Lock()
+		defer mu.Unlock()
+		prevId = prev.Id()
+		curId = cur.Id()
+		curEpoch = cur.Configuration().Epoch
+		calls++
+	})
+
+	fx.run(t)
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return calls > 0
+	}, time.Second*5, time.Millisecond*5)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, 1, calls, "observer must fire exactly once, not for the initial configuration")
+	assert.Equal(t, "test", prevId)
+	assert.Equal(t, "updated", curId)
+	assert.Equal(t, uint64(2), curEpoch)
+}

@@ -59,6 +59,9 @@ type CoordinatorClient interface {
 	AclUploadInvite(ctx context.Context, spaceId string, inviteKey crypto.PubKey, block blocks.Block) (err error)
 	AclDeleteInvite(ctx context.Context, spaceId string, inviteCid cid.Cid) (err error)
 
+	FileLimitsGet(ctx context.Context, spaceId, identity string) (resp *coordinatorproto.FileLimitsGetResponse, err error)
+	FileUsageReport(ctx context.Context, rows []*coordinatorproto.FileUsageRow) (err error)
+
 	app.Component
 }
 
@@ -293,6 +296,29 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		if _, err := cl.AccountLimitsSet(ctx, req); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+func (c *coordinatorClient) FileLimitsGet(ctx context.Context, spaceId, identity string) (resp *coordinatorproto.FileLimitsGetResponse, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err = cl.FileLimitsGet(ctx, &coordinatorproto.FileLimitsGetRequest{
+			SpaceId:  spaceId,
+			Identity: identity,
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (c *coordinatorClient) FileUsageReport(ctx context.Context, rows []*coordinatorproto.FileUsageRow) (err error) {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.FileUsageReport(ctx, &coordinatorproto.FileUsageReportRequest{Rows: rows}); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

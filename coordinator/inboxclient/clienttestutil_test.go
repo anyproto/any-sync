@@ -181,6 +181,8 @@ func (m *mockConf) Name() (name string) {
 	return nodeconf.CName
 }
 
+func (m *mockConf) ObserveChanges(observer nodeconf.ChangeObserver) {}
+
 func (m *mockConf) Run(ctx context.Context) (err error) {
 	return nil
 }
@@ -207,6 +209,14 @@ func (m *mockConf) IsResponsible(spaceId string) bool {
 }
 
 func (m *mockConf) FilePeers() []string {
+	return nil
+}
+
+func (m *mockConf) FileV2Peers() []string {
+	return nil
+}
+
+func (m *mockConf) FileV2NodeIds(spaceId string) []string {
 	return nil
 }
 

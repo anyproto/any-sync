@@ -60,6 +60,12 @@ service Coordinator {
   // AclDeleteInvite permanently removes an invite file from the filenodes.
   // The caller must be the space owner and the invite must be revoked in the acl.
   rpc AclDeleteInvite(AclDeleteInviteRequest) returns (AclDeleteInviteResponse);
+  // FileLimitsGet returns the file-storage pool bounds for an uploader identity in a space (files v2; fileV2 nodes only).
+  // The response carries absolute bounds — the caller computes effective headroom locally.
+  rpc FileLimitsGet(FileLimitsGetRequest) returns (FileLimitsGetResponse);
+  // FileUsageReport accepts per-(space, identity) durable file usage reports from fileV2 nodes.
+  // The reporting node is taken from the authenticated peer context. Values are absolute (idempotent re-reports).
+  rpc FileUsageReport(FileUsageReportRequest) returns (FileUsageReportResponse);
 }
 
 
@@ -214,6 +220,11 @@ message NetworkConfigurationResponse {
   repeated Node nodes = 3;
   // unix timestamp of the creation time of configuration
   uint64 creationTimeUnix = 4;
+  // monotonically increasing version of the configuration, 0 if the coordinator predates epoch support
+  uint64 epoch = 5;
+  // identity of the fileV2 fleet's shared receipt-signing key (network
+  // string encoding); empty if the network has no fileV2 fleet
+  string fileNetworkId = 6;
 }
 
 // NodeType determines the type of API that a node supports
@@ -232,6 +243,8 @@ enum NodeType {
   // PaymentProcessingAPI supports payment processing api
   // (see any-pp-node repository)
   PaymentProcessingAPI = 5;
+  // FileV2API supports the v2 file api (filenode v2 broker pool)
+  FileV2API = 6;
 }
 
 // DeletionChangeType determines the type of deletion payload
@@ -515,3 +528,32 @@ message AclDeleteInviteRequest {
 }
 
 message AclDeleteInviteResponse {}
+message FileLimitsGetRequest {
+  string spaceId = 1;
+  // Identity is the uploader account identity whose pool bounds are requested
+  string identity = 2;
+}
+
+message FileLimitsGetResponse {
+  // AccountLimitBytes is the identity's total file-storage cap (the common account pool)
+  uint64 accountLimitBytes = 1;
+  // AccountTotalUsageBytes is the coordinator-aggregated durable usage across all the identity's spaces
+  uint64 accountTotalUsageBytes = 2;
+  // SpaceLimitBytes is an optional space-scoped cap; 0 = unset
+  uint64 spaceLimitBytes = 3;
+}
+
+message FileUsageReportRequest {
+  repeated FileUsageRow rows = 1;
+}
+
+message FileUsageRow {
+  string spaceId = 1;
+  // Identity is the charged uploader identity (the author of the root's earliest bind row)
+  string identity = 2;
+  // DurableBytes is the HEAD-measured durable usage of this (space, identity) slice; in-flight is never reported
+  uint64 durableBytes = 3;
+  uint64 durableFilesCount = 4;
+}
+
+message FileUsageReportResponse {}
