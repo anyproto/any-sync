@@ -944,11 +944,15 @@ func (x *MembershipV2_CartProduct) GetIsLifetime() bool {
 }
 
 type MembershipV2_Invoice struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Id            string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Date          uint64                      `protobuf:"varint,2,opt,name=date,proto3" json:"date,omitempty"`
-	Total         *MembershipV2_Amount        `protobuf:"bytes,3,opt,name=total,proto3" json:"total,omitempty"`
-	Status        MembershipV2_Invoice_Status `protobuf:"varint,4,opt,name=status,proto3,enum=MembershipV2_Invoice_Status" json:"status,omitempty"`
+	state  protoimpl.MessageState      `protogen:"open.v1"`
+	Id     string                      `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Date   uint64                      `protobuf:"varint,2,opt,name=date,proto3" json:"date,omitempty"`
+	Total  *MembershipV2_Amount        `protobuf:"bytes,3,opt,name=total,proto3" json:"total,omitempty"`
+	Status MembershipV2_Invoice_Status `protobuf:"varint,4,opt,name=status,proto3,enum=MembershipV2_Invoice_Status" json:"status,omitempty"`
+	// Stripe hosted-invoice payment page for an OPEN (unpaid) invoice the user
+	// must pay to keep access — set during the reverse-trial grace period.
+	// Empty when no action is required.
+	PaymentUrl    string `protobuf:"bytes,5,opt,name=paymentUrl,proto3" json:"paymentUrl,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1009,6 +1013,13 @@ func (x *MembershipV2_Invoice) GetStatus() MembershipV2_Invoice_Status {
 		return x.Status
 	}
 	return MembershipV2_Invoice_Unpaid
+}
+
+func (x *MembershipV2_Invoice) GetPaymentUrl() string {
+	if x != nil {
+		return x.PaymentUrl
+	}
+	return ""
 }
 
 type MembershipV2_Cart struct {
@@ -2089,7 +2100,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xf3\x1f\n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\x93 \n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -2142,12 +2153,15 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x06remove\x18\x03 \x01(\bR\x06remove\x12\x1e\n" +
 	"\n" +
 	"isLifetime\x18\x04 \x01(\bR\n" +
-	"isLifetime\x1a\xaf\x01\n" +
+	"isLifetime\x1a\xcf\x01\n" +
 	"\aInvoice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04date\x18\x02 \x01(\x04R\x04date\x12*\n" +
 	"\x05total\x18\x03 \x01(\v2\x14.MembershipV2.AmountR\x05total\x124\n" +
-	"\x06status\x18\x04 \x01(\x0e2\x1c.MembershipV2.Invoice.StatusR\x06status\"\x1e\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1c.MembershipV2.Invoice.StatusR\x06status\x12\x1e\n" +
+	"\n" +
+	"paymentUrl\x18\x05 \x01(\tR\n" +
+	"paymentUrl\"\x1e\n" +
 	"\x06Status\x12\n" +
 	"\n" +
 	"\x06Unpaid\x10\x00\x12\b\n" +
