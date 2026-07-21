@@ -952,7 +952,13 @@ type MembershipV2_Invoice struct {
 	// Stripe hosted-invoice payment page for an OPEN (unpaid) invoice the user
 	// must pay to keep access — set during the reverse-trial grace period.
 	// Empty when no action is required.
-	PaymentUrl    string `protobuf:"bytes,5,opt,name=paymentUrl,proto3" json:"paymentUrl,omitempty"`
+	PaymentUrl string `protobuf:"bytes,5,opt,name=paymentUrl,proto3" json:"paymentUrl,omitempty"`
+	// Stripe billing_reason of the OPEN invoice this record describes, verbatim
+	// (e.g. "subscription_cycle" for the first post-trial invoice,
+	// "subscription_update"/"subscription_threshold" for later renewal dunning).
+	// Lets a consumer tell a trial-ended grace invoice from a failed-renewal one
+	// exactly, instead of inferring it from period math. Empty when unknown.
+	BillingReason string `protobuf:"bytes,6,opt,name=billingReason,proto3" json:"billingReason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1018,6 +1024,13 @@ func (x *MembershipV2_Invoice) GetStatus() MembershipV2_Invoice_Status {
 func (x *MembershipV2_Invoice) GetPaymentUrl() string {
 	if x != nil {
 		return x.PaymentUrl
+	}
+	return ""
+}
+
+func (x *MembershipV2_Invoice) GetBillingReason() string {
+	if x != nil {
+		return x.BillingReason
 	}
 	return ""
 }
@@ -2100,7 +2113,7 @@ var File_paymentservice_paymentserviceproto_protos_paymentservice2_proto protore
 
 const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDesc = "" +
 	"\n" +
-	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\x93 \n" +
+	"?paymentservice/paymentserviceproto/protos/paymentservice2.proto\"\xb9 \n" +
 	"\fMembershipV2\x1aF\n" +
 	"\x06Amount\x12\x1a\n" +
 	"\bcurrency\x18\x01 \x01(\tR\bcurrency\x12 \n" +
@@ -2153,7 +2166,7 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x06remove\x18\x03 \x01(\bR\x06remove\x12\x1e\n" +
 	"\n" +
 	"isLifetime\x18\x04 \x01(\bR\n" +
-	"isLifetime\x1a\xcf\x01\n" +
+	"isLifetime\x1a\xf5\x01\n" +
 	"\aInvoice\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04date\x18\x02 \x01(\x04R\x04date\x12*\n" +
@@ -2161,7 +2174,8 @@ const file_paymentservice_paymentserviceproto_protos_paymentservice2_proto_rawDe
 	"\x06status\x18\x04 \x01(\x0e2\x1c.MembershipV2.Invoice.StatusR\x06status\x12\x1e\n" +
 	"\n" +
 	"paymentUrl\x18\x05 \x01(\tR\n" +
-	"paymentUrl\"\x1e\n" +
+	"paymentUrl\x12$\n" +
+	"\rbillingReason\x18\x06 \x01(\tR\rbillingReason\"\x1e\n" +
 	"\x06Status\x12\n" +
 	"\n" +
 	"\x06Unpaid\x10\x00\x12\b\n" +
