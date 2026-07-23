@@ -214,6 +214,8 @@ message NetworkConfigurationResponse {
   repeated Node nodes = 3;
   // unix timestamp of the creation time of configuration
   uint64 creationTimeUnix = 4;
+  // monotonically increasing version of the configuration, 0 if the coordinator predates epoch support
+  uint64 epoch = 5;
 }
 
 // NodeType determines the type of API that a node supports
