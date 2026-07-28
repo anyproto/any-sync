@@ -109,7 +109,12 @@ func (rp *actionPool) Add(peerId, objectId string, action func(ctx context.Conte
 }
 
 func (rp *actionPool) Close() {
-	rp.periodicLoop.Close()
+	// cancels the ctx handed to every queued action, otherwise in-flight peer
+	// requests keep running after close
+	rp.cancel()
+	if rp.periodicLoop != nil {
+		rp.periodicLoop.Close()
+	}
 	rp.mu.Lock()
 	defer rp.mu.Unlock()
 	rp.isClosed = true
