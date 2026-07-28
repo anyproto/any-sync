@@ -3,9 +3,14 @@ package deletionmanager
 import (
 	"context"
 	"time"
+
+	"go.uber.org/zap"
 )
 
-const deleteLoopInterval = time.Second * 20
+const (
+	deleteLoopInterval = time.Second * 20
+	deleteCloseTimeout = time.Second * 10
+)
 
 type deleteLoop struct {
 	deleteCtx    context.Context
@@ -13,6 +18,7 @@ type deleteLoop struct {
 	deleteChan   chan struct{}
 	deleteFunc   func(ctx context.Context)
 	loopDone     chan struct{}
+	closeTimeout time.Duration
 }
 
 func newDeleteLoop(deleteFunc func(ctx context.Context)) *deleteLoop {
@@ -23,6 +29,7 @@ func newDeleteLoop(deleteFunc func(ctx context.Context)) *deleteLoop {
 		deleteChan:   make(chan struct{}, 1),
 		deleteFunc:   deleteFunc,
 		loopDone:     make(chan struct{}),
+		closeTimeout: deleteCloseTimeout,
 	}
 }
 
@@ -55,7 +62,18 @@ func (dl *deleteLoop) notify() {
 	}
 }
 
-func (dl *deleteLoop) Close() {
+// Close cancels the delete context and waits for the loop to exit. The wait is bounded:
+// deleteFunc calls into treemanager implementations that may not honour ctx, and blocking
+// here forever wedges the whole app.Close.
+func (dl *deleteLoop) Close(ctx context.Context) {
 	dl.deleteCancel()
-	<-dl.loopDone
+	timer := time.NewTimer(dl.closeTimeout)
+	defer timer.Stop()
+	select {
+	case <-dl.loopDone:
+	case <-ctx.Done():
+		log.WarnCtx(ctx, "delete loop close interrupted, delete is still in flight", zap.Error(ctx.Err()))
+	case <-timer.C:
+		log.WarnCtx(ctx, "delete loop close timed out, delete is still in flight")
+	}
 }
