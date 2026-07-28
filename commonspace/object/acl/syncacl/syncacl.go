@@ -48,6 +48,10 @@ type syncAcl struct {
 	verifier   recordverifier.RecordVerifier
 	isClosed   bool
 	aclUpdater headupdater.AclUpdater
+	// broadcasts happen under the acl lock, so they get their own cancellable ctx:
+	// Close cancels it before taking the lock
+	broadcastCtx    context.Context
+	broadcastCancel context.CancelFunc
 }
 
 func (s *syncAcl) SetAclUpdater(updater headupdater.AclUpdater) {
@@ -63,6 +67,7 @@ func (s *syncAcl) Run(ctx context.Context) (err error) {
 }
 
 func (s *syncAcl) Init(a *app.App) (err error) {
+	s.broadcastCtx, s.broadcastCancel = context.WithCancel(context.Background())
 	storage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	aclStorage, err := storage.AclStorage()
 	if err != nil {
@@ -103,7 +108,7 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 }
 
 func (s *syncAcl) broadcast(headUpdate *objectmessages.HeadUpdate) {
-	err := s.syncClient.Broadcast(context.Background(), headUpdate)
+	err := s.syncClient.Broadcast(s.broadcastCtx, headUpdate)
 	if err != nil {
 		log.Error("broadcast acl message error", zap.Error(err))
 	}
@@ -139,6 +144,10 @@ func (s *syncAcl) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 }
 
 func (s *syncAcl) Close(ctx context.Context) (err error) {
+	// unblocks a broadcast holding the acl lock, otherwise the Lock below never returns
+	if s.broadcastCancel != nil {
+		s.broadcastCancel()
+	}
 	if s.AclList == nil {
 		return
 	}
