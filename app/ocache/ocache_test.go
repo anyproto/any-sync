@@ -748,3 +748,33 @@ func TestOCache_RemoveBusyRevertDoubleClose(t *testing.T) {
 		}
 	}
 }
+
+// An entry another closer already owns must not stall cache close: that closer
+// can be a gc sitting in TryClose against an unresponsive peer.
+func TestOCache_CloseBoundedByOtherCloser(t *testing.T) {
+	c := New(func(ctx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	})
+	oc := c.(*oCache)
+	oc.closeTimeout = 20 * time.Millisecond
+	_, err := c.Get(ctx, "id")
+	require.NoError(t, err)
+
+	oc.mu.Lock()
+	e := oc.data["id"]
+	oc.mu.Unlock()
+	_, curState, err := e.setClosing(ctx, false)
+	require.NoError(t, err)
+	require.Equal(t, entryState(entryStateClosing), curState)
+
+	done := make(chan struct{})
+	go func() {
+		_ = c.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		require.Fail(t, "Close blocked behind an entry owned by another closer")
+	}
+}

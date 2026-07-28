@@ -380,6 +380,15 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 }
 
 func (p *peer) gc(ttl time.Duration) (aliveCount int) {
+	// drpc conn Close blocks until its reader unwinds, which on a stalled stream
+	// takes until the yamux stream close timeout: collect the doomed conns and
+	// close them after releasing the lock
+	var toClose []*subConn
+	defer func() {
+		for _, conn := range toClose {
+			_ = conn.Close()
+		}
+	}()
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	minLastUsage := time.Now().Add(-ttl)
@@ -392,7 +401,7 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 		default:
 		}
 		if in.LastUsage().Before(minLastUsage) {
-			_ = in.Close()
+			toClose = append(toClose, in)
 			p.inactive[i] = nil
 			hasClosed = true
 		}
@@ -415,7 +424,7 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 		}
 		if act.LastUsage().Before(minLastUsage) {
 			log.Warn("close active connection because no activity", zap.String("peerId", p.id), zap.String("addr", p.Addr()))
-			_ = act.Close()
+			toClose = append(toClose, act)
 			delete(p.active, act)
 			continue
 		}

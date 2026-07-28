@@ -21,6 +21,8 @@ var (
 var (
 	defaultTTL = time.Minute
 	defaultGC  = 20 * time.Second
+	// bounds Close against entries the gc is already closing
+	closeTimeout = 10 * time.Second
 )
 
 var log = logger.NewNamed("ocache")
@@ -56,6 +58,8 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 		gc:       defaultGC,
 		closeCh:  make(chan struct{}),
 		log:      log.Sugar(),
+
+		closeTimeout: closeTimeout,
 	}
 	for _, o := range opts {
 		if o != nil {
@@ -119,6 +123,8 @@ type oCache struct {
 	closeCh  chan struct{}
 	log      *zap.SugaredLogger
 	metrics  *metrics
+
+	closeTimeout time.Duration
 }
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
@@ -218,7 +224,10 @@ func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 	if _, err = e.waitLoad(ctx, e.id); err != nil {
 		return false, err
 	}
-	_, curState := e.setClosing(true)
+	_, curState, err := e.setClosing(ctx, true)
+	if err != nil {
+		return false, err
+	}
 	if curState == entryStateClosing {
 		ok = true
 		err = e.value.Close()
@@ -263,7 +272,7 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
-	prevState, _ := e.setClosing(false)
+	prevState, _, _ := e.setClosing(context.Background(), false)
 	if prevState == entryStateClosing || prevState == entryStateClosed {
 		return false, nil
 	}
@@ -357,7 +366,7 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 	closedNum := 0
 	for _, e := range toClose {
-		prevState, _ := e.setClosing(false)
+		prevState, _, _ := e.setClosing(context.Background(), false)
 		if prevState == entryStateClosing || prevState == entryStateClosed {
 			continue
 		}
@@ -396,8 +405,13 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
+	// one deadline for the whole close: an entry being closed by the gc can be
+	// stuck in TryClose on an unresponsive peer, and waiting per entry would let
+	// the total grow with the cache size
+	ctx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
+	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.remove(context.Background(), e); err != nil && err != ErrNotExists {
+		if _, err := c.remove(ctx, e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
