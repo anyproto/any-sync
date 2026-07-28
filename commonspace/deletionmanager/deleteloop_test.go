@@ -78,3 +78,18 @@ func TestDeleteLoop_CloseHonoursCtx(t *testing.T) {
 	}
 	close(release)
 }
+
+// app.Start closes components it never ran: loopDone is only closed by the loop.
+func TestDeleteLoop_CloseWithoutRun(t *testing.T) {
+	dl := newDeleteLoop(func(ctx context.Context) {})
+	closed := make(chan struct{})
+	go func() {
+		dl.Close(context.Background())
+		close(closed)
+	}()
+	select {
+	case <-closed:
+	case <-time.After(time.Second):
+		require.Fail(t, "Close waited for a loop that was never started")
+	}
+}

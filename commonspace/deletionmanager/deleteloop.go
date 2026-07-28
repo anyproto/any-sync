@@ -2,6 +2,7 @@ package deletionmanager
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ type deleteLoop struct {
 	deleteFunc   func(ctx context.Context)
 	loopDone     chan struct{}
 	closeTimeout time.Duration
+	running      atomic.Bool
 }
 
 func newDeleteLoop(deleteFunc func(ctx context.Context)) *deleteLoop {
@@ -34,6 +36,7 @@ func newDeleteLoop(deleteFunc func(ctx context.Context)) *deleteLoop {
 }
 
 func (dl *deleteLoop) Run() {
+	dl.running.Store(true)
 	go dl.loop()
 }
 
@@ -67,6 +70,11 @@ func (dl *deleteLoop) notify() {
 // here forever wedges the whole app.Close.
 func (dl *deleteLoop) Close(ctx context.Context) {
 	dl.deleteCancel()
+	// loopDone is closed by loop, which only Run starts: app.Start closes
+	// components it never ran
+	if !dl.running.Load() {
+		return
+	}
 	timer := time.NewTimer(dl.closeTimeout)
 	defer timer.Stop()
 	select {

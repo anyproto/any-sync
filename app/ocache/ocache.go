@@ -221,10 +221,16 @@ func (c *oCache) closeAndDelete(e *entry) {
 }
 
 func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
-	if _, err = e.waitLoad(ctx, e.id); err != nil {
+	return c.removeCtx(ctx, ctx, e)
+}
+
+// loadCtx bounds waiting for an in-flight load, closingCtx bounds waiting for
+// another closer to release the entry
+func (c *oCache) removeCtx(loadCtx, closingCtx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(loadCtx, e.id); err != nil {
 		return false, err
 	}
-	_, curState, err := e.setClosing(ctx, true)
+	_, curState, err := e.setClosing(closingCtx, true)
 	if err != nil {
 		return false, err
 	}
@@ -405,13 +411,14 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
-	// one deadline for the whole close: an entry being closed by the gc can be
-	// stuck in TryClose on an unresponsive peer, and waiting per entry would let
-	// the total grow with the cache size
-	ctx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
+	// one deadline for the whole pass, spent only on entries another closer holds:
+	// that closer can be a gc stuck in TryClose on an unresponsive peer. Loads are
+	// already cancelled above, and value.Close takes no ctx, so uncontended entries
+	// still close normally once the deadline has passed.
+	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
 	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.remove(ctx, e); err != nil && err != ErrNotExists {
+		if _, err := c.removeCtx(context.Background(), closingCtx, e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}

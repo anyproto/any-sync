@@ -2,6 +2,7 @@ package keyvalue
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -57,4 +58,31 @@ func TestConcurrentLimiter_CloseHonoursCtx(t *testing.T) {
 		require.Fail(t, "Close ignored the cancelled ctx")
 	}
 	close(release)
+}
+
+// A timed-out Close leaves a waiter parked on the WaitGroup: a later Add would
+// panic with "WaitGroup is reused before previous Wait has returned".
+func TestConcurrentLimiter_NoScheduleAfterClose(t *testing.T) {
+	for i := 0; i < 500; i++ {
+		cl := newConcurrentLimiter()
+		cl.closeTimeout = time.Microsecond
+		release := make(chan struct{})
+		require.True(t, cl.ScheduleRequest(context.Background(), "peer", func() {
+			<-release
+		}))
+		cl.Close(context.Background())
+
+		var start sync.WaitGroup
+		start.Add(2)
+		go func() {
+			start.Done()
+			start.Wait()
+			close(release)
+		}()
+		go func() {
+			start.Done()
+			start.Wait()
+			require.False(t, cl.ScheduleRequest(context.Background(), "peer2", func() {}))
+		}()
+	}
 }
