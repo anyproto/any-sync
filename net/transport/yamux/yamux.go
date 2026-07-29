@@ -63,6 +63,9 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 		}
 	}
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
+	// yamux defaults to 5 minutes, longer than the app close deadline: a stream
+	// whose peer never sends FIN back would keep drpc conn Close blocked
+	y.yamuxConf.StreamCloseTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
 	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
 	return

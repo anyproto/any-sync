@@ -103,7 +103,10 @@ func (e *entry) waitClose(ctx context.Context, id string) (res bool, err error) 
 	}
 }
 
-func (e *entry) setClosing(wait bool) (prevState, curState entryState) {
+// setClosing transitions the entry to closing. With wait it blocks until another
+// closer is done with it, bounded by ctx: that closer may be inside a TryClose
+// that waits on an unresponsive peer.
+func (e *entry) setClosing(ctx context.Context, wait bool) (prevState, curState entryState, err error) {
 	e.mx.Lock()
 	prevState = e.state
 	curState = e.state
@@ -118,7 +121,14 @@ func (e *entry) setClosing(wait bool) (prevState, curState entryState) {
 		if !wait {
 			return
 		}
-		<-waitCh
+		select {
+		case <-waitCh:
+		case <-ctx.Done():
+			e.mx.Lock()
+			curState = e.state
+			e.mx.Unlock()
+			return prevState, curState, ctx.Err()
+		}
 		e.mx.Lock()
 	}
 	if e.state != entryStateClosed {

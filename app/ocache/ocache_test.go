@@ -847,3 +847,65 @@ func TestOCache_RemoveBusyRevertDoubleClose(t *testing.T) {
 		}
 	}
 }
+
+// An entry another closer already owns must not stall cache close: that closer
+// can be a gc sitting in TryClose against an unresponsive peer.
+func TestOCache_CloseBoundedByOtherCloser(t *testing.T) {
+	c := New(func(ctx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	})
+	oc := c.(*oCache)
+	oc.closeTimeout = 20 * time.Millisecond
+	_, err := c.Get(ctx, "id")
+	require.NoError(t, err)
+
+	oc.mu.Lock()
+	e := oc.data["id"]
+	oc.mu.Unlock()
+	_, curState, err := e.setClosing(ctx, false)
+	require.NoError(t, err)
+	require.Equal(t, entryState(entryStateClosing), curState)
+
+	done := make(chan struct{})
+	go func() {
+		_ = c.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		require.Fail(t, "Close blocked behind an entry owned by another closer")
+	}
+}
+
+// The close deadline is spent only on entries another closer holds: healthy
+// entries must still be closed after it has expired.
+func TestOCache_CloseClosesHealthyEntriesAfterDeadline(t *testing.T) {
+	var objects []*testObject
+	c := New(func(ctx context.Context, id string) (Object, error) {
+		o := NewTestObject(id, true, nil)
+		objects = append(objects, o)
+		return o, nil
+	})
+	oc := c.(*oCache)
+	oc.closeTimeout = time.Millisecond
+	for i := 0; i < 50; i++ {
+		_, err := c.Get(ctx, fmt.Sprint(i))
+		require.NoError(t, err)
+	}
+	// one entry is held by another closer and will eat the whole deadline
+	oc.mu.Lock()
+	held := oc.data["0"]
+	oc.mu.Unlock()
+	_, _, err := held.setClosing(ctx, false)
+	require.NoError(t, err)
+
+	require.NoError(t, c.Close())
+	var notClosed []string
+	for _, o := range objects {
+		if o.name != "0" && !o.closeCalled {
+			notClosed = append(notClosed, o.name)
+		}
+	}
+	require.Empty(t, notClosed, "entries nobody else holds must still be closed after the deadline")
+}

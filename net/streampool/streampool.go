@@ -450,7 +450,10 @@ func (s *streamPool) Close(ctx context.Context) (err error) {
 	if s.metric != nil {
 		s.metric.UnregisterStreamPoolSyncMetric()
 	}
-	return s.dial.Close()
+	if s.dial != nil {
+		return s.dial.Close()
+	}
+	return nil
 }
 
 func removeStream(m map[string][]uint32, key string, streamId uint32) {

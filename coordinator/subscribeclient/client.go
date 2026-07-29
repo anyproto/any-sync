@@ -43,6 +43,7 @@ type subscribeClient struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 	close     chan struct{}
+	running   bool
 }
 
 func (s *subscribeClient) Init(a *app.App) (err error) {
@@ -60,18 +61,26 @@ func (s *subscribeClient) Name() (name string) {
 }
 
 func (s *subscribeClient) Run(ctx context.Context) error {
+	s.mu.Lock()
+	s.running = true
+	s.mu.Unlock()
 	go s.streamWatcher()
 	return nil
 }
 
 func (s *subscribeClient) Close(_ context.Context) (err error) {
 	s.mu.Lock()
+	running := s.running
 	if s.stream != nil {
 		_ = s.stream.Close()
 	}
 	s.mu.Unlock()
 	s.ctxCancel()
-	<-s.close
+	// s.close is closed by streamWatcher, which only exists after Run: app.Start
+	// closes components it never ran
+	if running {
+		<-s.close
+	}
 	return nil
 }
 

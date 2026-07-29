@@ -230,12 +230,12 @@ func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error
 		return
 	}
 
-	return s.addContent(res, isSnapshot)
+	return s.addContent(ctx, res, isSnapshot)
 }
 
-func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
+func (s *settingsObject) addContent(ctx context.Context, data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
-	res, err := s.AddContent(context.Background(), objecttree.SignableChangeContent{
+	res, err := s.AddContent(ctx, objecttree.SignableChangeContent{
 		Data:              data,
 		Key:               accountData.SignKey,
 		IsSnapshot:        isSnapshot,

@@ -47,7 +47,7 @@ func TestStoreElementsNewestFirst(t *testing.T) {
 	}
 
 	require.NoError(t, fxClient.SyncWithPeer(serverPeer))
-	fxClient.limiter.Close()
+	fxClient.limiter.Close(ctx)
 
 	var sentKeys []string
 	for _, id := range fxServer.ts.sentIds() {
@@ -74,7 +74,7 @@ func TestPushedValuesPersistDespiteSendFailure(t *testing.T) {
 	fxServer.ts.setFailTerminator(true)
 
 	require.NoError(t, fxClient.SyncWithPeer(serverPeer))
-	fxClient.limiter.Close()
+	fxClient.limiter.Close(ctx)
 
 	require.True(t, fxServer.check(t, "pushed", []byte("pushed-value")),
 		"server must persist pushed values even when its response send fails")
@@ -91,7 +91,7 @@ func TestIncrementalApplyConvergence(t *testing.T) {
 	}
 
 	require.NoError(t, fxClient.SyncWithPeer(serverPeer))
-	fxClient.limiter.Close()
+	fxClient.limiter.Close(ctx)
 
 	// The client broadcasts once per applied SetRaw, so the broadcast count
 	// proves the pull was applied incrementally rather than in one shot.

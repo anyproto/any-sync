@@ -21,6 +21,8 @@ var (
 var (
 	defaultTTL = time.Minute
 	defaultGC  = 20 * time.Second
+	// bounds Close against entries the gc is already closing
+	closeTimeout = 10 * time.Second
 )
 
 var log = logger.NewNamed("ocache")
@@ -56,6 +58,8 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 		gc:       defaultGC,
 		closeCh:  make(chan struct{}),
 		log:      log.Sugar(),
+
+		closeTimeout: closeTimeout,
 	}
 	for _, o := range opts {
 		if o != nil {
@@ -119,6 +123,8 @@ type oCache struct {
 	closeCh  chan struct{}
 	log      *zap.SugaredLogger
 	metrics  *metrics
+
+	closeTimeout time.Duration
 }
 
 // maxLoadRetries bounds Get's re-attempts after an aborted load (see the
@@ -250,10 +256,19 @@ func (c *oCache) closeAndDelete(e *entry) {
 }
 
 func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
-	if _, err = e.waitLoad(ctx, e.id); err != nil {
+	return c.removeCtx(ctx, ctx, e)
+}
+
+// loadCtx bounds waiting for an in-flight load, closingCtx bounds waiting for
+// another closer to release the entry
+func (c *oCache) removeCtx(loadCtx, closingCtx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(loadCtx, e.id); err != nil {
 		return false, err
 	}
-	_, curState := e.setClosing(true)
+	_, curState, err := e.setClosing(closingCtx, true)
+	if err != nil {
+		return false, err
+	}
 	if curState == entryStateClosing {
 		ok = true
 		err = e.value.Close()
@@ -298,7 +313,7 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
-	prevState, _ := e.setClosing(false)
+	prevState, _, _ := e.setClosing(context.Background(), false)
 	if prevState == entryStateClosing || prevState == entryStateClosed {
 		return false, nil
 	}
@@ -392,7 +407,7 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 	closedNum := 0
 	for _, e := range toClose {
-		prevState, _ := e.setClosing(false)
+		prevState, _, _ := e.setClosing(context.Background(), false)
 		if prevState == entryStateClosing || prevState == entryStateClosed {
 			continue
 		}
@@ -431,8 +446,14 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
+	// one deadline for the whole pass, spent only on entries another closer holds:
+	// that closer can be a gc stuck in TryClose on an unresponsive peer. Loads are
+	// already cancelled above, and value.Close takes no ctx, so uncontended entries
+	// still close normally once the deadline has passed.
+	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
+	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.remove(context.Background(), e); err != nil && err != ErrNotExists {
+		if _, err := c.removeCtx(context.Background(), closingCtx, e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}

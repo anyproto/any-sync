@@ -40,7 +40,7 @@ func TestKeyValueService(t *testing.T) {
 		fxServer.add(t, "key4", []byte("value4"))
 		err := fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
-		fxClient.limiter.Close()
+		fxClient.limiter.Close(ctx)
 		fxClient.check(t, "key3", []byte("value3"))
 		fxClient.check(t, "key4", []byte("value4"))
 		fxServer.check(t, "key1", []byte("value1"))
@@ -53,7 +53,7 @@ func TestKeyValueService(t *testing.T) {
 		fxServer.add(t, "key1", []byte("value2"))
 		err := fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
-		fxClient.limiter.Close()
+		fxClient.limiter.Close(ctx)
 		fxClient.check(t, "key1", []byte("value1"))
 		fxClient.check(t, "key1", []byte("value2"))
 		fxServer.check(t, "key1", []byte("value1"))
@@ -62,7 +62,7 @@ func TestKeyValueService(t *testing.T) {
 		fxServer.add(t, "key1", []byte("value2-2"))
 		err = fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
-		fxClient.limiter.Close()
+		fxClient.limiter.Close(ctx)
 		fxClient.check(t, "key1", []byte("value1-2"))
 		fxClient.check(t, "key1", []byte("value2-2"))
 		fxServer.check(t, "key1", []byte("value1-2"))
@@ -100,7 +100,7 @@ func TestKeyValueService(t *testing.T) {
 		}
 		err := fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
-		fxClient.limiter.Close()
+		fxClient.limiter.Close(ctx)
 
 		for key := range allKeys {
 			if strings.HasPrefix(key, "client-key-") {

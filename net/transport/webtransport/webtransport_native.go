@@ -236,6 +236,10 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 	if expectedPeerId == "" {
 		return nil, fmt.Errorf("no expected peer id in context for WebTransport dial")
 	}
+	// a peer that completes the quic handshake and then stalls keeps the idle
+	// timeout from firing, so bound the dial like yamux does
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(t.conf.DialTimeoutSec)*time.Second)
+	defer cancel()
 
 	dialer := wt.Dialer{
 		TLSClientConfig: &tls.Config{

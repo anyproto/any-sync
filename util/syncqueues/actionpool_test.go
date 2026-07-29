@@ -152,3 +152,33 @@ func TestRequestPool(t *testing.T) {
 		rp.Close()
 	})
 }
+
+// app.Start closes components it never ran: a failing Init makes closeServices
+// call Close on every component registered before it.
+func TestActionPool_CloseWithoutRun(t *testing.T) {
+	rp := NewActionPool(time.Minute, time.Minute, func(peerId string) *replaceableQueue {
+		return newReplaceableQueue(1, 1)
+	})
+	require.NotPanics(t, rp.Close)
+}
+
+func TestActionPool_CloseCancelsActionCtx(t *testing.T) {
+	rp := NewActionPool(time.Minute, time.Minute, func(peerId string) *replaceableQueue {
+		return newReplaceableQueue(1, 1)
+	})
+	rp.Run()
+	started := make(chan struct{})
+	cancelled := make(chan struct{})
+	rp.Add("peerId", "objectId", func(ctx context.Context) {
+		close(started)
+		<-ctx.Done()
+		close(cancelled)
+	}, func() {})
+	<-started
+	rp.Close()
+	select {
+	case <-cancelled:
+	case <-time.After(time.Second):
+		require.Fail(t, "in-flight action kept running after Close")
+	}
+}
