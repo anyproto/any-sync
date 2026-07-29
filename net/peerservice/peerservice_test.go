@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
@@ -159,6 +160,67 @@ func TestPeerService_DialWebTransport(t *testing.T) {
 	})
 }
 
+func TestPeerService_DialAdmissionTokenProvider(t *testing.T) {
+	const peerId = "p1"
+	addrs := []string{"yamux://127.0.0.1:1111"}
+
+	t.Run("injects provider token", func(t *testing.T) {
+		provider := &testAdmissionTokenProvider{token: "provider-token"}
+		fx := newFixtureWithAdmissionTokenProvider(t, provider)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").DoAndReturn(
+			func(dialCtx context.Context, addr string) (transport.MultiConn, error) {
+				assert.Equal(t, "provider-token", secureservice.CtxOutboundAdmissionToken(dialCtx))
+				expectedPeerId, err := peer.CtxExpectedPeerId(dialCtx)
+				require.NoError(t, err)
+				assert.Equal(t, peerId, expectedPeerId)
+				return fx.mockMC(peerId), nil
+			})
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		require.Len(t, provider.requests, 1)
+		assert.Equal(t, peerId, provider.requests[0].peerId)
+	})
+
+	t.Run("preserves existing token", func(t *testing.T) {
+		provider := &testAdmissionTokenProvider{token: "provider-token"}
+		fx := newFixtureWithAdmissionTokenProvider(t, provider)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").DoAndReturn(
+			func(dialCtx context.Context, addr string) (transport.MultiConn, error) {
+				assert.Equal(t, "caller-token", secureservice.CtxOutboundAdmissionToken(dialCtx))
+				return fx.mockMC(peerId), nil
+			})
+
+		p, err := fx.Dial(secureservice.CtxWithOutboundAdmissionToken(ctx, "caller-token"), peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Empty(t, provider.requests)
+	})
+
+	t.Run("provider error fails dial", func(t *testing.T) {
+		providerErr := fmt.Errorf("provider failed")
+		provider := &testAdmissionTokenProvider{err: providerErr}
+		fx := newFixtureWithAdmissionTokenProvider(t, provider)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+
+		p, err := fx.Dial(ctx, peerId)
+		assert.Equal(t, providerErr, err)
+		assert.Nil(t, p)
+	})
+}
+
 func TestPeerService_Accept(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.finish(t)
@@ -177,6 +239,10 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureWithAdmissionTokenProvider(t, nil)
+}
+
+func newFixtureWithAdmissionTokenProvider(t *testing.T, admissionTokenProvider *testAdmissionTokenProvider) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		PeerService: New(),
@@ -195,10 +261,33 @@ func newFixture(t *testing.T) *fixture {
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
 
+	if admissionTokenProvider != nil {
+		fx.a.Register(admissionTokenProvider)
+	}
 	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer())
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
+}
+
+type testAdmissionTokenProvider struct {
+	token    string
+	err      error
+	requests []admissionTokenRequest
+}
+
+type admissionTokenRequest struct {
+	ctx    context.Context
+	peerId string
+}
+
+func (p *testAdmissionTokenProvider) Init(a *app.App) error { return nil }
+
+func (p *testAdmissionTokenProvider) Name() string { return "test.admissionTokenProvider" }
+
+func (p *testAdmissionTokenProvider) OutboundAdmissionToken(ctx context.Context, peerId string) (string, error) {
+	p.requests = append(p.requests, admissionTokenRequest{ctx: ctx, peerId: peerId})
+	return p.token, p.err
 }
 
 func (fx *fixture) mockMC(peerId string) *mock_transport.MockMultiConn {
