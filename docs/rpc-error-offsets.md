@@ -47,8 +47,11 @@ within one repo. **This file is the source of truth for who owns which offset.**
    registered as a code.)
 3. **Local code `0` is the group's `Unexpected`/fallback** (registers at
    `offset+0`), mirroring `filesync.ErrCodes.Unexpected = 0`.
-4. **any-sync core uses `< 1000`.** Downstream repos that import any-sync must
-   use **`>= 1000`** to stay clear of the core range.
+4. **any-sync core historically used `< 1000`.** That range is now fully
+   allocated (100–900), so new **core** groups take the next free `>= 1000`
+   offset (e.g. `pubsub` at 1100). Downstream repos that import any-sync also
+   use **`>= 1000`**; the two now share that space, so always claim the next
+   free offset from the tables below and add a row.
 5. When you add a group, **pick the next free offset and add a row below.**
 
 ### Globally reserved low codes
@@ -77,15 +80,19 @@ may use offset `0`**:
 | 800 | 800–899 | `filesyncv2` (FileV2, v2 broker) | `commonfile/fileproto/fileprotov2` |
 | 900 | 900–999 | `filesyncp2p` (FileP2P, p2p file transfer) | `commonfile/fileproto/filep2p` |
 
-### Downstream repos (`>= 1000`)
+The `< 1000` range is now full; further **core** groups continue in the
+`>= 1000` tables below (see `pubsub` at 1100).
 
-These live in other repositories but share this global registry whenever their
-binary also links any-sync.
+### Core (any-sync) & downstream repos (`>= 1000`)
+
+Downstream groups live in other repositories but share this global registry
+whenever their binary also links any-sync. Core any-sync groups appear here too
+once the `< 1000` range is exhausted.
 
 | Offset | Band | Proto / service | Repo · package |
 |--------|------|-----------------|----------------|
 | 1000 | 1000–1099 | `nodesync` | `any-sync-node` · `nodesync/nodesyncproto` |
-| 1100 | 1100–1199 | _free_ | — |
+| 1100 | 1100–1199 | `pubsub` (space-scoped stateless pub/sub) | any-sync **(core)** · `commonspace/pubsub/pubsubproto` |
 | 1200 | 1200–1299 | `push` | `anytype-push-server` · `pushclient/pushapi` |
 | 1300 | 1300–1399 | `bobrik` | `bobrik-clusterctl` · `bobrikclient/bobrikapi` |
 | 1400+ | — | _free_ | — |
