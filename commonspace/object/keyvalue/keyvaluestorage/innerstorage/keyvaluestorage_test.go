@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	anystore "github.com/anyproto/any-store"
@@ -91,6 +92,47 @@ func testKeyValue(i int) innerstorage.KeyValue {
 			PeerSignature:     pattern(0x40),
 			IdentitySignature: pattern(0x70),
 		},
+	}
+}
+
+// TestIterateValuesKeyRowsAdjacent asserts the scan is id-ordered no matter
+// the insertion order. Storage.Iterate builds its per-key callback groups
+// from consecutive runs, so all rows of one key must come out adjacent —
+// an insertion-ordered scan splits a key across groups whenever peers' row
+// batches interleave (per-peer batch inserts put one key's rows far apart).
+func TestIterateValuesKeyRowsAdjacent(t *testing.T) {
+	storage := newTestStorage(t)
+	const keys, peers = 16, 3
+	for p := 0; p < peers; p++ {
+		batch := make([]innerstorage.KeyValue, 0, keys)
+		for k := 0; k < keys; k++ {
+			kv := testKeyValue(k)
+			kv.Key = fmt.Sprintf("key%02d", k)
+			kv.PeerId = fmt.Sprintf("peer%d", p)
+			kv.KeyPeerId = kv.Key + "-" + kv.PeerId
+			batch = append(batch, kv)
+		}
+		require.NoError(t, storage.Set(ctx, batch...))
+	}
+
+	var ids, keysSeen []string
+	require.NoError(t, storage.IterateValues(ctx, func(kv innerstorage.KeyValue) (bool, error) {
+		ids = append(ids, kv.KeyPeerId)
+		keysSeen = append(keysSeen, kv.Key)
+		return true, nil
+	}))
+	require.Len(t, ids, keys*peers)
+	require.True(t, sort.StringsAreSorted(ids), "scan must be id-ordered, got %v", ids)
+
+	finished := map[string]bool{}
+	var current string
+	for _, key := range keysSeen {
+		if key == current {
+			continue
+		}
+		require.False(t, finished[key], "rows of %s split across non-adjacent runs", key)
+		finished[current] = true
+		current = key
 	}
 }
 
