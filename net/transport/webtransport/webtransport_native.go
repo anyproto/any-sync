@@ -207,7 +207,7 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 		return nil, fmt.Errorf("no expected peer id in context for WebTransport dial")
 	}
 
-	dialer := wt.Dialer{
+	dialer := wt.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},

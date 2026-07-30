@@ -63,7 +63,7 @@ func testSessionPair(t *testing.T) (clientSess, serverSess *wt.Session, closeFn 
 	wt.ConfigureHTTP3Server(s.H3)
 	go s.Serve(udpConn)
 
-	d := wt.Dialer{
+	d := wt.Transport{
 		TLSClientConfig: &tls.Config{RootCAs: certPool},
 		QUICConfig: &quic.Config{
 			EnableDatagrams:                  true,
