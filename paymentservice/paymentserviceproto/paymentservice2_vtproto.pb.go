@@ -552,6 +552,13 @@ func (m *MembershipV2_Invoice) MarshalToSizedBufferVT(dAtA []byte) (int, error) 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.BillingReason) > 0 {
+		i -= len(m.BillingReason)
+		copy(dAtA[i:], m.BillingReason)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.BillingReason)))
+		i--
+		dAtA[i] = 0x32
+	}
 	if len(m.PaymentUrl) > 0 {
 		i -= len(m.PaymentUrl)
 		copy(dAtA[i:], m.PaymentUrl)
@@ -1840,6 +1847,10 @@ func (m *MembershipV2_Invoice) SizeVT() (n int) {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.Status))
 	}
 	l = len(m.PaymentUrl)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.BillingReason)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
@@ -3621,6 +3632,38 @@ func (m *MembershipV2_Invoice) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.PaymentUrl = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BillingReason", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BillingReason = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

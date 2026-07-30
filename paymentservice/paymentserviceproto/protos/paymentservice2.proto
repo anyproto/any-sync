@@ -132,6 +132,12 @@ message MembershipV2 {
     // must pay to keep access — set during the reverse-trial grace period.
     // Empty when no action is required.
     string paymentUrl = 5;
+    // Stripe billing_reason of the OPEN invoice this record describes, verbatim
+    // (e.g. "subscription_cycle" for the first post-trial invoice,
+    // "subscription_update"/"subscription_threshold" for later renewal dunning).
+    // Lets a consumer tell a trial-ended grace invoice from a failed-renewal one
+    // exactly, instead of inferring it from period math. Empty when unknown.
+    string billingReason = 6;
   }
 
   message Cart {

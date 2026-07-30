@@ -241,7 +241,7 @@ func (t *wtTransport) Dial(ctx context.Context, addr string) (transport.MultiCon
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(t.conf.DialTimeoutSec)*time.Second)
 	defer cancel()
 
-	dialer := wt.Dialer{
+	dialer := wt.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
