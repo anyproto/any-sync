@@ -47,12 +47,15 @@ proto:
 	$(call generate_drpc,$(PKGMAP),commonspace/spacesyncproto/protos)
 	$(call generate_drpc,$(PKGMAP),commonspace/clientspaceproto/protos)
 	$(call generate_drpc,$(PKGMAP),commonfile/fileproto/protos)
+	$(call generate_drpc,,commonfile/fileproto/fileprotov2/protos)
+	$(call generate_drpc,,commonfile/fileproto/filep2p/protos)
 	$(call generate_drpc,$(PKGMAP),net/streampool/testservice/protos)
 	$(call generate_drpc,$(PKGMAP),net/endtoendtest/testpeer/testproto/protos)
 
 
 	$(call generate_drpc,,net/secureservice/handshake/handshakeproto/protos)
 	$(call generate_drpc,,net/rpc/limiter/limiterproto/protos)
+	$(call generate_drpc,,commonspace/pubsub/pubsubproto/protos)
 	$(call generate_drpc,$(PKGMAP),coordinator/coordinatorproto/protos)
 	$(call generate_drpc,,consensus/consensusproto/protos)
 	$(call generate_drpc,,identityrepo/identityrepoproto/protos)

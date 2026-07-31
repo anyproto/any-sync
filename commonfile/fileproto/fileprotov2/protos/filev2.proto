@@ -1,0 +1,212 @@
+syntax = "proto3";
+package filesyncv2;
+
+option go_package = "commonfile/fileproto/fileprotov2";
+
+// FileV2 is the v2 filenode broker (S3-direct uploads/downloads).
+//
+// drpc route prefix is "/filesyncv2.FileV2/..." — DISTINCT from v1
+// "/filesync.File/..." so both services can be mounted on the same drpc mux
+// without a Register() panic. The package/service names are load-bearing:
+// method paths are derived from `package filesyncv2` + `service FileV2`.
+//
+// Conventions (all four SPACE-SCOPED RPCs are BATCH; Info is node-level):
+//   * request carries a single shared spaceId (or repeated spaceIds for
+//     SpaceInfo) + a repeated list of items;
+//   * identity is NEVER a request field — it is taken from the authenticated
+//     connection, and all per-space/per-cid authorization derives from it;
+//   * rootCid is bytes (raw self-describing CID, as in v1's `bytes cid`);
+//   * every result echoes its own key (rootCid bytes, or spaceId string) so
+//     clients build map[string(key)]->result in one pass — results are matched
+//     by key, NEVER by positional index; the server may reorder/dedupe;
+//   * per-item result = flat status enum (ErrCode, Ok=0) + exactly one typed
+//     payload message that is valid ONLY when code == Ok;
+//   * one bad/forbidden item never fails the whole batch.
+//
+// Two error layers:
+//   1. whole-RPC drpc error (err != nil), carrying an ErrCodes value from the
+//      offset-800 rpcerr registry, returned ONLY for cross-cutting failures:
+//      failed/absent auth (Forbidden), malformed input (InvalidRequest), an
+//      over-sized batch (QuerySizeExceeded), or a misrouted single-space
+//      request (NotResponsible — retry against the space's responsible pair);
+//   2. per-item business outcome lives in the in-body ErrCode `code` field
+//      (err == nil for the RPC as a whole).
+service FileV2 {
+    // Upload issues a presigned upload target per requested file root.
+    rpc Upload(UploadRequest) returns (UploadResponse);
+    // RequestSign returns a network-signed durable-custody receipt per rootCid.
+    rpc RequestSign(RequestSignRequest) returns (RequestSignResponse);
+    // RequestDownload returns a signed GET target per rootCid.
+    rpc RequestDownload(RequestDownloadRequest) returns (RequestDownloadResponse);
+    // SpaceInfo returns quota/usage per requested space (batch quota-info).
+    rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
+    // Info returns static node-level metadata (no spaceId, no responsibility
+    // gate, no auth beyond the connection); clients cache it.
+    rpc Info(InfoRequest) returns (InfoResponse);
+}
+
+// ErrCodes are WHOLE-RPC (drpc-level) errors, mirroring v1 filesync.ErrCodes.
+// Wired through rpcerr.ErrGroup(ErrCodes_ErrorOffset) in the fileprotov2err
+// package. Returned as a NON-nil drpc error ONLY for auth / malformed /
+// batch-too-large / misrouted. Never used to report the outcome of an
+// individual item (that is the per-item ErrCode below). Zero value
+// Unexpected=0 registers at offset+0 (=800), so an uncoded server fault reads
+// as Unexpected — exactly as v1 does at 200. Offset 800 is the only free
+// rpcerr block (v1=200, 100/300/400/500/600/700 are taken).
+enum ErrCodes {
+    Unexpected = 0;         // unclassified server fault (registry fallback)
+    Forbidden = 1;          // connection identity is not permitted at all
+    InvalidRequest = 2;     // malformed: empty spaceId, empty items, bad rootCid bytes
+    QuerySizeExceeded = 3;  // batch too large (too many items in one request)
+    NotResponsible = 4;     // retryable routing signal: this node is not in the space's chash pair
+    ErrorOffset = 800;      // rpcerr.ErrGroup base for v2 (constant, never an error)
+}
+
+// ErrCode is the PER-ITEM, in-body business outcome (err == nil at the RPC
+// layer). Flat status enum with an explicit success sentinel Ok=0. The typed
+// payload on a *Result is valid ONLY when code == Ok. Deliberately a SEPARATE
+// enum from ErrCodes: its zero value means success (not error), it never flows
+// through rpcerr, and its value short-names are kept disjoint from ErrCodes so
+// proto3's package-level enum-value scoping stays clean. Servers MUST set
+// `code` explicitly on every result (Ok is the proto3 default, so an unset
+// code would be misread as a success with an empty payload).
+enum ErrCode {
+    Ok = 0;                 // item succeeded; the typed payload is populated
+    ErrUnexpected = 1;      // internal error handling this single item
+    ErrCidNotFound = 2;     // sign/download: no such stored file for this rootCid
+    ErrForbidden = 3;       // identity may not access this item's space/file
+    ErrLimitExceeded = 4;   // upload rejected: space/account storage limit reached
+    ErrSpaceNotFound = 5;   // quota-info: unknown/deleted space id
+    ErrNotResponsible = 6;  // retryable routing signal: this node is not in this item's space chash pair
+}
+
+// ---- Upload ---------------------------------------------------------------
+
+message UploadRequest {
+    string spaceId = 1;                    // shared space for every item (auth scope)
+    repeated UploadRequestItem items = 2;  // files to obtain an upload target for
+}
+
+message UploadRequestItem {
+    bytes rootCid = 1;  // CID of the file root (result match key)
+    uint64 size = 2;    // declared total byte size of the file
+}
+
+message UploadResponse {
+    repeated UploadResult results = 1;  // one per requested item, keyed by rootCid
+}
+
+message UploadResult {
+    bytes rootCid = 1;           // echoes UploadRequestItem.rootCid (match key)
+    ErrCode code = 2;            // per-item outcome; `upload` valid only when Ok
+    PresignedUpload upload = 3;  // set ONLY when code == Ok
+}
+
+// PresignedUpload is an OPAQUE presigned upload target. No S3 vendor structs
+// leak into the shared proto: the client POSTs `fields` + the object body to
+// `url` verbatim. Modeled as a presigned POST form (fields are ordered
+// key/value pairs rather than a map) so the signing order is deterministic and
+// reproducible.
+message PresignedUpload {
+    string url = 1;                    // presigned POST endpoint
+    repeated PresignField fields = 2;  // multipart form fields to send verbatim, in order
+    uint64 maxContentLength = 3;       // hard upper bound the presign enforces (bytes)
+    int64 expiry = 4;                  // unix seconds; POST must complete before this
+}
+
+message PresignField {
+    string key = 1;
+    string value = 2;
+}
+
+// ---- RequestSign ----------------------------------------------------------
+
+message RequestSignRequest {
+    string spaceId = 1;           // shared space for every rootCid (auth scope)
+    repeated bytes rootCids = 2;  // files to obtain a durable-custody receipt for
+}
+
+message RequestSignResponse {
+    repeated RequestSignResult results = 1;  // one per rootCid, keyed by rootCid
+}
+
+message RequestSignResult {
+    bytes rootCid = 1;               // echoes the requested rootCid (match key)
+    ErrCode code = 2;                // per-item outcome; `receipt` valid only when Ok
+    NetworkSignReceipt receipt = 3;  // set ONLY when code == Ok
+}
+
+// NetworkSignReceipt mirrors coordinator SpaceReceiptWithSignature: an opaque
+// protobuf-encoded payload plus the network-key signature over it. The payload
+// schema is intentionally not defined here (opaque blob forwarded verbatim).
+message NetworkSignReceipt {
+    bytes receiptPayload = 1;  // protobuf-encoded signed receipt payload (opaque)
+    bytes signature = 2;       // network key signature over receiptPayload
+}
+
+// ---- RequestDownload ------------------------------------------------------
+
+message RequestDownloadRequest {
+    string spaceId = 1;           // shared space for every rootCid (auth scope)
+    repeated bytes rootCids = 2;  // files to obtain a signed GET target for
+}
+
+message RequestDownloadResponse {
+    repeated RequestDownloadResult results = 1;  // one per rootCid, keyed by rootCid
+}
+
+message RequestDownloadResult {
+    bytes rootCid = 1;            // echoes the requested rootCid (match key)
+    ErrCode code = 2;             // per-item outcome; `download` valid only when Ok
+    SignedDownload download = 3;  // set ONLY when code == Ok
+}
+
+// SignedDownload is an OPAQUE signed GET target (kept as a message, symmetric
+// with PresignedUpload, so download can grow response headers etc. without a
+// wire break on the result envelope).
+message SignedDownload {
+    string url = 1;    // opaque signed GET url
+    int64 expiry = 2;  // unix seconds the url is valid until
+}
+
+// ---- SpaceInfo (batch quota-info) -----------------------------------------
+
+message SpaceInfoRequest {
+    repeated string spaceIds = 1;  // batch of spaces to report on (result match key)
+}
+
+message SpaceInfoResponse {
+    repeated SpaceInfoResult results = 1;  // one per requested space, keyed by spaceId
+}
+
+message SpaceInfoResult {
+    string spaceId = 1;    // echoes the requested spaceId (match key)
+    ErrCode code = 2;      // per-item outcome; `quota` valid only when Ok
+    SpaceQuota quota = 3;  // set ONLY when code == Ok
+}
+
+message SpaceQuota {
+    uint64 limitBytes = 1;          // effective storage limit for the requester in this space
+    uint64 totalUsageBytes = 2;     // counted usage == durableUsageBytes + inflightUsageBytes
+    uint64 durableUsageBytes = 3;   // bytes fully committed to durable storage
+    uint64 inflightUsageBytes = 4;  // bytes reserved by presigned/not-yet-committed uploads
+    uint64 filesCount = 5;          // number of file roots stored in the space
+    // account-pool view for the requesting identity (files are charged to
+    // their uploader; all the identity's spaces share one pool). Zero when
+    // the node has no coordinator-backed limits (self-hosted fallback).
+    uint64 accountLimitBytes = 6;   // the identity's total file-storage cap
+    uint64 accountUsageBytes = 7;   // aggregated durable usage across the identity's spaces
+}
+
+// ---- Info (node-level metadata) ---------------------------------------------
+
+// InfoRequest is deliberately empty: Info is static node metadata,
+// extensible later (capabilities, limits) without a wire break.
+message InfoRequest {}
+
+message InfoResponse {
+    // publicReadBaseUrl, when non-empty, lets clients construct durable object
+    // URLs as {publicReadBaseUrl}/blob/{spaceId}/{rootCid} with zero broker
+    // round-trips; clients cache it. Empty = no public read: use RequestDownload.
+    string publicReadBaseUrl = 1;
+}

@@ -48,6 +48,8 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 			switch nt {
 			case coordinatorproto.NodeType_FileAPI:
 				types = append(types, nodeconf.NodeTypeFile)
+			case coordinatorproto.NodeType_FileV2API:
+				types = append(types, nodeconf.NodeTypeFileV2)
 			case coordinatorproto.NodeType_CoordinatorAPI:
 				types = append(types, nodeconf.NodeTypeCoordinator)
 			case coordinatorproto.NodeType_TreeAPI:
@@ -68,9 +70,11 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 	}
 
 	return nodeconf.Configuration{
-		Id:           res.ConfigurationId,
-		NetworkId:    res.NetworkId,
-		Nodes:        nodes,
-		CreationTime: time.Unix(int64(res.CreationTimeUnix), 0),
+		Id:            res.ConfigurationId,
+		NetworkId:     res.NetworkId,
+		FileNetworkId: res.FileNetworkId,
+		Nodes:         nodes,
+		CreationTime:  time.Unix(int64(res.CreationTimeUnix), 0),
+		Epoch:         res.Epoch,
 	}, nil
 }

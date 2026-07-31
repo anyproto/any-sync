@@ -152,6 +152,102 @@ func TestOCache_Get(t *testing.T) {
 	})
 }
 
+func TestOCache_GetForeignCtxRetry(t *testing.T) {
+	t.Run("waiter survives first caller's cancellation", func(t *testing.T) {
+		// The first caller owns the load's context; every concurrent Get
+		// shares the load's result. Pre-fix, cancelling the first caller
+		// failed the waiter with a context error it did not cause.
+		var (
+			started = make(chan struct{}, 2)
+			release = make(chan struct{})
+			calls   atomic.Int32
+		)
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			calls.Add(1)
+			started <- struct{}{}
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-release:
+				return &testObject{name: id}, nil
+			}
+		})
+		ownerCtx, cancelOwner := context.WithCancel(context.Background())
+		ownerErr := make(chan error, 1)
+		go func() {
+			_, err := c.Get(ownerCtx, "id")
+			ownerErr <- err
+		}()
+		<-started // the owner's load is in flight
+		waiterErr := make(chan error, 1)
+		go func() {
+			val, err := c.Get(context.Background(), "id")
+			if err == nil && val == nil {
+				err = errors.New("nil value")
+			}
+			waiterErr <- err
+		}()
+		time.Sleep(time.Millisecond * 10) // let the waiter join the in-flight load
+		cancelOwner()
+		require.Equal(t, context.Canceled, <-ownerErr, "the owner's own cancellation is its error")
+		<-started // the waiter retried: a fresh load, owned by its live ctx
+		close(release)
+		require.NoError(t, <-waiterErr, "a live waiter must not inherit the owner's cancellation")
+		assert.Equal(t, int32(2), calls.Load())
+		assert.NoError(t, c.Close())
+	})
+	t.Run("no retry when the loadFunc fails with its own internal timeout", func(t *testing.T) {
+		// A loadFunc-internal deadline (e.g. a transport dial timeout)
+		// returns a context error while the load's own ctx is alive —
+		// that is a verdict about the resource, not a killed load, and
+		// must surface immediately instead of multiplying dial attempts.
+		var calls atomic.Int32
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			calls.Add(1)
+			return nil, fmt.Errorf("dial: %w", context.DeadlineExceeded)
+		})
+		_, err := c.Get(context.Background(), "id")
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.Equal(t, int32(1), calls.Load())
+		assert.NoError(t, c.Close())
+	})
+	t.Run("retry is bounded under repeated aborts", func(t *testing.T) {
+		// White-box: a pre-poisoned entry (failed, aborted, never removed
+		// from the map — unlike a real load) makes every retry observe the
+		// same aborted result, so Get must give up at maxLoadRetries
+		// instead of spinning.
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			return &testObject{name: id}, nil
+		}).(*oCache)
+		e := newEntry("id", nil, entryStateLoading)
+		e.loadErr = context.Canceled
+		e.loadAborted = true
+		close(e.load)
+		c.mu.Lock()
+		c.data["id"] = e
+		c.mu.Unlock()
+		_, err := c.Get(context.Background(), "id")
+		require.ErrorIs(t, err, context.Canceled)
+		c.mu.Lock()
+		delete(c.data, "id")
+		c.mu.Unlock()
+		assert.NoError(t, c.Close())
+	})
+	t.Run("no retry when the caller's own ctx is done", func(t *testing.T) {
+		var calls atomic.Int32
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			calls.Add(1)
+			return nil, ctx.Err()
+		})
+		cctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := c.Get(cctx, "id")
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, int32(1), calls.Load())
+		assert.NoError(t, c.Close())
+	})
+}
+
 func TestOCache_GC(t *testing.T) {
 	t.Run("test gc expired object", func(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
@@ -487,7 +583,10 @@ func TestOCacheCancelWhenRemove(t *testing.T) {
 	time.Sleep(time.Millisecond * 10)
 	c.Close()
 	<-stopLoad
-	require.Equal(t, context.Canceled, err)
+	// Close cancels the in-flight load; the caller's retry then observes
+	// the closed cache and reports ErrClosed — the actual reason — rather
+	// than the load's raw context.Canceled.
+	require.Equal(t, ErrClosed, err)
 }
 
 func TestOCacheFuzzy(t *testing.T) {
@@ -747,4 +846,66 @@ func TestOCache_RemoveBusyRevertDoubleClose(t *testing.T) {
 			})
 		}
 	}
+}
+
+// An entry another closer already owns must not stall cache close: that closer
+// can be a gc sitting in TryClose against an unresponsive peer.
+func TestOCache_CloseBoundedByOtherCloser(t *testing.T) {
+	c := New(func(ctx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	})
+	oc := c.(*oCache)
+	oc.closeTimeout = 20 * time.Millisecond
+	_, err := c.Get(ctx, "id")
+	require.NoError(t, err)
+
+	oc.mu.Lock()
+	e := oc.data["id"]
+	oc.mu.Unlock()
+	_, curState, err := e.setClosing(ctx, false)
+	require.NoError(t, err)
+	require.Equal(t, entryState(entryStateClosing), curState)
+
+	done := make(chan struct{})
+	go func() {
+		_ = c.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		require.Fail(t, "Close blocked behind an entry owned by another closer")
+	}
+}
+
+// The close deadline is spent only on entries another closer holds: healthy
+// entries must still be closed after it has expired.
+func TestOCache_CloseClosesHealthyEntriesAfterDeadline(t *testing.T) {
+	var objects []*testObject
+	c := New(func(ctx context.Context, id string) (Object, error) {
+		o := NewTestObject(id, true, nil)
+		objects = append(objects, o)
+		return o, nil
+	})
+	oc := c.(*oCache)
+	oc.closeTimeout = time.Millisecond
+	for i := 0; i < 50; i++ {
+		_, err := c.Get(ctx, fmt.Sprint(i))
+		require.NoError(t, err)
+	}
+	// one entry is held by another closer and will eat the whole deadline
+	oc.mu.Lock()
+	held := oc.data["0"]
+	oc.mu.Unlock()
+	_, _, err := held.setClosing(ctx, false)
+	require.NoError(t, err)
+
+	require.NoError(t, c.Close())
+	var notClosed []string
+	for _, o := range objects {
+		if o.name != "0" && !o.closeCalled {
+			notClosed = append(notClosed, o.name)
+		}
+	}
+	require.Empty(t, notClosed, "entries nobody else holds must still be closed after the deadline")
 }

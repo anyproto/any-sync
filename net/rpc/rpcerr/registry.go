@@ -48,6 +48,10 @@ func Unwrap(e error) error {
 	return err
 }
 
+// ErrGroup is the base offset for a service's error codes. Every concrete
+// error registers at offset+localCode into the process-global errsMap, which
+// panics on a duplicate. Offsets are a namespace shared across all repos that
+// link any-sync — reserve a new one in docs/rpc-error-offsets.md.
 type ErrGroup int64
 
 func (g ErrGroup) Register(err error, code uint64) error {

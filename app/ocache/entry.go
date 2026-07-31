@@ -23,10 +23,16 @@ type entry struct {
 	lastUsage time.Time
 	load      chan struct{}
 	loadErr   error
-	value     Object
-	close     chan struct{}
-	mx        sync.Mutex
-	cancel    context.CancelFunc
+	// loadAborted marks a failed load whose OWN context was already done
+	// when the loadFunc returned — the load was killed (its first caller
+	// went away, or the cache is closing), not refused by the loadFunc.
+	// Written by oCache.load before the load channel closes; read only
+	// after <-load, like loadErr.
+	loadAborted bool
+	value       Object
+	close       chan struct{}
+	mx          sync.Mutex
+	cancel      context.CancelFunc
 }
 
 func newEntry(id string, value Object, state entryState) *entry {
@@ -97,7 +103,10 @@ func (e *entry) waitClose(ctx context.Context, id string) (res bool, err error) 
 	}
 }
 
-func (e *entry) setClosing(wait bool) (prevState, curState entryState) {
+// setClosing transitions the entry to closing. With wait it blocks until another
+// closer is done with it, bounded by ctx: that closer may be inside a TryClose
+// that waits on an unresponsive peer.
+func (e *entry) setClosing(ctx context.Context, wait bool) (prevState, curState entryState, err error) {
 	e.mx.Lock()
 	prevState = e.state
 	curState = e.state
@@ -112,7 +121,14 @@ func (e *entry) setClosing(wait bool) (prevState, curState entryState) {
 		if !wait {
 			return
 		}
-		<-waitCh
+		select {
+		case <-waitCh:
+		case <-ctx.Done():
+			e.mx.Lock()
+			curState = e.state
+			e.mx.Unlock()
+			return prevState, curState, ctx.Err()
+		}
 		e.mx.Lock()
 	}
 	if e.state != entryStateClosed {

@@ -123,6 +123,9 @@ func (k *AESKey) Decrypt(ciphertext []byte) ([]byte, error) {
 
 // DecryptReuse is like Decrypt but reuses dst's underlying array to avoid allocation.
 func (k *AESKey) DecryptReuse(dst, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) < NonceBytes {
+		return nil, fmt.Errorf("ciphertext too short: %d bytes, need at least %d", len(ciphertext), NonceBytes)
+	}
 	block, err := aes.NewCipher(k.raw[:KeyBytes])
 	if err != nil {
 		return nil, err

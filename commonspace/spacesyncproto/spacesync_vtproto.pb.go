@@ -693,6 +693,11 @@ func (m *SpaceHeader) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0xa0
 	}
+	if m.FileprotoVersion != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.FileprotoVersion))
+		i--
+		dAtA[i] = 0x48
+	}
 	if len(m.SettingPayload) > 0 {
 		i -= len(m.SettingPayload)
 		copy(dAtA[i:], m.SettingPayload)
@@ -1996,6 +2001,9 @@ func (m *SpaceHeader) SizeVT() (n int) {
 	l = len(m.SettingPayload)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.FileprotoVersion != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.FileprotoVersion))
 	}
 	if m.Version != 0 {
 		n += 2 + protohelpers.SizeOfVarint(uint64(m.Version))
@@ -4219,6 +4227,25 @@ func (m *SpaceHeader) UnmarshalVT(dAtA []byte) error {
 				m.SettingPayload = []byte{}
 			}
 			iNdEx = postIndex
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FileprotoVersion", wireType)
+			}
+			m.FileprotoVersion = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FileprotoVersion |= SpaceFileProtoVersion(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		case 100:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)

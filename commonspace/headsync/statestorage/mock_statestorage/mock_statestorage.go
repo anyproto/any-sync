@@ -57,17 +57,17 @@ func (mr *MockStateStorageMockRecorder) GetState(ctx any) *gomock.Call {
 }
 
 // SetHash mocks base method.
-func (m *MockStateStorage) SetHash(ctx context.Context, oldHash, newHash string) error {
+func (m *MockStateStorage) SetHash(ctx context.Context, hash string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHash", ctx, oldHash, newHash)
+	ret := m.ctrl.Call(m, "SetHash", ctx, hash)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetHash indicates an expected call of SetHash.
-func (mr *MockStateStorageMockRecorder) SetHash(ctx, oldHash, newHash any) *gomock.Call {
+func (mr *MockStateStorageMockRecorder) SetHash(ctx, hash any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), ctx, oldHash, newHash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), ctx, hash)
 }
 
 // SetObserver mocks base method.

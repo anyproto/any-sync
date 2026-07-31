@@ -30,6 +30,10 @@ type BuildTreeOpts struct {
 	Listener      updatelistener.UpdateListener
 	TreeBuilder   objecttree.BuildObjectTreeFunc
 	TreeValidator objecttree.ValidatorFunc
+	// Probe requests the tree's root and current heads only (no change
+	// bodies) when the tree is fetched remotely. Requires a TreeValidator
+	// that inspects the payload and aborts — see synctree.BuildDeps.Probe.
+	Probe bool
 }
 
 const CName = "common.commonspace.objecttreebuilder"
@@ -155,6 +159,7 @@ func (t *treeBuilder) BuildTree(ctx context.Context, id string, opts BuildTreeOp
 		BuildObjectTree:    treeBuilder,
 		ValidateObjectTree: opts.TreeValidator,
 		StatsCollector:     t.treeStats,
+		Probe:              opts.Probe,
 	}
 	t.treesUsed.Add(1)
 	t.log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", t.treesUsed.Load()))

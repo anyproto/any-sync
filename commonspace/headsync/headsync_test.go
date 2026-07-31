@@ -71,7 +71,6 @@ type headSyncFixture struct {
 	diffSyncerMock         *mock_headsync.MockDiffSyncer
 	treeSyncerMock         *mock_treesyncer.MockTreeSyncer
 	diffMock               *mock_ldiff.MockDiff
-	diffContainerMock      *mock_ldiff.MockDiffContainer
 	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	aclMock                *mock_syncacl.MockSyncAcl
 	headStorage            *mock_headstorage.MockHeadStorage
@@ -98,7 +97,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	deletionStateMock := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 	deletionStateMock.EXPECT().Name().AnyTimes().Return(deletionstate.CName)
 	diffSyncerMock := mock_headsync.NewMockDiffSyncer(ctrl)
-	diffContainerMock := mock_ldiff.NewMockDiffContainer(ctrl)
 	treeSyncerMock := mock_treesyncer.NewMockTreeSyncer(ctrl)
 	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
 	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
@@ -137,7 +135,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		defStoreMock:           defStore,
 		configurationMock:      configurationMock,
 		storageMock:            storageMock,
-		diffContainerMock:      diffContainerMock,
 		peerManagerMock:        peerManagerMock,
 		credentialProviderMock: credentialProviderMock,
 		treeManagerMock:        treeManagerMock,
@@ -161,7 +158,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.headStorage.EXPECT().AddObserver(gomock.Any())
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
-	fx.headSync.diffManager = NewDiffManager(fx.diffContainerMock, fx.storageMock, fx.aclMock, fx.headSync.log, context.Background(), fx.deletionStateMock, fx.kvMock)
+	fx.headSync.diffManager = NewDiffManager(fx.diffMock, fx.storageMock, fx.aclMock, fx.headSync.log, context.Background(), fx.deletionStateMock)
 }
 
 func (fx *headSyncFixture) stop() {
@@ -206,30 +203,16 @@ func TestHeadSync(t *testing.T) {
 		hash1 := hasher.HashId("h1h2")
 		hash2 := hasher.HashId("h3h4")
 		ldiff.ReleaseHasher(hasher)
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock).Times(2)
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: hash1,
-		})
-		fx.diffMock.EXPECT().Set(ldiff.Element{
+		}, ldiff.Element{
 			Id:   "id2",
 			Head: hash2,
 		})
 
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock).Times(2)
-		fx.diffMock.EXPECT().Set(ldiff.Element{
-			Id:   "id1",
-			Head: hash1,
-		})
-		fx.diffMock.EXPECT().Set(ldiff.Element{
-			Id:   "id2",
-			Head: hash2,
-		})
-
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Run()
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()
@@ -273,22 +256,13 @@ func TestHeadSync(t *testing.T) {
 		hasher := ldiff.NewHasher()
 		hash2 := hasher.HashId("h3h4")
 		ldiff.ReleaseHasher(hasher)
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id2",
 			Head: hash2,
 		})
 
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Set(ldiff.Element{
-			Id:   "id2",
-			Head: hash2,
-		})
-
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().Return("hash").Times(2)
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Run()
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()

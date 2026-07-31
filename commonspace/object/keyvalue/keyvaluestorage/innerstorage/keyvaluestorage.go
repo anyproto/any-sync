@@ -98,7 +98,11 @@ func (s *storage) GetKeyPeerId(ctx context.Context, keyPeerId string) (value Key
 }
 
 func (s *storage) IterateValues(ctx context.Context, iterFunc func(kv KeyValue) (bool, error)) (err error) {
-	iter, err := s.collection.Find(nil).Iter(ctx)
+	// Sorted by id (key+"-"+peerId) so all rows of one key come out
+	// adjacent. Storage.Iterate builds its per-key callback groups from
+	// consecutive runs; an unsorted scan is insertion-ordered and can
+	// split a key across groups whenever peers' row batches interleave.
+	iter, err := s.collection.Find(nil).Sort("id").Iter(ctx)
 	if err != nil {
 		return
 	}

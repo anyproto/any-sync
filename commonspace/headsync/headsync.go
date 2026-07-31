@@ -10,7 +10,6 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/app/olddiff"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
@@ -77,13 +76,13 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	diffContainer := ldiff.NewDiffContainer(ldiff.New(32, 256), olddiff.New(32, 256))
+	diff := ldiff.New(32, 256)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
-	h.diffManager = NewDiffManager(diffContainer, h.storage, h.syncAcl, h.log, context.Background(), h.deletionState, h.keyValue)
+	h.diffManager = NewDiffManager(diff, h.storage, h.syncAcl, h.log, context.Background(), h.deletionState)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		return h.syncer.Sync(ctx)

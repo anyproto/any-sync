@@ -36,9 +36,12 @@ func (m *StubConf) Init(a *app.App) (err error) {
 		NetworkId:    networkId,
 		Nodes:        []nodeconf.Node{node},
 		CreationTime: time.Now(),
+		Epoch:        1,
 	}
 	return nil
 }
+
+func (m *StubConf) ObserveChanges(observer nodeconf.ChangeObserver) {}
 
 func (m *StubConf) Name() (name string) {
 	return nodeconf.CName
@@ -73,6 +76,14 @@ func (m *StubConf) IsResponsible(spaceId string) bool {
 }
 
 func (m *StubConf) FilePeers() []string {
+	return nil
+}
+
+func (m *StubConf) FileV2Peers() []string {
+	return nil
+}
+
+func (m *StubConf) FileV2NodeIds(spaceId string) []string {
 	return nil
 }
 

@@ -10,7 +10,6 @@ import (
 )
 
 type State struct {
-	OldHash     string
 	NewHash     string
 	AclId       string
 	SettingsId  string
@@ -19,25 +18,29 @@ type State struct {
 }
 
 type Observer interface {
-	OnHashChange(oldHash, newHash string)
+	OnHashChange(hash string)
 }
 
 type StateStorage interface {
 	GetState(ctx context.Context) (State, error)
 	SettingsId() string
-	SetHash(ctx context.Context, oldHash, newHash string) error
+	SetHash(ctx context.Context, hash string) error
 	SetObserver(observer Observer)
 }
 
 const (
 	stateCollectionKey = "state"
 	idKey              = "id"
-	oldHashKey         = "oh"
 	newHashKey         = "nh"
-	legacyHashKey      = "h"
-	headerKey          = "e"
-	aclIdKey           = "a"
-	settingsIdKey      = "s"
+	// oldHashKey held the removed V2-diff hash; it is still mirrored on write because
+	// releases before the V2 removal treat a doc with an empty "oh" as legacy format
+	// and misread NewHash as empty (see their stateFromDoc). Drop the mirror once
+	// downgrades/coldsync to those releases are out of support.
+	oldHashKey    = "oh"
+	legacyHashKey = "h"
+	headerKey     = "e"
+	aclIdKey      = "a"
+	settingsIdKey = "s"
 )
 
 type stateStorage struct {
@@ -62,20 +65,20 @@ func (s *stateStorage) SetObserver(observer Observer) {
 	s.observer = observer
 }
 
-func (s *stateStorage) SetHash(ctx context.Context, oldHash, newHash string) (err error) {
+func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 	var modifyResult anystore.ModifyResult
 	defer func() {
 		if s.observer != nil && err == nil && modifyResult.Modified > 0 {
-			s.observer.OnHashChange(oldHash, newHash)
+			s.observer.OnHashChange(hash)
 		}
 	}()
 
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		if storeutil.ModifyKey(v, oldHashKey, a.NewString(oldHash)) {
+		if storeutil.ModifyKey(v, newHashKey, a.NewString(hash)) {
 			modified = true
 		}
 
-		if storeutil.ModifyKey(v, newHashKey, a.NewString(newHash)) {
+		if storeutil.ModifyKey(v, oldHashKey, a.NewString(hash)) {
 			modified = true
 		}
 
@@ -148,20 +151,15 @@ func (s *stateStorage) SettingsId() string {
 }
 
 func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
-	var (
-		oldHash = doc.Value().GetString(oldHashKey)
-		newHash = doc.Value().GetString(newHashKey)
-	)
+	newHash := doc.Value().GetString(newHashKey)
 	// legacy hash is used for backward compatibility, which was due to a mistake in key names
-	if oldHash == "" || newHash == "" {
-		oldHash = doc.Value().GetString(legacyHashKey)
-		newHash = oldHash
+	if newHash == "" {
+		newHash = doc.Value().GetString(legacyHashKey)
 	}
 	return State{
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		OldHash:     oldHash,
 		NewHash:     newHash,
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}

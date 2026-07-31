@@ -85,3 +85,54 @@ func (c config) Init(a *app.App) (err error) {
 func (c config) Name() (name string) {
 	return "config"
 }
+
+func TestNodeConfStore_History(t *testing.T) {
+	t.Run("get by epoch", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		for epoch := uint64(1); epoch <= 3; epoch++ {
+			c := nodeconf.Configuration{
+				Id:        "id" + string(rune('0'+epoch)),
+				NetworkId: "net1",
+				Epoch:     epoch,
+			}
+			require.NoError(t, fx.SaveLast(ctx, c))
+		}
+
+		c, err := fx.GetByEpoch(ctx, "net1", 2)
+		require.NoError(t, err)
+		assert.Equal(t, "id2", c.Id)
+		assert.Equal(t, uint64(2), c.Epoch)
+
+		last, err := fx.GetLast(ctx, "net1")
+		require.NoError(t, err)
+		assert.Equal(t, uint64(3), last.Epoch)
+
+		epochs, err := fx.Epochs(ctx, "net1")
+		require.NoError(t, err)
+		assert.Equal(t, []uint64{1, 2, 3}, epochs)
+
+		_, err = fx.GetByEpoch(ctx, "net1", 10)
+		assert.EqualError(t, err, nodeconf.ErrConfigurationNotFound.Error())
+	})
+	t.Run("no history for epochless configs", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		require.NoError(t, fx.SaveLast(ctx, nodeconf.Configuration{Id: "1", NetworkId: "net2"}))
+		epochs, err := fx.Epochs(ctx, "net2")
+		require.NoError(t, err)
+		assert.Empty(t, epochs)
+	})
+	t.Run("prune", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		for epoch := uint64(1); epoch <= historyLimit+3; epoch++ {
+			require.NoError(t, fx.SaveLast(ctx, nodeconf.Configuration{Id: "x", NetworkId: "net3", Epoch: epoch}))
+		}
+		epochs, err := fx.Epochs(ctx, "net3")
+		require.NoError(t, err)
+		require.Len(t, epochs, historyLimit)
+		assert.Equal(t, uint64(4), epochs[0])
+		assert.Equal(t, uint64(historyLimit+3), epochs[len(epochs)-1])
+	})
+}

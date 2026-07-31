@@ -21,6 +21,8 @@ var (
 var (
 	defaultTTL = time.Minute
 	defaultGC  = 20 * time.Second
+	// bounds Close against entries the gc is already closing
+	closeTimeout = 10 * time.Second
 )
 
 var log = logger.NewNamed("ocache")
@@ -56,6 +58,8 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 		gc:       defaultGC,
 		closeCh:  make(chan struct{}),
 		log:      log.Sugar(),
+
+		closeTimeout: closeTimeout,
 	}
 	for _, o := range opts {
 		if o != nil {
@@ -119,40 +123,72 @@ type oCache struct {
 	closeCh  chan struct{}
 	log      *zap.SugaredLogger
 	metrics  *metrics
+
+	closeTimeout time.Duration
 }
+
+// maxLoadRetries bounds Get's re-attempts after an aborted load (see the
+// retry in Get). Each retry is a fresh load — the failed entry is deleted
+// — so the bound only matters under a storm of loads that keep getting
+// killed mid-flight.
+const maxLoadRetries = 3
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 	var (
-		e    *entry
-		ok   bool
-		load bool
+		counted bool
+		retries int
 	)
-Load:
-	c.mu.Lock()
-	if c.closed {
+	for {
+		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return nil, ErrClosed
+		}
+		e, ok := c.data[id]
+		load := false
+		if !ok {
+			e = newEntry(id, nil, entryStateLoading)
+			load = true
+			c.data[id] = e
+		}
+		e.lastUsage = time.Now()
 		c.mu.Unlock()
-		return nil, ErrClosed
+		reload, err := e.waitClose(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if reload {
+			continue
+		}
+		if !counted {
+			c.metricsGet(!load)
+			counted = true
+		}
+		if load {
+			c.load(ctx, id, e)
+			value, err = e.value, e.loadErr
+		} else {
+			value, err = e.waitLoad(ctx, id)
+		}
+		// A load runs under the context of whichever caller arrived first
+		// and its result is shared with every concurrent waiter. If that
+		// first caller goes away mid-load (its request finished, its
+		// per-round timeout fired), the load is killed with an error that
+		// has nothing to do with the waiters — retry instead of surfacing
+		// it: the failed entry is already deleted, so the retry starts a
+		// fresh load owned by a live context. loadAborted distinguishes a
+		// killed load from a loadFunc that failed on its own (an internal
+		// dial timeout returns context.DeadlineExceeded with the load's ctx
+		// still alive — that is a verdict, not an abort, and is never
+		// retried). The ctx.Err() check both scopes the retry to callers
+		// that are still alive and proves waitLoad returned via the load
+		// channel, making the loadAborted read safe.
+		if err != nil && ctx.Err() == nil && e.loadAborted && retries < maxLoadRetries {
+			retries++
+			continue
+		}
+		return value, err
 	}
-	if e, ok = c.data[id]; !ok {
-		e = newEntry(id, nil, entryStateLoading)
-		load = true
-		c.data[id] = e
-	}
-	e.lastUsage = time.Now()
-	c.mu.Unlock()
-	reload, err := e.waitClose(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if reload {
-		goto Load
-	}
-	c.metricsGet(!load)
-	if load {
-		c.load(ctx, id, e)
-		return e.value, e.loadErr
-	}
-	return e.waitLoad(ctx, id)
 }
 
 func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
@@ -172,6 +208,10 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	ctx, cancel := context.WithCancel(ctx)
 	e.setCancel(cancel)
 	value, err := c.loadFunc(ctx, id)
+	// Read before cancel(): a done ctx here means the load was killed
+	// (first caller gone, or cancelLoad on cache close) rather than the
+	// loadFunc failing on its own — recorded so Get's waiters can retry.
+	aborted := ctx.Err() != nil
 	cancel()
 
 	c.mu.Lock()
@@ -181,6 +221,7 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	}
 	if err != nil {
 		e.loadErr = err
+		e.loadAborted = aborted
 		delete(c.data, id)
 	} else {
 		e.value = value
@@ -215,10 +256,19 @@ func (c *oCache) closeAndDelete(e *entry) {
 }
 
 func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
-	if _, err = e.waitLoad(ctx, e.id); err != nil {
+	return c.removeCtx(ctx, ctx, e)
+}
+
+// loadCtx bounds waiting for an in-flight load, closingCtx bounds waiting for
+// another closer to release the entry
+func (c *oCache) removeCtx(loadCtx, closingCtx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(loadCtx, e.id); err != nil {
 		return false, err
 	}
-	_, curState := e.setClosing(true)
+	_, curState, err := e.setClosing(closingCtx, true)
+	if err != nil {
+		return false, err
+	}
 	if curState == entryStateClosing {
 		ok = true
 		err = e.value.Close()
@@ -263,7 +313,7 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
-	prevState, _ := e.setClosing(false)
+	prevState, _, _ := e.setClosing(context.Background(), false)
 	if prevState == entryStateClosing || prevState == entryStateClosed {
 		return false, nil
 	}
@@ -357,7 +407,7 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 	closedNum := 0
 	for _, e := range toClose {
-		prevState, _ := e.setClosing(false)
+		prevState, _, _ := e.setClosing(context.Background(), false)
 		if prevState == entryStateClosing || prevState == entryStateClosed {
 			continue
 		}
@@ -396,8 +446,14 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
+	// one deadline for the whole pass, spent only on entries another closer holds:
+	// that closer can be a gc stuck in TryClose on an unresponsive peer. Loads are
+	// already cancelled above, and value.Close takes no ctx, so uncontended entries
+	// still close normally once the deadline has passed.
+	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
+	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.remove(context.Background(), e); err != nil && err != ErrNotExists {
+		if _, err := c.removeCtx(context.Background(), closingCtx, e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}

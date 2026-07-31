@@ -53,6 +53,8 @@ type DRPCCoordinatorClient interface {
 	NotifySubscribe(ctx context.Context, in *NotifySubscribeRequest) (DRPCCoordinator_NotifySubscribeClient, error)
 	AclUploadInvite(ctx context.Context, in *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 	AclDeleteInvite(ctx context.Context, in *AclDeleteInviteRequest) (*AclDeleteInviteResponse, error)
+	FileLimitsGet(ctx context.Context, in *FileLimitsGetRequest) (*FileLimitsGetResponse, error)
+	FileUsageReport(ctx context.Context, in *FileUsageReportRequest) (*FileUsageReportResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -276,6 +278,24 @@ func (c *drpcCoordinatorClient) AclDeleteInvite(ctx context.Context, in *AclDele
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) FileLimitsGet(ctx context.Context, in *FileLimitsGetRequest) (*FileLimitsGetResponse, error) {
+	out := new(FileLimitsGetResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/FileLimitsGet", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) FileUsageReport(ctx context.Context, in *FileUsageReportRequest) (*FileUsageReportResponse, error) {
+	out := new(FileUsageReportResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/FileUsageReport", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
@@ -297,6 +317,8 @@ type DRPCCoordinatorServer interface {
 	NotifySubscribe(*NotifySubscribeRequest, DRPCCoordinator_NotifySubscribeStream) error
 	AclUploadInvite(context.Context, *AclUploadInviteRequest) (*AclUploadInviteResponse, error)
 	AclDeleteInvite(context.Context, *AclDeleteInviteRequest) (*AclDeleteInviteResponse, error)
+	FileLimitsGet(context.Context, *FileLimitsGetRequest) (*FileLimitsGetResponse, error)
+	FileUsageReport(context.Context, *FileUsageReportRequest) (*FileUsageReportResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -381,9 +403,17 @@ func (s *DRPCCoordinatorUnimplementedServer) AclDeleteInvite(context.Context, *A
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) FileLimitsGet(context.Context, *FileLimitsGetRequest) (*FileLimitsGetResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) FileUsageReport(context.Context, *FileUsageReportRequest) (*FileUsageReportResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 20 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 22 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -567,6 +597,24 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclDeleteInviteRequest),
 					)
 			}, DRPCCoordinatorServer.AclDeleteInvite, true
+	case 20:
+		return "/coordinator.Coordinator/FileLimitsGet", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					FileLimitsGet(
+						ctx,
+						in1.(*FileLimitsGetRequest),
+					)
+			}, DRPCCoordinatorServer.FileLimitsGet, true
+	case 21:
+		return "/coordinator.Coordinator/FileUsageReport", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					FileUsageReport(
+						ctx,
+						in1.(*FileUsageReportRequest),
+					)
+			}, DRPCCoordinatorServer.FileUsageReport, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -967,6 +1015,46 @@ func (x *drpcCoordinator_AclDeleteInviteStream) GetStream() drpc.Stream {
 }
 
 func (x *drpcCoordinator_AclDeleteInviteStream) SendAndClose(m *AclDeleteInviteResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_FileLimitsGetStream interface {
+	drpc.Stream
+	SendAndClose(*FileLimitsGetResponse) error
+}
+
+type drpcCoordinator_FileLimitsGetStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_FileLimitsGetStream) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcCoordinator_FileLimitsGetStream) SendAndClose(m *FileLimitsGetResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_FileUsageReportStream interface {
+	drpc.Stream
+	SendAndClose(*FileUsageReportResponse) error
+}
+
+type drpcCoordinator_FileUsageReportStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_FileUsageReportStream) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcCoordinator_FileUsageReportStream) SendAndClose(m *FileUsageReportResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}

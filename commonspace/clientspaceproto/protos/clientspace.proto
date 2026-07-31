@@ -4,7 +4,15 @@ package clientspace;
 option go_package = "commonspace/clientspaceproto";
 
 service ClientSpace {
+    // SpaceExchange sends plaintext space id lists to any LAN peer.
+    // Deprecated: leaks the full space set to unauthenticated strangers; use SpaceExchangeV2.
     rpc SpaceExchange(SpaceExchangeRequest) returns (SpaceExchangeResponse);
+    // SpaceExchangeV2 lets two LAN peers learn only the intersection of their space sets.
+    // Instead of space ids, peers exchange per-space HMAC tokens keyed by a discovery key
+    // derived from the space's first ACL read key — a secret only members hold. A valid
+    // token both hides the space from non-members and proves the sender's membership.
+    // See clientspaceproto/exchange2.go for token derivation.
+    rpc SpaceExchangeV2(SpaceExchangeV2Request) returns (SpaceExchangeV2Response);
 }
 
 message SpaceExchangeRequest {
@@ -14,6 +22,21 @@ message SpaceExchangeRequest {
 
 message SpaceExchangeResponse {
     repeated string spaceIds = 1;
+}
+
+message SpaceExchangeV2Request {
+    // nonce is 32 random bytes chosen by the caller; it challenges both request and response tokens
+    bytes nonce = 1;
+    // spaceTokens holds one 32-byte request token per caller space,
+    // padded with random tokens up to a bucket size and sorted to hide the true count
+    repeated bytes spaceTokens = 2;
+    LocalServer localServer = 3;
+}
+
+message SpaceExchangeV2Response {
+    // spaceTokens holds one 32-byte response token per intersecting space —
+    // the responder's proof of membership, keyed by the caller's nonce
+    repeated bytes spaceTokens = 1;
 }
 
 message LocalServer {

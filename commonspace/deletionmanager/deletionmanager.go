@@ -61,7 +61,7 @@ func (d *deletionManager) Run(ctx context.Context) (err error) {
 }
 
 func (d *deletionManager) Close(ctx context.Context) (err error) {
-	d.loop.Close()
+	d.loop.Close(ctx)
 	return
 }
 

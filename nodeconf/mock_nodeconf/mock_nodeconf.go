@@ -127,6 +127,34 @@ func (mr *MockServiceMockRecorder) FilePeers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilePeers", reflect.TypeOf((*MockService)(nil).FilePeers))
 }
 
+// FileV2NodeIds mocks base method.
+func (m *MockService) FileV2NodeIds(spaceId string) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileV2NodeIds", spaceId)
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// FileV2NodeIds indicates an expected call of FileV2NodeIds.
+func (mr *MockServiceMockRecorder) FileV2NodeIds(spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileV2NodeIds", reflect.TypeOf((*MockService)(nil).FileV2NodeIds), spaceId)
+}
+
+// FileV2Peers mocks base method.
+func (m *MockService) FileV2Peers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileV2Peers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// FileV2Peers indicates an expected call of FileV2Peers.
+func (mr *MockServiceMockRecorder) FileV2Peers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileV2Peers", reflect.TypeOf((*MockService)(nil).FileV2Peers))
+}
+
 // Id mocks base method.
 func (m *MockService) Id() string {
 	m.ctrl.T.Helper()
@@ -237,6 +265,18 @@ func (m *MockService) NodeTypes(nodeId string) []nodeconf.NodeType {
 func (mr *MockServiceMockRecorder) NodeTypes(nodeId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTypes", reflect.TypeOf((*MockService)(nil).NodeTypes), nodeId)
+}
+
+// ObserveChanges mocks base method.
+func (m *MockService) ObserveChanges(observer nodeconf.ChangeObserver) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ObserveChanges", observer)
+}
+
+// ObserveChanges indicates an expected call of ObserveChanges.
+func (mr *MockServiceMockRecorder) ObserveChanges(observer any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveChanges", reflect.TypeOf((*MockService)(nil).ObserveChanges), observer)
 }
 
 // Partition mocks base method.

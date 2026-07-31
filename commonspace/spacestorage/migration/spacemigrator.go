@@ -160,7 +160,7 @@ func (s *spaceMigrator) migrateHash(ctx context.Context, oldStorage oldstorage.S
 	if err != nil {
 		return err
 	}
-	return newStorage.StateStorage().SetHash(ctx, spaceHash, spaceHash)
+	return newStorage.StateStorage().SetHash(ctx, spaceHash)
 }
 
 func (s *spaceMigrator) checkMigrated(ctx context.Context, id string) (bool, spacestorage.SpaceStorage) {

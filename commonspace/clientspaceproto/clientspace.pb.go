@@ -117,6 +117,115 @@ func (x *SpaceExchangeResponse) GetSpaceIds() []string {
 	return nil
 }
 
+type SpaceExchangeV2Request struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// nonce is 32 random bytes chosen by the caller; it challenges both request and response tokens
+	Nonce []byte `protobuf:"bytes,1,opt,name=nonce,proto3" json:"nonce,omitempty"`
+	// spaceTokens holds one 32-byte request token per caller space,
+	// padded with random tokens up to a bucket size and sorted to hide the true count
+	SpaceTokens   [][]byte     `protobuf:"bytes,2,rep,name=spaceTokens,proto3" json:"spaceTokens,omitempty"`
+	LocalServer   *LocalServer `protobuf:"bytes,3,opt,name=localServer,proto3" json:"localServer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpaceExchangeV2Request) Reset() {
+	*x = SpaceExchangeV2Request{}
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpaceExchangeV2Request) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpaceExchangeV2Request) ProtoMessage() {}
+
+func (x *SpaceExchangeV2Request) ProtoReflect() protoreflect.Message {
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpaceExchangeV2Request.ProtoReflect.Descriptor instead.
+func (*SpaceExchangeV2Request) Descriptor() ([]byte, []int) {
+	return file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SpaceExchangeV2Request) GetNonce() []byte {
+	if x != nil {
+		return x.Nonce
+	}
+	return nil
+}
+
+func (x *SpaceExchangeV2Request) GetSpaceTokens() [][]byte {
+	if x != nil {
+		return x.SpaceTokens
+	}
+	return nil
+}
+
+func (x *SpaceExchangeV2Request) GetLocalServer() *LocalServer {
+	if x != nil {
+		return x.LocalServer
+	}
+	return nil
+}
+
+type SpaceExchangeV2Response struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// spaceTokens holds one 32-byte response token per intersecting space —
+	// the responder's proof of membership, keyed by the caller's nonce
+	SpaceTokens   [][]byte `protobuf:"bytes,1,rep,name=spaceTokens,proto3" json:"spaceTokens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpaceExchangeV2Response) Reset() {
+	*x = SpaceExchangeV2Response{}
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpaceExchangeV2Response) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpaceExchangeV2Response) ProtoMessage() {}
+
+func (x *SpaceExchangeV2Response) ProtoReflect() protoreflect.Message {
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpaceExchangeV2Response.ProtoReflect.Descriptor instead.
+func (*SpaceExchangeV2Response) Descriptor() ([]byte, []int) {
+	return file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SpaceExchangeV2Response) GetSpaceTokens() [][]byte {
+	if x != nil {
+		return x.SpaceTokens
+	}
+	return nil
+}
+
 type LocalServer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ips           []string               `protobuf:"bytes,1,rep,name=Ips,proto3" json:"Ips,omitempty"`
@@ -127,7 +236,7 @@ type LocalServer struct {
 
 func (x *LocalServer) Reset() {
 	*x = LocalServer{}
-	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[2]
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -139,7 +248,7 @@ func (x *LocalServer) String() string {
 func (*LocalServer) ProtoMessage() {}
 
 func (x *LocalServer) ProtoReflect() protoreflect.Message {
-	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[2]
+	mi := &file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -152,7 +261,7 @@ func (x *LocalServer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LocalServer.ProtoReflect.Descriptor instead.
 func (*LocalServer) Descriptor() ([]byte, []int) {
-	return file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescGZIP(), []int{2}
+	return file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LocalServer) GetIps() []string {
@@ -178,12 +287,19 @@ const file_commonspace_clientspaceproto_protos_clientspace_proto_rawDesc = "" +
 	"\bspaceIds\x18\x01 \x03(\tR\bspaceIds\x12:\n" +
 	"\vlocalServer\x18\x02 \x01(\v2\x18.clientspace.LocalServerR\vlocalServer\"3\n" +
 	"\x15SpaceExchangeResponse\x12\x1a\n" +
-	"\bspaceIds\x18\x01 \x03(\tR\bspaceIds\"3\n" +
+	"\bspaceIds\x18\x01 \x03(\tR\bspaceIds\"\x8c\x01\n" +
+	"\x16SpaceExchangeV2Request\x12\x14\n" +
+	"\x05nonce\x18\x01 \x01(\fR\x05nonce\x12 \n" +
+	"\vspaceTokens\x18\x02 \x03(\fR\vspaceTokens\x12:\n" +
+	"\vlocalServer\x18\x03 \x01(\v2\x18.clientspace.LocalServerR\vlocalServer\";\n" +
+	"\x17SpaceExchangeV2Response\x12 \n" +
+	"\vspaceTokens\x18\x01 \x03(\fR\vspaceTokens\"3\n" +
 	"\vLocalServer\x12\x10\n" +
 	"\x03Ips\x18\x01 \x03(\tR\x03Ips\x12\x12\n" +
-	"\x04port\x18\x02 \x01(\x05R\x04port2e\n" +
+	"\x04port\x18\x02 \x01(\x05R\x04port2\xc3\x01\n" +
 	"\vClientSpace\x12V\n" +
-	"\rSpaceExchange\x12!.clientspace.SpaceExchangeRequest\x1a\".clientspace.SpaceExchangeResponseB\x1eZ\x1ccommonspace/clientspaceprotob\x06proto3"
+	"\rSpaceExchange\x12!.clientspace.SpaceExchangeRequest\x1a\".clientspace.SpaceExchangeResponse\x12\\\n" +
+	"\x0fSpaceExchangeV2\x12#.clientspace.SpaceExchangeV2Request\x1a$.clientspace.SpaceExchangeV2ResponseB\x1eZ\x1ccommonspace/clientspaceprotob\x06proto3"
 
 var (
 	file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescOnce sync.Once
@@ -197,21 +313,26 @@ func file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescGZIP() []
 	return file_commonspace_clientspaceproto_protos_clientspace_proto_rawDescData
 }
 
-var file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_commonspace_clientspaceproto_protos_clientspace_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_commonspace_clientspaceproto_protos_clientspace_proto_goTypes = []any{
-	(*SpaceExchangeRequest)(nil),  // 0: clientspace.SpaceExchangeRequest
-	(*SpaceExchangeResponse)(nil), // 1: clientspace.SpaceExchangeResponse
-	(*LocalServer)(nil),           // 2: clientspace.LocalServer
+	(*SpaceExchangeRequest)(nil),    // 0: clientspace.SpaceExchangeRequest
+	(*SpaceExchangeResponse)(nil),   // 1: clientspace.SpaceExchangeResponse
+	(*SpaceExchangeV2Request)(nil),  // 2: clientspace.SpaceExchangeV2Request
+	(*SpaceExchangeV2Response)(nil), // 3: clientspace.SpaceExchangeV2Response
+	(*LocalServer)(nil),             // 4: clientspace.LocalServer
 }
 var file_commonspace_clientspaceproto_protos_clientspace_proto_depIdxs = []int32{
-	2, // 0: clientspace.SpaceExchangeRequest.localServer:type_name -> clientspace.LocalServer
-	0, // 1: clientspace.ClientSpace.SpaceExchange:input_type -> clientspace.SpaceExchangeRequest
-	1, // 2: clientspace.ClientSpace.SpaceExchange:output_type -> clientspace.SpaceExchangeResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: clientspace.SpaceExchangeRequest.localServer:type_name -> clientspace.LocalServer
+	4, // 1: clientspace.SpaceExchangeV2Request.localServer:type_name -> clientspace.LocalServer
+	0, // 2: clientspace.ClientSpace.SpaceExchange:input_type -> clientspace.SpaceExchangeRequest
+	2, // 3: clientspace.ClientSpace.SpaceExchangeV2:input_type -> clientspace.SpaceExchangeV2Request
+	1, // 4: clientspace.ClientSpace.SpaceExchange:output_type -> clientspace.SpaceExchangeResponse
+	3, // 5: clientspace.ClientSpace.SpaceExchangeV2:output_type -> clientspace.SpaceExchangeV2Response
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_commonspace_clientspaceproto_protos_clientspace_proto_init() }
@@ -225,7 +346,7 @@ func file_commonspace_clientspaceproto_protos_clientspace_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonspace_clientspaceproto_protos_clientspace_proto_rawDesc), len(file_commonspace_clientspaceproto_protos_clientspace_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

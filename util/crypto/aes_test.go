@@ -43,6 +43,18 @@ func TestAESKey_DecryptReuse_NilDst(t *testing.T) {
 	require.Equal(t, msg, result)
 }
 
+func TestAESKey_Decrypt_ShortInput(t *testing.T) {
+	key := NewAES()
+	// wire-controlled input shorter than the GCM nonce must error, not panic
+	for l := 0; l < NonceBytes; l++ {
+		_, err := key.Decrypt(make([]byte, l))
+		require.Error(t, err, "len %d", l)
+	}
+	// nonce-only input has no room for the GCM tag: auth error, not panic
+	_, err := key.Decrypt(make([]byte, NonceBytes))
+	require.Error(t, err)
+}
+
 func TestAESKey_DecryptReuse_BufferReuse(t *testing.T) {
 	key := NewAES()
 	msg := make([]byte, 256)

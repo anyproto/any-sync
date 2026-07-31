@@ -274,7 +274,7 @@ func (k *keyValueService) Run(ctx context.Context) (err error) {
 
 func (k *keyValueService) Close(ctx context.Context) (err error) {
 	k.cancel()
-	k.limiter.Close()
+	k.limiter.Close(ctx)
 	return nil
 }
 

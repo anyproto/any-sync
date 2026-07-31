@@ -36,6 +36,9 @@ func (d *deleter) Delete(ctx context.Context) {
 		spaceId   = d.st.Id()
 	)
 	for _, id := range allQueued {
+		if ctx.Err() != nil {
+			return
+		}
 		log := d.log.With(zap.String("treeId", id))
 		shouldDelete, err := d.tryMarkDeleted(ctx, spaceId, id)
 		if !shouldDelete {
@@ -67,6 +70,9 @@ func (d *deleter) deleteBoundChildren(ctx context.Context, spaceId, parentId str
 		return
 	}
 	for _, child := range children {
+		if ctx.Err() != nil {
+			return
+		}
 		if child.DeletedStatus >= headstorage.DeletedStatusDeleted {
 			continue
 		}
@@ -100,5 +106,5 @@ func (d *deleter) tryMarkDeleted(ctx context.Context, spaceId, treeId string) (b
 	if !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return false, err
 	}
-	return false, d.getter.MarkTreeDeleted(context.Background(), spaceId, treeId)
+	return false, d.getter.MarkTreeDeleted(ctx, spaceId, treeId)
 }
