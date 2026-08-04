@@ -152,9 +152,11 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 	connPeerId, err := peer.CtxPeerId(mc.Context())
 	if err != nil {
+		_ = mc.Close()
 		return nil, err
 	}
 	if connPeerId != peerId {
+		_ = mc.Close()
 		return nil, ErrPeerIdMismatched
 	}
 	return peer.NewPeer(mc, p.server)
@@ -185,6 +187,11 @@ type dialCandidate struct {
 // candidate immediately. The first success wins and cancels the rest;
 // a loser that completes its dial after the race is decided is closed
 // by the background drain. All-failed returns the joined attempt errors.
+//
+// Preference is a head start, not a guarantee: a preferred candidate
+// that is alive but slower than the stagger interval can lose to a
+// lower-preference one that connects faster — the happy-eyeballs
+// trade-off. PreferQuic still decides launch order.
 func (p *peerService) dialStaggered(ctx context.Context, cands []dialCandidate) (transport.MultiConn, error) {
 	dctx, cancel := context.WithCancel(ctx)
 	type dialResult struct {

@@ -188,7 +188,9 @@ func TestPeerService_DialStaggered(t *testing.T) {
 		// already decided; its connection must be closed by the drain.
 		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").DoAndReturn(
 			func(ctx context.Context, addr string) (transport.MultiConn, error) {
-				time.Sleep(150 * time.Millisecond)
+				// Wide margin over the stagger so the quic candidate wins
+				// even on a heavily loaded CI scheduler.
+				time.Sleep(500 * time.Millisecond)
 				return late, nil
 			})
 		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
