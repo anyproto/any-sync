@@ -193,6 +193,27 @@ func TestPeerService_DialLocalAddrs(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, p)
 	})
+	t.Run("servers never resolve: preferQuic unset short-circuits the local check", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.setResolver(func(_ context.Context, host string) ([]net.IPAddr, error) {
+			t.Fatalf("resolver must not run with preferQuic=false, got lookup of %q", host)
+			return nil, nil
+		})
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"yamux://any-sync-node-1:1111",
+			"quic://any-sync-node-1:1112",
+		}, true)
+
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "any-sync-node-1:1111").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
 	t.Run("hostname verdict is cached", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.finish(t)

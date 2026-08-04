@@ -3,6 +3,7 @@ package peerservice
 import (
 	"context"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,7 +17,10 @@ const (
 	// address is still dialed — so guessing wrong is cheap.
 	localResolveTimeout = 200 * time.Millisecond
 	localResolveTTL     = time.Minute
-	localCacheMaxSize   = 128
+	// failed lookups keep a short TTL: DNS being briefly down (network just
+	// came up, captive portal) must not pin a wrong verdict for a minute
+	localResolveErrTTL = 5 * time.Second
+	localCacheMaxSize  = 128
 )
 
 type localVerdict struct {
@@ -55,6 +59,12 @@ func (d *localAddrDetector) isLocal(ctx context.Context, hostport string) bool {
 	if ip := net.ParseIP(host); ip != nil {
 		return isLocalIP(ip)
 	}
+	// zoned IPv6 literal (fe80::1%en0) — ParseIP can't handle the zone
+	if i := strings.IndexByte(host, '%'); i != -1 {
+		if ip := net.ParseIP(host[:i]); ip != nil {
+			return isLocalIP(ip)
+		}
+	}
 
 	now := d.now()
 	d.mu.Lock()
@@ -67,6 +77,7 @@ func (d *localAddrDetector) isLocal(ctx context.Context, hostport string) bool {
 	rctx, cancel := context.WithTimeout(ctx, localResolveTimeout)
 	defer cancel()
 	var local bool
+	ttl := localResolveTTL
 	if ips, err := d.resolve(rctx, host); err == nil {
 		for _, ip := range ips {
 			if isLocalIP(ip.IP) {
@@ -74,13 +85,20 @@ func (d *localAddrDetector) isLocal(ctx context.Context, hostport string) bool {
 				break
 			}
 		}
+	} else {
+		if ctx.Err() != nil {
+			// the lookup lost to the caller's dial budget, not to DNS —
+			// don't record a verdict at all
+			return false
+		}
+		ttl = localResolveErrTTL
 	}
 
 	d.mu.Lock()
 	if len(d.cache) >= localCacheMaxSize {
 		d.cache = map[string]localVerdict{}
 	}
-	d.cache[host] = localVerdict{local: local, expires: now.Add(localResolveTTL)}
+	d.cache[host] = localVerdict{local: local, expires: now.Add(ttl)}
 	d.mu.Unlock()
 	return local
 }

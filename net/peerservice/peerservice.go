@@ -136,12 +136,19 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 	connPeerId, err := peer.CtxPeerId(mc.Context())
 	if err != nil {
+		_ = mc.Close()
 		return nil, err
 	}
 	if connPeerId != peerId {
+		_ = mc.Close()
 		return nil, ErrPeerIdMismatched
 	}
-	return peer.NewPeer(mc, p.server)
+	pr, err = peer.NewPeer(mc, p.server)
+	if err != nil {
+		_ = mc.Close()
+		return nil, err
+	}
+	return pr, nil
 }
 
 // orderAddrs returns the dial candidates in preference order, dropping addrs
