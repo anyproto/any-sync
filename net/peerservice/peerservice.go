@@ -3,9 +3,9 @@ package peerservice
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -28,6 +28,15 @@ var (
 	ErrAddrsNotFound    = errors.New("addrs for peer not found")
 	ErrPeerIdMismatched = errors.New("peerId mismatched")
 )
+
+// dialStaggerInterval is the head start each dial candidate gets before
+// the next one launches in parallel (happy-eyeballs, RFC 8305 §5). A
+// candidate that fails fast hands off immediately, so a network where
+// every addr answers keeps the old sequential behavior; the stagger only
+// bounds how long a silently-dropping addr (filtered port, blackholed
+// route) can delay the rest of the list — previously a full dial timeout
+// per dead addr, serialized across every addr and scheme. Var for tests.
+var dialStaggerInterval = 300 * time.Millisecond
 
 func New() PeerService {
 	return new(peerService)
@@ -119,17 +128,27 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	// Pass expected peerId in context for transports that need it (e.g. WebTransport)
 	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
 
-	var mc transport.MultiConn
 	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 
-	err = ErrAddrsNotFound
+	var cands []dialCandidate
 	for _, sch := range schemes {
-		if mc, err = p.dialScheme(ctx, sch, addrs); err == nil {
-			break
+		tr := p.transportFor(sch)
+		if tr == nil {
+			continue
+		}
+		for _, addr := range addrs {
+			if scheme(addr) != sch {
+				continue
+			}
+			cands = append(cands, dialCandidate{tr: tr, addr: addr})
 		}
 	}
+	if len(cands) == 0 {
+		return nil, ErrAddrsNotFound
+	}
+	mc, err := p.dialStaggered(ctx, cands)
 	if err != nil {
-		return
+		return nil, err
 	}
 	connPeerId, err := peer.CtxPeerId(mc.Context())
 	if err != nil {
@@ -141,34 +160,97 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	return peer.NewPeer(mc, p.server)
 }
 
-func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string) (mc transport.MultiConn, err error) {
-	var tr transport.Transport
+func (p *peerService) transportFor(sch string) transport.Transport {
 	switch sch {
 	case transport.Quic:
-		tr = p.quic
+		return p.quic
 	case transport.Yamux:
-		tr = p.yamux
+		return p.yamux
 	case transport.WebTransport:
-		tr = p.webtransport
-	default:
-		return nil, fmt.Errorf("unexpected transport: %v", sch)
+		return p.webtransport
 	}
-	if tr == nil {
-		return nil, fmt.Errorf("transport %v not available", sch)
+	return nil
+}
+
+// dialCandidate is one (transport, addr) attempt; candidates are ordered
+// by scheme preference first, addr list order second — the same order the
+// old sequential loop tried them in.
+type dialCandidate struct {
+	tr   transport.Transport
+	addr string // scheme-prefixed; stripped at dial time, kept raw for logs
+}
+
+// dialStaggered races the candidates: each gets dialStaggerInterval of
+// head start before the next launches; a failure hands off to the next
+// candidate immediately. The first success wins and cancels the rest;
+// a loser that completes its dial after the race is decided is closed
+// by the background drain. All-failed returns the joined attempt errors.
+func (p *peerService) dialStaggered(ctx context.Context, cands []dialCandidate) (transport.MultiConn, error) {
+	dctx, cancel := context.WithCancel(ctx)
+	type dialResult struct {
+		mc  transport.MultiConn
+		err error
+	}
+	// Buffered to len(cands): every launched goroutine can deliver its
+	// result without blocking even when nobody is left to read it.
+	results := make(chan dialResult, len(cands))
+	launched, completed := 0, 0
+	launch := func() {
+		c := cands[launched]
+		launched++
+		go func() {
+			mc, err := c.tr.Dial(dctx, stripScheme(c.addr))
+			if err != nil {
+				log.InfoCtx(ctx, "can't connect to host", zap.String("addr", c.addr), zap.Error(err))
+			}
+			results <- dialResult{mc: mc, err: err}
+		}()
+	}
+	// finish cancels the still-running losers and drains their results in
+	// the background, closing any connection that completed its dial after
+	// the race was already decided.
+	finish := func(mc transport.MultiConn, err error) (transport.MultiConn, error) {
+		cancel()
+		if outstanding := launched - completed; outstanding > 0 {
+			go func() {
+				for i := 0; i < outstanding; i++ {
+					if r := <-results; r.err == nil && r.mc != nil {
+						_ = r.mc.Close()
+					}
+				}
+			}()
+		}
+		return mc, err
 	}
 
-	err = ErrAddrsNotFound
-	for _, addr := range addrs {
-		if scheme(addr) != sch {
-			continue
+	var errs []error
+	launch()
+	staggerC := time.After(dialStaggerInterval)
+	for {
+		if launched == len(cands) {
+			staggerC = nil
 		}
-		if mc, err = tr.Dial(ctx, stripScheme(addr)); err == nil {
-			return
-		} else {
-			log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
+		select {
+		case <-dctx.Done():
+			return finish(nil, dctx.Err())
+		case <-staggerC:
+			launch()
+			staggerC = time.After(dialStaggerInterval)
+		case r := <-results:
+			completed++
+			if r.err == nil {
+				return finish(r.mc, nil)
+			}
+			errs = append(errs, r.err)
+			if completed == len(cands) {
+				return finish(nil, errors.Join(errs...))
+			}
+			if launched < len(cands) {
+				launch()
+				staggerC = time.After(dialStaggerInterval)
+			}
 		}
 	}
-	return
 }
 
 func (p *peerService) Accept(mc transport.MultiConn) (err error) {

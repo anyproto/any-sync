@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
@@ -113,6 +114,93 @@ func TestPeerService_Dial(t *testing.T) {
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
 		assert.NotNil(t, p)
+	})
+}
+
+func TestPeerService_DialStaggered(t *testing.T) {
+	var addrs = []string{
+		"yamux://127.0.0.1:1111",
+		"quic://127.0.0.1:1112",
+	}
+	setStagger := func(t *testing.T, d time.Duration) {
+		prev := dialStaggerInterval
+		dialStaggerInterval = d
+		t.Cleanup(func() { dialStaggerInterval = prev })
+	}
+	t.Run("blackholed addr does not serialize the dial", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		setStagger(t, 30*time.Millisecond)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		// The preferred candidate hangs like a filtered port: nothing
+		// answers until the dial ctx is cancelled.
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				<-ctx.Done()
+				return nil, ctx.Err()
+			})
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
+
+		start := time.Now()
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Less(t, time.Since(start), 2*time.Second,
+			"the second candidate must win after one stagger interval, not after the first dial's timeout")
+	})
+	t.Run("all candidates fail returns joined errors", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		setStagger(t, 30*time.Millisecond)
+		var peerId = "p1"
+		errYamux := fmt.Errorf("yamux down")
+		errQuic := fmt.Errorf("quic down")
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(nil, errYamux)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(nil, errQuic)
+
+		p, err := fx.Dial(ctx, peerId)
+		assert.Nil(t, p)
+		assert.ErrorIs(t, err, errYamux)
+		assert.ErrorIs(t, err, errQuic)
+	})
+	t.Run("late success is closed", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		setStagger(t, 20*time.Millisecond)
+		var peerId = "p1"
+
+		closed := make(chan struct{})
+		late := mock_transport.NewMockMultiConn(fx.ctrl)
+		late.EXPECT().Close().DoAndReturn(func() error {
+			close(closed)
+			return nil
+		})
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		// The preferred candidate succeeds — but only after the race is
+		// already decided; its connection must be closed by the drain.
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				time.Sleep(150 * time.Millisecond)
+				return late, nil
+			})
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		select {
+		case <-closed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("late-winning connection was never closed")
+		}
 	})
 }
 
