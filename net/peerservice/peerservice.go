@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -50,6 +51,7 @@ type peerService struct {
 	pool         pool.Pool
 	server       server.DRPCServer
 	preferQuic   bool
+	localAddrs   *localAddrDetector
 	mu           sync.RWMutex
 }
 
@@ -70,12 +72,13 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
+	p.localAddrs = newLocalAddrDetector()
 	return nil
 }
 
-func (p *peerService) preferredSchemes() []string {
+func (p *peerService) preferredSchemes(preferQuic bool) []string {
 	var schemes []string
-	if p.preferQuic {
+	if preferQuic {
 		if p.quic != nil {
 			schemes = append(schemes, transport.Quic)
 		}
@@ -108,23 +111,23 @@ func (p *peerService) PreferQuic(prefer bool) {
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
 	p.mu.RLock()
-	schemes := p.preferredSchemes()
+	preferQuic := p.preferQuic
 	addrs, err := p.getPeerAddrs(peerId)
+	p.mu.RUnlock()
 	if err != nil {
-		p.mu.RUnlock()
 		return
 	}
-	p.mu.RUnlock()
 
 	// Pass expected peerId in context for transports that need it (e.g. WebTransport)
 	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
 
-	var mc transport.MultiConn
-	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
+	ordered := p.orderAddrs(ctx, addrs, preferQuic)
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", ordered))
 
+	var mc transport.MultiConn
 	err = ErrAddrsNotFound
-	for _, sch := range schemes {
-		if mc, err = p.dialScheme(ctx, sch, addrs); err == nil {
+	for _, addr := range ordered {
+		if mc, err = p.dialAddr(ctx, addr); err == nil {
 			break
 		}
 	}
@@ -133,42 +136,76 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 	connPeerId, err := peer.CtxPeerId(mc.Context())
 	if err != nil {
+		_ = mc.Close()
 		return nil, err
 	}
 	if connPeerId != peerId {
+		_ = mc.Close()
 		return nil, ErrPeerIdMismatched
 	}
-	return peer.NewPeer(mc, p.server)
+	pr, err = peer.NewPeer(mc, p.server)
+	if err != nil {
+		_ = mc.Close()
+		return nil, err
+	}
+	return pr, nil
 }
 
-func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string) (mc transport.MultiConn, err error) {
-	var tr transport.Transport
-	switch sch {
-	case transport.Quic:
-		tr = p.quic
-	case transport.Yamux:
-		tr = p.yamux
-	case transport.WebTransport:
-		tr = p.webtransport
-	default:
-		return nil, fmt.Errorf("unexpected transport: %v", sch)
+// orderAddrs returns the dial candidates in preference order, dropping addrs
+// whose scheme has no registered transport. The scheme order is decided per
+// address: local addresses (loopback/private/link-local, hostnames resolved
+// with a short deadline) always try yamux first — a dead port answers a TCP
+// dial with an RST in one RTT, while a QUIC dial has to wait out the whole
+// handshake timeout, because quic-go gets no ICMP feedback on the unconnected
+// sockets used for dialing. Non-local addresses follow the global preferQuic
+// order. The sort is stable, so the given order is kept within equal
+// preference — and with preferQuic unset the order is unchanged, since yamux
+// comes first either way.
+func (p *peerService) orderAddrs(ctx context.Context, addrs []string, preferQuic bool) []string {
+	type candidate struct {
+		addr string
+		rank int
 	}
-	if tr == nil {
-		return nil, fmt.Errorf("transport %v not available", sch)
-	}
-
-	err = ErrAddrsNotFound
+	candidates := make([]candidate, 0, len(addrs))
 	for _, addr := range addrs {
-		if scheme(addr) != sch {
+		schemes := p.preferredSchemes(preferQuic && !p.localAddrs.isLocal(ctx, stripScheme(addr)))
+		rank := slices.Index(schemes, scheme(addr))
+		if rank == -1 {
 			continue
 		}
-		if mc, err = tr.Dial(ctx, stripScheme(addr)); err == nil {
-			return
-		} else {
-			log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
-		}
+		candidates = append(candidates, candidate{addr: addr, rank: rank})
+	}
+	slices.SortStableFunc(candidates, func(a, b candidate) int {
+		return a.rank - b.rank
+	})
+	ordered := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		ordered = append(ordered, c.addr)
+	}
+	return ordered
+}
+
+func (p *peerService) dialAddr(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
+	tr := p.transport(scheme(addr))
+	if tr == nil {
+		return nil, fmt.Errorf("transport %v not available", scheme(addr))
+	}
+	if mc, err = tr.Dial(ctx, stripScheme(addr)); err != nil {
+		log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
 	}
 	return
+}
+
+func (p *peerService) transport(sch string) transport.Transport {
+	switch sch {
+	case transport.Quic:
+		return p.quic
+	case transport.Yamux:
+		return p.yamux
+	case transport.WebTransport:
+		return p.webtransport
+	}
+	return nil
 }
 
 func (p *peerService) Accept(mc transport.MultiConn) (err error) {

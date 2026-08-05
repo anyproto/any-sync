@@ -3,6 +3,7 @@ package peerservice
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 
 	"github.com/anyproto/any-sync/app"
@@ -24,9 +25,10 @@ import (
 var ctx = context.Background()
 
 func TestPeerService_Dial(t *testing.T) {
+	// public (non-local) addrs: the global preferQuic order applies
 	var addrs = []string{
-		"yamux://127.0.0.1:1111",
-		"quic://127.0.0.1:1112",
+		"yamux://203.0.113.1:1111",
+		"quic://203.0.113.1:1112",
 	}
 	t.Run("prefer yamux", func(t *testing.T) {
 		fx := newFixture(t)
@@ -36,7 +38,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -50,7 +52,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(fx.mockMC(peerId), nil)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -64,8 +66,8 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1112").Return(nil, fmt.Errorf("test"))
-		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, fmt.Errorf("test"))
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -79,7 +81,7 @@ func TestPeerService_Dial(t *testing.T) {
 
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
 
-		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId+"not valid"), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId+"not valid"), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		assert.EqualError(t, err, ErrPeerIdMismatched.Error())
@@ -94,7 +96,7 @@ func TestPeerService_Dial(t *testing.T) {
 		fx.SetPeerAddrs(peerId, addrs)
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(nil, false)
 
-		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "127.0.0.1:1111").Return(fx.mockMC(peerId), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
 
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
@@ -113,6 +115,125 @@ func TestPeerService_Dial(t *testing.T) {
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
 		assert.NotNil(t, p)
+	})
+}
+
+func TestPeerService_DialLocalAddrs(t *testing.T) {
+	var localAddrs = []string{
+		"quic://192.168.1.5:1112",
+		"yamux://192.168.1.5:1111",
+	}
+	t.Run("local addr prefers yamux even when quic preferred", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(localAddrs, true)
+
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "192.168.1.5:1111").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("local addr falls back to quic when yamux fails", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(localAddrs, true)
+
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "192.168.1.5:1111").Return(nil, fmt.Errorf("connection refused"))
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "192.168.1.5:1112").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("hostname resolving to local addr prefers yamux", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		var peerId = "p1"
+
+		fx.setResolver(func(_ context.Context, host string) ([]net.IPAddr, error) {
+			require.Equal(t, "any-sync-node-1", host)
+			return []net.IPAddr{{IP: net.ParseIP("172.18.0.5")}}, nil
+		})
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"quic://any-sync-node-1:1112",
+			"yamux://any-sync-node-1:1111",
+		}, true)
+
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "any-sync-node-1:1111").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("unresolved hostname keeps global order", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		var peerId = "p1"
+
+		fx.setResolver(func(_ context.Context, _ string) ([]net.IPAddr, error) {
+			return nil, fmt.Errorf("no such host")
+		})
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"yamux://example.org:1111",
+			"quic://example.org:1112",
+		}, true)
+
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "example.org:1112").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("servers never resolve: preferQuic unset short-circuits the local check", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.setResolver(func(_ context.Context, host string) ([]net.IPAddr, error) {
+			t.Fatalf("resolver must not run with preferQuic=false, got lookup of %q", host)
+			return nil, nil
+		})
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"yamux://any-sync-node-1:1111",
+			"quic://any-sync-node-1:1112",
+		}, true)
+
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "any-sync-node-1:1111").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("hostname verdict is cached", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		var peerId = "p1"
+		var resolveCalls int
+
+		fx.setResolver(func(_ context.Context, _ string) ([]net.IPAddr, error) {
+			resolveCalls++
+			return []net.IPAddr{{IP: net.ParseIP("10.0.0.7")}}, nil
+		})
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"yamux://box.lan:1111"}, true).Times(2)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "box.lan:1111").Return(fx.mockMC(peerId), nil).Times(2)
+
+		for i := 0; i < 2; i++ {
+			p, err := fx.Dial(ctx, peerId)
+			require.NoError(t, err)
+			assert.NotNil(t, p)
+		}
+		assert.Equal(t, 1, resolveCalls)
 	})
 }
 
@@ -136,7 +257,7 @@ func TestPeerService_DialWebTransport(t *testing.T) {
 		defer fx.finish(t)
 
 		ps := fx.PeerService.(*peerService)
-		schemes := ps.preferredSchemes()
+		schemes := ps.preferredSchemes(false)
 		assert.Contains(t, schemes, transport.WebTransport)
 	})
 	t.Run("fallback to webtransport when yamux fails", func(t *testing.T) {
@@ -199,6 +320,10 @@ func newFixture(t *testing.T) *fixture {
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
+}
+
+func (fx *fixture) setResolver(resolve func(ctx context.Context, host string) ([]net.IPAddr, error)) {
+	fx.PeerService.(*peerService).localAddrs.resolve = resolve
 }
 
 func (fx *fixture) mockMC(peerId string) *mock_transport.MockMultiConn {
