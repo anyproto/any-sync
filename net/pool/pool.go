@@ -177,6 +177,7 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 				// client keeps its FIRST success and closes the later
 				// one, so keep ours and close the newcomer — replacing
 				// would kill the very connection the client kept.
+				log.Debug("dial-race duplicate: keeping existing conn", zap.String("peerId", pr.Id()))
 				_ = pr.Close()
 				return nil
 			}
@@ -196,8 +197,14 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 
 // dialRaceGracePeriod classifies a duplicate incoming connection: an
 // existing live connection younger than this is the near-tie of a
-// client's staggered parallel dial, not a stale leftover.
-const dialRaceGracePeriod = 5 * time.Second
+// client's staggered parallel dial, not a stale leftover. A tie's two
+// arrivals are separated by at most the client-side completion spread
+// (milliseconds) plus client/server skew (≤ one RTT), so 2s covers it
+// with margin. Deliberately small: IsClosed only reports DETECTED
+// death, and a client that crashes right after connecting and redials
+// has its fresh conn refused while the undetected zombie sits inside
+// the grace — the window is the price of the race protection.
+const dialRaceGracePeriod = 2 * time.Second
 
 func isDialRaceDuplicate(existing peer.Peer) bool {
 	if existing.IsClosed() {
