@@ -387,10 +387,11 @@ func TestPool_AddPeer(t *testing.T) {
 		defer fx.Finish()
 		require.NoError(t, fx.AddPeer(ctx, newTestPeer("p1")))
 	})
-	t.Run("two peers", func(t *testing.T) {
+	t.Run("old existing conn is replaced (reconnect)", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		p1, p2 := newTestPeer("p1"), newTestPeer("p1")
+		p1 := newTestPeerWithParams("p1", time.Now().Add(-time.Minute), 0, 0)
+		p2 := newTestPeerWithParams("p1", time.Now(), 0, 0)
 		require.NoError(t, fx.AddPeer(ctx, p1))
 		require.NoError(t, fx.AddPeer(ctx, p2))
 		select {
@@ -398,6 +399,39 @@ func TestPool_AddPeer(t *testing.T) {
 		default:
 			assert.Truef(t, false, "peer not closed")
 		}
+		got, err := fx.Pick(ctx, "p1")
+		require.NoError(t, err)
+		assert.Equal(t, p2, got)
+	})
+	t.Run("near-simultaneous duplicate keeps the existing conn", func(t *testing.T) {
+		// The two ends of a client's staggered parallel dial: the client
+		// keeps its first success and closes the later one, so the pool
+		// must keep the existing connection and close the newcomer —
+		// replacing would kill the connection the client kept.
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeerWithParams("p1", time.Now(), 0, 0)
+		p2 := newTestPeerWithParams("p1", time.Now(), 0, 0)
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, fx.AddPeer(ctx, p2))
+		assert.True(t, p2.IsClosed(), "dial-race newcomer must be closed")
+		assert.False(t, p1.IsClosed())
+		got, err := fx.Pick(ctx, "p1")
+		require.NoError(t, err)
+		assert.Equal(t, p1, got)
+	})
+	t.Run("dead recent conn is replaced regardless of age", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeerWithParams("p1", time.Now(), 0, 0)
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		_ = p1.Close()
+		p2 := newTestPeerWithParams("p1", time.Now(), 0, 0)
+		require.NoError(t, fx.AddPeer(ctx, p2))
+		assert.False(t, p2.IsClosed())
+		got, err := fx.Pick(ctx, "p1")
+		require.NoError(t, err)
+		assert.Equal(t, p2, got)
 	})
 }
 
