@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -170,20 +169,12 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 	err = p.incoming.Add(pr.Id(), pr)
 	if err == ocache.ErrExists {
+		// in case when an incoming connection with a peer already exists, we close and remove an existing connection
 		if v, e := p.incoming.Pick(ctx, pr.Id()); e == nil {
-			if existing, ok := v.(peer.Peer); ok && isDialRaceDuplicate(existing) {
-				// Two connections from one peer within the grace are the
-				// two ends of a client's parallel-dial near-tie. The
-				// client keeps its FIRST success and closes the later
-				// one, so keep ours and close the newcomer — replacing
-				// would kill the very connection the client kept.
-				log.Debug("dial-race duplicate: keeping existing conn", zap.String("peerId", pr.Id()))
-				_ = pr.Close()
-				return nil
-			}
-			// The existing connection is old (or already dead): this is a
-			// reconnect and the newcomer is the only live connection —
-			// close and remove the existing one, keep the new.
+			// Counts reconnects AND parallel-dial near-tie duplicates (a
+			// rollout signal: a tie here can drop the conn the dialer
+			// kept — self-healing by redial, watched, not special-cased).
+			log.Debug("incoming duplicate: replacing existing conn", zap.String("peerId", pr.Id()))
 			_ = v.Close()
 			_, _ = p.incoming.Remove(ctx, pr.Id())
 			err = p.incoming.Add(pr.Id(), pr)
@@ -193,29 +184,6 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 		go p.evictOnClose(pr, p.incoming)
 	}
 	return err
-}
-
-// dialRaceGracePeriod classifies a duplicate incoming connection: an
-// existing live connection younger than this is the near-tie of a
-// client's staggered parallel dial, not a stale leftover. A tie's two
-// arrivals are separated by at most the client-side completion spread
-// (milliseconds) plus client/server skew (≤ one RTT), so 2s covers it
-// with margin. Deliberately small: IsClosed only reports DETECTED
-// death, and a client that crashes right after connecting and redials
-// has its fresh conn refused while the undetected zombie sits inside
-// the grace — the window is the price of the race protection.
-const dialRaceGracePeriod = 2 * time.Second
-
-func isDialRaceDuplicate(existing peer.Peer) bool {
-	if existing.IsClosed() {
-		return false
-	}
-	sp, ok := existing.(peer.StatProvider)
-	if !ok {
-		return false
-	}
-	st := sp.ProvideStat()
-	return st != nil && time.Since(st.Created) < dialRaceGracePeriod
 }
 
 func (p *pool) Pick(ctx context.Context, id string) (pr peer.Peer, err error) {
