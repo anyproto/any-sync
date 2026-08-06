@@ -57,7 +57,22 @@ type SpaceDerivePayload struct {
 
 const (
 	SpaceReserved = "any-sync.space"
+
+	// SpaceTypeOneToOne is the legacy 1-1 header type used by anytype
+	// clients. SpaceTypeOneToOneAny is the `any` product's variant; its
+	// headers carry fileproto v2. Both peers derive the 1-1 space id
+	// from the header, so the type selects which product's 1-1 space a
+	// pair of identities shares — the two variants derive distinct ids
+	// and never interoperate.
+	SpaceTypeOneToOne    = "anytype.onetoone"
+	SpaceTypeOneToOneAny = "any.onetoone"
 )
+
+// IsOneToOneType reports whether spaceType is one of the 1-1 header
+// types.
+func IsOneToOneType(spaceType string) bool {
+	return spaceType == SpaceTypeOneToOne || spaceType == SpaceTypeOneToOneAny
+}
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
 var ErrIncorrectOneToOnePayload = errors.New("incorrect onetoone payload")
@@ -437,7 +452,20 @@ func makeOneToOneInfo(sharedSk crypto.PrivKey, aPk, bPk crypto.PubKey) (oneToOne
 	return
 }
 
+// StoragePayloadForOneToOneSpace builds the legacy (anytype) 1-1 space
+// payload. See StoragePayloadForOneToOneSpaceWithType.
 func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	return StoragePayloadForOneToOneSpaceWithType(aSk, bPk, SpaceTypeOneToOne)
+}
+
+// StoragePayloadForOneToOneSpaceWithType builds a 1-1 space payload
+// with the given header type (a IsOneToOneType value). The type is
+// content-addressed into the derived space id, so both peers must use
+// the same one.
+func StoragePayloadForOneToOneSpaceWithType(aSk crypto.PrivKey, bPk crypto.PubKey, spaceType string) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	if !IsOneToOneType(spaceType) {
+		return storagePayload, fmt.Errorf("not a 1-1 space type: %q", spaceType)
+	}
 	sharedSk, err := crypto.GenerateSharedKey(aSk, bPk, crypto.AnysyncOneToOneSpacePath)
 	if err != nil {
 		return
@@ -497,12 +525,16 @@ func StoragePayloadForOneToOneSpace(aSk crypto.PrivKey, bPk crypto.PubKey) (stor
 	// preparing header and space id
 	header := &spacesyncproto.SpaceHeader{
 		Identity:           identity,
-		SpaceType:          "anytype.onetoone",
+		SpaceType:          spaceType,
 		SpaceHeaderPayload: oneToOneInfoBytes,
 		ReplicationKey:     repKey,
 		SettingPayload:     settingsRoot.RawChange,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 		AclPayload:         aclRoot.Payload,
+	}
+	if spaceType == SpaceTypeOneToOneAny {
+		// any.* headers are files-v2 only (coordinator-enforced).
+		header.FileprotoVersion = spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2
 	}
 	marshalled, err := header.MarshalVT()
 	if err != nil {
@@ -603,7 +635,7 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		}
 	}
 
-	if header.SpaceType == "anytype.onetoone" {
+	if IsOneToOneType(header.SpaceType) {
 		var oneToOneInfo aclrecordproto.AclOneToOneInfo
 		err = oneToOneInfo.UnmarshalVT(header.SpaceHeaderPayload)
 		if err != nil {

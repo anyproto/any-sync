@@ -547,6 +547,39 @@ func TestStoragePayloadForOneToOneSpace(t *testing.T) {
 		require.NoError(t, ValidateSpaceStorageCreatePayload(spB))
 	})
 
+	t.Run("any.onetoone variant: symmetric, validated, distinct id, fileproto v2", func(t *testing.T) {
+		aSk, aPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		bSk, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
+
+		spA, err := StoragePayloadForOneToOneSpaceWithType(aSk, bPk, SpaceTypeOneToOneAny)
+		require.NoError(t, err)
+		spB, err := StoragePayloadForOneToOneSpaceWithType(bSk, aPk, SpaceTypeOneToOneAny)
+		require.NoError(t, err)
+
+		assert.True(t, bytes.Equal(spA.SpaceHeaderWithId.RawHeader, spB.SpaceHeaderWithId.RawHeader))
+		require.NoError(t, ValidateSpaceStorageCreatePayload(spA))
+		require.NoError(t, ValidateSpaceStorageCreatePayload(spB))
+
+		legacy, err := StoragePayloadForOneToOneSpace(aSk, bPk)
+		require.NoError(t, err)
+		assert.NotEqual(t, legacy.SpaceHeaderWithId.Id, spA.SpaceHeaderWithId.Id,
+			"the two 1-1 variants must derive distinct space ids")
+
+		var raw spacesyncproto.RawSpaceHeader
+		require.NoError(t, raw.UnmarshalVT(spA.SpaceHeaderWithId.RawHeader))
+		var header spacesyncproto.SpaceHeader
+		require.NoError(t, header.UnmarshalVT(raw.SpaceHeader))
+		assert.Equal(t, SpaceTypeOneToOneAny, header.SpaceType)
+		assert.Equal(t, spacesyncproto.SpaceFileProtoVersion_SpaceFileProtoVersionV2, header.FileprotoVersion)
+	})
+
+	t.Run("non-1-1 type rejected", func(t *testing.T) {
+		aSk, _, _ := crypto.GenerateRandomEd25519KeyPair()
+		_, bPk, _ := crypto.GenerateRandomEd25519KeyPair()
+		_, err := StoragePayloadForOneToOneSpaceWithType(aSk, bPk, "anytype.space")
+		require.Error(t, err)
+	})
+
 }
 
 func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId string) (rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
