@@ -52,6 +52,10 @@ func New() SecureService {
 	return &secureService{}
 }
 
+func NewWithAdmissionVerifier(verifier AdmissionVerifier) SecureService {
+	return &secureService{admissionVerifier: verifier}
+}
+
 type SecureService interface {
 	SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error)
 	HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error)
@@ -72,6 +76,11 @@ type secureService struct {
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
 	inboundChecker   handshake.CredentialChecker
+
+	admissionVerifier AdmissionVerifier
+	admissionEnabled  bool
+	admissionRequired bool
+	networkID         string
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
@@ -93,6 +102,14 @@ func (s *secureService) Init(a *app.App) (err error) {
 		}
 		s.compatibleVersions = conf.CompatibleVersions
 	}
+	admissionConf := conf.Admission.WithDefaults()
+	s.admissionEnabled = admissionConf.Enabled || admissionConf.Required
+	s.admissionRequired = admissionConf.Required
+	if s.admissionEnabled && s.admissionVerifier == nil {
+		if s.admissionVerifier, err = newAdmissionVerifierFromConfig(admissionConf); err != nil {
+			return err
+		}
+	}
 
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
@@ -105,10 +122,16 @@ func (s *secureService) Init(a *app.App) (err error) {
 	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, s.compatibleVersions, a.VersionName(), account.Account())
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+	if s.admissionEnabled {
+		s.networkID = s.nodeconf.Configuration().NetworkId
+		if s.networkID == "" {
+			return ErrAdmissionInvalidConfig
+		}
+	}
 
 	s.inboundChecker = s.noVerifyChecker
 	confTypes := s.nodeconf.NodeTypes(account.Account().PeerId)
-	if conf.RequireClientAuth || len(confTypes) > 0 {
+	if conf.RequireClientAuth || len(confTypes) > 0 || s.admissionRequired {
 		// require identity verification if we are node
 		s.inboundChecker = s.peerSignVerifier
 	}
@@ -136,7 +159,12 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 }
 
 func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
-	res, err := handshake.IncomingHandshake(ctx, conn, peerId, s.inboundChecker)
+	checker := s.inboundChecker
+	if s.admissionEnabled {
+		checker = withAdmissionVerifier(ctx, checker, s.admissionVerifier, s.admissionRequired, s.networkID)
+	}
+	checker = withAdmissionToken(checker, CtxOutboundAdmissionToken(ctx))
+	res, err := handshake.IncomingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +173,7 @@ func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteC
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
+	cctx = ctxWithRemoteAdmissionToken(cctx, res.AdmissionToken)
 	return
 }
 
@@ -164,6 +193,7 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	} else {
 		checker = s.noVerifyChecker
 	}
+	checker = withAdmissionToken(checker, CtxOutboundAdmissionToken(ctx))
 	res, err := handshake.OutgoingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
@@ -173,6 +203,7 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
+	cctx = ctxWithRemoteAdmissionToken(cctx, res.AdmissionToken)
 	return cctx, nil
 }
 
