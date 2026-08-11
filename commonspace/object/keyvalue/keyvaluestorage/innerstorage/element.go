@@ -65,7 +65,7 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	kv.PeerId = peerId.PeerId()
 	kv.Key = innerValue.Key
 	kv.AclId = innerValue.AclHeadId
-	kv.DeletePrefix = innerValue.DeletePrefix
+	kv.DeletePrefix = innerValue.GetDelete().GetPrefix()
 	// The id must be derived from the signed payload: an unchecked KeyPeerId
 	// would let any writer occupy (and overwrite) another peer's row.
 	if kv.KeyPeerId != kv.Key+"-"+kv.PeerId {

@@ -465,7 +465,7 @@ func rawWatermark(t *testing.T, keys *accountdata.AccountKeys, prefix string, ts
 		TimestampMicro: ts,
 		AclHeadId:      "acl-head",
 		Key:            prefix,
-		DeletePrefix:   prefix,
+		Delete:         &spacesyncproto.StoreDeletePrefix{Prefix: prefix},
 	}
 	innerBytes, err := inner.MarshalVT()
 	require.NoError(t, err)

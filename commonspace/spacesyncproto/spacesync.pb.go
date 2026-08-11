@@ -2075,12 +2075,9 @@ type StoreKeyInner struct {
 	TimestampMicro int64                  `protobuf:"varint,4,opt,name=timestampMicro,proto3" json:"timestampMicro,omitempty"`
 	AclHeadId      string                 `protobuf:"bytes,5,opt,name=aclHeadId,proto3" json:"aclHeadId,omitempty"`
 	Key            string                 `protobuf:"bytes,6,opt,name=key,proto3" json:"key,omitempty"`
-	// deletePrefix marks the row as a deletion watermark: applying it
-	// physically removes every stored row whose key starts with the
-	// prefix and whose timestamp is older than timestampMicro, and
-	// rejects such rows arriving later. The watermark row itself is the
-	// only retained state. key mirrors the prefix; value stays empty.
-	DeletePrefix  string `protobuf:"bytes,7,opt,name=deletePrefix,proto3" json:"deletePrefix,omitempty"`
+	// delete turns this row into a deletion watermark instead of a value
+	// (see StoreDeletePrefix). key mirrors the prefix; value stays empty.
+	Delete        *StoreDeletePrefix `protobuf:"bytes,7,opt,name=delete,proto3" json:"delete,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2157,9 +2154,60 @@ func (x *StoreKeyInner) GetKey() string {
 	return ""
 }
 
-func (x *StoreKeyInner) GetDeletePrefix() string {
+func (x *StoreKeyInner) GetDelete() *StoreDeletePrefix {
 	if x != nil {
-		return x.DeletePrefix
+		return x.Delete
+	}
+	return nil
+}
+
+// StoreDeletePrefix is the deletion watermark operation: applying the row
+// carrying it physically removes every stored row whose key starts with the
+// prefix and whose timestamp is older than the watermark's, and rejects such
+// rows arriving later. The watermark row itself is the only retained state.
+// It lives inside the signed StoreKeyInner so the operation type cannot be
+// forged, and rides the ordinary element sync so it reaches every replica —
+// including devices restoring from old snapshots.
+type StoreDeletePrefix struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prefix        string                 `protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StoreDeletePrefix) Reset() {
+	*x = StoreDeletePrefix{}
+	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StoreDeletePrefix) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreDeletePrefix) ProtoMessage() {}
+
+func (x *StoreDeletePrefix) ProtoReflect() protoreflect.Message {
+	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreDeletePrefix.ProtoReflect.Descriptor instead.
+func (*StoreDeletePrefix) Descriptor() ([]byte, []int) {
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *StoreDeletePrefix) GetPrefix() string {
+	if x != nil {
+		return x.Prefix
 	}
 	return ""
 }
@@ -2174,7 +2222,7 @@ type StorageHeader struct {
 
 func (x *StorageHeader) Reset() {
 	*x = StorageHeader{}
-	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[31]
+	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2186,7 +2234,7 @@ func (x *StorageHeader) String() string {
 func (*StorageHeader) ProtoMessage() {}
 
 func (x *StorageHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[31]
+	mi := &file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2199,7 +2247,7 @@ func (x *StorageHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StorageHeader.ProtoReflect.Descriptor instead.
 func (*StorageHeader) Descriptor() ([]byte, []int) {
-	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{31}
+	return file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *StorageHeader) GetSpaceId() string {
@@ -2339,15 +2387,17 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\rpeerSignature\x18\x04 \x01(\fR\rpeerSignature\x12\x18\n" +
 	"\aspaceId\x18\x05 \x01(\tR\aspaceId\"H\n" +
 	"\x0eStoreKeyValues\x126\n" +
-	"\tkeyValues\x18\x01 \x03(\v2\x18.spacesync.StoreKeyValueR\tkeyValues\"\xd1\x01\n" +
+	"\tkeyValues\x18\x01 \x03(\v2\x18.spacesync.StoreKeyValueR\tkeyValues\"\xe3\x01\n" +
 	"\rStoreKeyInner\x12\x12\n" +
 	"\x04peer\x18\x01 \x01(\fR\x04peer\x12\x1a\n" +
 	"\bidentity\x18\x02 \x01(\fR\bidentity\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\fR\x05value\x12&\n" +
 	"\x0etimestampMicro\x18\x04 \x01(\x03R\x0etimestampMicro\x12\x1c\n" +
 	"\taclHeadId\x18\x05 \x01(\tR\taclHeadId\x12\x10\n" +
-	"\x03key\x18\x06 \x01(\tR\x03key\x12\"\n" +
-	"\fdeletePrefix\x18\a \x01(\tR\fdeletePrefix\"K\n" +
+	"\x03key\x18\x06 \x01(\tR\x03key\x124\n" +
+	"\x06delete\x18\a \x01(\v2\x1c.spacesync.StoreDeletePrefixR\x06delete\"+\n" +
+	"\x11StoreDeletePrefix\x12\x16\n" +
+	"\x06prefix\x18\x01 \x01(\tR\x06prefix\"K\n" +
 	"\rStorageHeader\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12 \n" +
 	"\vstorageName\x18\x02 \x01(\tR\vstorageName*\xee\x01\n" +
@@ -2409,7 +2459,7 @@ func file_commonspace_spacesyncproto_protos_spacesync_proto_rawDescGZIP() []byte
 }
 
 var file_commonspace_spacesyncproto_protos_spacesync_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_commonspace_spacesyncproto_protos_spacesync_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_commonspace_spacesyncproto_protos_spacesync_proto_goTypes = []any{
 	(ErrCodes)(0),                 // 0: spacesync.ErrCodes
 	(SpaceHeaderVersion)(0),       // 1: spacesync.SpaceHeaderVersion
@@ -2448,7 +2498,8 @@ var file_commonspace_spacesyncproto_protos_spacesync_proto_goTypes = []any{
 	(*StoreKeyValue)(nil),         // 34: spacesync.StoreKeyValue
 	(*StoreKeyValues)(nil),        // 35: spacesync.StoreKeyValues
 	(*StoreKeyInner)(nil),         // 36: spacesync.StoreKeyInner
-	(*StorageHeader)(nil),         // 37: spacesync.StorageHeader
+	(*StoreDeletePrefix)(nil),     // 37: spacesync.StoreDeletePrefix
+	(*StorageHeader)(nil),         // 38: spacesync.StorageHeader
 }
 var file_commonspace_spacesyncproto_protos_spacesync_proto_depIdxs = []int32{
 	8,  // 0: spacesync.HeadSyncResult.elements:type_name -> spacesync.HeadSyncResultElement
@@ -2471,31 +2522,32 @@ var file_commonspace_spacesyncproto_protos_spacesync_proto_depIdxs = []int32{
 	6,  // 17: spacesync.StoreDiffRequest.ranges:type_name -> spacesync.HeadSyncRange
 	7,  // 18: spacesync.StoreDiffResponse.results:type_name -> spacesync.HeadSyncResult
 	34, // 19: spacesync.StoreKeyValues.keyValues:type_name -> spacesync.StoreKeyValue
-	9,  // 20: spacesync.SpaceSync.HeadSync:input_type -> spacesync.HeadSyncRequest
-	32, // 21: spacesync.SpaceSync.StoreDiff:input_type -> spacesync.StoreDiffRequest
-	34, // 22: spacesync.SpaceSync.StoreElements:input_type -> spacesync.StoreKeyValue
-	12, // 23: spacesync.SpaceSync.SpacePush:input_type -> spacesync.SpacePushRequest
-	14, // 24: spacesync.SpaceSync.SpacePull:input_type -> spacesync.SpacePullRequest
-	11, // 25: spacesync.SpaceSync.ObjectSyncStream:input_type -> spacesync.ObjectSyncMessage
-	11, // 26: spacesync.SpaceSync.ObjectSync:input_type -> spacesync.ObjectSyncMessage
-	11, // 27: spacesync.SpaceSync.ObjectSyncRequestStream:input_type -> spacesync.ObjectSyncMessage
-	28, // 28: spacesync.SpaceSync.AclAddRecord:input_type -> spacesync.AclAddRecordRequest
-	30, // 29: spacesync.SpaceSync.AclGetRecords:input_type -> spacesync.AclGetRecordsRequest
-	10, // 30: spacesync.SpaceSync.HeadSync:output_type -> spacesync.HeadSyncResponse
-	33, // 31: spacesync.SpaceSync.StoreDiff:output_type -> spacesync.StoreDiffResponse
-	34, // 32: spacesync.SpaceSync.StoreElements:output_type -> spacesync.StoreKeyValue
-	13, // 33: spacesync.SpaceSync.SpacePush:output_type -> spacesync.SpacePushResponse
-	15, // 34: spacesync.SpaceSync.SpacePull:output_type -> spacesync.SpacePullResponse
-	11, // 35: spacesync.SpaceSync.ObjectSyncStream:output_type -> spacesync.ObjectSyncMessage
-	11, // 36: spacesync.SpaceSync.ObjectSync:output_type -> spacesync.ObjectSyncMessage
-	11, // 37: spacesync.SpaceSync.ObjectSyncRequestStream:output_type -> spacesync.ObjectSyncMessage
-	29, // 38: spacesync.SpaceSync.AclAddRecord:output_type -> spacesync.AclAddRecordResponse
-	31, // 39: spacesync.SpaceSync.AclGetRecords:output_type -> spacesync.AclGetRecordsResponse
-	30, // [30:40] is the sub-list for method output_type
-	20, // [20:30] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	37, // 20: spacesync.StoreKeyInner.delete:type_name -> spacesync.StoreDeletePrefix
+	9,  // 21: spacesync.SpaceSync.HeadSync:input_type -> spacesync.HeadSyncRequest
+	32, // 22: spacesync.SpaceSync.StoreDiff:input_type -> spacesync.StoreDiffRequest
+	34, // 23: spacesync.SpaceSync.StoreElements:input_type -> spacesync.StoreKeyValue
+	12, // 24: spacesync.SpaceSync.SpacePush:input_type -> spacesync.SpacePushRequest
+	14, // 25: spacesync.SpaceSync.SpacePull:input_type -> spacesync.SpacePullRequest
+	11, // 26: spacesync.SpaceSync.ObjectSyncStream:input_type -> spacesync.ObjectSyncMessage
+	11, // 27: spacesync.SpaceSync.ObjectSync:input_type -> spacesync.ObjectSyncMessage
+	11, // 28: spacesync.SpaceSync.ObjectSyncRequestStream:input_type -> spacesync.ObjectSyncMessage
+	28, // 29: spacesync.SpaceSync.AclAddRecord:input_type -> spacesync.AclAddRecordRequest
+	30, // 30: spacesync.SpaceSync.AclGetRecords:input_type -> spacesync.AclGetRecordsRequest
+	10, // 31: spacesync.SpaceSync.HeadSync:output_type -> spacesync.HeadSyncResponse
+	33, // 32: spacesync.SpaceSync.StoreDiff:output_type -> spacesync.StoreDiffResponse
+	34, // 33: spacesync.SpaceSync.StoreElements:output_type -> spacesync.StoreKeyValue
+	13, // 34: spacesync.SpaceSync.SpacePush:output_type -> spacesync.SpacePushResponse
+	15, // 35: spacesync.SpaceSync.SpacePull:output_type -> spacesync.SpacePullResponse
+	11, // 36: spacesync.SpaceSync.ObjectSyncStream:output_type -> spacesync.ObjectSyncMessage
+	11, // 37: spacesync.SpaceSync.ObjectSync:output_type -> spacesync.ObjectSyncMessage
+	11, // 38: spacesync.SpaceSync.ObjectSyncRequestStream:output_type -> spacesync.ObjectSyncMessage
+	29, // 39: spacesync.SpaceSync.AclAddRecord:output_type -> spacesync.AclAddRecordResponse
+	31, // 40: spacesync.SpaceSync.AclGetRecords:output_type -> spacesync.AclGetRecordsResponse
+	31, // [31:41] is the sub-list for method output_type
+	21, // [21:31] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_commonspace_spacesyncproto_protos_spacesync_proto_init() }
@@ -2513,7 +2565,7 @@ func file_commonspace_spacesyncproto_protos_spacesync_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc), len(file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   32,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

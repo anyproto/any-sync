@@ -205,7 +205,9 @@ func (s *storage) signAndStore(ctx context.Context, key string, value []byte, de
 		TimestampMicro: timestampMicro,
 		AclHeadId:      headId,
 		Key:            key,
-		DeletePrefix:   deletePrefix,
+	}
+	if deletePrefix != "" {
+		inner.Delete = &spacesyncproto.StoreDeletePrefix{Prefix: deletePrefix}
 	}
 	innerBytes, err := inner.MarshalVT()
 	if err != nil {
