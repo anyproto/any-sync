@@ -686,3 +686,82 @@ func TestIndexerDeletionFlow(t *testing.T) {
 	indexed, _ = idx.counts()
 	require.Equal(t, 2, indexed, "rejected rows must not be indexed")
 }
+
+// attachPeer wires fx to hub's rpc server and returns the peer fx dials.
+func attachPeer(t *testing.T, fx *fixture, fxKeys *accountdata.AccountKeys, hub *fixture, hubKeys *accountdata.AccountKeys) peer.Peer {
+	hubConn, fxConn := rpctest.MultiConnPair(fxKeys.PeerId, hubKeys.PeerId)
+	hubPeer, err := peer.NewPeer(hubConn, fx.server)
+	require.NoError(t, err)
+	_, err = peer.NewPeer(fxConn, hub.server)
+	require.NoError(t, err)
+	return hubPeer
+}
+
+// TestDeletePrefix_OfflinePeers covers devices that were offline across a
+// prefix deletion:
+//   - stale unsynced rows (older than the watermark) are rejected by the hub
+//     and dropped by their writer once the watermark reaches it;
+//   - rows written after the deletion (newer than the watermark) win by LWW
+//     and propagate — the app-level reconciler's re-issued delete is what
+//     removes them, and does so everywhere.
+func TestDeletePrefix_OfflinePeers(t *testing.T) {
+	ownerKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	hubKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	hubKeys.SignKey = ownerKeys.SignKey
+	staleKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	staleKeys.SignKey = ownerKeys.SignKey
+	lateKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	lateKeys.SignKey = ownerKeys.SignKey
+	payload := newStorageCreatePayload(t, ownerKeys)
+
+	fxOwner := newFixture(t, ownerKeys, payload)
+	fxHub := newFixture(t, hubKeys, payload)
+	fxStale := newFixture(t, staleKeys, payload)
+	fxLate := newFixture(t, lateKeys, payload)
+	hubForOwner := attachPeer(t, fxOwner, ownerKeys, fxHub, hubKeys)
+	hubForStale := attachPeer(t, fxStale, staleKeys, fxHub, hubKeys)
+	hubForLate := attachPeer(t, fxLate, lateKeys, fxHub, hubKeys)
+
+	// Stale device writes while offline; owner writes and syncs.
+	fxStale.add(t, "read/sp1/x", []byte("vx"))
+	fxStale.add(t, "read/sp1/y", []byte("vy"))
+	fxStale.add(t, "notes/keep", []byte("vk"))
+	fxOwner.add(t, "read/sp1/a", []byte("va"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+
+	// Timestamps order the whole scenario; keep them strictly increasing.
+	time.Sleep(2 * time.Millisecond)
+	require.NoError(t, fxOwner.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 1, "hub holds only the watermark")
+
+	// The stale device comes online: one round pushes its rows (rejected)
+	// and pulls the watermark (drops its local copies).
+	require.NoError(t, fxStale.keyValueService.syncWithPeer(ctx, hubForStale))
+	require.Len(t, prefixIds(t, fxStale.defaultStore, "read/sp1/"), 1, "stale device drops its unsynced rows on receiving the watermark")
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 1, "stale rows must not stick on the hub")
+	require.True(t, fxStale.check(t, "notes/keep", []byte("vk")), "unsynced rows outside the prefix survive")
+	require.True(t, fxHub.check(t, "notes/keep", []byte("vk")), "out-of-prefix rows still sync")
+
+	// A device that writes AFTER the deletion (its clock is past the
+	// watermark) wins by LWW: the row propagates by design.
+	time.Sleep(2 * time.Millisecond)
+	fxLate.add(t, "read/sp1/z", []byte("vz"))
+	require.NoError(t, fxLate.keyValueService.syncWithPeer(ctx, hubForLate))
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 2, "post-deletion write survives the old watermark")
+
+	// The reconciler's re-issued delete removes the late row everywhere.
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	time.Sleep(2 * time.Millisecond)
+	require.NoError(t, fxOwner.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	require.NoError(t, fxLate.keyValueService.syncWithPeer(ctx, hubForLate))
+	for name, fx := range map[string]*fixture{"owner": fxOwner, "hub": fxHub, "late": fxLate} {
+		ids := prefixIds(t, fx.defaultStore, "read/sp1/")
+		require.Len(t, ids, 1, "%s converges to the watermark only: %v", name, ids)
+	}
+}
