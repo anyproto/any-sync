@@ -4,6 +4,7 @@ package keyvaluestorage
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -25,11 +26,26 @@ import (
 
 var log = logger.NewNamed("common.keyvalue.keyvaluestorage")
 
+var (
+	// ErrCoveredByWatermark: the write's key sits under a deletion watermark
+	// newer than the write's timestamp, so every replica would discard it.
+	ErrCoveredByWatermark = errors.New("key is covered by a newer deletion watermark")
+	ErrEmptyDeletePrefix  = errors.New("empty delete prefix")
+)
+
 const IndexerCName = "common.keyvalue.indexer"
 
 type Indexer interface {
 	app.Component
 	Index(decryptor Decryptor, keyValue ...innerstorage.KeyValue) error
+}
+
+// DeletionAwareIndexer is implemented by indexers that mirror physical
+// deletions: RemoveIndex receives the ids of rows a watermark dropped, so the
+// downstream index does not keep resolving keys the storage no longer holds.
+type DeletionAwareIndexer interface {
+	Indexer
+	RemoveIndex(keyPeerIds ...string) error
 }
 
 type Decryptor = func(kv innerstorage.KeyValue) (value []byte, err error)
@@ -129,6 +145,9 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 }
 
 func (s *storage) DeletePrefix(ctx context.Context, prefix string) error {
+	if prefix == "" {
+		return ErrEmptyDeletePrefix
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	// Owner-only: a watermark removes rows written by every peer, not just
@@ -173,6 +192,12 @@ func (s *storage) signAndStore(ctx context.Context, key string, value []byte, de
 		return err
 	}
 	timestampMicro := time.Now().UnixMicro()
+	// Fail loudly instead of writing a row every replica (this one included)
+	// would silently discard: without this, Set would return success and the
+	// value would never be readable anywhere.
+	if wmTs := s.inner.WatermarkTs(key); wmTs > timestampMicro {
+		return ErrCoveredByWatermark
+	}
 	inner := spacesyncproto.StoreKeyInner{
 		Peer:           protoPeerKey,
 		Identity:       protoIdentityKey,
@@ -210,9 +235,14 @@ func (s *storage) signAndStore(ctx context.Context, key string, value []byte, de
 			IdentitySignature: identitySig,
 		},
 	}
-	err = s.inner.Set(ctx, keyValue)
+	res, err := s.inner.Set(ctx, keyValue)
 	if err != nil {
 		return err
+	}
+	s.removeIndexes(res.DroppedIds)
+	if len(res.Applied) == 0 {
+		// Lost LWW to an already-stored newer own row; nothing changed.
+		return nil
 	}
 	if deletePrefix == "" {
 		indexErr := s.indexer.Index(s.decrypt, keyValue)
@@ -225,6 +255,20 @@ func (s *storage) signAndStore(ctx context.Context, key string, value []byte, de
 		log.Warn("failed to send key value", zap.String("key", key), zap.Error(sendErr))
 	}
 	return nil
+}
+
+// removeIndexes mirrors watermark drops into the indexer when it opts in.
+func (s *storage) removeIndexes(droppedIds []string) {
+	if len(droppedIds) == 0 {
+		return
+	}
+	indexer, ok := s.indexer.(DeletionAwareIndexer)
+	if !ok {
+		return
+	}
+	if err := indexer.RemoveIndex(droppedIds...); err != nil {
+		log.Warn("failed to remove index for dropped keys", zap.Error(err))
+	}
 }
 
 func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) (err error) {
@@ -281,17 +325,24 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	if len(keyValues) == 0 {
 		return nil
 	}
-	err = s.inner.Set(ctx, keyValues...)
+	res, err := s.inner.Set(ctx, keyValues...)
 	if err != nil {
 		return err
 	}
-	sendErr := s.syncClient.Broadcast(ctx, s.storageId, keyValues...)
+	s.removeIndexes(res.DroppedIds)
+	// Broadcast and index only what actually applied: values the store
+	// rejected (LWW losers, watermark-covered rows) must not propagate
+	// further — indexing them would resurrect deleted data downstream.
+	if len(res.Applied) == 0 {
+		return nil
+	}
+	sendErr := s.syncClient.Broadcast(ctx, s.storageId, res.Applied...)
 	if sendErr != nil {
 		log.Warn("failed to send key values", zap.Error(sendErr))
 	}
 	// Watermarks carry no payload to index; their effect (dropped rows) is
 	// already applied.
-	indexable := slice.DiscardFromSlice(keyValues, func(value innerstorage.KeyValue) bool {
+	indexable := slice.DiscardFromSlice(res.Applied, func(value innerstorage.KeyValue) bool {
 		return value.DeletePrefix != ""
 	})
 	if len(indexable) > 0 {

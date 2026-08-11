@@ -18,6 +18,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
@@ -558,4 +559,130 @@ func TestDeletePrefix(t *testing.T) {
 		require.True(t, fxClient.check(t, "read/sp1/a", []byte("va")), "rows survive a stranger's watermark")
 		require.Len(t, prefixIds(t, fxClient.defaultStore, "read/sp1/"), 1, "the stranger's watermark row must not be stored")
 	})
+}
+
+// recordingIndexer records Index/RemoveIndex calls; RemoveIndex makes it
+// deletion-aware.
+type recordingIndexer struct {
+	mu      sync.Mutex
+	indexed []string
+	removed []string
+}
+
+func (r *recordingIndexer) Init(a *app.App) error { return nil }
+func (r *recordingIndexer) Name() string          { return keyvaluestorage.IndexerCName }
+
+func (r *recordingIndexer) Index(_ keyvaluestorage.Decryptor, keyValues ...innerstorage.KeyValue) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, kv := range keyValues {
+		r.indexed = append(r.indexed, kv.KeyPeerId)
+	}
+	return nil
+}
+
+func (r *recordingIndexer) RemoveIndex(keyPeerIds ...string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.removed = append(r.removed, keyPeerIds...)
+	return nil
+}
+
+func (r *recordingIndexer) counts() (indexed, removed int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.indexed), len(r.removed)
+}
+
+// newBareStorage builds a keyvaluestorage.Storage without the rpc service
+// around it, with an arbitrary indexer.
+func newBareStorage(t *testing.T, keys *accountdata.AccountKeys, spacePayload spacestorage.SpaceStorageCreatePayload, indexer keyvaluestorage.Indexer) keyvaluestorage.Storage {
+	anyStore, err := anystore.Open(ctx, filepath.Join(t.TempDir(), "store.db"), nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = anyStore.Close() })
+	storage, err := spacestorage.Create(ctx, anyStore, spacePayload)
+	require.NoError(t, err)
+	aclStorage, err := storage.AclStorage()
+	require.NoError(t, err)
+	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+	st, err := keyvaluestorage.New(ctx, "kv.storage", anyStore, storage.HeadStorage(), keys, &countingSyncClient{}, aclList, indexer)
+	require.NoError(t, err)
+	return st
+}
+
+// exportPrefix returns the wire protos of every raw row under the prefix.
+func exportPrefix(t *testing.T, store keyvaluestorage.Storage, prefix string) []*spacesyncproto.StoreKeyValue {
+	var protos []*spacesyncproto.StoreKeyValue
+	err := store.InnerStorage().IteratePrefix(ctx, prefix, func(kv innerstorage.KeyValue) error {
+		protos = append(protos, kv.Proto())
+		return nil
+	})
+	require.NoError(t, err)
+	return protos
+}
+
+// TestSetCoveredByWatermark: a local write under a newer watermark fails
+// loudly instead of returning success for a value every replica would drop.
+func TestSetCoveredByWatermark(t *testing.T) {
+	fxClient, _, _ := prepareFixtures(t)
+	_, err := fxClient.defaultStore.InnerStorage().Set(ctx, innerstorage.KeyValue{
+		KeyPeerId:      "read/sp1/-peerX",
+		Key:            "read/sp1/",
+		PeerId:         "peerX",
+		Identity:       "identity",
+		DeletePrefix:   "read/sp1/",
+		TimestampMicro: time.Now().Add(time.Hour).UnixMicro(),
+	})
+	require.NoError(t, err)
+
+	err = fxClient.defaultStore.Set(ctx, "read/sp1/a", []byte("va"))
+	require.ErrorIs(t, err, keyvaluestorage.ErrCoveredByWatermark)
+	require.ErrorIs(t, fxClient.defaultStore.DeletePrefix(ctx, "read/sp1/sub/"), keyvaluestorage.ErrCoveredByWatermark,
+		"a narrower watermark under a newer covering one is refused too")
+	require.NoError(t, fxClient.defaultStore.Set(ctx, "other/b", []byte("vb")), "keys outside the prefix write normally")
+}
+
+func TestDeletePrefixEmpty(t *testing.T) {
+	fxClient, _, _ := prepareFixtures(t)
+	require.ErrorIs(t, fxClient.defaultStore.DeletePrefix(ctx, ""), keyvaluestorage.ErrEmptyDeletePrefix)
+}
+
+// TestIndexerDeletionFlow pins the indexer contract around watermarks:
+// applied rows index, watermark-dropped rows un-index via the optional
+// DeletionAwareIndexer, and rows the store rejects never reach Index.
+func TestIndexerDeletionFlow(t *testing.T) {
+	firstKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	secondKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	secondKeys.SignKey = firstKeys.SignKey
+	payload := newStorageCreatePayload(t, firstKeys)
+
+	idx := &recordingIndexer{}
+	stA := newBareStorage(t, firstKeys, payload, keyvaluestorage.NoOpIndexer{})
+	stB := newBareStorage(t, secondKeys, payload, idx)
+
+	require.NoError(t, stA.Set(ctx, "read/sp1/a", []byte("va")))
+	require.NoError(t, stA.Set(ctx, "read/sp1/b", []byte("vb")))
+	stale := exportPrefix(t, stA, "read/sp1/")
+	require.Len(t, stale, 2)
+
+	require.NoError(t, stB.SetRaw(ctx, stale...))
+	indexed, removed := idx.counts()
+	require.Equal(t, 2, indexed, "applied rows index")
+	require.Equal(t, 0, removed)
+
+	require.NoError(t, stA.DeletePrefix(ctx, "read/sp1/"))
+	wmProtos := exportPrefix(t, stA, "read/sp1/")
+	require.Len(t, wmProtos, 1, "only the watermark row remains on A")
+	require.NoError(t, stB.SetRaw(ctx, wmProtos...))
+	indexed, removed = idx.counts()
+	require.Equal(t, 2, indexed, "the watermark row itself is not indexed")
+	require.Equal(t, 2, removed, "dropped rows are un-indexed")
+
+	// Resurrection attempt: the rejected rows must not reach Index.
+	require.NoError(t, stB.SetRaw(ctx, stale...))
+	indexed, _ = idx.counts()
+	require.Equal(t, 2, indexed, "rejected rows must not be indexed")
 }
