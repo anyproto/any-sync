@@ -450,3 +450,112 @@ func (r *recordingStream) Send(kv *spacesyncproto.StoreKeyValue) error {
 	r.ts.mu.Unlock()
 	return r.DRPCSpaceSync_StoreElementsStream.Send(kv)
 }
+
+// rawWatermark hand-builds a signed deletion watermark, letting a test send
+// one from an arbitrary identity.
+func rawWatermark(t *testing.T, keys *accountdata.AccountKeys, prefix string, ts int64) *spacesyncproto.StoreKeyValue {
+	protoPeerKey, err := keys.PeerKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	protoIdentityKey, err := keys.SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	inner := spacesyncproto.StoreKeyInner{
+		Peer:           protoPeerKey,
+		Identity:       protoIdentityKey,
+		TimestampMicro: ts,
+		AclHeadId:      "acl-head",
+		Key:            prefix,
+		DeletePrefix:   prefix,
+	}
+	innerBytes, err := inner.MarshalVT()
+	require.NoError(t, err)
+	peerSig, err := keys.PeerKey.Sign(innerBytes)
+	require.NoError(t, err)
+	identitySig, err := keys.SignKey.Sign(innerBytes)
+	require.NoError(t, err)
+	return &spacesyncproto.StoreKeyValue{
+		KeyPeerId:         prefix + "-" + keys.PeerKey.GetPublic().PeerId(),
+		Value:             innerBytes,
+		PeerSignature:     peerSig,
+		IdentitySignature: identitySig,
+	}
+}
+
+// prefixIds lists the raw stored row ids under a key prefix, watermark rows
+// included.
+func prefixIds(t *testing.T, store keyvaluestorage.Storage, prefix string) []string {
+	var ids []string
+	err := store.InnerStorage().IteratePrefix(ctx, prefix, func(kv innerstorage.KeyValue) error {
+		ids = append(ids, kv.KeyPeerId)
+		return nil
+	})
+	require.NoError(t, err)
+	sort.Strings(ids)
+	return ids
+}
+
+func TestDeletePrefix(t *testing.T) {
+	t.Run("drops locally, propagates via sync, rejects resurrection", func(t *testing.T) {
+		fxClient, fxServer, serverPeer := prepareFixtures(t)
+		fxClient.add(t, "read/sp1/a", []byte("va"))
+		fxClient.add(t, "read/sp1/b", []byte("vb"))
+		fxClient.add(t, "other/c", []byte("vc"))
+		fxServer.add(t, "read/sp1/d", []byte("vd"))
+		// syncWithPeer directly: the limiter permits one scheduled sync per
+		// peer and its Close is terminal, while this test needs two rounds.
+		require.NoError(t, fxClient.keyValueService.syncWithPeer(ctx, serverPeer))
+		require.Len(t, prefixIds(t, fxServer.defaultStore, "read/sp1/"), 3)
+
+		// Capture the pre-delete rows: a device restoring an old snapshot
+		// would push exactly these.
+		var stale []*spacesyncproto.StoreKeyValue
+		err := fxServer.defaultStore.InnerStorage().IteratePrefix(ctx, "read/sp1/", func(kv innerstorage.KeyValue) error {
+			p := kv.Proto()
+			p.Value = append([]byte(nil), p.Value...)
+			p.PeerSignature = append([]byte(nil), p.PeerSignature...)
+			p.IdentitySignature = append([]byte(nil), p.IdentitySignature...)
+			stale = append(stale, p)
+			return nil
+		})
+		require.NoError(t, err)
+		require.Len(t, stale, 3)
+
+		require.NoError(t, fxClient.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+		require.NoError(t, fxClient.keyValueService.syncWithPeer(ctx, serverPeer))
+
+		for _, fx := range []*fixture{fxClient, fxServer} {
+			ids := prefixIds(t, fx.defaultStore, "read/sp1/")
+			require.Len(t, ids, 1, "only the watermark row remains: %v", ids)
+			require.True(t, strings.HasPrefix(ids[0], "read/sp1/-"), "remaining row is the watermark: %v", ids)
+			require.False(t, fx.check(t, "read/sp1/a", []byte("va")))
+			require.False(t, fx.check(t, "read/sp1/d", []byte("vd")))
+			require.True(t, fx.check(t, "other/c", []byte("vc")), "rows outside the prefix survive")
+			// The public read surface hides the watermark row.
+			var seen []string
+			require.NoError(t, fx.defaultStore.Iterate(ctx, func(_ keyvaluestorage.Decryptor, key string, _ []innerstorage.KeyValue) (bool, error) {
+				seen = append(seen, key)
+				return true, nil
+			}))
+			require.Equal(t, []string{"other/c"}, seen)
+		}
+
+		// Resurrection attempt: replaying the captured pre-delete rows is a
+		// no-op on both replicas.
+		require.NoError(t, fxServer.defaultStore.SetRaw(ctx, stale...))
+		require.Len(t, prefixIds(t, fxServer.defaultStore, "read/sp1/"), 1)
+		require.NoError(t, fxClient.defaultStore.SetRaw(ctx, stale...))
+		require.Len(t, prefixIds(t, fxClient.defaultStore, "read/sp1/"), 1)
+	})
+
+	t.Run("watermark from a non-owner identity is rejected", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		fxClient.add(t, "read/sp1/a", []byte("va"))
+
+		strangerKeys, err := accountdata.NewRandom()
+		require.NoError(t, err)
+		wm := rawWatermark(t, strangerKeys, "read/sp1/", time.Now().Add(time.Hour).UnixMicro())
+		require.NoError(t, fxClient.defaultStore.SetRaw(ctx, wm))
+
+		require.True(t, fxClient.check(t, "read/sp1/a", []byte("va")), "rows survive a stranger's watermark")
+		require.Len(t, prefixIds(t, fxClient.defaultStore, "read/sp1/"), 1, "the stranger's watermark row must not be stored")
+	})
+}

@@ -240,8 +240,8 @@ type DiffType int32
 
 const (
 	DiffType_Initial DiffType = 0
-	DiffType_V1      DiffType = 1
-	DiffType_V2      DiffType = 2
+	DiffType_V1      DiffType = 1 // deprecated, not supported anymore
+	DiffType_V2      DiffType = 2 // deprecated, not supported anymore
 	DiffType_V3      DiffType = 3
 )
 
@@ -2075,8 +2075,14 @@ type StoreKeyInner struct {
 	TimestampMicro int64                  `protobuf:"varint,4,opt,name=timestampMicro,proto3" json:"timestampMicro,omitempty"`
 	AclHeadId      string                 `protobuf:"bytes,5,opt,name=aclHeadId,proto3" json:"aclHeadId,omitempty"`
 	Key            string                 `protobuf:"bytes,6,opt,name=key,proto3" json:"key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// deletePrefix marks the row as a deletion watermark: applying it
+	// physically removes every stored row whose key starts with the
+	// prefix and whose timestamp is older than timestampMicro, and
+	// rejects such rows arriving later. The watermark row itself is the
+	// only retained state. key mirrors the prefix; value stays empty.
+	DeletePrefix  string `protobuf:"bytes,7,opt,name=deletePrefix,proto3" json:"deletePrefix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StoreKeyInner) Reset() {
@@ -2147,6 +2153,13 @@ func (x *StoreKeyInner) GetAclHeadId() string {
 func (x *StoreKeyInner) GetKey() string {
 	if x != nil {
 		return x.Key
+	}
+	return ""
+}
+
+func (x *StoreKeyInner) GetDeletePrefix() string {
+	if x != nil {
+		return x.DeletePrefix
 	}
 	return ""
 }
@@ -2326,14 +2339,15 @@ const file_commonspace_spacesyncproto_protos_spacesync_proto_rawDesc = "" +
 	"\rpeerSignature\x18\x04 \x01(\fR\rpeerSignature\x12\x18\n" +
 	"\aspaceId\x18\x05 \x01(\tR\aspaceId\"H\n" +
 	"\x0eStoreKeyValues\x126\n" +
-	"\tkeyValues\x18\x01 \x03(\v2\x18.spacesync.StoreKeyValueR\tkeyValues\"\xad\x01\n" +
+	"\tkeyValues\x18\x01 \x03(\v2\x18.spacesync.StoreKeyValueR\tkeyValues\"\xd1\x01\n" +
 	"\rStoreKeyInner\x12\x12\n" +
 	"\x04peer\x18\x01 \x01(\fR\x04peer\x12\x1a\n" +
 	"\bidentity\x18\x02 \x01(\fR\bidentity\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\fR\x05value\x12&\n" +
 	"\x0etimestampMicro\x18\x04 \x01(\x03R\x0etimestampMicro\x12\x1c\n" +
 	"\taclHeadId\x18\x05 \x01(\tR\taclHeadId\x12\x10\n" +
-	"\x03key\x18\x06 \x01(\tR\x03key\"K\n" +
+	"\x03key\x18\x06 \x01(\tR\x03key\x12\"\n" +
+	"\fdeletePrefix\x18\a \x01(\tR\fdeletePrefix\"K\n" +
 	"\rStorageHeader\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12 \n" +
 	"\vstorageName\x18\x02 \x01(\tR\vstorageName*\xee\x01\n" +

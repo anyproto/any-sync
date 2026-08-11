@@ -34,6 +34,11 @@ type storage struct {
 	collection  anystore.Collection
 	store       anystore.DB
 	storageName string
+	// watermarks maps a deletion prefix to the highest applied watermark
+	// timestamp: rows under the prefix older than it are dropped and stay
+	// rejected. Mutated only inside Set, which callers serialize (the outer
+	// storage holds its mutex around every write).
+	watermarks map[string]int64
 }
 
 func New(ctx context.Context, storageName string, headStorage headstorage.HeadStorage, store anystore.DB) (kv KeyValueStorage, err error) {
@@ -58,6 +63,7 @@ func New(ctx context.Context, storageName string, headStorage headstorage.HeadSt
 		collection:  collection,
 		store:       store,
 		diff:        ldiff.New(32, 256).(ldiff.CompareDiff),
+		watermarks:  map[string]int64{},
 	}
 	iter, err := storage.collection.Find(nil).Iter(ctx)
 	if err != nil {
@@ -75,6 +81,11 @@ func New(ctx context.Context, storageName string, headStorage headstorage.HeadSt
 			return
 		}
 		elements = append(elements, anyEncToElement(doc.Value()))
+		if dp := doc.Value().GetString("dp"); dp != "" {
+			if t := int64(doc.Value().GetFloat64("t")); t > storage.watermarks[dp] {
+				storage.watermarks[dp] = t
+			}
+		}
 	}
 	storage.diff.Set(elements...)
 	hash := storage.diff.Hash()
@@ -169,6 +180,7 @@ func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 		Identity:       doc.Value().GetString("i"),
 		PeerId:         doc.Value().GetString("p"),
 		Key:            doc.Value().GetString("k"),
+		DeletePrefix:   doc.Value().GetString("dp"),
 	}
 }
 
@@ -199,9 +211,8 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 		return
 	}
 	var (
-		elements, prior []ldiff.Element
-		added           []string
-		diffUpdated     bool
+		res         updateResult
+		diffUpdated bool
 	)
 	defer func() {
 		if err == nil {
@@ -209,27 +220,42 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 		} else {
 			_ = tx.Rollback()
 		}
+		if err == nil {
+			for prefix, t := range res.watermarks {
+				if t > s.watermarks[prefix] {
+					s.watermarks[prefix] = t
+				}
+			}
+		}
 		if err != nil && diffUpdated {
 			// The diff already contains this call's elements but the tx did not
 			// commit: undo the in-memory mutations so the diff never advertises
 			// heads the storage doesn't hold — peers would never re-send those
 			// values. Prior heads are restored in reverse so a duplicate id ends
-			// up at its genuine pre-call state; inserts are then dropped.
-			for i := len(prior) - 1; i >= 0; i-- {
-				s.diff.Set(prior[i])
+			// up at its genuine pre-call state; inserts are then dropped, and
+			// watermark-dropped rows re-added (the tx rollback restored their
+			// documents).
+			for i := len(res.prior) - 1; i >= 0; i-- {
+				s.diff.Set(res.prior[i])
 			}
-			for _, id := range added {
+			for _, id := range res.added {
 				_ = s.diff.RemoveId(id)
+			}
+			for _, el := range res.removed {
+				s.diff.Set(el)
 			}
 		}
 	}()
 	ctx = tx.Context()
-	elements, prior, added, err = s.updateValues(ctx, values...)
+	res, err = s.updateValues(ctx, values...)
 	if err != nil {
 		return
 	}
-	s.diff.Set(elements...)
-	diffUpdated = len(elements) > 0
+	s.diff.Set(res.elements...)
+	for _, el := range res.removed {
+		_ = s.diff.RemoveId(el.Id)
+	}
+	diffUpdated = len(res.elements) > 0 || len(res.removed) > 0
 	err = s.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
 		Id:    s.storageName,
 		Heads: []string{s.diff.Hash()},
@@ -237,18 +263,52 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 	return
 }
 
-// updateValues upserts the values that win their LWW comparison and returns the
-// new diff elements along with what is needed to undo the diff on a failed tx:
-// the replaced elements' prior state and the ids that were not present before.
-func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (elements, prior []ldiff.Element, added []string, err error) {
+// updateResult carries one updateValues batch outcome: the new diff elements,
+// what is needed to undo the diff on a failed tx (replaced elements' prior
+// state, inserted ids, elements of watermark-dropped rows), and the watermarks
+// to publish into s.watermarks once the tx commits.
+type updateResult struct {
+	elements   []ldiff.Element
+	prior      []ldiff.Element
+	added      []string
+	removed    []ldiff.Element
+	watermarks map[string]int64
+}
+
+// covered reports whether a row loses to an applied or in-batch watermark:
+// its key falls under the prefix and it is strictly older. A watermark row
+// itself never loses to its own prefix (equal timestamps are not covered).
+func (s *storage) covered(res *updateResult, key string, timestampMicro int64) bool {
+	for prefix, t := range s.watermarks {
+		if timestampMicro < t && strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	for prefix, t := range res.watermarks {
+		if timestampMicro < t && strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// updateValues upserts the values that win their LWW comparison. A winning
+// watermark value additionally drops every stored row under its prefix that
+// is older than it — document and diff element — leaving the watermark row
+// as the only retained state.
+func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (res updateResult, err error) {
 	parser := parserPool.Get()
 	defer parserPool.Put(parser)
 	arena := arenaPool.Get()
 	defer arenaPool.Put(arena)
 
-	elements = make([]ldiff.Element, 0, len(values))
+	res.elements = make([]ldiff.Element, 0, len(values))
+	res.watermarks = map[string]int64{}
 	var doc anystore.Doc
 	for _, value := range values {
+		if s.covered(&res, value.Key, value.TimestampMicro) {
+			continue
+		}
 		doc, err = s.collection.FindIdWithParser(ctx, parser, value.KeyPeerId)
 		isNotFound := errors.Is(err, anystore.ErrDocNotFound)
 		if err != nil && !isNotFound {
@@ -258,18 +318,64 @@ func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (element
 			if int64(doc.Value().GetFloat64("t")) >= value.TimestampMicro {
 				continue
 			}
-			prior = append(prior, anyEncToElement(doc.Value()))
+			res.prior = append(res.prior, anyEncToElement(doc.Value()))
 		} else {
-			added = append(added, value.KeyPeerId)
+			res.added = append(res.added, value.KeyPeerId)
 		}
 		arena.Reset()
 		val := value.AnyEnc(arena)
 		if err = s.collection.UpsertOne(ctx, val); err != nil {
 			return
 		}
-		elements = append(elements, anyEncToElement(val))
+		res.elements = append(res.elements, anyEncToElement(val))
+		if value.DeletePrefix != "" {
+			if err = s.applyWatermark(ctx, &res, value); err != nil {
+				return
+			}
+		}
 	}
 	return
+}
+
+// applyWatermark physically deletes every stored row whose key starts with
+// the watermark's prefix and is strictly older than it, the just-written
+// watermark row excepted by the timestamp comparison. Runs inside Set's tx;
+// diff elements of the dropped rows are removed by Set after it returns.
+func (s *storage) applyWatermark(ctx context.Context, res *updateResult, wm KeyValue) (err error) {
+	// KeyPeerId starts with Key, so a key-prefix scan is an id-prefix scan.
+	filter := query.Key{Path: []string{"id"}, Filter: query.NewComp(query.CompOpGte, wm.DeletePrefix)}
+	iter, err := s.collection.Find(filter).Sort("id").Iter(ctx)
+	if err != nil {
+		return err
+	}
+	var dropIds []string
+	var doc anystore.Doc
+	for iter.Next() {
+		if doc, err = iter.Doc(); err != nil {
+			_ = iter.Close()
+			return err
+		}
+		if !strings.HasPrefix(doc.Value().GetString("id"), wm.DeletePrefix) {
+			break
+		}
+		if int64(doc.Value().GetFloat64("t")) >= wm.TimestampMicro {
+			continue
+		}
+		res.removed = append(res.removed, anyEncToElement(doc.Value()))
+		dropIds = append(dropIds, doc.Value().GetString("id"))
+	}
+	if err = iter.Close(); err != nil {
+		return err
+	}
+	for _, id := range dropIds {
+		if err = s.collection.DeleteId(ctx, id); err != nil {
+			return err
+		}
+	}
+	if wm.TimestampMicro > res.watermarks[wm.DeletePrefix] {
+		res.watermarks[wm.DeletePrefix] = wm.TimestampMicro
+	}
+	return nil
 }
 
 func anyEncToElement(val *anyenc.Value) ldiff.Element {
