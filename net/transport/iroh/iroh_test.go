@@ -226,6 +226,12 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureConf(t, Config{})
+}
+
+// newFixtureConf starts a transport bound to loopback; conf overrides
+// RelayURLs (empty = direct addressing).
+func newFixtureConf(t *testing.T, conf Config) *fixture {
 	fx := &fixture{
 		irohTransport: New().(*irohTransport),
 		ctrl:          gomock.NewController(t),
@@ -239,7 +245,7 @@ func newFixture(t *testing.T) *fixture {
 	fx.mockNodeConf.EXPECT().Run(ctx)
 	fx.mockNodeConf.EXPECT().Close(ctx)
 	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return([]nodeconf.NodeType{nodeconf.NodeTypeTree}).AnyTimes()
-	fx.a.Register(fx.acc).Register(newTestConf()).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.irohTransport).Register(fx.accepter)
+	fx.a.Register(fx.acc).Register(newTestConf(conf.RelayURLs)).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.irohTransport).Register(fx.accepter)
 	require.NoError(t, fx.a.Start(ctx))
 	fx.peerId = fx.acc.Account().PeerId
 	require.Eventually(t, func() bool { return fx.Ticket() != "" }, 5*time.Second, 10*time.Millisecond, "no ticket")
@@ -263,16 +269,18 @@ func (fx *fixture) finish(t *testing.T) {
 	fx.ctrl.Finish()
 }
 
-func newTestConf() *testConf {
-	return &testConf{testnodeconf.GenNodeConfig(1)}
+func newTestConf(relayURLs []string) *testConf {
+	return &testConf{Config: testnodeconf.GenNodeConfig(1), relayURLs: relayURLs}
 }
 
 type testConf struct {
 	*testnodeconf.Config
+	relayURLs []string
 }
 
 func (c *testConf) GetIroh() Config {
 	return Config{
+		RelayURLs:       c.relayURLs,
 		BindAddr:        "127.0.0.1:0",
 		WriteTimeoutSec: 5,
 		DialTimeoutSec:  5,

@@ -226,6 +226,14 @@ func (i *irohTransport) ticketFor(ep *iroh.Endpoint, addr netaddr.EndpointAddr) 
 
 func (i *irohTransport) watchAddr(ep *iroh.Endpoint) {
 	defer i.wg.Done()
+	// a relay ticket is dialable only after the relay session is up: peers
+	// that read it earlier would dial into a relay that drops their frames
+	if len(i.relays) > 0 {
+		if err := ep.Online(i.runCtx); err != nil {
+			return
+		}
+		log.Info("iroh home relay connected", zap.String("endpointId", ep.ID().String()))
+	}
 	obs := ep.WatchAddr()
 	for {
 		addr, err := obs.Updated(i.runCtx)
@@ -255,6 +263,13 @@ func (i *irohTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	dialTimeout := time.Duration(i.conf.DialTimeoutSec) * time.Second
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
+	// the relay drops frames for endpoints it has not registered yet, so a
+	// relay dial waits for our own home-relay session first (no-op once up)
+	if len(i.relays) > 0 {
+		if err = ep.Online(ctx); err != nil {
+			return nil, fmt.Errorf("iroh: home relay not connected: %w", err)
+		}
+	}
 	conn, err := ep.Connect(ctx, target, ALPN)
 	if err != nil {
 		return nil, err
