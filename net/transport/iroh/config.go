@@ -31,4 +31,8 @@ type Config struct {
 	// end of the any-sync handshake; later arrivals are refused before any
 	// handshake work. Defaults to 64.
 	MaxInflightAccepts int `yaml:"maxInflightAccepts"`
+	// PeerTTLSec is the idle TTL the pool keeps iroh peers for, on both
+	// sides of a connection; a relay connection costs a full handshake to
+	// re-establish, so it outlives the pool default. Defaults to 1800.
+	PeerTTLSec int `yaml:"peerTtlSec"`
 }

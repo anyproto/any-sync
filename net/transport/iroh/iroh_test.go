@@ -90,6 +90,9 @@ func TestIrohTransport_HandshakeContext(t *testing.T) {
 
 	assert.True(t, strings.HasPrefix(peer.CtxPeerAddr(mcS.Context()), transport.Iroh+"://"))
 	assert.True(t, strings.HasPrefix(mcC.Addr(), transport.Iroh+"://"))
+	// both sides keep relay-backed peers past the pool default
+	assert.Equal(t, 30*time.Minute, peer.CtxTTL(mcS.Context()))
+	assert.Equal(t, 30*time.Minute, peer.CtxTTL(mcC.Context()))
 }
 
 func TestIrohTransport_ExpectedPeerIdMismatch(t *testing.T) {

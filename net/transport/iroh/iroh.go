@@ -123,6 +123,9 @@ func (i *irohTransport) Init(a *app.App) (err error) {
 	if i.conf.MaxInflightAccepts <= 0 {
 		i.conf.MaxInflightAccepts = 64
 	}
+	if i.conf.PeerTTLSec <= 0 {
+		i.conf.PeerTTLSec = 1800
+	}
 	if i.conf.MaxStreams <= 0 {
 		i.conf.MaxStreams = 128
 	}
@@ -446,7 +449,12 @@ func (i *irohTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		_ = conn.CloseWithError(closeCodeHandshake, "outbound handshake failed")
 		return nil, err
 	}
-	return newConn(cctx, conn, time.Duration(i.conf.CloseTimeoutSec)*time.Second, time.Duration(i.conf.WriteTimeoutSec)*time.Second), nil
+	return i.newConn(cctx, conn), nil
+}
+
+func (i *irohTransport) newConn(cctx context.Context, conn *goiroh.Conn) transport.MultiConn {
+	cctx = peer.CtxWithTTL(cctx, time.Duration(i.conf.PeerTTLSec)*time.Second)
+	return newConn(cctx, conn, time.Duration(i.conf.CloseTimeoutSec)*time.Second, time.Duration(i.conf.WriteTimeoutSec)*time.Second)
 }
 
 // capDialAddrs rebuilds a ticket's address with bounded relay and IP
@@ -593,7 +601,7 @@ func (i *irohTransport) accept(in *goiroh.Incoming, source netip.Addr) {
 		_ = conn.CloseWithError(closeCodeNormal, "closing")
 		return
 	}
-	mc := newConn(cctx, conn, time.Duration(i.conf.CloseTimeoutSec)*time.Second, time.Duration(i.conf.WriteTimeoutSec)*time.Second)
+	mc := i.newConn(cctx, conn)
 	if err = i.accepter.Accept(mc); err != nil {
 		l.Info("connection accept error", zap.Error(err))
 		_ = mc.Close()

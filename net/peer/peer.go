@@ -49,6 +49,9 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		created:        time.Now(),
 		useSnappy:      ctrl.DrpcConfig().Snappy,
 	}
+	if ttl := CtxTTL(ctx); ttl > 0 {
+		pr.SetTTL(ttl)
+	}
 	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
