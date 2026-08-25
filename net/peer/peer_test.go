@@ -207,6 +207,20 @@ func TestPeer_TryClose(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res)
 	})
+	t.Run("custom ttl keeps a peer without sub conns", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		fx.peer.created = fx.peer.created.Add(-time.Minute * 2)
+		fx.peer.SetTTL(time.Hour)
+		res, err := fx.TryClose(time.Second)
+		require.NoError(t, err)
+		assert.False(t, res)
+
+		fx.peer.created = fx.peer.created.Add(-time.Hour)
+		res, err = fx.TryClose(time.Second)
+		require.NoError(t, err)
+		assert.True(t, res)
+	})
 	t.Run("custom ttl", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
