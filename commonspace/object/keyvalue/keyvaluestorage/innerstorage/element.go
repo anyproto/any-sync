@@ -9,7 +9,18 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
-var ErrInvalidSignature = errors.New("invalid signature")
+var (
+	ErrInvalidSignature = errors.New("invalid signature")
+	// ErrKeyPeerIdMismatch means the row id does not name the signed key and
+	// peer: rows are addressed by key+"-"+peerId, so an id that differs
+	// would let one peer overwrite or block another peer's row.
+	ErrKeyPeerIdMismatch = errors.New("key-peerId does not match the signed key and peer")
+)
+
+// KeyPeerId is the row id of key written by peerId.
+func KeyPeerId(key, peerId string) string {
+	return key + "-" + peerId
+}
 
 type KeyValue struct {
 	KeyPeerId string
@@ -53,7 +64,9 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	kv.PeerId = peerId.PeerId()
 	kv.Key = innerValue.Key
 	kv.AclId = innerValue.AclHeadId
-	// TODO: check that key-peerId is equal to key+peerId?
+	if kv.KeyPeerId != KeyPeerId(kv.Key, kv.PeerId) {
+		return kv, ErrKeyPeerIdMismatch
+	}
 	if verify {
 		if verify, _ = identity.Verify(proto.Value, proto.IdentitySignature); !verify {
 			return kv, ErrInvalidSignature

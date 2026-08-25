@@ -160,7 +160,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	if err != nil {
 		return err
 	}
-	keyPeerId := key + "-" + peerIdKey.GetPublic().PeerId()
+	keyPeerId := innerstorage.KeyPeerId(key, peerIdKey.GetPublic().PeerId())
 	keyValue := innerstorage.KeyValue{
 		KeyPeerId:      keyPeerId,
 		Key:            key,
