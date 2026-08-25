@@ -394,16 +394,59 @@ func TestIrohTransport_TicketCoalescing(t *testing.T) {
 }
 
 func TestIrohTransport_DirectTicketUnspecifiedBind(t *testing.T) {
-	fx := newFixtureConf(t, Config{BindAddr: "0.0.0.0:0"})
-	defer fx.finish(t)
+	for _, bind := range []string{"0.0.0.0:0", "[::]:0"} {
+		t.Run(bind, func(t *testing.T) {
+			fx := newFixtureConf(t, Config{BindAddr: bind})
+			defer fx.finish(t)
 
-	addr, err := endpointticket.Decode(fx.Ticket())
-	require.NoError(t, err)
-	require.NotEmpty(t, addr.IPAddrs())
-	for _, ip := range addr.IPAddrs() {
-		assert.False(t, ip.Addr().IsUnspecified())
-		assert.Equal(t, fx.ep.LocalAddr().Port(), ip.Port())
+			addr, err := endpointticket.Decode(fx.Ticket())
+			require.NoError(t, err)
+			require.NotEmpty(t, addr.IPAddrs())
+			var hasV4 bool
+			for _, ip := range addr.IPAddrs() {
+				assert.False(t, ip.Addr().IsUnspecified())
+				assert.Equal(t, fx.ep.LocalAddr().Port(), ip.Port())
+				hasV4 = hasV4 || ip.Addr().Is4()
+			}
+			assert.True(t, hasV4, "an unspecified bind must stay dialable over IPv4")
+		})
 	}
+}
+
+func TestDirectAddrs(t *testing.T) {
+	specific := netip.MustParseAddrPort("10.1.2.3:4000")
+	assert.Equal(t, []netaddr.TransportAddr{netaddr.IPAddr{Addr: specific}}, directAddrs(specific))
+	assert.Nil(t, directAddrs(netip.AddrPort{}))
+	v4 := interfaceAddrs(4000, true)
+	for _, a := range v4 {
+		assert.True(t, a.(netaddr.IPAddr).Addr.Addr().Is4())
+	}
+	assert.NotEmpty(t, interfaceAddrs(4000, false))
+}
+
+func TestIrohNetConn_ReadFromCountsAndTimes(t *testing.T) {
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	mcC, mcS := fxC.connect(t, fxS)
+	done := make(chan int64, 1)
+	go func() {
+		conn, serr := mcS.Accept()
+		require.NoError(t, serr)
+		n, _ := io.Copy(io.Discard, conn)
+		done <- n
+	}()
+	conn, err := mcC.Open(ctx)
+	require.NoError(t, err)
+	payload := bytes.Repeat([]byte("z"), 10000)
+	n, err := io.Copy(conn, bytes.NewReader(payload))
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+	assert.Equal(t, int64(len(payload)), n)
+	assert.Equal(t, int64(len(payload)), <-done)
+	assert.GreaterOrEqual(t, mcC.BytesWritten(), int64(len(payload)), "io.Copy must be counted")
 }
 
 func TestParseRelayURL(t *testing.T) {

@@ -38,7 +38,9 @@ const (
 	// thousands of hosts.
 	maxDialRelays = 2
 	maxDialIPs    = 4
-	// maxInflightPerSource bounds in-flight inbound connections from one IP.
+	// maxInflightPerSource bounds in-flight inbound connections per source
+	// address: the UDP source for direct paths, the relay-mapped address
+	// (one per remote endpoint id) for relayed ones.
 	maxInflightPerSource = 8
 )
 
@@ -114,6 +116,9 @@ func (i *irohTransport) Init(a *app.App) (err error) {
 	}
 	if i.conf.WriteTimeoutSec <= 0 {
 		i.conf.WriteTimeoutSec = 10
+	}
+	if i.conf.CloseTimeoutSec <= 0 {
+		i.conf.CloseTimeoutSec = 5
 	}
 	if i.conf.MaxInflightAccepts <= 0 {
 		i.conf.MaxInflightAccepts = 64
@@ -306,7 +311,8 @@ func (i *irohTransport) ticketFor(ep *goiroh.Endpoint, addr netaddr.EndpointAddr
 // directAddrs lists the addresses a peer can dial the bound socket on. The
 // endpoint's own address watcher reports no candidates for loopback or
 // unspecified binds, so a specific bind is used as is and an unspecified
-// one expands to the interface addresses of the matching family.
+// one expands to the interface addresses: both families for the dual-stack
+// [::] bind, IPv4 only for 0.0.0.0.
 func directAddrs(local netip.AddrPort) []netaddr.TransportAddr {
 	if !local.IsValid() {
 		return nil
@@ -314,6 +320,10 @@ func directAddrs(local netip.AddrPort) []netaddr.TransportAddr {
 	if !local.Addr().IsUnspecified() {
 		return []netaddr.TransportAddr{netaddr.IPAddr{Addr: local}}
 	}
+	return interfaceAddrs(local.Port(), local.Addr().Unmap().Is4())
+}
+
+func interfaceAddrs(port uint16, v4Only bool) []netaddr.TransportAddr {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil
@@ -338,10 +348,10 @@ func directAddrs(local netip.AddrPort) []netaddr.TransportAddr {
 				continue
 			}
 			ip = ip.Unmap()
-			if local.Addr().Is4() != ip.Is4() || ip.IsLinkLocalUnicast() {
+			if (v4Only && !ip.Is4()) || ip.IsLinkLocalUnicast() {
 				continue
 			}
-			ta := netaddr.IPAddr{Addr: netip.AddrPortFrom(ip, local.Port())}
+			ta := netaddr.IPAddr{Addr: netip.AddrPortFrom(ip, port)}
 			if ip.IsLoopback() {
 				loopback = append(loopback, ta)
 			} else if len(out) < maxDirectAddrs {
@@ -361,6 +371,9 @@ func (i *irohTransport) watchAddr(ep *goiroh.Endpoint) {
 	// that read it earlier would dial into a relay that drops their frames
 	if len(i.relays) > 0 {
 		if err := ep.Online(i.runCtx); err != nil {
+			if i.runCtx.Err() == nil {
+				log.Warn("iroh home relay never connected, no ticket", zap.Error(err))
+			}
 			return
 		}
 		log.Info("iroh home relay connected", zap.String("endpointId", ep.ID().String()))
@@ -433,7 +446,7 @@ func (i *irohTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		_ = conn.CloseWithError(closeCodeHandshake, "outbound handshake failed")
 		return nil, err
 	}
-	return newConn(cctx, conn, time.Duration(i.conf.WriteTimeoutSec)*time.Second), nil
+	return newConn(cctx, conn, time.Duration(i.conf.CloseTimeoutSec)*time.Second, time.Duration(i.conf.WriteTimeoutSec)*time.Second), nil
 }
 
 // capDialAddrs rebuilds a ticket's address with bounded relay and IP
@@ -467,7 +480,7 @@ func (i *irohTransport) acceptLoop(ep *goiroh.Endpoint) {
 	for {
 		in, err := ep.AcceptIncoming(i.runCtx)
 		if err != nil {
-			if i.runCtx.Err() != nil || errors.Is(err, goiroh.ErrEndpointClosed) {
+			if i.runCtx.Err() != nil || errors.Is(err, goiroh.ErrEndpointClosed) || errors.Is(err, net.ErrClosed) {
 				return
 			}
 			l.Warn("iroh accept error", zap.Error(err))
@@ -490,6 +503,7 @@ func (i *irohTransport) acceptLoop(ep *goiroh.Endpoint) {
 
 // admit reserves an in-flight slot for an incoming attempt, refusing it
 // before any handshake work once the global or per-source bound is hit.
+// Only the global bound holds against a flood of fresh endpoint keys.
 func (i *irohTransport) admit(in *goiroh.Incoming) (source netip.Addr, ok bool) {
 	if ua, isUDP := in.RemoteAddr().(*net.UDPAddr); isUDP {
 		if ip, valid := netip.AddrFromSlice(ua.IP); valid {
@@ -579,7 +593,7 @@ func (i *irohTransport) accept(in *goiroh.Incoming, source netip.Addr) {
 		_ = conn.CloseWithError(closeCodeNormal, "closing")
 		return
 	}
-	mc := newConn(cctx, conn, time.Duration(i.conf.WriteTimeoutSec)*time.Second)
+	mc := newConn(cctx, conn, time.Duration(i.conf.CloseTimeoutSec)*time.Second, time.Duration(i.conf.WriteTimeoutSec)*time.Second)
 	if err = i.accepter.Accept(mc); err != nil {
 		l.Info("connection accept error", zap.Error(err))
 		_ = mc.Close()

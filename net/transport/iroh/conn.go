@@ -3,6 +3,7 @@ package iroh
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"sync/atomic"
 	"time"
@@ -20,7 +21,7 @@ const (
 	closeCodeHandshake = 3
 )
 
-func newConn(cctx context.Context, conn *goiroh.Conn, writeTimeout time.Duration) transport.MultiConn {
+func newConn(cctx context.Context, conn *goiroh.Conn, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
 	addr := transport.Iroh + "://" + conn.RemoteID().String()
 	cctx = peer.CtxWithPeerAddr(cctx, addr)
 	return &irohMultiConn{
@@ -28,6 +29,7 @@ func newConn(cctx context.Context, conn *goiroh.Conn, writeTimeout time.Duration
 		conn:         conn,
 		addr:         addr,
 		writeTimeout: writeTimeout,
+		closeTimeout: closeTimeout,
 	}
 }
 
@@ -36,6 +38,7 @@ type irohMultiConn struct {
 	conn         *goiroh.Conn
 	addr         string
 	writeTimeout time.Duration
+	closeTimeout time.Duration
 	bytesRead    atomic.Int64
 	bytesWritten atomic.Int64
 }
@@ -107,10 +110,21 @@ func (c *irohMultiConn) CloseChan() <-chan struct{} {
 	return c.conn.Context().Done()
 }
 
-// Close sends the QUIC close frame; go-iroh's CloseWithError does not block.
+// Close sends the QUIC close frame but waits at most closeTimeout for the
+// connection teardown CloseWithError blocks on: the pool closes peers
+// synchronously and must not hang on a peer that stopped answering.
 func (c *irohMultiConn) Close() error {
-	if err := c.conn.CloseWithError(closeCodeNormal, ""); err != nil && !errors.Is(err, net.ErrClosed) {
-		log.Debug("iroh conn closed with error", zap.Error(err))
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := c.conn.CloseWithError(closeCodeNormal, ""); err != nil && !errors.Is(err, net.ErrClosed) {
+			log.Debug("iroh conn closed with error", zap.Error(err))
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(c.closeTimeout):
+		log.Warn("iroh conn close timeout", zap.String("addr", c.addr))
 	}
 	return nil
 }
@@ -138,6 +152,14 @@ func (c irohNetConn) Close() error {
 	c.Stream.CancelRead(0)
 	return c.Stream.Close()
 }
+
+// ReadFrom routes io.Copy through Write: the embedded stream's own ReadFrom
+// would skip the write deadline and the byte counter.
+func (c irohNetConn) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(writeOnly{c}, r)
+}
+
+type writeOnly struct{ io.Writer }
 
 func (c irohNetConn) Write(b []byte) (n int, err error) {
 	if c.writeTimeout > 0 {

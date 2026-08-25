@@ -16,6 +16,7 @@ type Config struct {
 	// all interfaces.
 	BindAddr        string `yaml:"bindAddr"`
 	WriteTimeoutSec int    `yaml:"writeTimeoutSec"`
+	CloseTimeoutSec int    `yaml:"closeTimeoutSec"`
 	DialTimeoutSec  int    `yaml:"dialTimeoutSec"`
 	MaxStreams      int64  `yaml:"maxStreams"`
 	// InitialPacketSize overrides the initial QUIC packet size; 0 keeps the
