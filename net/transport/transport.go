@@ -25,6 +25,7 @@ const (
 	Yamux        = "yamux"
 	Quic         = "quic"
 	WebTransport = "webtransport"
+	Iroh         = "iroh"
 )
 
 // Transport is a common interface for a network transport

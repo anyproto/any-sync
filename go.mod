@@ -1,6 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.25.7
+go 1.26
 
 require (
 	filippo.io/edwards25519 v1.2.0
@@ -33,6 +33,7 @@ require (
 	github.com/quic-go/quic-go v0.61.0
 	github.com/quic-go/webtransport-go v0.12.0
 	github.com/stretchr/testify v1.11.1
+	github.com/tmc/go-iroh v0.1.0
 	github.com/zeebo/blake3 v0.2.4
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.6.0
@@ -53,6 +54,7 @@ require (
 	github.com/anyproto/go-sqlite v1.4.2-any // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/crackcomm/go-gitignore v0.0.0-20241020182519-7843d2ba8fdf // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
