@@ -14,7 +14,6 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
-	"github.com/anyproto/any-sync/net/transport/iroh"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/webtransport"
 	"github.com/anyproto/any-sync/net/transport/yamux"
@@ -70,7 +69,7 @@ func (p *peerService) Init(a *app.App) (err error) {
 		p.webtransport = comp.(transport.Transport)
 		p.webtransport.SetAccepter(p)
 	}
-	if comp := a.Component(iroh.CName); comp != nil {
+	if comp := a.Component(transport.IrohCName); comp != nil {
 		p.iroh = comp.(transport.Transport)
 		p.iroh.SetAccepter(p)
 	}
@@ -132,7 +131,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
 
 	ordered := p.orderAddrs(ctx, addrs, preferQuic)
-	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", ordered))
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", logAddrs(ordered)))
 
 	var mc transport.MultiConn
 	err = ErrAddrsNotFound
@@ -179,7 +178,7 @@ func (p *peerService) orderAddrs(ctx context.Context, addrs []string, preferQuic
 		rank int
 	}
 	candidates := make([]candidate, 0, len(addrs))
-	globalDial := CtxIsGlobalDial(ctx)
+	globalDial := ctxIsGlobalDial(ctx)
 	for _, addr := range addrs {
 		sch := scheme(addr)
 		var schemes []string
@@ -213,7 +212,7 @@ func (p *peerService) dialAddr(ctx context.Context, addr string) (mc transport.M
 		return nil, fmt.Errorf("transport %v not available", scheme(addr))
 	}
 	if mc, err = tr.Dial(ctx, stripScheme(addr)); err != nil {
-		log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
+		log.InfoCtx(ctx, "can't connect to host", zap.String("addr", logAddr(addr)), zap.Error(err))
 	}
 	return
 }
@@ -258,6 +257,27 @@ func (p *peerService) getPeerAddrs(peerId string) ([]string, error) {
 		return nil, ErrAddrsNotFound
 	}
 	return addrs, nil
+}
+
+// logAddr shortens iroh tickets: a ticket encodes the peer's relay and IP
+// addresses, which have no place in shipped logs.
+func logAddr(addr string) string {
+	const keep = 12
+	if scheme(addr) != transport.Iroh {
+		return addr
+	}
+	if ticket := stripScheme(addr); len(ticket) > keep {
+		return transport.Iroh + "://" + ticket[:keep] + "…"
+	}
+	return addr
+}
+
+func logAddrs(addrs []string) []string {
+	out := make([]string, len(addrs))
+	for i, addr := range addrs {
+		out[i] = logAddr(addr)
+	}
+	return out
 }
 
 func scheme(addr string) string {

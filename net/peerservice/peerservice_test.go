@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/transport"
-	irohpkg "github.com/anyproto/any-sync/net/transport/iroh"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
 	webtransportpkg "github.com/anyproto/any-sync/net/transport/webtransport"
@@ -448,8 +447,12 @@ func TestPeerService_DialIroh(t *testing.T) {
 		}
 	})
 	t.Run("global dial ctx flag", func(t *testing.T) {
-		assert.False(t, CtxIsGlobalDial(ctx))
-		assert.True(t, CtxIsGlobalDial(CtxWithGlobalDial(ctx)))
+		assert.False(t, ctxIsGlobalDial(ctx))
+		assert.True(t, ctxIsGlobalDial(CtxWithGlobalDial(ctx)))
+	})
+	t.Run("tickets are shortened in logs", func(t *testing.T) {
+		assert.Equal(t, "iroh://endpointabcd…", logAddr("iroh://endpointabcdefghijklmnop"))
+		assert.Equal(t, "yamux://1.2.3.4:1", logAddr("yamux://1.2.3.4:1"))
 	})
 }
 
@@ -469,7 +472,7 @@ func newFixtureWithIroh(t *testing.T) *fixtureWithIroh {
 			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 			nodeConf:    mock_nodeconf.NewMockService(ctrl),
 		},
-		iroh: mock_transport.NewTransportComponent(ctrl, irohpkg.CName),
+		iroh: mock_transport.NewTransportComponent(ctrl, transport.IrohCName),
 	}
 
 	fx.quic.EXPECT().SetAccepter(fx.PeerService)

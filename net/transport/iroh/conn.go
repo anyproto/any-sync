@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tmc/go-iroh/iroh"
+	goiroh "github.com/tmc/go-iroh/iroh"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/net/peer"
@@ -20,7 +20,7 @@ const (
 	closeCodeHandshake = 3
 )
 
-func newConn(cctx context.Context, conn *iroh.Conn, closeTimeout, writeTimeout time.Duration) transport.MultiConn {
+func newConn(cctx context.Context, conn *goiroh.Conn, writeTimeout time.Duration) transport.MultiConn {
 	addr := transport.Iroh + "://" + conn.RemoteID().String()
 	cctx = peer.CtxWithPeerAddr(cctx, addr)
 	return &irohMultiConn{
@@ -28,16 +28,14 @@ func newConn(cctx context.Context, conn *iroh.Conn, closeTimeout, writeTimeout t
 		conn:         conn,
 		addr:         addr,
 		writeTimeout: writeTimeout,
-		closeTimeout: closeTimeout,
 	}
 }
 
 type irohMultiConn struct {
 	cctx         context.Context
-	conn         *iroh.Conn
+	conn         *goiroh.Conn
 	addr         string
 	writeTimeout time.Duration
-	closeTimeout time.Duration
 	bytesRead    atomic.Int64
 	bytesWritten atomic.Int64
 }
@@ -56,7 +54,7 @@ func (c *irohMultiConn) isConnDead(err error) bool {
 	if c.conn.Context().Err() != nil {
 		return true
 	}
-	return errors.Is(err, net.ErrClosed) || errors.Is(err, iroh.ErrEndpointClosed)
+	return errors.Is(err, net.ErrClosed) || errors.Is(err, goiroh.ErrEndpointClosed)
 }
 
 func (c *irohMultiConn) Accept() (conn net.Conn, err error) {
@@ -81,7 +79,7 @@ func (c *irohMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 	return c.netConn(stream), nil
 }
 
-func (c *irohMultiConn) netConn(stream *iroh.Stream) net.Conn {
+func (c *irohMultiConn) netConn(stream *goiroh.Stream) net.Conn {
 	return irohNetConn{
 		Stream:       stream,
 		localAddr:    c.conn.LocalAddr(),
@@ -109,20 +107,10 @@ func (c *irohMultiConn) CloseChan() <-chan struct{} {
 	return c.conn.Context().Done()
 }
 
-// Close sends the QUIC close frame but waits at most closeTimeout for it:
-// a peer that stopped answering must not hold the pool's close path.
+// Close sends the QUIC close frame; go-iroh's CloseWithError does not block.
 func (c *irohMultiConn) Close() error {
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if err := c.conn.CloseWithError(closeCodeNormal, ""); err != nil && !errors.Is(err, net.ErrClosed) {
-			log.Debug("iroh conn closed with error", zap.Error(err))
-		}
-	}()
-	select {
-	case <-done:
-	case <-time.After(c.closeTimeout):
-		log.Warn("iroh conn close timeout", zap.String("addr", c.addr))
+	if err := c.conn.CloseWithError(closeCodeNormal, ""); err != nil && !errors.Is(err, net.ErrClosed) {
+		log.Debug("iroh conn closed with error", zap.Error(err))
 	}
 	return nil
 }
@@ -136,7 +124,7 @@ func (c *irohMultiConn) BytesWritten() int64 {
 }
 
 type irohNetConn struct {
-	*iroh.Stream
+	*goiroh.Stream
 	writeTimeout          time.Duration
 	localAddr, remoteAddr net.Addr
 	bytesRead             *atomic.Int64

@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmc/go-iroh/endpointticket"
+	"github.com/tmc/go-iroh/key"
+	"github.com/tmc/go-iroh/netaddr"
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/app"
@@ -229,9 +232,17 @@ func newFixture(t *testing.T) *fixture {
 	return newFixtureConf(t, Config{})
 }
 
-// newFixtureConf starts a transport bound to loopback; conf overrides
-// RelayURLs (empty = direct addressing).
+// newFixtureConf starts a transport with an allow-all filter; zero conf
+// fields get test defaults (loopback bind, short timeouts, insecure relay).
 func newFixtureConf(t *testing.T, conf Config) *fixture {
+	fx, err := startFixture(t, conf, func(string) bool { return true })
+	require.NoError(t, err)
+	fx.peerId = fx.acc.Account().PeerId
+	require.Eventually(t, func() bool { return fx.Ticket() != "" }, 5*time.Second, 10*time.Millisecond, "no ticket")
+	return fx
+}
+
+func startFixture(t *testing.T, conf Config, filter func(string) bool) (*fixture, error) {
 	fx := &fixture{
 		irohTransport: New().(*irohTransport),
 		ctrl:          gomock.NewController(t),
@@ -239,17 +250,31 @@ func newFixtureConf(t *testing.T, conf Config) *fixture {
 		accepter:      &testAccepter{mcs: make(chan transport.MultiConn, 100)},
 		a:             new(app.App),
 	}
+	if conf.BindAddr == "" {
+		conf.BindAddr = "127.0.0.1:0"
+	}
+	if conf.DialTimeoutSec == 0 {
+		conf.DialTimeoutSec = 5
+	}
+	if conf.WriteTimeoutSec == 0 {
+		conf.WriteTimeoutSec = 5
+	}
+	conf.InsecureRelay = true
 	fx.mockNodeConf = mock_nodeconf.NewMockService(fx.ctrl)
 	fx.mockNodeConf.EXPECT().Init(gomock.Any())
 	fx.mockNodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
-	fx.mockNodeConf.EXPECT().Run(ctx)
-	fx.mockNodeConf.EXPECT().Close(ctx)
+	fx.mockNodeConf.EXPECT().Run(ctx).AnyTimes()
+	fx.mockNodeConf.EXPECT().Close(ctx).AnyTimes()
 	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return([]nodeconf.NodeType{nodeconf.NodeTypeTree}).AnyTimes()
-	fx.a.Register(fx.acc).Register(newTestConf(conf.RelayURLs)).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.irohTransport).Register(fx.accepter)
-	require.NoError(t, fx.a.Start(ctx))
-	fx.peerId = fx.acc.Account().PeerId
-	require.Eventually(t, func() bool { return fx.Ticket() != "" }, 5*time.Second, 10*time.Millisecond, "no ticket")
-	return fx
+	if filter != nil {
+		fx.SetIncomingFilter(filter)
+	}
+	fx.a.Register(fx.acc).Register(&testConf{Config: testnodeconf.GenNodeConfig(1), iroh: conf}).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.irohTransport).Register(fx.accepter)
+	if err := fx.a.Start(ctx); err != nil {
+		_ = fx.a.Close(ctx)
+		return nil, err
+	}
+	return fx, nil
 }
 
 // connect dials fxS from fx and returns both ends.
@@ -269,23 +294,13 @@ func (fx *fixture) finish(t *testing.T) {
 	fx.ctrl.Finish()
 }
 
-func newTestConf(relayURLs []string) *testConf {
-	return &testConf{Config: testnodeconf.GenNodeConfig(1), relayURLs: relayURLs}
-}
-
 type testConf struct {
 	*testnodeconf.Config
-	relayURLs []string
+	iroh Config
 }
 
 func (c *testConf) GetIroh() Config {
-	return Config{
-		RelayURLs:       c.relayURLs,
-		BindAddr:        "127.0.0.1:0",
-		WriteTimeoutSec: 5,
-		DialTimeoutSec:  5,
-		CloseTimeoutSec: 2,
-	}
+	return c.iroh
 }
 
 type testAccepter struct {
@@ -304,3 +319,150 @@ func (t *testAccepter) Init(a *app.App) (err error) {
 }
 
 func (t *testAccepter) Name() (name string) { return "testAccepter" }
+
+func TestIrohTransport_RunRequiresFilter(t *testing.T) {
+	_, err := startFixture(t, Config{}, nil)
+	assert.ErrorIs(t, err, ErrNoFilter)
+}
+
+func TestIrohTransport_DialTimeout(t *testing.T) {
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixtureConf(t, Config{DialTimeoutSec: 1})
+	defer fxC.finish(t)
+
+	// right id, dead port: the dial must give up within DialTimeoutSec
+	dead := endpointticket.Encode(netaddr.NewEndpointAddr(fxS.ep.ID()).WithIP(netip.MustParseAddrPort("127.0.0.1:9")))
+	start := time.Now()
+	_, err := fxC.Dial(peer.CtxWithExpectedPeerId(ctx, fxS.peerId), dead)
+	require.Error(t, err)
+	assert.Less(t, time.Since(start), 3*time.Second)
+}
+
+func TestIrohTransport_CloseDuringDial(t *testing.T) {
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixtureConf(t, Config{DialTimeoutSec: 10})
+
+	dead := endpointticket.Encode(netaddr.NewEndpointAddr(fxS.ep.ID()).WithIP(netip.MustParseAddrPort("127.0.0.1:9")))
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := fxC.Dial(peer.CtxWithExpectedPeerId(ctx, fxS.peerId), dead)
+		errCh <- err
+	}()
+	time.Sleep(100 * time.Millisecond)
+	closed := make(chan struct{})
+	go func() {
+		fxC.finish(t)
+		close(closed)
+	}()
+	select {
+	case err := <-errCh:
+		require.Error(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("dial did not return after close")
+	}
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("close did not return")
+	}
+}
+
+func TestIrohTransport_TicketCoalescing(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+	// drain the start-up signal
+	select {
+	case <-fx.TicketUpdates():
+	default:
+	}
+	fx.setTicket("a")
+	fx.setTicket("b")
+	fx.setTicket("b")
+	select {
+	case <-fx.TicketUpdates():
+	default:
+		t.Fatal("no wake-up")
+	}
+	select {
+	case <-fx.TicketUpdates():
+		t.Fatal("changes must coalesce into one pending wake-up")
+	default:
+	}
+	assert.Equal(t, "b", fx.Ticket())
+}
+
+func TestIrohTransport_DirectTicketUnspecifiedBind(t *testing.T) {
+	fx := newFixtureConf(t, Config{BindAddr: "0.0.0.0:0"})
+	defer fx.finish(t)
+
+	addr, err := endpointticket.Decode(fx.Ticket())
+	require.NoError(t, err)
+	require.NotEmpty(t, addr.IPAddrs())
+	for _, ip := range addr.IPAddrs() {
+		assert.False(t, ip.Addr().IsUnspecified())
+		assert.Equal(t, fx.ep.LocalAddr().Port(), ip.Port())
+	}
+}
+
+func TestParseRelayURL(t *testing.T) {
+	for _, tc := range []struct {
+		raw      string
+		insecure bool
+		ok       bool
+	}{
+		{"https://relay.example", false, true},
+		{"https://relay.example:8443/", false, true},
+		{"http://127.0.0.1:3340", false, false},
+		{"http://127.0.0.1:3340", true, true},
+		{"ws://relay.example", true, false},
+		{"not a url at all", true, false},
+		{"", true, false},
+		{"https://", false, false},
+	} {
+		_, err := parseRelayURL(tc.raw, tc.insecure)
+		if tc.ok {
+			assert.NoError(t, err, tc.raw)
+		} else {
+			assert.Error(t, err, tc.raw)
+		}
+	}
+}
+
+func TestCapDialAddrs(t *testing.T) {
+	var id key.EndpointID
+	addr := netaddr.NewEndpointAddr(id)
+	for i := 1; i <= 10; i++ {
+		addr = addr.WithIP(netip.AddrPortFrom(netip.AddrFrom4([4]byte{10, 0, 0, byte(i)}), 1000))
+		addr = addr.WithRelayURL(netaddr.RelayURL{})
+	}
+	addr = addr.WithIP(netip.MustParseAddrPort("0.0.0.0:1")).WithIP(netip.MustParseAddrPort("10.0.1.1:0"))
+	capped := capDialAddrs(addr)
+	assert.Len(t, capped.IPAddrs(), maxDialIPs)
+	assert.LessOrEqual(t, len(capped.RelayURLs()), maxDialRelays)
+	for _, ip := range capped.IPAddrs() {
+		assert.False(t, ip.Addr().IsUnspecified())
+		assert.NotZero(t, ip.Port())
+	}
+}
+
+func TestIrohTransport_InflightAccounting(t *testing.T) {
+	tr := &irohTransport{conf: Config{MaxInflightAccepts: 2}, inflightBySource: map[netip.Addr]int{}}
+	src := netip.MustParseAddr("10.1.1.1")
+	assert.True(t, tr.admitSource(src))
+	assert.True(t, tr.admitSource(src))
+	assert.False(t, tr.admitSource(src), "global cap")
+	tr.release(src)
+	assert.True(t, tr.admitSource(src))
+	tr.release(src)
+	tr.release(src)
+	assert.Empty(t, tr.inflightBySource)
+
+	tr = &irohTransport{conf: Config{MaxInflightAccepts: 100}, inflightBySource: map[netip.Addr]int{}}
+	for i := 0; i < maxInflightPerSource; i++ {
+		assert.True(t, tr.admitSource(src))
+	}
+	assert.False(t, tr.admitSource(src), "per-source cap")
+	assert.True(t, tr.admitSource(netip.MustParseAddr("10.1.1.2")))
+}

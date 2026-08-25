@@ -26,6 +26,10 @@ const (
 	Quic         = "quic"
 	WebTransport = "webtransport"
 	Iroh         = "iroh"
+
+	// IrohCName names the iroh transport component; peerservice looks it up
+	// by name so binaries that never register it do not link go-iroh.
+	IrohCName = "net.transport.iroh"
 )
 
 // Transport is a common interface for a network transport

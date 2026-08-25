@@ -18,7 +18,7 @@ import (
 func TestIrohTransport_Relay(t *testing.T) {
 	ts := httptest.NewServer(relayserver.New())
 	defer ts.Close()
-	conf := Config{RelayURLs: []string{ts.URL}}
+	conf := Config{RelayURLs: []string{ts.URL}, InsecureRelay: true}
 
 	fxS := newFixtureConf(t, conf)
 	defer fxS.finish(t)
@@ -32,6 +32,7 @@ func TestIrohTransport_Relay(t *testing.T) {
 	assert.Equal(t, ts.URL+"/", addr.RelayURLs()[0].String())
 	assert.Empty(t, addr.IPAddrs(), "relay ticket must not carry direct addrs")
 
+	assert.True(t, fxS.RelayConnected())
 	mcC, mcS := fxC.connect(t, fxS)
 
 	done := make(chan string, 1)
