@@ -17,6 +17,6 @@ func TestCtxProtoVersion(t *testing.T) {
 }
 
 func TestCtxTTL(t *testing.T) {
-	assert.Zero(t, CtxTTL(context.Background()))
-	assert.Equal(t, time.Minute, CtxTTL(CtxWithTTL(context.Background(), time.Minute)))
+	require.Zero(t, CtxTTL(context.Background()))
+	require.Equal(t, time.Minute, CtxTTL(CtxWithTTL(context.Background(), time.Minute)))
 }
