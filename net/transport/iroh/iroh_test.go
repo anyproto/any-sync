@@ -140,6 +140,62 @@ func TestIrohTransport_IncomingFilter(t *testing.T) {
 	}
 }
 
+func TestIrohTransport_HandshakeFilter(t *testing.T) {
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	seen := make(chan string, 2)
+	fxS.SetHandshakeFilter(func(peerId string, identity []byte) bool {
+		if len(identity) == 0 {
+			t.Errorf("no identity for %s", peerId)
+		}
+		seen <- peerId
+		return false
+	})
+	_, err := fxC.Dial(peer.CtxWithExpectedPeerId(ctx, fxS.peerId), fxS.Ticket())
+	if err == nil {
+		// the dial side may finish its handshake before the close arrives;
+		// the accepter must not see the connection either way
+		select {
+		case mc := <-fxS.accepter.mcs:
+			t.Fatalf("refused connection reached the accepter: %v", mc.Addr())
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	select {
+	case peerId := <-seen:
+		assert.Equal(t, fxC.peerId, peerId)
+	case <-time.After(time.Second):
+		t.Fatal("handshake filter was not consulted")
+	}
+
+	fxS.SetHandshakeFilter(func(string, []byte) bool { return true })
+	mcC, mcS := fxC.connect(t, fxS)
+	assert.NotNil(t, mcC)
+	assert.NotNil(t, mcS)
+}
+
+func TestTicketForPeer(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+
+	ticket, err := TicketForPeer(fx.peerId, "https://relay.example")
+	require.NoError(t, err)
+	peerId, err := PeerIdFromTicket(ticket)
+	require.NoError(t, err)
+	assert.Equal(t, fx.peerId, peerId)
+	addr, err := endpointticket.Decode(ticket)
+	require.NoError(t, err)
+	require.Len(t, addr.RelayURLs(), 1)
+	assert.Equal(t, "https://relay.example/", addr.RelayURLs()[0].String())
+	assert.Empty(t, addr.IPAddrs())
+
+	_, err = TicketForPeer("not a peer id", "https://relay.example")
+	assert.Error(t, err)
+}
+
 func TestIrohTransport_CloseMapsToErrConnClosed(t *testing.T) {
 	fxS := newFixture(t)
 	defer fxS.finish(t)

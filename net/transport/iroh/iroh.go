@@ -76,6 +76,25 @@ type Iroh interface {
 	// the any-sync handshake runs. The endpoint is reachable from the whole
 	// internet through the relay, so Run refuses to start without one.
 	SetIncomingFilter(f func(peerId string) bool)
+	// SetHandshakeFilter gates inbound connections once the any-sync
+	// handshake has proven the remote's identity; nil admits every peer the
+	// incoming filter let through.
+	SetHandshakeFilter(f func(peerId string, identity []byte) bool)
+}
+
+// TicketForPeer returns the relay-only ticket of a peer reachable at
+// relayURL: the endpoint id derives from the peer id, so a peer's address is
+// its peer id plus its home relay.
+func TicketForPeer(peerId, relayURL string) (string, error) {
+	id, err := EndpointIdFromPeerId(peerId)
+	if err != nil {
+		return "", err
+	}
+	u, err := netaddr.ParseRelayURL(relayURL)
+	if err != nil {
+		return "", fmt.Errorf("iroh: relay url %q: %w", relayURL, err)
+	}
+	return endpointticket.Encode(netaddr.NewEndpointAddr(id).WithRelayURL(u)), nil
 }
 
 // PeerIdFromTicket returns the any-sync peer id a ticket belongs to.
@@ -98,6 +117,7 @@ type irohTransport struct {
 	ticket    string
 	updates   chan struct{}
 	filter    func(peerId string) bool
+	hsFilter  func(peerId string, identity []byte) bool
 	runCtx    context.Context
 	runCancel context.CancelFunc
 	wg        sync.WaitGroup
@@ -192,6 +212,12 @@ func (i *irohTransport) SetIncomingFilter(f func(peerId string) bool) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.filter = f
+}
+
+func (i *irohTransport) SetHandshakeFilter(f func(peerId string, identity []byte) bool) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.hsFilter = f
 }
 
 func (i *irohTransport) Run(ctx context.Context) (err error) {
@@ -596,6 +622,17 @@ func (i *irohTransport) accept(in *goiroh.Incoming, source netip.Addr) {
 		l.Info("incoming connection handshake error", zap.Error(err))
 		_ = conn.CloseWithError(closeCodeHandshake, "inbound handshake failed")
 		return
+	}
+	i.mu.Lock()
+	hsFilter := i.hsFilter
+	i.mu.Unlock()
+	if hsFilter != nil {
+		identity, _ := peer.CtxIdentity(cctx)
+		if !hsFilter(peerId, identity) {
+			l.Debug("incoming connection refused after handshake", zap.String("peerId", peerId))
+			_ = conn.CloseWithError(closeCodeRefused, "refused")
+			return
+		}
 	}
 	if i.runCtx.Err() != nil {
 		_ = conn.CloseWithError(closeCodeNormal, "closing")
