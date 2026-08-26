@@ -105,11 +105,26 @@ func (e *entry) waitClose(ctx context.Context, id string) (res bool, err error) 
 
 // setClosing transitions the entry to closing. With wait it blocks until another
 // closer is done with it, bounded by ctx: that closer may be inside a TryClose
-// that waits on an unresponsive peer.
+// that waits on an unresponsive peer. The transition happens only from the
+// active state; prevState tells the caller whether this call acquired it.
 func (e *entry) setClosing(ctx context.Context, wait bool) (prevState, curState entryState, err error) {
 	e.mx.Lock()
 	prevState = e.state
 	curState = e.state
+	// A loading entry is not closeable: e.value is nil until oCache.load
+	// publishes it, and e.load is closed by that load alone. Marking it closing
+	// would hand the caller a nil value to close and would park the entry in
+	// closing behind a close channel nobody ever closes - the load's success
+	// path calls setActive(false) - stranding every later waitClose/waitLoad
+	// (GO-7333). Refuse rather than transition: undoing the transition
+	// afterwards is not equivalent, it either leaves the entry closing or makes
+	// it active with a nil value. Callers that must close a loading entry
+	// (Remove, RemoveSame, Close) wait the load out in oCache.removeCtx first,
+	// so they never arrive here in this state.
+	if e.state == entryStateLoading {
+		e.mx.Unlock()
+		return
+	}
 	// Loop rather than `if`: after waking from <-waitCh another goroutine may
 	// have already moved the entry back to closing (e.g. a busy GC/TryRemove
 	// reverted it to active and a concurrent remover re-acquired it). Re-check

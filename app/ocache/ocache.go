@@ -313,8 +313,11 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
+	// Only prevState == entryStateActive means this call acquired the closing
+	// transition and may touch e.value; loading refuses it, closing/closed
+	// belong to another closer.
 	prevState, _, _ := e.setClosing(context.Background(), false)
-	if prevState == entryStateClosing || prevState == entryStateClosed {
+	if prevState != entryStateActive {
 		return false, nil
 	}
 
@@ -408,7 +411,7 @@ func (c *oCache) GC() {
 	closedNum := 0
 	for _, e := range toClose {
 		prevState, _, _ := e.setClosing(context.Background(), false)
-		if prevState == entryStateClosing || prevState == entryStateClosed {
+		if prevState != entryStateActive {
 			continue
 		}
 		closed, err := e.value.TryClose(c.ttl)
