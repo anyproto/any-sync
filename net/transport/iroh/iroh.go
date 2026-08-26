@@ -23,6 +23,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const (
@@ -77,22 +78,26 @@ type Iroh interface {
 	// internet through the relay, so Run refuses to start without one.
 	SetIncomingFilter(f func(peerId string) bool)
 	// SetHandshakeFilter gates inbound connections once the any-sync
-	// handshake has proven the remote's identity; nil admits every peer the
-	// incoming filter let through.
-	SetHandshakeFilter(f func(peerId string, identity []byte) bool)
+	// handshake has proven the remote's account identity (every iroh
+	// handshake verifies it, on both sides); nil admits every peer the
+	// incoming filter let through. A connection without a proven identity
+	// is refused whenever a filter is set.
+	SetHandshakeFilter(f func(peerId string, identity crypto.PubKey) bool)
 }
 
 // TicketForPeer returns the relay-only ticket of a peer reachable at
 // relayURL: the endpoint id derives from the peer id, so a peer's address is
-// its peer id plus its home relay.
-func TicketForPeer(peerId, relayURL string) (string, error) {
+// its peer id plus its home relay. relayURL is validated like a configured
+// relay (https unless insecure) — it usually comes from data another device
+// wrote.
+func TicketForPeer(peerId, relayURL string, insecure bool) (string, error) {
 	id, err := EndpointIdFromPeerId(peerId)
 	if err != nil {
 		return "", err
 	}
-	u, err := netaddr.ParseRelayURL(relayURL)
+	u, err := parseRelayURL(relayURL, insecure)
 	if err != nil {
-		return "", fmt.Errorf("iroh: relay url %q: %w", relayURL, err)
+		return "", err
 	}
 	return endpointticket.Encode(netaddr.NewEndpointAddr(id).WithRelayURL(u)), nil
 }
@@ -117,7 +122,7 @@ type irohTransport struct {
 	ticket    string
 	updates   chan struct{}
 	filter    func(peerId string) bool
-	hsFilter  func(peerId string, identity []byte) bool
+	hsFilter  func(peerId string, identity crypto.PubKey) bool
 	runCtx    context.Context
 	runCancel context.CancelFunc
 	wg        sync.WaitGroup
@@ -214,7 +219,7 @@ func (i *irohTransport) SetIncomingFilter(f func(peerId string) bool) {
 	i.filter = f
 }
 
-func (i *irohTransport) SetHandshakeFilter(f func(peerId string, identity []byte) bool) {
+func (i *irohTransport) SetHandshakeFilter(f func(peerId string, identity crypto.PubKey) bool) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.hsFilter = f
@@ -470,7 +475,9 @@ func (i *irohTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 	defer func() {
 		_ = stream.Close()
 	}()
-	cctx, err := i.secure.HandshakeOutbound(ctx, stream, peerId)
+	// every iroh handshake proves identities: the endpoint is internet
+	// reachable and admission may depend on the account, not the device
+	cctx, err := i.secure.HandshakeOutbound(secureservice.CtxAllowAccountCheck(ctx), stream, peerId)
 	if err != nil {
 		_ = conn.CloseWithError(closeCodeHandshake, "outbound handshake failed")
 		return nil, err
@@ -617,7 +624,7 @@ func (i *irohTransport) accept(in *goiroh.Incoming, source netip.Addr) {
 	defer func() {
 		_ = stream.Close()
 	}()
-	cctx, err := i.secure.HandshakeInbound(ctx, stream, peerId)
+	cctx, err := i.secure.HandshakeInbound(secureservice.CtxAllowAccountCheck(ctx), stream, peerId)
 	if err != nil {
 		l.Info("incoming connection handshake error", zap.Error(err))
 		_ = conn.CloseWithError(closeCodeHandshake, "inbound handshake failed")
@@ -627,7 +634,12 @@ func (i *irohTransport) accept(in *goiroh.Incoming, source netip.Addr) {
 	hsFilter := i.hsFilter
 	i.mu.Unlock()
 	if hsFilter != nil {
-		identity, _ := peer.CtxIdentity(cctx)
+		identity, idErr := peer.CtxPubKey(cctx)
+		if idErr != nil || identity == nil {
+			l.Info("incoming connection without a proven identity", zap.String("peerId", peerId))
+			_ = conn.CloseWithError(closeCodeRefused, "no identity")
+			return
+		}
 		if !hsFilter(peerId, identity) {
 			l.Debug("incoming connection refused after handshake", zap.String("peerId", peerId))
 			_ = conn.CloseWithError(closeCodeRefused, "refused")

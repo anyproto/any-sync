@@ -25,6 +25,7 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/testutil/testnodeconf"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 var ctx = context.Background()
@@ -146,54 +147,98 @@ func TestIrohTransport_HandshakeFilter(t *testing.T) {
 	fxC := newFixture(t)
 	defer fxC.finish(t)
 
-	seen := make(chan string, 2)
-	fxS.SetHandshakeFilter(func(peerId string, identity []byte) bool {
-		if len(identity) == 0 {
-			t.Errorf("no identity for %s", peerId)
-		}
-		seen <- peerId
+	type seenIdentity struct {
+		peerId  string
+		account string
+	}
+	seen := make(chan seenIdentity, 2)
+	fxS.SetHandshakeFilter(func(peerId string, identity crypto.PubKey) bool {
+		seen <- seenIdentity{peerId: peerId, account: identity.Account()}
 		return false
 	})
-	_, err := fxC.Dial(peer.CtxWithExpectedPeerId(ctx, fxS.peerId), fxS.Ticket())
-	if err == nil {
-		// the dial side may finish its handshake before the close arrives;
-		// the accepter must not see the connection either way
-		select {
-		case mc := <-fxS.accepter.mcs:
-			t.Fatalf("refused connection reached the accepter: %v", mc.Addr())
-		case <-time.After(200 * time.Millisecond):
-		}
+	_, _ = fxC.Dial(peer.CtxWithExpectedPeerId(ctx, fxS.peerId), fxS.Ticket())
+	// the dial side may finish its handshake before the close arrives; the
+	// accepter must not see the connection either way
+	select {
+	case mc := <-fxS.accepter.mcs:
+		t.Fatalf("refused connection reached the accepter: %v", mc.Addr())
+	case <-time.After(200 * time.Millisecond):
 	}
 	select {
-	case peerId := <-seen:
-		assert.Equal(t, fxC.peerId, peerId)
+	case got := <-seen:
+		assert.Equal(t, fxC.peerId, got.peerId)
+		assert.Equal(t, fxC.acc.Account().SignKey.GetPublic().Account(), got.account)
 	case <-time.After(time.Second):
 		t.Fatal("handshake filter was not consulted")
 	}
 
-	fxS.SetHandshakeFilter(func(string, []byte) bool { return true })
+	fxS.SetHandshakeFilter(func(string, crypto.PubKey) bool { return true })
 	mcC, mcS := fxC.connect(t, fxS)
+	assert.NotNil(t, mcC)
+	assert.NotNil(t, mcS)
+
+	fxS.SetHandshakeFilter(nil)
+	mcC, mcS = fxC.connect(t, fxS)
 	assert.NotNil(t, mcC)
 	assert.NotNil(t, mcS)
 }
 
-func TestTicketForPeer(t *testing.T) {
-	fx := newFixture(t)
-	defer fx.finish(t)
+// Two clients (not nodes, no RequireClientAuth) still prove their account
+// identities to each other over iroh: the transport asks for it on both
+// sides of every handshake.
+func TestIrohTransport_ClientsProveIdentity(t *testing.T) {
+	fxS := newFixtureConf(t, Config{}, withClientNodeTypes())
+	defer fxS.finish(t)
+	fxC := newFixtureConf(t, Config{}, withClientNodeTypes())
+	defer fxC.finish(t)
 
-	ticket, err := TicketForPeer(fx.peerId, "https://relay.example")
+	admitted := make(chan string, 1)
+	fxS.SetHandshakeFilter(func(peerId string, identity crypto.PubKey) bool {
+		admitted <- identity.Account()
+		return true
+	})
+	mcC, mcS := fxC.connect(t, fxS)
+	select {
+	case account := <-admitted:
+		assert.Equal(t, fxC.acc.Account().SignKey.GetPublic().Account(), account)
+	case <-time.After(time.Second):
+		t.Fatal("handshake filter was not consulted")
+	}
+	pub, err := peer.CtxPubKey(mcS.Context())
 	require.NoError(t, err)
-	peerId, err := PeerIdFromTicket(ticket)
+	assert.Equal(t, fxC.acc.Account().SignKey.GetPublic().Account(), pub.Account())
+	pub, err = peer.CtxPubKey(mcC.Context())
 	require.NoError(t, err)
-	assert.Equal(t, fx.peerId, peerId)
+	assert.Equal(t, fxS.acc.Account().SignKey.GetPublic().Account(), pub.Account())
+}
+
+func TestTicketForPeer(t *testing.T) {
+	sk, err := key.GenerateSecretKey()
+	require.NoError(t, err)
+	peerId, err := PeerIdFromEndpointId(sk.Public().EndpointID())
+	require.NoError(t, err)
+
+	ticket, err := TicketForPeer(peerId, "https://relay.example", false)
+	require.NoError(t, err)
+	got, err := PeerIdFromTicket(ticket)
+	require.NoError(t, err)
+	assert.Equal(t, peerId, got)
 	addr, err := endpointticket.Decode(ticket)
 	require.NoError(t, err)
 	require.Len(t, addr.RelayURLs(), 1)
 	assert.Equal(t, "https://relay.example/", addr.RelayURLs()[0].String())
 	assert.Empty(t, addr.IPAddrs())
 
-	_, err = TicketForPeer("not a peer id", "https://relay.example")
+	_, err = TicketForPeer("not a peer id", "https://relay.example", false)
 	assert.Error(t, err)
+	_, err = TicketForPeer(peerId, "http://relay.example", false)
+	assert.Error(t, err, "http needs insecure")
+	_, err = TicketForPeer(peerId, "http://relay.example", true)
+	assert.NoError(t, err)
+	_, err = TicketForPeer(peerId, "", false)
+	assert.Error(t, err)
+	_, err = TicketForPeer(peerId, "relay.example", false)
+	assert.Error(t, err, "scheme-less host")
 }
 
 func TestIrohTransport_CloseMapsToErrConnClosed(t *testing.T) {
@@ -287,21 +332,38 @@ type fixture struct {
 	peerId       string
 }
 
+type fixtureOpt func(*fixtureOpts)
+
+type fixtureOpts struct {
+	nodeTypes []nodeconf.NodeType
+}
+
+// withClientNodeTypes makes the fixture a plain client: nodeconf reports no
+// node types for any peer, so secureservice defaults to unverified
+// handshakes (as the SDK does).
+func withClientNodeTypes() fixtureOpt {
+	return func(o *fixtureOpts) { o.nodeTypes = nil }
+}
+
 func newFixture(t *testing.T) *fixture {
 	return newFixtureConf(t, Config{})
 }
 
 // newFixtureConf starts a transport with an allow-all filter; zero conf
 // fields get test defaults (loopback bind, short timeouts, insecure relay).
-func newFixtureConf(t *testing.T, conf Config) *fixture {
-	fx, err := startFixture(t, conf, func(string) bool { return true })
+func newFixtureConf(t *testing.T, conf Config, opts ...fixtureOpt) *fixture {
+	fx, err := startFixture(t, conf, func(string) bool { return true }, opts...)
 	require.NoError(t, err)
 	fx.peerId = fx.acc.Account().PeerId
 	require.Eventually(t, func() bool { return fx.Ticket() != "" }, 5*time.Second, 10*time.Millisecond, "no ticket")
 	return fx
 }
 
-func startFixture(t *testing.T, conf Config, filter func(string) bool) (*fixture, error) {
+func startFixture(t *testing.T, conf Config, filter func(string) bool, opts ...fixtureOpt) (*fixture, error) {
+	o := fixtureOpts{nodeTypes: []nodeconf.NodeType{nodeconf.NodeTypeTree}}
+	for _, opt := range opts {
+		opt(&o)
+	}
 	fx := &fixture{
 		irohTransport: New().(*irohTransport),
 		ctrl:          gomock.NewController(t),
@@ -324,7 +386,7 @@ func startFixture(t *testing.T, conf Config, filter func(string) bool) (*fixture
 	fx.mockNodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
 	fx.mockNodeConf.EXPECT().Run(ctx).AnyTimes()
 	fx.mockNodeConf.EXPECT().Close(ctx).AnyTimes()
-	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return([]nodeconf.NodeType{nodeconf.NodeTypeTree}).AnyTimes()
+	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return(o.nodeTypes).AnyTimes()
 	if filter != nil {
 		fx.SetIncomingFilter(filter)
 	}

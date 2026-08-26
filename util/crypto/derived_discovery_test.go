@@ -1,6 +1,9 @@
 package crypto
 
 import (
+	"bytes"
+	"crypto/ed25519"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,4 +38,21 @@ func TestDeriveDiscoveryKeys(t *testing.T) {
 	ok, err := sign1.GetPublic().Verify([]byte("record"), sig)
 	require.NoError(t, err)
 	assert.True(t, ok)
+}
+
+// The derivation is frozen: published records are addressed by these keys.
+func TestDeriveDiscoveryKeys_KnownAnswer(t *testing.T) {
+	seed := bytes.Repeat([]byte{0x2a}, ed25519.SeedSize)
+	identity := NewEd25519PrivKey(ed25519.NewKeyFromSeed(seed))
+	require.Equal(t, "A6DTa5q8PmGHM8aLTSm7xdh47LQBLvFdc2g3PpXUkRiXBk9R", identity.GetPublic().Account())
+
+	sign, enc, err := DeriveDiscoveryKeys(identity)
+	require.NoError(t, err)
+	pub, err := sign.GetPublic().Raw()
+	require.NoError(t, err)
+	assert.Equal(t, "15aedadf32b1a8248022cf4d09425f62abb9b6109400798fbc2e99324a4ce556", hex.EncodeToString(pub))
+	assert.Equal(t, "A68TUHXwkUgscvvEknmv8JiAuKbYjuL2iypdedMpfXTs17qU", sign.GetPublic().Account())
+	encRaw, err := enc.Raw()
+	require.NoError(t, err)
+	assert.Equal(t, "e70b9f8823c6519b69bbeaf0ff200a508159aaecf42cb7f3e4064ce8656ef102", hex.EncodeToString(encRaw))
 }

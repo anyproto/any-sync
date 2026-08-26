@@ -19,9 +19,11 @@ const (
 	AnysyncReadOneToOneSpacePath = "m/SLIP-0021/anysync/onetooneread"
 	AnysyncMetadataOneToOnePath  = "m/SLIP-0021/anysync/onetoonemeta"
 
-	// AnysyncDiscoveryKeyPath is the hardened slip-10 path, rooted in the
-	// identity key seed, of the key that addresses and signs the account's
-	// device-discovery record. Frozen: devices and restores must agree.
+	// AnysyncDiscoveryKeyPath is the hardened slip-10 path of the key that
+	// addresses and signs the account's device-discovery record. Its root
+	// seed is the identity key's 32-byte ed25519 seed (not PrivKey.Raw()),
+	// a fresh slip-10 root unrelated to the mnemonic tree. Frozen: devices
+	// and restores must agree.
 	AnysyncDiscoveryKeyPath = "m/99999'/2'"
 	// AnysyncDiscoveryEncPath is the slip-21 path of the symmetric key that
 	// encrypts that record.
@@ -35,12 +37,15 @@ const (
 // identity key never signs the record and its public id stays unlinkable to
 // it.
 func DeriveDiscoveryKeys(identity PrivKey) (signKey PrivKey, encKey SymKey, err error) {
+	if _, ok := identity.(*Ed25519PrivKey); !ok {
+		return nil, nil, ErrIncorrectKeyType
+	}
 	raw, err := identity.Raw()
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(raw) < ed25519.SeedSize {
-		return nil, nil, errors.New("identity key is too short")
+	if len(raw) != ed25519.PrivateKeySize {
+		return nil, nil, errors.New("identity key has an unexpected size")
 	}
 	seed := raw[:ed25519.SeedSize]
 	node, err := slip10.DeriveForPath(AnysyncDiscoveryKeyPath, seed)
