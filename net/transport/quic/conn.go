@@ -216,4 +216,3 @@ func (q quicNetConn) LocalAddr() net.Addr {
 func (q quicNetConn) RemoteAddr() net.Addr {
 	return q.remoteAddr
 }
-

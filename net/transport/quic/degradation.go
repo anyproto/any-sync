@@ -33,6 +33,15 @@ func classifyClose(cause error, lifetime time.Duration) transport.ConnCloseKind 
 	return transport.ConnCloseNeutral
 }
 
+// IsHandshakeTimeout reports whether a dial error is quic-go's own handshake
+// timeout: the whole HandshakeIdleTimeout passed without an answer, i.e. UDP
+// is likely blocked toward that address. Caller-context deadlines don't
+// count — those are ambiguous (the caller may just be impatient).
+func IsHandshakeTimeout(err error) bool {
+	var ht *quic.HandshakeTimeoutError
+	return errors.As(err, &ht)
+}
+
 // watch blocks until the underlying QUIC connection dies, then reports a
 // classified close event. Run in a goroutine for every dialed connection when
 // an observer is registered.

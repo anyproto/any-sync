@@ -131,7 +131,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		_ = udpConn.Close()
 		return nil, err
 	}
-	
+
 	var remotePubKey libp2crypto.PubKey
 	select {
 	case remotePubKey = <-keyCh:
