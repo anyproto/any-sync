@@ -37,6 +37,7 @@ type Quic interface {
 type quicTransport struct {
 	secure        secureservice.SecureService
 	accepter      transport.Accepter
+	connObserver  func(ev transport.ConnCloseEvent)
 	conf          Config
 	quicConf      *quic.Config
 	listeners     []*quic.Listener
@@ -72,6 +73,12 @@ func (q *quicTransport) Name() (name string) {
 
 func (q *quicTransport) SetAccepter(accepter transport.Accepter) {
 	q.accepter = accepter
+}
+
+// SetConnObserver registers an observer for close events of dialed
+// connections. This method should be called before app start.
+func (q *quicTransport) SetConnObserver(observer func(ev transport.ConnCloseEvent)) {
+	q.connObserver = observer
 }
 
 func (q *quicTransport) Run(ctx context.Context) (err error) {
@@ -161,7 +168,11 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		}()
 		return nil, err
 	}
-	return newConn(cctx, udpConn, qConn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
+	mc = newConn(cctx, udpConn, qConn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec))
+	if q.connObserver != nil {
+		go mc.(*quicMultiConn).watch(q.connObserver)
+	}
+	return mc, nil
 }
 
 func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
