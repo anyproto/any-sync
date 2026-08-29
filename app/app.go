@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -28,6 +29,7 @@ var (
 	StopWarningAfter     = time.Second * 10
 	StartWarningAfter    = time.Second * 10
 	ErrComponentNotFound = errors.New("component not found")
+	ErrAppAlreadyStarted = errors.New("app already started")
 )
 
 // Component is a minimal interface for a common app.Component
@@ -64,6 +66,9 @@ type App struct {
 	startStat         Stat
 	stopStat          Stat
 	deviceState       int
+	started           atomic.Bool
+	initialized       atomic.Int32
+	closed            atomic.Bool
 	versionName       string
 	anySyncVersion    string
 	componentListener func(comp Component)
@@ -224,6 +229,12 @@ func (app *App) ComponentNames() (names []string) {
 // Start starts the application
 // All registered services will be initialized and started
 func (app *App) Start(ctx context.Context) (err error) {
+	// One Start per app. A second one would re-Init every component and
+	// Run them twice; after a failed Start the components have already been
+	// closed, so a retry must build a fresh app.
+	if !app.started.CompareAndSwap(false, true) {
+		return ErrAppAlreadyStarted
+	}
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	app.startStat.SpentMsPerComp = make(map[string]int64)
@@ -249,19 +260,29 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 
 	for i, s := range app.components {
+		// Track how far Init got: a component that fails Init is still
+		// closed (documented), but nothing past it ever ran Init and must
+		// never be closed — its fields are nil.
+		app.initialized.Store(int32(i + 1))
 		if err = s.Init(app); err != nil {
 			log.Error("can't init service", zap.String("service", s.Name()), zap.Error(err))
-			closeServices(i)
+			if app.closed.CompareAndSwap(false, true) {
+				closeServices(i)
+			}
 			return fmt.Errorf("can't init service '%s': %w", s.Name(), err)
 		}
 	}
 
-	for i, s := range app.components {
+	for _, s := range app.components {
 		if serviceRun, ok := s.(ComponentRunnable); ok {
 			start := time.Now()
 			if err = serviceRun.Run(ctx); err != nil {
 				log.Error("can't run service", zap.String("service", serviceRun.Name()), zap.Error(err))
-				closeServices(i)
+				// Every component ran Init, so every one holds Init-time
+				// resources — close the whole range, not just [0, i].
+				if app.closed.CompareAndSwap(false, true) {
+					closeServices(len(app.components) - 1)
+				}
 				return fmt.Errorf("can't run service '%s': %w", serviceRun.Name(), err)
 			}
 			spent := time.Since(start).Milliseconds()
@@ -315,6 +336,10 @@ func (app *App) Close(ctx context.Context) error {
 	log.Debug("close components...")
 	app.mu.RLock()
 	defer app.mu.RUnlock()
+	// Start's error path already ran the one cleanup pass this app gets.
+	if !app.closed.CompareAndSwap(false, true) {
+		return nil
+	}
 	app.stopStat.SpentMsPerComp = make(map[string]int64)
 	var currentComponentStopping string
 	done := make(chan struct{})
@@ -341,7 +366,7 @@ func (app *App) Close(ctx context.Context) error {
 	}()
 
 	var errs []string
-	for i := len(app.components) - 1; i >= 0; i-- {
+	for i := int(app.initialized.Load()) - 1; i >= 0; i-- {
 		if serviceClose, ok := app.components[i].(ComponentRunnable); ok {
 			start := time.Now()
 			currentComponentStopping = app.components[i].Name()
