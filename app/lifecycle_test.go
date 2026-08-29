@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -94,11 +95,19 @@ func TestConcurrentCloseRunsOnce(t *testing.T) {
 		}
 		wg.Wait()
 
-		if after.closes != 0 {
-			t.Fatalf("round %d: never-Init'd component closed %d times", round, after.closes)
-		}
-		if before.closes > 1 || failing.closes > 1 {
-			t.Fatalf("round %d: double close before=%d failing=%d", round, before.closes, failing.closes)
+		// The invariant, whichever goroutine won: a component whose Init
+		// ran is closed exactly once, one that never ran Init is never
+		// closed. (If a Close won the lock first, Start is rejected and
+		// nothing is Init'd — also valid.)
+		for _, c := range []*probeComp{before, failing, after} {
+			want := 0
+			if c.inits > 0 {
+				want = 1
+			}
+			if c.closes != want {
+				t.Fatalf("round %d: %s init=%d close=%d, want close=%d",
+					round, c.name, c.inits, c.closes, want)
+			}
 		}
 	}
 }
@@ -132,4 +141,89 @@ func TestConcurrentStartRunsOnce(t *testing.T) {
 			t.Fatalf("round %d: Init ran %d times, want 1", round, c.inits)
 		}
 	}
+}
+
+// nilFieldComp models a real component (headSync): Close touches a field that
+// only Init populates, so closing it mid-Init panics.
+type nilFieldComp struct {
+	name   string
+	dep    *struct{ x int }
+	closes int
+	onInit func()
+	mu     sync.Mutex
+}
+
+func (c *nilFieldComp) Init(a *App) error {
+	if c.onInit != nil {
+		c.onInit()
+	}
+	c.dep = &struct{ x int }{}
+	return nil
+}
+func (c *nilFieldComp) Name() string                  { return c.name }
+func (c *nilFieldComp) Run(ctx context.Context) error { return nil }
+func (c *nilFieldComp) Close(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.closes++
+	_ = c.dep.x // panics if Init never completed
+	return nil
+}
+
+// Close must not run against a component whose Init is still in flight — it
+// waits for Start instead. Without the lifecycle lock this panics with the
+// same nil deref the Init high-water mark exists to prevent.
+func TestCloseWaitsForInFlightStart(t *testing.T) {
+	gate := make(chan struct{})
+	entered := make(chan struct{})
+	c := &nilFieldComp{name: "c", onInit: func() { close(entered); <-gate }}
+	a := new(App)
+	a.Register(c)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); assert.NoError(t, a.Start(context.Background())) }()
+	<-entered // Start is parked inside c.Init
+
+	closed := make(chan error, 1)
+	go func() { closed <- a.Close(context.Background()) }()
+
+	select {
+	case <-closed:
+		t.Fatal("Close returned while Init was still running")
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(gate)
+	wg.Wait()
+	require.NoError(t, <-closed)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	assert.Equal(t, 1, c.closes, "component closed exactly once, after Init finished")
+}
+
+// A Close landing before Start must not silently consume the app's cleanup:
+// Start refuses, so nothing is ever Init'd and left unreachable.
+func TestStartAfterCloseIsRejected(t *testing.T) {
+	a := new(App)
+	c1 := &probeComp{name: "c1"}
+	c2 := &probeComp{name: "c2"}
+	a.Register(c1).Register(c2)
+
+	require.NoError(t, a.Close(context.Background()))
+	require.ErrorIs(t, a.Start(context.Background()), ErrAppClosed)
+
+	c1.assertCounts(t, 0, 0)
+	c2.assertCounts(t, 0, 0)
+}
+
+// Close on an app that was never started closes nothing — every component's
+// fields are still nil. This is the case the initialized bound protects.
+func TestCloseWithoutStartClosesNothing(t *testing.T) {
+	a := new(App)
+	c := &nilFieldComp{name: "c"}
+	a.Register(c)
+
+	require.NoError(t, a.Close(context.Background()))
+	assert.Equal(t, 0, c.closes)
 }
