@@ -2,14 +2,20 @@ package peerservice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
@@ -288,6 +294,477 @@ func TestPeerService_Accept(t *testing.T) {
 	require.NoError(t, fx.Accept(mc))
 }
 
+func TestPeerService_PeerObserver(t *testing.T) {
+	// public (non-local) addrs: the global preferQuic order applies
+	var addrs = []string{
+		"yamux://203.0.113.1:1111",
+		"quic://203.0.113.1:1112",
+	}
+	t.Run("successful dial reports started then connected, in order", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindConnected}, kindsOf(events))
+		assert.Equal(t, "p1", events[0].PeerId)
+		assert.Equal(t, 2, events[0].AddrCount)
+		connected := events[1]
+		assert.Equal(t, "p1", connected.PeerId)
+		assert.Equal(t, "203.0.113.1:1111", connected.Addr)
+		assert.Equal(t, transport.Yamux, connected.Scheme)
+		assert.False(t, connected.Inbound)
+		assert.Equal(t, uint32(13), connected.ProtoVersion)
+		assert.Greater(t, connected.Dur, time.Duration(0))
+	})
+	t.Run("failed dial reports started then failed with every address error", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		errYamuxRefused := errors.New("yamux refused")
+		errQuicTimeout := errors.New("quic timed out")
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(nil, errYamuxRefused)
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, errQuicTimeout)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+		failed := events[1]
+		assert.Equal(t, "p1", failed.PeerId)
+		// errors.Is must see through the join: consumers classify by sentinel
+		assert.ErrorIs(t, failed.Err, errYamuxRefused)
+		assert.ErrorIs(t, failed.Err, errQuicTimeout)
+		assert.Greater(t, failed.Dur, time.Duration(0))
+	})
+	t.Run("a single failing address still arrives joined", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		errRefused := errors.New("yamux refused")
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"yamux://203.0.113.1:1111"}, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(nil, errRefused)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+		assert.ErrorIs(t, events[1].Err, errRefused)
+		// the promised stable shape: joined even for one address
+		_, joined := events[1].Err.(interface{ Unwrap() []error })
+		assert.True(t, joined, "a single address error must still arrive joined")
+	})
+	t.Run("addr count reflects dialable candidates, not raw addrs", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		// webtransport has no registered transport in this fixture, so only
+		// the yamux addr is a dial candidate
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"yamux://203.0.113.1:1111",
+			"webtransport://203.0.113.1:4433",
+		}, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindConnected}, kindsOf(events))
+		assert.Equal(t, 1, events[0].AddrCount)
+	})
+	t.Run("no addrs reports failed with ErrAddrsNotFound", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(nil, false)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+		assert.Equal(t, 0, events[0].AddrCount)
+		assert.ErrorIs(t, events[1].Err, ErrAddrsNotFound)
+	})
+	t.Run("mismatched peerId reports failed", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId+"not valid"), nil)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+		assert.ErrorIs(t, events[1].Err, ErrPeerIdMismatched)
+	})
+	t.Run("accept reports inbound connected with scheme from its address", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+
+		mc := fx.mockMC("p1")
+		require.NoError(t, fx.Accept(mc))
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected}, kindsOf(events))
+		connected := events[0]
+		assert.Equal(t, "p1", connected.PeerId)
+		assert.Equal(t, "192.0.2.7:3333", connected.Addr)
+		assert.Equal(t, transport.Yamux, connected.Scheme)
+		assert.True(t, connected.Inbound)
+		assert.Equal(t, uint32(13), connected.ProtoVersion)
+		assert.Zero(t, connected.Dur)
+	})
+	t.Run("proto version missing from conn context reports zero", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+
+		mc := fx.mockMCWithCtxAddr(peer.CtxWithPeerId(ctx, "p1"), "192.0.2.7:3333")
+		require.NoError(t, fx.Accept(mc))
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected}, kindsOf(events))
+		assert.Zero(t, events[0].ProtoVersion)
+		assert.Empty(t, events[0].Scheme)
+	})
+	t.Run("inbound connection that never becomes a peer produces no event", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+
+		// no peer id in the conn context: peer.NewPeer must fail
+		mc := fx.mockMCWithCtxAddr(ctx, "yamux://192.0.2.7:3333")
+		require.Error(t, fx.Accept(mc))
+		assert.Empty(t, obs.getEvents())
+	})
+	t.Run("connected is emitted before the pool learns of the peer", func(t *testing.T) {
+		// deterministic pin of the ordering comment in Accept: at AddPeer
+		// entry the Connected event must already have been delivered
+		obs := &peerEventRecorder{}
+		ocp := &orderCheckPool{obs: obs}
+		fx := newFixtureCustom(t, ocp, peerobserver.New(obs))
+		fx.EnableQuicDemotion()
+		defer fx.finish(t)
+
+		mc := fx.mockMC("p1")
+		require.NoError(t, fx.Accept(mc))
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected}, ocp.kindsOnAdd)
+	})
+	t.Run("pool call for another peer from a dial-path event is safe", func(t *testing.T) {
+		obs := &crossPeerObserver{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		obs.pool = fx.a.MustComponent(pool.CName).(pool.Service)
+
+		fx.nodeConf.EXPECT().PeerAddresses("p1").Return([]string{"yamux://203.0.113.1:1111"}, true)
+		fx.nodeConf.EXPECT().PeerAddresses("p2").Return([]string{"yamux://203.0.113.1:2222"}, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC("p1"), nil)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:2222").Return(fx.mockMC("p2"), nil)
+
+		_, err := obs.pool.Get(ctx, "p1")
+		require.NoError(t, err)
+		require.True(t, obs.getDone())
+		require.NoError(t, obs.getOtherErr())
+	})
+	t.Run("accept into refusing pool reports connected then closed", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithRefusingPool(t, obs)
+		defer fx.finish(t)
+
+		mc := fx.mockMC("p1")
+		require.Error(t, fx.Accept(mc))
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected, peerobserver.KindClosed}, kindsOf(events))
+		assert.True(t, events[1].Inbound)
+		assert.Equal(t, "p1", events[1].PeerId)
+	})
+	t.Run("concurrent pool gets share one dial and one event pair", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true).AnyTimes()
+		release := make(chan struct{})
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				<-release
+				return fx.mockMC(peerId), nil
+			})
+
+		pl := fx.a.MustComponent(pool.CName).(pool.Service)
+		var wg sync.WaitGroup
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, _ = pl.Get(ctx, peerId)
+			}()
+		}
+		close(release)
+		wg.Wait()
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindConnected}, kindsOf(events))
+	})
+	t.Run("cached incompatible-version verdict produces no further events", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"yamux://203.0.113.1:1111"}, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(nil, handshake.ErrIncompatibleVersion)
+
+		pl := fx.a.MustComponent(pool.CName).(pool.Service)
+		_, err := pl.Get(ctx, peerId)
+		require.Error(t, err)
+		_, err = pl.Get(ctx, peerId)
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+	})
+	t.Run("dial that falls back to the second addr reports started then connected only", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(nil, fmt.Errorf("yamux refused"))
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(fx.mockMC(peerId), nil)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindConnected}, kindsOf(events))
+		assert.Equal(t, transport.Quic, events[1].Scheme)
+		assert.Equal(t, "203.0.113.1:1112", events[1].Addr)
+	})
+	t.Run("pool call for the dialed peer from a dial-path event blocks until ctx dies", func(t *testing.T) {
+		// pins the documented hazard: dial-path events run inside the pool's
+		// single-flight load, so a pool call for the same peer cannot proceed
+		obs := &reentrantObserver{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+		obs.pool = fx.a.MustComponent(pool.CName).(pool.Service)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
+
+		_, err := obs.pool.Get(ctx, peerId)
+		require.NoError(t, err)
+		require.ErrorIs(t, obs.getSamePeerErr(), context.DeadlineExceeded)
+	})
+	t.Run("accepted connection that dies reports connected then closed, in order", func(t *testing.T) {
+		// composed peerservice+pool path: the pool watcher's Closed must
+		// follow the Connected emitted by Accept
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+
+		closedCh := make(chan struct{})
+		close(closedCh)
+		cctx := peer.CtxWithProtoVersion(peer.CtxWithPeerId(ctx, "p1"), 13)
+		mc := mock_transport.NewMockMultiConn(fx.ctrl)
+		mc.EXPECT().Context().Return(cctx).AnyTimes()
+		mc.EXPECT().Addr().Return("yamux://192.0.2.7:3333").AnyTimes()
+		mc.EXPECT().IsClosed().Return(true).AnyTimes()
+		mc.EXPECT().CloseChan().Return((<-chan struct{})(closedCh)).AnyTimes()
+		mc.EXPECT().Close().Return(nil).AnyTimes()
+		mc.EXPECT().Accept().Return(nil, fmt.Errorf("test")).AnyTimes()
+
+		require.NoError(t, fx.Accept(mc))
+
+		require.Eventually(t, func() bool { return len(obs.getEvents()) == 2 }, time.Second, 10*time.Millisecond)
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected, peerobserver.KindClosed}, kindsOf(events))
+		assert.True(t, events[1].Inbound)
+	})
+	t.Run("panicking observer does not break dialing or accepting", func(t *testing.T) {
+		fx := newFixtureWithObserver(t, panickyPeerObserver{})
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(addrs, true)
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(ctx, peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		require.NoError(t, fx.Accept(fx.mockMC("p2")))
+	})
+}
+
+type peerEventRecorder struct {
+	mu     sync.Mutex
+	events []peerobserver.Event
+}
+
+func (r *peerEventRecorder) ObservePeerEvent(ev peerobserver.Event) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, ev)
+}
+
+func (r *peerEventRecorder) getEvents() []peerobserver.Event {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]peerobserver.Event(nil), r.events...)
+}
+
+func kindsOf(events []peerobserver.Event) []peerobserver.Kind {
+	kinds := make([]peerobserver.Kind, 0, len(events))
+	for _, ev := range events {
+		kinds = append(kinds, ev.Kind)
+	}
+	return kinds
+}
+
+// reentrantObserver calls back into the pool for the peer a Connected event
+// names, with a short deadline, recording the resulting error
+type reentrantObserver struct {
+	pool        pool.Service
+	mu          sync.Mutex
+	samePeerErr error
+}
+
+func (r *reentrantObserver) ObservePeerEvent(ev peerobserver.Event) {
+	if ev.Kind != peerobserver.KindConnected {
+		return
+	}
+	pctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	_, err := r.pool.Get(pctx, ev.PeerId)
+	r.mu.Lock()
+	r.samePeerErr = err
+	r.mu.Unlock()
+}
+
+func (r *reentrantObserver) getSamePeerErr() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.samePeerErr
+}
+
+type panickyPeerObserver struct{}
+
+func (panickyPeerObserver) ObservePeerEvent(peerobserver.Event) { panic("observer panic") }
+
+// crossPeerObserver calls the pool for a DIFFERENT peer from inside a
+// dial-path Connected event — allowed by the contract. The guard is a CAS,
+// not sync.Once: the nested dial's own Connected re-enters this method on
+// the same goroutine, and a re-entrant once.Do would self-block
+type crossPeerObserver struct {
+	pool     pool.Service
+	started  atomic.Bool
+	mu       sync.Mutex
+	otherErr error
+	done     bool
+}
+
+func (o *crossPeerObserver) ObservePeerEvent(ev peerobserver.Event) {
+	if ev.Kind != peerobserver.KindConnected {
+		return
+	}
+	if !o.started.CompareAndSwap(false, true) {
+		return
+	}
+	pctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err := o.pool.Get(pctx, "p2")
+	o.mu.Lock()
+	o.otherErr = err
+	o.done = true
+	o.mu.Unlock()
+}
+
+func (o *crossPeerObserver) getDone() bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.done
+}
+
+func (o *crossPeerObserver) getOtherErr() error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.otherErr
+}
+
+// orderCheckPool satisfies pool.Service (methods beyond the overridden ones
+// panic on the nil embedded interface — sufficient because Accept only calls
+// AddPeer) and records which events the observer had already received when
+// AddPeer was entered
+type orderCheckPool struct {
+	pool.Service
+	obs        *peerEventRecorder
+	kindsOnAdd []peerobserver.Kind
+}
+
+func (p *orderCheckPool) Init(a *app.App) error           { return nil }
+func (p *orderCheckPool) Name() string                    { return pool.CName }
+func (p *orderCheckPool) Run(ctx context.Context) error   { return nil }
+func (p *orderCheckPool) Close(ctx context.Context) error { return nil }
+func (p *orderCheckPool) AddPeer(ctx context.Context, pr peer.Peer) error {
+	p.kindsOnAdd = kindsOf(p.obs.getEvents())
+	return nil
+}
+
+// refusingPool satisfies pool.Service but rejects every AddPeer, to reach
+// Accept's failure branch; methods beyond the overridden ones panic on the
+// nil embedded interface — sufficient because Accept only calls AddPeer
+type refusingPool struct {
+	pool.Service
+}
+
+func (r *refusingPool) Init(a *app.App) error           { return nil }
+func (r *refusingPool) Name() string                    { return pool.CName }
+func (r *refusingPool) Run(ctx context.Context) error   { return nil }
+func (r *refusingPool) Close(ctx context.Context) error { return nil }
+func (r *refusingPool) AddPeer(ctx context.Context, p peer.Peer) error {
+	return fmt.Errorf("pool refuses")
+}
+
 type fixture struct {
 	PeerService
 	a        *app.App
@@ -303,7 +780,23 @@ func newFixture(t *testing.T) *fixture {
 	return fx
 }
 
-func newFixtureNoDemotion(t *testing.T) *fixture {
+func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
+	fx := newFixtureNoDemotion(t, peerobserver.New(obs))
+	fx.EnableQuicDemotion()
+	return fx
+}
+
+func newFixtureWithRefusingPool(t *testing.T, obs peerobserver.Observer) *fixture {
+	fx := newFixtureCustom(t, &refusingPool{}, peerobserver.New(obs))
+	fx.EnableQuicDemotion()
+	return fx
+}
+
+func newFixtureNoDemotion(t *testing.T, extra ...app.Component) *fixture {
+	return newFixtureCustom(t, pool.New(), extra...)
+}
+
+func newFixtureCustom(t *testing.T, poolComponent app.Component, extra ...app.Component) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		PeerService: New(),
@@ -322,7 +815,10 @@ func newFixtureNoDemotion(t *testing.T) *fixture {
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
 
-	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer())
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.nodeConf).Register(poolComponent).Register(rpctest.NewTestServer())
+	for _, comp := range extra {
+		fx.a.Register(comp)
+	}
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
@@ -333,9 +829,16 @@ func (fx *fixture) setResolver(resolve func(ctx context.Context, host string) ([
 }
 
 func (fx *fixture) mockMC(peerId string) *mock_transport.MockMultiConn {
+	cctx := peer.CtxWithProtoVersion(peer.CtxWithPeerId(ctx, peerId), 13)
+	// real transports return scheme-prefixed addresses
+	return fx.mockMCWithCtxAddr(cctx, "yamux://192.0.2.7:3333")
+}
+
+func (fx *fixture) mockMCWithCtxAddr(cctx context.Context, addr string) *mock_transport.MockMultiConn {
 	mc := mock_transport.NewMockMultiConn(fx.ctrl)
-	cctx := peer.CtxWithPeerId(ctx, peerId)
 	mc.EXPECT().Context().Return(cctx).AnyTimes()
+	mc.EXPECT().Addr().Return(addr).AnyTimes()
+	mc.EXPECT().IsClosed().Return(false).AnyTimes()
 	mc.EXPECT().Accept().Return(nil, fmt.Errorf("test")).AnyTimes()
 	mc.EXPECT().Close().AnyTimes()
 	// the pool subscribes to CloseChan to evict the peer when the connection

@@ -45,7 +45,10 @@ type MultiConn interface {
 	Accept() (conn net.Conn, err error)
 	// Open opens new sub connection
 	Open(ctx context.Context) (conn net.Conn, err error)
-	// Addr returns remote peer address
+	// Addr returns the remote peer address prefixed with the transport
+	// scheme, as "<scheme>://<address>" — consumers may rely on the prefix
+	// to identify the transport a connection came over; the address form
+	// after the prefix is transport-specific
 	Addr() string
 	// IsClosed returns true when connection is closed
 	IsClosed() bool
