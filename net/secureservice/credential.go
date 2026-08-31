@@ -43,8 +43,9 @@ func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakepro
 		return
 	}
 	return handshake.Result{
-		ProtoVersion:  cred.Version,
-		ClientVersion: cred.ClientVersion,
+		ProtoVersion:   cred.Version,
+		ClientVersion:  cred.ClientVersion,
+		AdmissionToken: cred.AdmissionToken,
 	}, nil
 }
 
@@ -117,8 +118,34 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 		return
 	}
 	return handshake.Result{
-		Identity:      msg.Identity,
-		ProtoVersion:  cred.Version,
-		ClientVersion: cred.ClientVersion,
+		Identity:       msg.Identity,
+		ProtoVersion:   cred.Version,
+		ClientVersion:  cred.ClientVersion,
+		AdmissionToken: cred.AdmissionToken,
 	}, nil
+}
+
+func withAdmissionToken(checker handshake.CredentialChecker, token string) handshake.CredentialChecker {
+	if token == "" {
+		return checker
+	}
+	return admissionTokenCredentialChecker{
+		CredentialChecker: checker,
+		token:             token,
+	}
+}
+
+type admissionTokenCredentialChecker struct {
+	handshake.CredentialChecker
+	token string
+}
+
+func (a admissionTokenCredentialChecker) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
+	cred := a.CredentialChecker.MakeCredentials(remotePeerId)
+	if cred == nil {
+		return nil
+	}
+	withToken := *cred
+	withToken.AdmissionToken = a.token
+	return &withToken
 }

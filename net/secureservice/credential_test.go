@@ -25,16 +25,41 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 
 	cr1 := cc1.MakeCredentials(c1)
 	cr2 := cc2.MakeCredentials(c2)
+	cr1.AdmissionToken = "token-1"
+	cr2.AdmissionToken = "token-2"
 	res, err := cc1.CheckCredential(c1, cr2)
 	assert.NoError(t, err)
 	assert.Equal(t, identity2, res.Identity)
+	assert.Equal(t, "token-2", res.AdmissionToken)
 
 	res2, err := cc2.CheckCredential(c2, cr1)
 	assert.NoError(t, err)
 	assert.Equal(t, identity1, res2.Identity)
+	assert.Equal(t, "token-1", res2.AdmissionToken)
 
 	_, err = cc1.CheckCredential(c1, cr1)
 	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
+}
+
+func TestNoVerifyChecker_CheckCredentialCopiesAdmissionToken(t *testing.T) {
+	cc := newNoVerifyChecker(1, []uint32{1}, "test:v1")
+	cred := cc.MakeCredentials("peer-id")
+	cred.AdmissionToken = "admission-token"
+
+	res, err := cc.CheckCredential("peer-id", cred)
+	require.NoError(t, err)
+	assert.Equal(t, "admission-token", res.AdmissionToken)
+}
+
+func TestAdmissionTokenCheckerDoesNotMutateBaseCredentials(t *testing.T) {
+	cc := newNoVerifyChecker(1, []uint32{1}, "test:v1")
+	wrapped := withAdmissionToken(cc, "admission-token")
+
+	wrappedCred := wrapped.MakeCredentials("peer-id")
+	baseCred := cc.MakeCredentials("peer-id")
+
+	assert.Equal(t, "admission-token", wrappedCred.AdmissionToken)
+	assert.Empty(t, baseCred.AdmissionToken)
 }
 
 func TestIncompatibleVersion(t *testing.T) {
