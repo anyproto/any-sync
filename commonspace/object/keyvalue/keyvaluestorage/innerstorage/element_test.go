@@ -47,12 +47,12 @@ func TestKeyValueFromProto_KeyPeerIdBinding(t *testing.T) {
 	// a row planted at another peer's id must not be accepted
 	proto.KeyPeerId = KeyPeerId("k", "12D3KooWSomeOtherPeer")
 	_, err = KeyValueFromProto(proto, true)
-	require.ErrorIs(t, err, ErrKeyPeerIdMismatch)
+	require.ErrorIs(t, err, ErrInvalidKeyPeerId)
 	_, err = KeyValueFromProto(proto, false)
-	require.ErrorIs(t, err, ErrKeyPeerIdMismatch)
+	require.ErrorIs(t, err, ErrInvalidKeyPeerId)
 
 	// nor one whose id names a different key
 	proto.KeyPeerId = KeyPeerId("other", peerPub.PeerId())
 	_, err = KeyValueFromProto(proto, true)
-	require.ErrorIs(t, err, ErrKeyPeerIdMismatch)
+	require.ErrorIs(t, err, ErrInvalidKeyPeerId)
 }
