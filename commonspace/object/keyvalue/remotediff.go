@@ -23,8 +23,8 @@ func NewRemoteDiff(spaceId string, client Client) RemoteDiff {
 }
 
 type remote struct {
-	spaceId  string
-	client   Client
+	spaceId string
+	client  Client
 }
 
 func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
@@ -39,8 +39,8 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 		})
 	}
 	req := &spacesyncproto.StoreDiffRequest{
-		SpaceId:  r.spaceId,
-		Ranges:   pbRanges,
+		SpaceId: r.spaceId,
+		Ranges:  pbRanges,
 	}
 	resp, err := r.client.StoreDiff(ctx, req)
 	if err != nil {
