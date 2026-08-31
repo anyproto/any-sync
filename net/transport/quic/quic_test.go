@@ -317,11 +317,13 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		}
 
 		done := make(chan struct{})
-		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").Return(nil)
+		// udpConn.Close is the last call Close makes; releasing on
+		// CloseWithError lets ctrl.Finish run before it
+		mockUdpConn.EXPECT().Close().DoAndReturn(func() error {
 			close(done)
 			return nil
 		})
-		mockUdpConn.EXPECT().Close().Return(nil)
 
 		err := q.Close()
 		assert.NoError(t, err)
@@ -375,11 +377,13 @@ func TestQuicMultiConn_Close(t *testing.T) {
 		}
 
 		done := make(chan struct{})
-		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").DoAndReturn(func(quic.ApplicationErrorCode, string) error {
+		mockConn.EXPECT().CloseWithError(quic.ApplicationErrorCode(2), "").Return(nil)
+		// udpConn.Close is the last call Close makes; releasing on
+		// CloseWithError lets ctrl.Finish run before it
+		mockUdpConn.EXPECT().Close().DoAndReturn(func() error {
 			close(done)
-			return nil
+			return errors.New("udp error")
 		})
-		mockUdpConn.EXPECT().Close().Return(errors.New("udp error"))
 
 		err := q.Close()
 		assert.NoError(t, err)
