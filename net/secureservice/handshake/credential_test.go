@@ -18,9 +18,10 @@ var noVerifyChecker = &testCredChecker{
 	makeCred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, ClientVersion: "test:v1.0"},
 	checkCred: func(peerId string, cred *handshakeproto.Credentials) (res Result, err error) {
 		return Result{
-			Identity:      []byte("identity"),
-			ProtoVersion:  cred.Version,
-			ClientVersion: cred.ClientVersion,
+			Identity:       []byte("identity"),
+			ProtoVersion:   cred.Version,
+			ClientVersion:  cred.ClientVersion,
+			AdmissionToken: cred.AdmissionToken,
 		}, nil
 	},
 }
@@ -46,7 +47,10 @@ func TestOutgoingHandshake(t *testing.T) {
 		_, err = noVerifyChecker.CheckCredential("p1", msg.cred)
 		require.NoError(t, err)
 		// send credential message
-		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials("")))
+		const remoteToken = "remote-admission-token"
+		remoteCred := *noVerifyChecker.MakeCredentials("")
+		remoteCred.AdmissionToken = remoteToken
+		require.NoError(t, h.writeCredentials(&remoteCred))
 		// receive ack
 		msg, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
@@ -55,6 +59,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		require.NoError(t, h.writeAck(handshakeproto.Error_Null))
 		res := <-handshakeResCh
 		assert.NotEmpty(t, res.res)
+		assert.Equal(t, remoteToken, res.res.AdmissionToken)
 		assert.NoError(t, res.err)
 	})
 	t.Run("write cred err", func(t *testing.T) {
@@ -233,6 +238,7 @@ func TestOutgoingHandshake(t *testing.T) {
 func TestIncomingHandshake(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
+		const remoteToken = "remote-admission-token"
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
@@ -241,7 +247,9 @@ func TestIncomingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// write credentials
-		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials("")))
+		remoteCred := *noVerifyChecker.MakeCredentials("")
+		remoteCred.AdmissionToken = remoteToken
+		require.NoError(t, h.writeCredentials(&remoteCred))
 		// wait credentials
 		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
@@ -255,6 +263,7 @@ func TestIncomingHandshake(t *testing.T) {
 		assert.Equal(t, handshakeproto.Error_Null, msg.ack.Error)
 		res := <-handshakeResCh
 		assert.NotEmpty(t, res.res)
+		assert.Equal(t, remoteToken, res.res.AdmissionToken)
 		require.NoError(t, res.err)
 	})
 	t.Run("write cred err", func(t *testing.T) {
@@ -490,24 +499,37 @@ func TestEndToEnd(t *testing.T) {
 		inResCh  = make(chan handshakeRes, 1)
 		outResCh = make(chan handshakeRes, 1)
 	)
+	clientChecker := cloneNoVerifyCheckerWithAdmissionToken("client-admission-token")
+	serverChecker := cloneNoVerifyCheckerWithAdmissionToken("server-admission-token")
 	st := time.Now()
 	go func() {
-		identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
+		identity, err := OutgoingHandshake(nil, c1, "", clientChecker)
 		outResCh <- handshakeRes{res: identity, err: err}
 	}()
 	go func() {
-		identity, err := IncomingHandshake(nil, c2, "", noVerifyChecker)
+		identity, err := IncomingHandshake(nil, c2, "", serverChecker)
 		inResCh <- handshakeRes{res: identity, err: err}
 	}()
 
 	outRes := <-outResCh
 	assert.NoError(t, outRes.err)
 	assert.NotEmpty(t, outRes.res)
+	assert.Equal(t, "server-admission-token", outRes.res.AdmissionToken)
 
 	inRes := <-inResCh
 	assert.NoError(t, inRes.err)
 	assert.NotEmpty(t, inRes.res)
+	assert.Equal(t, "client-admission-token", inRes.res.AdmissionToken)
 	t.Log("dur", time.Since(st))
+}
+
+func cloneNoVerifyCheckerWithAdmissionToken(token string) *testCredChecker {
+	cred := *noVerifyChecker.makeCred
+	cred.AdmissionToken = token
+	return &testCredChecker{
+		makeCred:  &cred,
+		checkCred: noVerifyChecker.checkCred,
+	}
 }
 
 func BenchmarkHandshake(b *testing.B) {
