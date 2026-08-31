@@ -195,7 +195,12 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 	if err != nil {
 		return nil, err
 	}
-	pr := v.(peer.Peer)
+	// the cache can hold an *errObject for a failed dial: resolve through
+	// getPeer like get() does instead of panicking on the type assertion
+	pr, err := getPeer(v)
+	if err != nil {
+		return nil, err
+	}
 	if !pr.IsClosed() {
 		return pr, nil
 	}
