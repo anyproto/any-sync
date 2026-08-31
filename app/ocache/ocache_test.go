@@ -424,11 +424,15 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		// try removing the object, so we will wait on closing
+		// try removing the object, so we will wait on closing. Len is not
+		// asserted here: the parked Get re-creates the entry as soon as the
+		// removal completes, so 0 is only ever a transient state.
+		tryRemoveDone := make(chan struct{})
 		go func() {
-			_, err := c.TryRemove("id")
-			require.Equal(t, 0, c.Len())
-			require.NoError(t, err)
+			defer close(tryRemoveDone)
+			ok, err := c.TryRemove("id")
+			assert.True(t, ok)
+			assert.NoError(t, err)
 		}()
 		time.Sleep(time.Millisecond * 20)
 
@@ -447,6 +451,7 @@ func Test_OCache_Remove(t *testing.T) {
 		close(closeCh)
 
 		<-getCh
+		<-tryRemoveDone
 		require.Equal(t, []string{"close", "get"}, events)
 	})
 	t.Run("tryRemove simple - can't be removed", func(t *testing.T) {
@@ -461,10 +466,12 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
 		// try removing the object, so we will wait on closing
+		tryRemoveDone := make(chan struct{})
 		go func() {
-			_, err := c.TryRemove("id")
-			require.Equal(t, 1, c.Len())
-			require.NoError(t, err)
+			defer close(tryRemoveDone)
+			ok, err := c.TryRemove("id")
+			assert.False(t, ok)
+			assert.NoError(t, err)
 		}()
 		time.Sleep(time.Millisecond * 20)
 
@@ -483,6 +490,8 @@ func Test_OCache_Remove(t *testing.T) {
 		close(closeCh)
 
 		<-getCh
+		<-tryRemoveDone
+		require.Equal(t, 1, c.Len())
 		require.Equal(t, []string{"close", "get"}, events)
 	})
 	t.Run("test remove while gc, tryClose false", func(t *testing.T) {
@@ -922,8 +931,9 @@ func newLoadingCache(opts ...Option) (c *oCache, obj *testObject, release chan s
 	loading := make(chan struct{})
 	release = make(chan struct{})
 	obj = NewTestObject("id", true, nil)
+	var loadingOnce sync.Once // a retried load must not close(loading) twice
 	c = New(func(loadCtx context.Context, id string) (Object, error) {
-		close(loading)
+		loadingOnce.Do(func() { close(loading) })
 		<-release
 		return obj, nil
 	}, append([]Option{WithGCPeriod(0)}, opts...)...).(*oCache)
@@ -1026,17 +1036,25 @@ func TestOCache_TryRemoveWhileLoading(t *testing.T) {
 		require.NoError(t, c.Close())
 	})
 
-	t.Run("GC never closes a loading entry", func(t *testing.T) {
+	t.Run("the try-close path refuses a loading entry", func(t *testing.T) {
 		// GC pre-filters on e.isActive(), and nothing moves an entry back to
 		// loading (newEntry is the only writer of entryStateLoading, and a
 		// fresh entry replaces a removed one), so GC cannot reach a loading
-		// value today. It would, however, if TryRemove "restored" a refused
-		// entry with setActive(true): the entry would be active with a nil
-		// value and the very next GC pass would dereference it.
+		// value through its public path — pin the shared tryCloseEntry helper
+		// directly instead, then check the GC pass as a whole stays inert.
 		c, _, release, getDone := newLoadingCache(WithTTL(0))
 
-		require.NotPanics(t, func() { _, _ = c.TryRemove("id") }, "TryRemove on a loading entry")
-		require.NotPanics(t, func() { c.GC() }, "GC after a refused TryRemove")
+		c.mu.Lock()
+		e := c.data["id"]
+		c.mu.Unlock()
+		var (
+			closed bool
+			err    error
+		)
+		require.NotPanics(t, func() { closed, err = c.tryCloseEntry(e) }, "tryCloseEntry on a loading entry")
+		require.False(t, closed, "a loading entry has no value to close")
+		require.NoError(t, err)
+		require.NotPanics(t, func() { c.GC() }, "GC with a loading entry in the map")
 
 		state, ok := entryStateOf(c, "id")
 		require.True(t, ok)
@@ -1048,10 +1066,10 @@ func TestOCache_TryRemoveWhileLoading(t *testing.T) {
 	})
 
 	t.Run("Close still closes an entry that was loading", func(t *testing.T) {
-		// Close cancels every in-flight load and then removes the entry. This
-		// loadFunc ignores the cancellation and still produces a value, so the
-		// entry becomes active while Close is waiting on it - Close must end up
-		// closing that value rather than refusing it.
+		// Close cancels every in-flight load and waits it out. This loadFunc
+		// still produces a value on cancellation; whichever side wins the race
+		// - Close's own pass, or the load's closed-cache branch - the value
+		// must end up closed and the entry gone.
 		var (
 			loading = make(chan struct{})
 			obj     = NewTestObject("id", true, nil)
@@ -1087,19 +1105,13 @@ func TestOCache_TryRemoveWhileLoading(t *testing.T) {
 
 	t.Run("TryRemove racing the value publication", func(t *testing.T) {
 		// oCache.load writes e.value under c.mu; TryRemove must not read it
-		// unsynchronised. The loadFunc is released by the TryRemove side, so
-		// the write and the read run against each other and -race can observe
-		// an unguarded pair. 100 iterations give the scheduler room to
-		// overlap them.
+		// unsynchronised. The release goroutine is not waited for, so
+		// TryRemove observes both the loading and the just-published states
+		// across the 100 iterations, and -race can catch an unguarded pair.
 		for i := 0; i < 100; i++ {
 			c, _, release, getDone := newLoadingCache()
 
-			race := make(chan struct{})
-			go func() {
-				close(race)
-				close(release) // the load publishes e.value ...
-			}()
-			<-race
+			go func() { close(release) }()                                                         // the load publishes e.value ...
 			require.NotPanics(t, func() { _, _ = c.TryRemove("id") }, "TryRemove racing the load") // ... while TryRemove reads it
 			require.NoError(t, <-getDone)
 			require.NoError(t, c.Close())
@@ -1114,7 +1126,13 @@ type tryCloseResultObject struct {
 	closeCalled bool
 }
 
-func (o *tryCloseResultObject) Close() error { o.closeCalled = true; return nil }
+func (o *tryCloseResultObject) Close() error {
+	if o.closeCalled {
+		panic("close called twice")
+	}
+	o.closeCalled = true
+	return nil
+}
 
 func (o *tryCloseResultObject) TryClose(objectTTL time.Duration) (bool, error) { return o.res, o.err }
 
@@ -1156,6 +1174,7 @@ func TestOCache_TryRemoveTryCloseError(t *testing.T) {
 		require.True(t, ok)
 		require.Error(t, err)
 		require.Equal(t, 0, c.Len(), "a closed value must not stay in the map")
+		require.False(t, obj.closeCalled, "TryClose already closed the value; Close must not run on top")
 		require.NoError(t, c.Close())
 	})
 }
@@ -1186,22 +1205,44 @@ func TestOCache_AddAfterClose(t *testing.T) {
 	require.Equal(t, 0, c.Len())
 }
 
-// A loadFunc that ignores cancellation must not wedge Close: its entry
-// forfeits the value after the close deadline instead of holding Close
-// hostage.
+// A loadFunc that ignores cancellation must not wedge Close, and the value it
+// publishes after Close gave up must not leak: the load's closed-cache branch
+// closes it and drops the entry, and waiters get ErrClosed.
 func TestOCache_CloseBoundedByWedgedLoad(t *testing.T) {
 	loading := make(chan struct{})
 	release := make(chan struct{})
-	defer close(release)
+	obj := NewTestObject("id", true, nil)
 	c := New(func(loadCtx context.Context, id string) (Object, error) {
 		close(loading)
 		<-release // deliberately ignores loadCtx
-		return NewTestObject(id, true, nil), nil
-	}, WithGCPeriod(0)).(*oCache)
-	c.closeTimeout = 50 * time.Millisecond
+		return obj, nil
+	}, WithGCPeriod(0), WithCloseTimeout(50*time.Millisecond)).(*oCache)
 
-	go func() { _, _ = c.Get(ctx, "id") }()
+	getDone := make(chan error, 1)
+	go func() {
+		_, err := c.Get(ctx, "id")
+		getDone <- err
+	}()
 	<-loading
 
 	awaitClose(t, c, "Close hung behind a load that ignores cancellation")
+
+	// the forfeited load completes after Close returned
+	close(release)
+	require.ErrorIs(t, <-getDone, ErrClosed, "a waiter must not receive a value from a closed cache")
+	// the Get goroutine is the loader: it ran value.Close inside c.load before
+	// returning, so these reads are ordered after it
+	require.True(t, obj.closeCalled, "the late-published value must be closed by the load itself")
+	require.Equal(t, 0, c.Len(), "the forfeited entry must not stay in the map")
+}
+
+// Add(nil) must be refused: every close path dereferences the value, and the
+// GC one runs on the ticker goroutine where a panic kills the process.
+func TestOCache_AddNilValue(t *testing.T) {
+	c := New(func(loadCtx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	})
+	require.ErrorIs(t, c.Add("id", nil), ErrNilValue)
+	require.Equal(t, 0, c.Len())
+	require.NoError(t, c.Close())
 }

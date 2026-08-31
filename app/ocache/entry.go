@@ -32,7 +32,10 @@ type entry struct {
 	value       Object
 	close       chan struct{}
 	mx          sync.Mutex
-	cancel      context.CancelFunc
+	// cancel aborts the load. Written once, before the entry is published
+	// into oCache.data under c.mu; every cross-goroutine reader reaches the
+	// entry through c.mu, which orders it after the write.
+	cancel context.CancelFunc
 }
 
 func newEntry(id string, value Object, state entryState) *entry {
@@ -43,6 +46,16 @@ func newEntry(id string, value Object, state entryState) *entry {
 		state:     state,
 		value:     value,
 	}
+}
+
+// newLoadingEntry returns a loading entry with its load cancel registered.
+// The cancel must exist before the entry becomes visible in the cache: a
+// concurrent Close cancels loads through the entries it can see, and one it
+// found without a cancel would run to completion uncancelled.
+func newLoadingEntry(id string, ctx context.Context) (e *entry, loadCtx context.Context) {
+	e = newEntry(id, nil, entryStateLoading)
+	loadCtx, e.cancel = context.WithCancel(ctx)
+	return
 }
 
 func (e *entry) isActive() bool {
@@ -76,6 +89,13 @@ func (e *entry) waitLoad(ctx context.Context, id string) (value Object, err erro
 	}
 	select {
 	case <-ctx.Done():
+		// both cases may have been ready and the select picks randomly:
+		// re-check so the completed-load rule is total, not best-effort
+		select {
+		case <-e.load:
+			return e.value, e.loadErr
+		default:
+		}
 		log.DebugCtx(ctx, "ctx done while waiting on object load", zap.String("id", id))
 		return nil, ctx.Err()
 	case <-e.load:
