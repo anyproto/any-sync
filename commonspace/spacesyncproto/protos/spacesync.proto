@@ -262,6 +262,20 @@ message StoreKeyInner {
     int64 timestampMicro = 4;
     string aclHeadId = 5;
     string key = 6;
+    // delete turns this row into a deletion watermark instead of a value
+    // (see StoreDeletePrefix). key mirrors the prefix; value stays empty.
+    StoreDeletePrefix delete = 7;
+}
+
+// StoreDeletePrefix is the deletion watermark operation: applying the row
+// carrying it physically removes every stored row whose key starts with the
+// prefix and whose timestamp is older than the watermark's, and rejects such
+// rows arriving later. The watermark row itself is the only retained state.
+// It lives inside the signed StoreKeyInner so the operation type cannot be
+// forged, and rides the ordinary element sync so it reaches every replica —
+// including devices restoring from old snapshots.
+message StoreDeletePrefix {
+    string prefix = 1;
 }
 
 message StorageHeader {

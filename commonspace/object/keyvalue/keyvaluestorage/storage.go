@@ -4,6 +4,7 @@ package keyvaluestorage
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -25,11 +26,26 @@ import (
 
 var log = logger.NewNamed("common.keyvalue.keyvaluestorage")
 
+var (
+	// ErrCoveredByWatermark: the write's key sits under a deletion watermark
+	// newer than the write's timestamp, so every replica would discard it.
+	ErrCoveredByWatermark = errors.New("key is covered by a newer deletion watermark")
+	ErrEmptyDeletePrefix  = errors.New("empty delete prefix")
+)
+
 const IndexerCName = "common.keyvalue.indexer"
 
 type Indexer interface {
 	app.Component
 	Index(decryptor Decryptor, keyValue ...innerstorage.KeyValue) error
+}
+
+// DeletionAwareIndexer is implemented by indexers that mirror physical
+// deletions: RemoveIndex receives the ids of rows a watermark dropped, so the
+// downstream index does not keep resolving keys the storage no longer holds.
+type DeletionAwareIndexer interface {
+	Indexer
+	RemoveIndex(keyPeerIds ...string) error
 }
 
 type Decryptor = func(kv innerstorage.KeyValue) (value []byte, err error)
@@ -53,6 +69,12 @@ type Storage interface {
 	Prepare() error
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
+	// DeletePrefix publishes a deletion watermark: every row whose key
+	// starts with prefix and predates the watermark is physically dropped
+	// on every replica, and stays rejected should it arrive again (e.g.
+	// from a device restoring an old snapshot). The watermark row is the
+	// only retained state. Owner-only.
+	DeletePrefix(ctx context.Context, prefix string) error
 	GetAll(ctx context.Context, key string, get func(decryptor Decryptor, values []innerstorage.KeyValue) error) error
 	Iterate(ctx context.Context, f func(decryptor Decryptor, key string, values []innerstorage.KeyValue) (bool, error)) error
 	InnerStorage() innerstorage.KeyValueStorage
@@ -111,24 +133,54 @@ func (s *storage) Id() string {
 func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.aclList.RLock()
-	headId := s.aclList.Head().Id
-	state := s.aclList.AclState()
-	if !s.aclList.AclState().Permissions(state.Identity()).CanWrite() {
-		s.aclList.RUnlock()
-		return list.ErrInsufficientPermissions
-	}
-	readKeyId := state.CurrentReadKeyId()
-	err := s.readKeysFromAclState(state)
+	headId, readKeyId, err := s.prepareWrite(func(p list.AclPermissions) bool { return p.CanWrite() })
 	if err != nil {
-		s.aclList.RUnlock()
 		return err
 	}
-	s.aclList.RUnlock()
 	value, err = s.currentReadKey.Encrypt(value)
 	if err != nil {
 		return err
 	}
+	return s.signAndStore(ctx, key, value, "", headId, readKeyId)
+}
+
+func (s *storage) DeletePrefix(ctx context.Context, prefix string) error {
+	if prefix == "" {
+		return ErrEmptyDeletePrefix
+	}
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	// Owner-only: a watermark removes rows written by every peer, not just
+	// the caller's own.
+	headId, readKeyId, err := s.prepareWrite(func(p list.AclPermissions) bool { return p.IsOwner() })
+	if err != nil {
+		return err
+	}
+	return s.signAndStore(ctx, prefix, nil, prefix, headId, readKeyId)
+}
+
+// prepareWrite runs the shared ACL section of a local write: permission
+// check, read-key refresh, and the current head/read-key ids the row is
+// stamped with.
+func (s *storage) prepareWrite(allowed func(list.AclPermissions) bool) (headId, readKeyId string, err error) {
+	s.aclList.RLock()
+	defer s.aclList.RUnlock()
+	headId = s.aclList.Head().Id
+	state := s.aclList.AclState()
+	if !allowed(state.Permissions(state.Identity())) {
+		return "", "", list.ErrInsufficientPermissions
+	}
+	readKeyId = state.CurrentReadKeyId()
+	if err = s.readKeysFromAclState(state); err != nil {
+		return "", "", err
+	}
+	return headId, readKeyId, nil
+}
+
+// signAndStore builds, signs, applies and broadcasts one own row: a regular
+// value (encrypted by the caller) or, with deletePrefix set, a deletion
+// watermark (empty value, key mirrors the prefix).
+func (s *storage) signAndStore(ctx context.Context, key string, value []byte, deletePrefix string, headId, readKeyId string) error {
 	peerIdKey := s.keys.PeerKey
 	identityKey := s.keys.SignKey
 	protoPeerKey, err := peerIdKey.GetPublic().Marshall()
@@ -140,6 +192,12 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 		return err
 	}
 	timestampMicro := time.Now().UnixMicro()
+	// Fail loudly instead of writing a row every replica (this one included)
+	// would silently discard: without this, Set would return success and the
+	// value would never be readable anywhere.
+	if wmTs := s.inner.WatermarkTs(key); wmTs > timestampMicro {
+		return ErrCoveredByWatermark
+	}
 	inner := spacesyncproto.StoreKeyInner{
 		Peer:           protoPeerKey,
 		Identity:       protoIdentityKey,
@@ -147,6 +205,9 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 		TimestampMicro: timestampMicro,
 		AclHeadId:      headId,
 		Key:            key,
+	}
+	if deletePrefix != "" {
+		inner.Delete = &spacesyncproto.StoreDeletePrefix{Prefix: deletePrefix}
 	}
 	innerBytes, err := inner.MarshalVT()
 	if err != nil {
@@ -169,25 +230,47 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 		PeerId:         peerIdKey.GetPublic().PeerId(),
 		AclId:          headId,
 		ReadKeyId:      readKeyId,
+		DeletePrefix:   deletePrefix,
 		Value: innerstorage.Value{
 			Value:             innerBytes,
 			PeerSignature:     peerSig,
 			IdentitySignature: identitySig,
 		},
 	}
-	err = s.inner.Set(ctx, keyValue)
+	res, err := s.inner.Set(ctx, keyValue)
 	if err != nil {
 		return err
 	}
-	indexErr := s.indexer.Index(s.decrypt, keyValue)
-	if indexErr != nil {
-		log.Warn("failed to index for key", zap.String("key", key), zap.Error(indexErr))
+	s.removeIndexes(res.DroppedIds)
+	if len(res.Applied) == 0 {
+		// Lost LWW to an already-stored newer own row; nothing changed.
+		return nil
+	}
+	if deletePrefix == "" {
+		indexErr := s.indexer.Index(s.decrypt, keyValue)
+		if indexErr != nil {
+			log.Warn("failed to index for key", zap.String("key", key), zap.Error(indexErr))
+		}
 	}
 	sendErr := s.syncClient.Broadcast(ctx, s.storageId, keyValue)
 	if sendErr != nil {
 		log.Warn("failed to send key value", zap.String("key", key), zap.Error(sendErr))
 	}
 	return nil
+}
+
+// removeIndexes mirrors watermark drops into the indexer when it opts in.
+func (s *storage) removeIndexes(droppedIds []string) {
+	if len(droppedIds) == 0 {
+		return
+	}
+	indexer, ok := s.indexer.(DeletionAwareIndexer)
+	if !ok {
+		return
+	}
+	if err := indexer.RemoveIndex(droppedIds...); err != nil {
+		log.Warn("failed to remove index for dropped keys", zap.Error(err))
+	}
 }
 
 func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) (err error) {
@@ -217,6 +300,12 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 		return err
 	}
 	for i := range keyValues {
+		// A watermark deletes other peers' rows, so accepting one demands
+		// the owner's identity — the same bar DeletePrefix applies locally.
+		if keyValues[i].DeletePrefix != "" && !state.Permissions(keyValues[i].IdentityPubKey).IsOwner() {
+			keyValues[i].KeyPeerId = ""
+			continue
+		}
 		el, err := s.inner.Diff().Element(keyValues[i].KeyPeerId)
 		if err == nil {
 			binary.BigEndian.PutUint64(s.byteRepr, uint64(keyValues[i].TimestampMicro))
@@ -238,17 +327,31 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	if len(keyValues) == 0 {
 		return nil
 	}
-	err = s.inner.Set(ctx, keyValues...)
+	res, err := s.inner.Set(ctx, keyValues...)
 	if err != nil {
 		return err
 	}
-	sendErr := s.syncClient.Broadcast(ctx, s.storageId, keyValues...)
+	s.removeIndexes(res.DroppedIds)
+	// Broadcast and index only what actually applied: values the store
+	// rejected (LWW losers, watermark-covered rows) must not propagate
+	// further — indexing them would resurrect deleted data downstream.
+	if len(res.Applied) == 0 {
+		return nil
+	}
+	sendErr := s.syncClient.Broadcast(ctx, s.storageId, res.Applied...)
 	if sendErr != nil {
 		log.Warn("failed to send key values", zap.Error(sendErr))
 	}
-	indexErr := s.indexer.Index(s.decrypt, keyValues...)
-	if indexErr != nil {
-		log.Warn("failed to index for keys", zap.Error(indexErr))
+	// Watermarks carry no payload to index; their effect (dropped rows) is
+	// already applied.
+	indexable := slice.DiscardFromSlice(res.Applied, func(value innerstorage.KeyValue) bool {
+		return value.DeletePrefix != ""
+	})
+	if len(indexable) > 0 {
+		indexErr := s.indexer.Index(s.decrypt, indexable...)
+		if indexErr != nil {
+			log.Warn("failed to index for keys", zap.Error(indexErr))
+		}
 	}
 	return nil
 }
@@ -256,6 +359,9 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 func (s *storage) GetAll(ctx context.Context, key string, get func(decryptor Decryptor, values []innerstorage.KeyValue) error) (err error) {
 	var values []innerstorage.KeyValue
 	err = s.inner.IteratePrefix(ctx, key, func(kv innerstorage.KeyValue) error {
+		if kv.DeletePrefix != "" {
+			return nil
+		}
 		values = append(values, kv)
 		return nil
 	})
@@ -317,6 +423,9 @@ func (s *storage) Iterate(ctx context.Context, f func(decryptor Decryptor, key s
 		values []innerstorage.KeyValue
 	)
 	err = s.inner.IterateValues(ctx, func(kv innerstorage.KeyValue) (bool, error) {
+		if kv.DeletePrefix != "" {
+			return true, nil
+		}
 		if kv.Key != curKey {
 			if curKey != "" {
 				iter, err := f(s.decrypt, curKey, values)
