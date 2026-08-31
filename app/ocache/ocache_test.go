@@ -802,7 +802,7 @@ func (o *busyRevertObject) TryClose(objectTTL time.Duration) (res bool, err erro
 }
 
 // TestOCache_RemoveBusyRevertDoubleClose reproduces a panic that crashes the
-// process on laptop wake (GO-7332): when a busy TryRemove/GC reverts an entry
+// process on laptop wake: when a busy TryRemove/GC reverts an entry
 // back to active while two or more Remove callers are parked on its close
 // channel, every woken remover re-enters the closing path. The second one
 // overwrites e.close, and both call setClosed -> close(e.close) on the same
@@ -1290,9 +1290,6 @@ func TestOCache_AddNilValue(t *testing.T) {
 func TestOCache_CloseBoundedByBusyCloser(t *testing.T) {
 	block := make(chan struct{})
 	var unblock sync.Once
-	// unblock on every exit path, or a failed assertion leaks the parked
-	// TryRemove goroutine
-	defer unblock.Do(func() { close(block) })
 	obj := NewTestObject("id", false, block) // TryClose blocks on block, then declines
 	c := New(func(loadCtx context.Context, id string) (Object, error) {
 		return obj, nil
@@ -1305,6 +1302,12 @@ func TestOCache_CloseBoundedByBusyCloser(t *testing.T) {
 		ok, err := c.TryRemove("id")
 		assert.True(t, ok, "the decline into a closed cache must escalate to a removal")
 		assert.NoError(t, err)
+	}()
+	// on every exit path unblock the parked TryRemove goroutine AND join it,
+	// so its assertions can never run after the test has completed
+	defer func() {
+		unblock.Do(func() { close(block) })
+		<-tryRemoveDone
 	}()
 	require.Eventually(t, func() bool {
 		st, ok := entryStateOf(c, "id")

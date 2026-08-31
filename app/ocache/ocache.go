@@ -72,7 +72,7 @@ var WithGCPeriod = func(gcPeriod time.Duration) Option {
 
 // WithCloseTimeout bounds Close's waits on in-flight loads and on entries
 // another closer holds (default 10s). The value.Close calls themselves take
-// no ctx and are not bounded.
+// no ctx and are not bounded. Non-positive values are ignored.
 var WithCloseTimeout = func(d time.Duration) Option {
 	return func(cache *oCache) {
 		if d > 0 {
@@ -409,19 +409,24 @@ func (c *oCache) tryCloseEntry(e *entry) (closed bool, err error) {
 	}
 	closed, err = e.value.TryClose(c.ttl)
 	if !closed {
-		c.mu.Lock()
-		if !c.closed {
-			// the restore happens under the same c.mu hold that read
+		restored := func() bool {
+			// the restore happens under the same c.mu hold that reads
 			// c.closed: Close's set-closed-and-snapshot section then runs
 			// either before this check (the escalation below is taken) or
 			// after the restore (the snapshot holds the entry and Close's
 			// pass closes it) — never between, where the restored value
 			// would leak
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			if c.closed {
+				return false
+			}
 			e.setActive(true)
-			c.mu.Unlock()
+			return true
+		}()
+		if restored {
 			return false, err
 		}
-		c.mu.Unlock()
 		// Close's pass may already have given up waiting on this entry:
 		// restoring it to active would resurrect a live value into a closed
 		// cache with no remaining closer. Escalate the decline instead — the
