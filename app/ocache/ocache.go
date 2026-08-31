@@ -89,7 +89,7 @@ type OCache interface {
 	// Pick returns value if it's presents in cache (will not call loadFunc)
 	Pick(ctx context.Context, id string) (value Object, err error)
 	// Add adds new object to cache
-	// Returns error when object exists
+	// Returns error when object exists or the cache is closed
 	Add(id string, value Object) (err error)
 	// Remove closes and removes object
 	Remove(ctx context.Context, id string) (ok bool, err error)
@@ -146,9 +146,14 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 		}
 		e, ok := c.data[id]
 		load := false
+		var loadCtx context.Context
 		if !ok {
 			e = newEntry(id, nil, entryStateLoading)
 			load = true
+			// register the cancel before the entry becomes visible, so a
+			// concurrent Close cannot observe the entry with no cancel yet
+			// and miss the load
+			loadCtx, e.cancel = context.WithCancel(ctx)
 			c.data[id] = e
 		}
 		e.lastUsage = time.Now()
@@ -165,7 +170,7 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 			counted = true
 		}
 		if load {
-			c.load(ctx, id, e)
+			c.load(loadCtx, id, e)
 			value, err = e.value, e.loadErr
 		} else {
 			value, err = e.waitLoad(ctx, id)
@@ -203,16 +208,15 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 	return val.waitLoad(ctx, id)
 }
 
+// ctx is the cancellable load context Get created together with the entry.
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	defer close(e.load)
-	ctx, cancel := context.WithCancel(ctx)
-	e.setCancel(cancel)
 	value, err := c.loadFunc(ctx, id)
-	// Read before cancel(): a done ctx here means the load was killed
+	// Read before cancelLoad(): a done ctx here means the load was killed
 	// (first caller gone, or cancelLoad on cache close) rather than the
 	// loadFunc failing on its own — recorded so Get's waiters can retry.
 	aborted := ctx.Err() != nil
-	cancel()
+	e.cancelLoad()
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -285,11 +289,13 @@ func (c *oCache) RemoveSame(ctx context.Context, id string, value Object) (ok bo
 	}
 	e, exists := c.data[id]
 	// e.value is written only under c.mu (in Add/load), so reading it here is
-	// race-free. remove() acts on this exact entry: it deletes/closes it only
+	// race-free. A nil value never matches: a mid-load entry's value is still
+	// nil, and matching it would wait the load out and close whatever object
+	// it publishes. remove() acts on this exact entry: it deletes/closes it only
 	// if this call is the one that transitions it to closing. If e was already
 	// replaced under the same id it is in a closed state and remove() is a
 	// no-op, so a stale caller can never close the newer value that took the id.
-	same := exists && e.value == value
+	same := exists && value != nil && e.value == value
 	c.mu.Unlock()
 	if !same {
 		return false, ErrNotExists
@@ -313,27 +319,32 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
-	// Only prevState == entryStateActive means this call acquired the closing
-	// transition and may touch e.value; loading refuses it, closing/closed
-	// belong to another closer.
+	ok, err = c.tryCloseEntry(e)
+	if err != nil {
+		c.log.With("object_id", e.id).Warnf("try remove err: %v", err)
+	}
+	return ok, err
+}
+
+// tryCloseEntry acquires the closing transition and asks the value whether it
+// can close. Only prevState == entryStateActive means this call acquired the
+// transition and may touch e.value; loading refuses it, closing/closed belong
+// to another closer. A value that declined or errored is restored to active —
+// abandoning an acquired transition would park the entry in closing behind a
+// close channel nobody ever closes, wedging the id. A closed value is
+// finalized even when TryClose also returned an error.
+func (c *oCache) tryCloseEntry(e *entry) (closed bool, err error) {
 	prevState, _, _ := e.setClosing(context.Background(), false)
 	if prevState != entryStateActive {
 		return false, nil
 	}
-
-	closed, err := e.value.TryClose(c.ttl)
-	if err != nil {
-		c.log.With("object_id", e.id).Warnf("try remove err: %v", err)
-		return closed, err
-	}
-
+	closed, err = e.value.TryClose(c.ttl)
 	if !closed {
 		e.setActive(true)
-		return false, nil
+		return false, err
 	}
-
 	c.closeAndDelete(e)
-	return true, nil
+	return true, err
 }
 
 func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
@@ -351,6 +362,9 @@ func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
 func (c *oCache) Add(id string, value Object) (err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return ErrClosed
+	}
 	if _, ok := c.data[id]; ok {
 		return ErrExists
 	}
@@ -410,20 +424,12 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 	closedNum := 0
 	for _, e := range toClose {
-		prevState, _, _ := e.setClosing(context.Background(), false)
-		if prevState != entryStateActive {
-			continue
-		}
-		closed, err := e.value.TryClose(c.ttl)
+		closed, err := c.tryCloseEntry(e)
 		if err != nil {
 			c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
 		}
-		if !closed {
-			e.setActive(true)
-			continue
-		} else {
+		if closed {
 			closedNum++
-			c.closeAndDelete(e)
 		}
 	}
 	c.metricsClosed(closedNum, size)
@@ -449,14 +455,16 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
-	// one deadline for the whole pass, spent only on entries another closer holds:
-	// that closer can be a gc stuck in TryClose on an unresponsive peer. Loads are
-	// already cancelled above, and value.Close takes no ctx, so uncontended entries
-	// still close normally once the deadline has passed.
+	// one deadline for the whole pass, spent only on entries another closer or
+	// an unresponsive load holds: that closer can be a gc stuck in TryClose on
+	// an unresponsive peer, and a loadFunc that ignores its cancelled ctx must
+	// forfeit its entry rather than wedge Close. Completed loads win over the
+	// spent deadline inside waitLoad, and value.Close takes no ctx, so
+	// uncontended entries still close normally once the deadline has passed.
 	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
 	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.removeCtx(context.Background(), closingCtx, e); err != nil && err != ErrNotExists {
+		if _, err := c.removeCtx(closingCtx, closingCtx, e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
