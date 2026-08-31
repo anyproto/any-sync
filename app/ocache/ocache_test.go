@@ -96,10 +96,10 @@ func TestOCache_Get(t *testing.T) {
 
 		for i := 0; i < l; i++ {
 			go func() {
+				defer func() { res <- struct{}{} }()
 				val, err := c.Get(context.TODO(), "id")
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, obj, val)
-				res <- struct{}{}
 			}()
 		}
 		time.Sleep(time.Millisecond * 10)
@@ -147,8 +147,23 @@ func TestOCache_Get(t *testing.T) {
 		})
 
 		value, err := c.Get(ctx, "id")
-		assert.NotNil(t, err)
+		require.ErrorIs(t, err, ErrNilValue)
 		assert.Nil(t, value)
+		assert.Equal(t, 0, c.Len())
+		assert.NoError(t, c.Close())
+	})
+	t.Run("value is a typed nil", func(t *testing.T) {
+		// the idiomatic `var p *T; return p, nil` mistake: a non-nil interface
+		// wrapping a nil pointer must be refused like a plain nil, or every
+		// close path panics on it
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return (*testObject)(nil), nil
+		})
+
+		value, err := c.Get(ctx, "id")
+		require.ErrorIs(t, err, ErrNilValue)
+		assert.Nil(t, value)
+		assert.Equal(t, 0, c.Len())
 		assert.NoError(t, c.Close())
 	})
 }
@@ -317,13 +332,14 @@ func TestOCache_GC(t *testing.T) {
 
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			<-begin
 			c.GC()
-			wg.Done()
 		}()
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
 			go func(i int) {
+				defer wg.Done()
 				once.Do(func() {
 					close(begin)
 				})
@@ -331,8 +347,7 @@ func TestOCache_GC(t *testing.T) {
 					time.Sleep(time.Millisecond)
 				}
 				_, err := c.Get(context.TODO(), "id")
-				require.NoError(t, err)
-				wg.Done()
+				assert.NoError(t, err)
 			}(i)
 		}
 		require.NoError(t, err)
@@ -625,6 +640,7 @@ func TestOCacheFuzzy(t *testing.T) {
 		}, WithTTL(time.Nanosecond))
 
 		stopGC := make(chan struct{})
+		defer close(stopGC)
 		wg := sync.WaitGroup{}
 		go func() {
 			for {
@@ -642,8 +658,8 @@ func TestOCacheFuzzy(t *testing.T) {
 			for j := 0; j < 10; j++ {
 				for i := 0; i < max; i++ {
 					val, err := c.Get(context.TODO(), getId(i))
-					require.NoError(t, err)
-					require.NotNil(t, val)
+					assert.NoError(t, err)
+					assert.NotNil(t, val)
 				}
 			}
 		}()
@@ -657,7 +673,6 @@ func TestOCacheFuzzy(t *testing.T) {
 			}
 		}()
 		wg.Wait()
-		close(stopGC)
 		err := c.Close()
 		require.NoError(t, err)
 		require.Equal(t, 0, c.Len())
@@ -1274,6 +1289,10 @@ func TestOCache_AddNilValue(t *testing.T) {
 // no remaining closer. The decline escalates to a real close instead.
 func TestOCache_CloseBoundedByBusyCloser(t *testing.T) {
 	block := make(chan struct{})
+	var unblock sync.Once
+	// unblock on every exit path, or a failed assertion leaks the parked
+	// TryRemove goroutine
+	defer unblock.Do(func() { close(block) })
 	obj := NewTestObject("id", false, block) // TryClose blocks on block, then declines
 	c := New(func(loadCtx context.Context, id string) (Object, error) {
 		return obj, nil
@@ -1295,34 +1314,56 @@ func TestOCache_CloseBoundedByBusyCloser(t *testing.T) {
 	awaitClose(t, c, "Close hung behind a busy closer")
 
 	// the closer wakes after Close gave up on it and declines
-	close(block)
+	unblock.Do(func() { close(block) })
 	<-tryRemoveDone
 	require.True(t, obj.closeCalled, "the declined value must be closed, not resurrected")
 	require.Equal(t, 0, c.Len(), "the entry must not survive in the closed cache")
 }
 
 // A panicking loadFunc must not wedge its id: the entry is dropped, waiters
-// get an error rather than (nil, nil), and the panic reaches the loading
+// get ErrLoadPanic rather than (nil, nil), and the panic reaches the loading
 // caller.
 func TestOCache_LoadFuncPanic(t *testing.T) {
-	calls := 0
+	var (
+		calls   atomic.Int32
+		loading = make(chan struct{})
+		boom    = make(chan struct{})
+	)
 	c := New(func(loadCtx context.Context, id string) (Object, error) {
-		calls++
-		if calls == 1 {
+		if calls.Add(1) == 1 {
+			close(loading)
+			<-boom
 			panic("boom")
 		}
 		return NewTestObject(id, true, nil), nil
 	}, WithGCPeriod(0)).(*oCache)
 
-	func() {
-		defer func() { require.NotNil(t, recover(), "the loadFunc panic must propagate") }()
+	loaderPanic := make(chan any, 1)
+	go func() {
+		defer func() { loaderPanic <- recover() }()
 		_, _ = c.Get(ctx, "id")
 	}()
+	<-loading
+
+	// a waiter parked on the panicking entry's load channel (white-box, so it
+	// deterministically joins this exact entry rather than a fresh load)
+	c.mu.Lock()
+	e := c.data["id"]
+	c.mu.Unlock()
+	waiterErr := make(chan error, 1)
+	go func() {
+		_, err := e.waitLoad(ctx, "id")
+		waiterErr <- err
+	}()
+
+	close(boom)
+	require.NotNil(t, <-loaderPanic, "the loadFunc panic must propagate to the loading caller")
+	require.ErrorIs(t, <-waiterErr, ErrLoadPanic, "a parked waiter must get an error, not (nil, nil)")
 
 	v, err := c.Get(ctx, "id")
 	require.NoError(t, err, "a fresh Get must run a fresh load, not observe the panicked entry")
 	require.NotNil(t, v)
-	require.Equal(t, 2, calls)
+	require.Equal(t, int32(2), calls.Load())
 	require.NoError(t, c.Close())
 }
 
@@ -1334,5 +1375,26 @@ func TestOCache_PickAfterClose(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, c.Close())
 	_, err = c.Pick(ctx, "id")
+	require.ErrorIs(t, err, ErrClosed)
+}
+
+// White-box: no public path leaves a loaded entry behind after Close, so the
+// closed-cache guards on ForEach and Pick are pinned against a planted one.
+func TestOCache_ForEachAfterClose(t *testing.T) {
+	c := New(func(loadCtx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	}).(*oCache)
+	require.NoError(t, c.Close())
+	e := newEntry("id", NewTestObject("id", true, nil), entryStateActive)
+	close(e.load)
+	c.mu.Lock()
+	c.data["id"] = e
+	c.mu.Unlock()
+
+	c.ForEach(func(v Object) bool {
+		t.Error("ForEach must not hand out values from a closed cache")
+		return false
+	})
+	_, err := c.Pick(ctx, "id")
 	require.ErrorIs(t, err, ErrClosed)
 }

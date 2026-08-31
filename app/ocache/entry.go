@@ -11,7 +11,7 @@ import (
 type entryState int
 
 const (
-	entryStateLoading = iota
+	entryStateLoading entryState = iota
 	entryStateActive
 	entryStateClosing
 	entryStateClosed
@@ -79,20 +79,14 @@ func (e *entry) cancelLoad() {
 }
 
 func (e *entry) waitLoad(ctx context.Context, id string) (value Object, err error) {
-	// a completed load wins over a done ctx: Close passes a deadline that may
-	// already be spent for entries late in its pass, and those must still
-	// observe their loaded values
-	select {
-	case <-e.load:
-		return e.value, e.loadErr
-	default:
-	}
 	select {
 	case <-ctx.Done():
-		// both cases may have been ready and the select picks randomly:
-		// re-check so the completed-load rule is total, not best-effort.
-		// The window is a few instructions wide — no test can observe it;
-		// the guarantee is structural.
+		// a completed load wins over a done ctx: Close passes a deadline
+		// that may already be spent for entries late in its pass, and both
+		// cases may have been ready with the select picking randomly —
+		// re-check the load channel before failing. (The window is a few
+		// instructions wide; no test can observe it, the guarantee is
+		// structural.)
 		select {
 		case <-e.load:
 			return e.value, e.loadErr
@@ -154,7 +148,7 @@ func (e *entry) setClosing(ctx context.Context, wait bool) (prevState, curState 
 	// have already moved the entry back to closing (e.g. a busy GC/TryRemove
 	// reverted it to active and a concurrent remover re-acquired it). Re-check
 	// and wait on the new close channel instead of overwriting e.close, which
-	// would let two removers close the same channel twice (GO-7332).
+	// would let two removers close the same channel twice.
 	for e.state == entryStateClosing {
 		waitCh := e.close
 		e.mx.Unlock()
@@ -183,15 +177,17 @@ func (e *entry) setClosing(ctx context.Context, wait bool) (prevState, curState 
 func (e *entry) setActive(chClose bool) {
 	e.mx.Lock()
 	defer e.mx.Unlock()
+	// state before close: a close panic must not leave the entry in closing
+	// with an already-closed channel, which would spin waitClose callers
+	e.state = entryStateActive
 	if chClose {
 		close(e.close)
 	}
-	e.state = entryStateActive
 }
 
 func (e *entry) setClosed() {
 	e.mx.Lock()
 	defer e.mx.Unlock()
-	close(e.close)
 	e.state = entryStateClosed
+	close(e.close)
 }
