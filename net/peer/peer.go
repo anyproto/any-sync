@@ -49,6 +49,9 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		created:        time.Now(),
 		useSnappy:      ctrl.DrpcConfig().Snappy,
 	}
+	if ttl := CtxTTL(ctx); ttl > 0 {
+		pr.SetTTL(ttl)
+	}
 	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
@@ -373,7 +376,10 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	}
 	aliveCount := p.gc(objectTTL)
 	log.Debug("peer gc", zap.String("peerId", p.id), zap.Int("aliveCount", aliveCount))
-	if aliveCount == 0 && p.created.Add(time.Minute).Before(time.Now()) {
+	// a peer without sub conns is closed once it is older than its TTL (at
+	// least a minute): a connection held for reachability alone, with a long
+	// TTL, must not be dropped every GC pass
+	if aliveCount == 0 && p.created.Add(max(objectTTL, time.Minute)).Before(time.Now()) {
 		return true, p.Close()
 	}
 	return false, nil

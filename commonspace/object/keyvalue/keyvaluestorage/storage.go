@@ -221,7 +221,7 @@ func (s *storage) signAndStore(ctx context.Context, key string, value []byte, de
 	if err != nil {
 		return err
 	}
-	keyPeerId := key + "-" + peerIdKey.GetPublic().PeerId()
+	keyPeerId := innerstorage.KeyPeerId(key, peerIdKey.GetPublic().PeerId())
 	keyValue := innerstorage.KeyValue{
 		KeyPeerId:      keyPeerId,
 		Key:            key,

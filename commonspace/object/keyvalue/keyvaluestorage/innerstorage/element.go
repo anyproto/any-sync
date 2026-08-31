@@ -15,6 +15,11 @@ var (
 	ErrInvalidWatermark = errors.New("invalid deletion watermark")
 )
 
+// KeyPeerId is the row id of key written by peerId.
+func KeyPeerId(key, peerId string) string {
+	return key + "-" + peerId
+}
+
 type KeyValue struct {
 	KeyPeerId string
 	ReadKeyId string
@@ -68,7 +73,7 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	kv.DeletePrefix = innerValue.GetDelete().GetPrefix()
 	// The id must be derived from the signed payload: an unchecked KeyPeerId
 	// would let any writer occupy (and overwrite) another peer's row.
-	if kv.KeyPeerId != kv.Key+"-"+kv.PeerId {
+	if kv.KeyPeerId != KeyPeerId(kv.Key, kv.PeerId) {
 		return kv, ErrInvalidKeyPeerId
 	}
 	// A watermark's key mirrors its prefix, keeping it inside the key range

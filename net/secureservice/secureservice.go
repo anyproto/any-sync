@@ -135,8 +135,16 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 	return s.HandshakeInbound(ctx, sc, sc.RemotePeer().String())
 }
 
+// HandshakeInbound runs the inbound handshake. A ctx carrying
+// CtxAllowAccountCheck verifies the remote's signed identity even when the
+// service default is not to (a client that accepts internet-reachable
+// connections), so the resulting context always names a proven identity.
 func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
-	res, err := handshake.IncomingHandshake(ctx, conn, peerId, s.inboundChecker)
+	checker := s.inboundChecker
+	if CtxIsAccountCheckAllowed(ctx) {
+		checker = s.peerSignVerifier
+	}
+	res, err := handshake.IncomingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package peer
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/sec"
 	"storj.io/drpc/drpcctx"
@@ -19,6 +20,7 @@ const (
 	contextKeyPeerClientVersion
 	contextKeyPeerProtoVersion
 	contextKeyExpectedPeerId
+	contextKeyTTL
 )
 
 var (
@@ -118,4 +120,18 @@ func CtxExpectedPeerId(ctx context.Context) (string, error) {
 		return peerId, nil
 	}
 	return "", ErrPeerIdNotFoundInContext
+}
+
+// CtxWithTTL sets the idle TTL a transport wants for peers on this
+// connection; NewPeer applies it over the pool default. Relay-backed
+// connections cost a full handshake to re-establish, so they keep a longer
+// TTL than LAN ones.
+func CtxWithTTL(ctx context.Context, ttl time.Duration) context.Context {
+	return context.WithValue(ctx, contextKeyTTL, ttl)
+}
+
+// CtxTTL returns the TTL set by CtxWithTTL, or 0.
+func CtxTTL(ctx context.Context) time.Duration {
+	ttl, _ := ctx.Value(contextKeyTTL).(time.Duration)
+	return ttl
 }
