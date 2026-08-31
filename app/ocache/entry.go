@@ -90,7 +90,9 @@ func (e *entry) waitLoad(ctx context.Context, id string) (value Object, err erro
 	select {
 	case <-ctx.Done():
 		// both cases may have been ready and the select picks randomly:
-		// re-check so the completed-load rule is total, not best-effort
+		// re-check so the completed-load rule is total, not best-effort.
+		// The window is a few instructions wide — no test can observe it;
+		// the guarantee is structural.
 		select {
 		case <-e.load:
 			return e.value, e.loadErr

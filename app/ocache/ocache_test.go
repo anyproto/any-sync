@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -282,11 +283,13 @@ func TestOCache_GC(t *testing.T) {
 		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
+			// defer + assert (not require): a failed assertion must still
+			// close getCh, or the subtest deadlocks instead of failing
+			defer close(getCh)
 			_, err := c.Get(context.TODO(), "id")
-			require.NoError(t, err)
-			require.NotNil(t, val)
+			assert.NoError(t, err)
+			assert.NotNil(t, val)
 			events = append(events, "get")
-			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
 		time.Sleep(time.Millisecond * 20)
@@ -391,19 +394,23 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
 		// removing the object, so we will wait on closing
+		removeDone := make(chan struct{})
 		go func() {
+			defer close(removeDone)
 			_, err := c.Remove(ctx, "id")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}()
 		time.Sleep(time.Millisecond * 20)
 
 		var events []string
 		go func() {
+			// defer + assert (not require): a failed assertion must still
+			// close getCh, or the subtest deadlocks instead of failing
+			defer close(getCh)
 			_, err := c.Get(context.TODO(), "id")
-			require.NoError(t, err)
-			require.NotNil(t, val)
+			assert.NoError(t, err)
+			assert.NotNil(t, val)
 			events = append(events, "get")
-			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
 		time.Sleep(time.Millisecond * 20)
@@ -411,6 +418,7 @@ func Test_OCache_Remove(t *testing.T) {
 		close(closeCh)
 
 		<-getCh
+		<-removeDone
 		require.Equal(t, []string{"close", "get"}, events)
 	})
 	t.Run("tryRemove simple", func(t *testing.T) {
@@ -438,12 +446,12 @@ func Test_OCache_Remove(t *testing.T) {
 
 		var events []string
 		go func() {
+			defer close(getCh)
 			_, err := c.Get(context.TODO(), "id")
-			require.Equal(t, 1, c.Len())
-			require.NoError(t, err)
-			require.NotNil(t, val)
+			assert.Equal(t, 1, c.Len())
+			assert.NoError(t, err)
+			assert.NotNil(t, val)
 			events = append(events, "get")
-			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
 		time.Sleep(time.Millisecond * 20)
@@ -477,12 +485,12 @@ func Test_OCache_Remove(t *testing.T) {
 
 		var events []string
 		go func() {
+			defer close(getCh)
 			_, err := c.Get(context.TODO(), "id")
-			require.Equal(t, 1, c.Len())
-			require.NoError(t, err)
-			require.NotNil(t, val)
+			assert.Equal(t, 1, c.Len())
+			assert.NoError(t, err)
+			assert.NotNil(t, val)
 			events = append(events, "get")
-			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
 		time.Sleep(time.Millisecond * 20)
@@ -510,11 +518,11 @@ func Test_OCache_Remove(t *testing.T) {
 		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
+			defer close(removeCh)
 			ok, err := c.Remove(ctx, "id")
-			require.NoError(t, err)
-			require.True(t, ok)
+			assert.NoError(t, err)
+			assert.True(t, ok)
 			events = append(events, "remove")
-			close(removeCh)
 		}()
 		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
@@ -539,11 +547,11 @@ func Test_OCache_Remove(t *testing.T) {
 		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
+			defer close(removeCh)
 			ok, err := c.Remove(ctx, "id")
-			require.NoError(t, err)
-			require.False(t, ok)
+			assert.NoError(t, err)
+			assert.False(t, ok)
 			events = append(events, "remove")
-			close(removeCh)
 		}()
 		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
@@ -564,10 +572,10 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
 		go func() {
+			defer close(removeCh)
 			ok, err := c.Remove(ctx, "id")
-			require.NoError(t, err)
-			require.True(t, ok)
-			close(removeCh)
+			assert.NoError(t, err)
+			assert.True(t, ok)
 		}()
 		time.Sleep(20 * time.Millisecond)
 		c.GC()
@@ -671,9 +679,16 @@ func TestOCacheFuzzy(t *testing.T) {
 			return NewTestObject(id, tryCloseIds[id], nil), nil
 		}, WithTTL(time.Nanosecond))
 
+		stopGC := make(chan struct{})
+		defer close(stopGC)
 		go func() {
 			for {
-				c.GC()
+				select {
+				case <-stopGC:
+					return
+				default:
+					c.GC()
+				}
 			}
 		}()
 		go func() {
@@ -683,8 +698,8 @@ func TestOCacheFuzzy(t *testing.T) {
 					if err == ErrClosed {
 						return
 					}
-					require.NoError(t, err)
-					require.NotNil(t, val)
+					assert.NoError(t, err)
+					assert.NotNil(t, val)
 				}
 			}
 		}()
@@ -1111,7 +1126,12 @@ func TestOCache_TryRemoveWhileLoading(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			c, _, release, getDone := newLoadingCache()
 
-			go func() { close(release) }()                                                         // the load publishes e.value ...
+			go func() { close(release) }() // the load publishes e.value ...
+			if i%2 == 1 {
+				// without a yield TryRemove always observes the loading state;
+				// yielding lets half the iterations meet the published state
+				runtime.Gosched()
+			}
 			require.NotPanics(t, func() { _, _ = c.TryRemove("id") }, "TryRemove racing the load") // ... while TryRemove reads it
 			require.NoError(t, <-getDone)
 			require.NoError(t, c.Close())
@@ -1237,12 +1257,82 @@ func TestOCache_CloseBoundedByWedgedLoad(t *testing.T) {
 }
 
 // Add(nil) must be refused: every close path dereferences the value, and the
-// GC one runs on the ticker goroutine where a panic kills the process.
+// GC one runs on the ticker goroutine where a panic kills the process. A
+// typed-nil pointer is the same hazard wrapped in a non-nil interface.
 func TestOCache_AddNilValue(t *testing.T) {
 	c := New(func(loadCtx context.Context, id string) (Object, error) {
 		return NewTestObject(id, true, nil), nil
 	})
 	require.ErrorIs(t, c.Add("id", nil), ErrNilValue)
+	require.ErrorIs(t, c.Add("id", (*testObject)(nil)), ErrNilValue)
 	require.Equal(t, 0, c.Len())
 	require.NoError(t, c.Close())
+}
+
+// A closer that outruns Close's deadline and then declines must not restore
+// its entry into the closed cache — a live value would survive shutdown with
+// no remaining closer. The decline escalates to a real close instead.
+func TestOCache_CloseBoundedByBusyCloser(t *testing.T) {
+	block := make(chan struct{})
+	obj := NewTestObject("id", false, block) // TryClose blocks on block, then declines
+	c := New(func(loadCtx context.Context, id string) (Object, error) {
+		return obj, nil
+	}, WithGCPeriod(0), WithCloseTimeout(50*time.Millisecond)).(*oCache)
+	require.NoError(t, c.Add("id", obj))
+
+	tryRemoveDone := make(chan struct{})
+	go func() {
+		defer close(tryRemoveDone)
+		ok, err := c.TryRemove("id")
+		assert.True(t, ok, "the decline into a closed cache must escalate to a removal")
+		assert.NoError(t, err)
+	}()
+	require.Eventually(t, func() bool {
+		st, ok := entryStateOf(c, "id")
+		return ok && st == entryStateClosing
+	}, time.Second, time.Millisecond)
+
+	awaitClose(t, c, "Close hung behind a busy closer")
+
+	// the closer wakes after Close gave up on it and declines
+	close(block)
+	<-tryRemoveDone
+	require.True(t, obj.closeCalled, "the declined value must be closed, not resurrected")
+	require.Equal(t, 0, c.Len(), "the entry must not survive in the closed cache")
+}
+
+// A panicking loadFunc must not wedge its id: the entry is dropped, waiters
+// get an error rather than (nil, nil), and the panic reaches the loading
+// caller.
+func TestOCache_LoadFuncPanic(t *testing.T) {
+	calls := 0
+	c := New(func(loadCtx context.Context, id string) (Object, error) {
+		calls++
+		if calls == 1 {
+			panic("boom")
+		}
+		return NewTestObject(id, true, nil), nil
+	}, WithGCPeriod(0)).(*oCache)
+
+	func() {
+		defer func() { require.NotNil(t, recover(), "the loadFunc panic must propagate") }()
+		_, _ = c.Get(ctx, "id")
+	}()
+
+	v, err := c.Get(ctx, "id")
+	require.NoError(t, err, "a fresh Get must run a fresh load, not observe the panicked entry")
+	require.NotNil(t, v)
+	require.Equal(t, 2, calls)
+	require.NoError(t, c.Close())
+}
+
+func TestOCache_PickAfterClose(t *testing.T) {
+	c := New(func(loadCtx context.Context, id string) (Object, error) {
+		return NewTestObject(id, true, nil), nil
+	})
+	_, err := c.Get(ctx, "id")
+	require.NoError(t, err)
+	require.NoError(t, c.Close())
+	_, err = c.Pick(ctx, "id")
+	require.ErrorIs(t, err, ErrClosed)
 }

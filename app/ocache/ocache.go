@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -18,6 +19,23 @@ var (
 	ErrNotExists = errors.New("object not exists")
 	ErrNilValue  = errors.New("nil value")
 )
+
+// errLoadPanic marks an entry whose loadFunc panicked instead of returning.
+var errLoadPanic = errors.New("load did not complete")
+
+// isNilObject reports whether value is nil or a typed-nil pointer wrapped in
+// the interface — calling methods on either panics in the close paths.
+func isNilObject(value Object) bool {
+	if value == nil {
+		return true
+	}
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return rv.IsNil()
+	}
+	return false
+}
 
 var (
 	defaultTTL = time.Minute
@@ -50,8 +68,9 @@ var WithGCPeriod = func(gcPeriod time.Duration) Option {
 	}
 }
 
-// WithCloseTimeout bounds Close's whole pass (default 10s); consumers holding
-// several caches can budget their total shutdown with it.
+// WithCloseTimeout bounds Close's waits on in-flight loads and on entries
+// another closer holds (default 10s). The value.Close calls themselves take
+// no ctx and are not bounded.
 var WithCloseTimeout = func(d time.Duration) Option {
 	return func(cache *oCache) {
 		cache.closeTimeout = d
@@ -91,11 +110,16 @@ type OCache interface {
 	// under a global lock, this will prevent a race which otherwise occurs
 	// when object is created in parallel with action
 	DoLockedIfNotExists(id string, action func() error) error
-	// Get gets an object from cache or creates a new one via 'loadFunc'
+	// Get gets an object from cache or creates a new one via 'loadFunc';
+	// it also refreshes the object's GC deadline.
 	// When 'loadFunc' returns a non-nil error, an object will not be stored to cache.
 	// A load that completed by the time ctx is done still returns its value.
+	// Returns ErrClosed on a closed cache, including for waiters whose load
+	// lands after Close.
 	Get(ctx context.Context, id string) (value Object, err error)
-	// Pick returns value if it's presents in cache (will not call loadFunc)
+	// Pick returns value if it's present in cache (will not call loadFunc,
+	// does not refresh the GC deadline) — but it waits out an in-flight load
+	// for the id, bounded by ctx. Returns ErrClosed on a closed cache.
 	Pick(ctx context.Context, id string) (value Object, err error)
 	// Add adds new object to cache
 	// Returns error when the value is nil, the object exists or the cache is closed
@@ -121,8 +145,9 @@ type OCache interface {
 	// Len returns current cache size
 	Len() int
 	// Close closes all objects and the cache. The pass is bounded by a close
-	// timeout; a load that outruns it is not waited for — its value is closed
-	// by the load itself when it completes.
+	// timeout; an entry held past it by an in-flight load or a busy closer is
+	// not waited for — its value is closed by that path's own closed-cache
+	// branch when it completes.
 	Close() (err error)
 }
 
@@ -208,6 +233,10 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 
 func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return nil, ErrClosed
+	}
 	val, ok := c.data[id]
 	if !ok || val.isClosing() {
 		c.mu.Unlock()
@@ -220,7 +249,19 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 
 // ctx is the cancellable load context Get created together with the entry.
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
-	defer close(e.load)
+	defer func() {
+		// a panicking loadFunc arrives here with no result recorded; mark the
+		// entry failed and drop it before releasing waiters, or the id wedges
+		// forever with Get/Pick returning (nil, nil). The panic propagates to
+		// the loading caller.
+		if e.value == nil && e.loadErr == nil {
+			c.mu.Lock()
+			e.loadErr = errLoadPanic
+			delete(c.data, id)
+			c.mu.Unlock()
+		}
+		close(e.load)
+	}()
 	value, err := c.loadFunc(ctx, id)
 	// Read before cancelLoad(): a done ctx here means the load was killed
 	// (first caller gone, or cancelLoad on cache close) rather than the
@@ -229,8 +270,8 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	e.cancelLoad()
 
 	c.mu.Lock()
-	if value == nil && err == nil {
-		err = fmt.Errorf("loaded value is nil, id: %s", id)
+	if isNilObject(value) && err == nil {
+		err = fmt.Errorf("loaded %w, id: %s", ErrNilValue, id)
 	}
 	if err != nil {
 		e.loadErr = err
@@ -365,6 +406,22 @@ func (c *oCache) tryCloseEntry(e *entry) (closed bool, err error) {
 	}
 	closed, err = e.value.TryClose(c.ttl)
 	if !closed {
+		c.mu.Lock()
+		cacheClosed := c.closed
+		c.mu.Unlock()
+		if cacheClosed {
+			// Close's pass may already have given up waiting on this entry:
+			// restoring it to active would resurrect a live value into a
+			// closed cache with no remaining closer. Escalate the decline
+			// instead — the mirror of load's closed-cache branch. If Close is
+			// still parked on e.close, setClosed wakes it into a safe refusal.
+			cErr := e.value.Close()
+			if err == nil {
+				err = cErr
+			}
+			c.closeAndDelete(e)
+			return true, err
+		}
 		e.setActive(true)
 		return false, err
 	}
@@ -387,7 +444,7 @@ func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
 func (c *oCache) Add(id string, value Object) (err error) {
 	// a nil value would panic every close path; the GC one runs on the
 	// unrecovered ticker goroutine and would take the process down
-	if value == nil {
+	if isNilObject(value) {
 		return ErrNilValue
 	}
 	c.mu.Lock()
@@ -407,6 +464,10 @@ func (c *oCache) Add(id string, value Object) (err error) {
 func (c *oCache) ForEach(f func(obj Object) (isContinue bool)) {
 	var objects []Object
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return
+	}
 	for _, v := range c.data {
 		select {
 		case <-v.load:
@@ -497,7 +558,11 @@ func (c *oCache) Close() (err error) {
 	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
 	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.removeCtx(closingCtx, closingCtx, e); err != nil && err != ErrNotExists && err != ErrClosed {
+		// ErrClosed means c.load already handled the entry; context.Canceled
+		// is the loadErr of a load this Close killed itself — neither is
+		// worth a warning
+		if _, err := c.removeCtx(closingCtx, closingCtx, e); err != nil &&
+			!errors.Is(err, ErrNotExists) && !errors.Is(err, ErrClosed) && !errors.Is(err, context.Canceled) {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
