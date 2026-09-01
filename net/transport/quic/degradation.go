@@ -32,12 +32,20 @@ const degradedMaxLifetime = 5 * time.Minute
 // about a minute, so peers used for short RPCs never reach
 // degradedMaxLifetime, and without this they could never clear their strikes.
 func classifyClose(cause error, lifetime time.Duration, bytesRead int64) transport.ConnCloseKind {
-	if lifetime >= degradedMaxLifetime {
-		return transport.ConnCloseHealthy
-	}
 	var idle *quic.IdleTimeoutError
 	if errors.As(cause, &idle) {
-		return transport.ConnCloseDegraded
+		// An idle timeout always means the path went black: keepalives are on,
+		// so a working path never reaches it. Young means the connection was
+		// cut shortly after the handshake, which is the signature this
+		// detects; old is usually sleep or a network change, which is no
+		// evidence either way and must not clear the peer's history.
+		if lifetime < degradedMaxLifetime {
+			return transport.ConnCloseDegraded
+		}
+		return transport.ConnCloseNeutral
+	}
+	if lifetime >= degradedMaxLifetime {
+		return transport.ConnCloseHealthy
 	}
 	var reset *quic.StatelessResetError
 	if errors.As(cause, &reset) {

@@ -42,10 +42,14 @@ func TestClassifyClose(t *testing.T) {
 			want:      transport.ConnCloseDegraded,
 		},
 		{
-			name:     "old idle timeout is healthy",
+			// an idle timeout means the path went black, whenever it happened:
+			// keepalives are on, so a working path never reaches it. Old ones
+			// are usually sleep or a network change, which is no evidence
+			// either way - and must not clear a peer's history.
+			name:     "old idle timeout is not evidence of health",
 			cause:    &quic.IdleTimeoutError{},
 			lifetime: 6 * time.Minute,
-			want:     transport.ConnCloseHealthy,
+			want:     transport.ConnCloseNeutral,
 		},
 		{
 			name:     "long-lived conn is healthy whatever the cause",
@@ -160,7 +164,9 @@ func TestQuicMultiConn_Watch(t *testing.T) {
 		}
 	})
 
-	t.Run("long-lived death reports healthy", func(t *testing.T) {
+	t.Run("long-lived idle timeout reports neutral", func(t *testing.T) {
+		// a connection that ran for ten minutes and then went black says
+		// nothing either way - typically a sleep or a network change
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		q, cancel := newWatchedConn(t, ctrl, time.Now().Add(-10*time.Minute))
@@ -171,7 +177,7 @@ func TestQuicMultiConn_Watch(t *testing.T) {
 
 		select {
 		case ev := <-events:
-			assert.Equal(t, transport.ConnCloseHealthy, ev.Kind)
+			assert.Equal(t, transport.ConnCloseNeutral, ev.Kind)
 		case <-time.After(time.Second):
 			t.Fatal("no close event")
 		}

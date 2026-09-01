@@ -371,3 +371,32 @@ func TestTransportPenalties_FallbackEvidenceScope(t *testing.T) {
 		assert.True(t, fx.demoteDial("n1"), "a new network re-learns whether tcp works")
 	})
 }
+
+func TestTransportPenalties_SeedRestoresNetworkVerdict(t *testing.T) {
+	// The whole point of persisting is that a client returning to a hostile
+	// network does not re-learn it, so a restored snapshot must restore the
+	// network-wide demotion too, not just the per-peer entries.
+	fx := newPenaltyFixture()
+	fx.nodeIds["n1"], fx.nodeIds["n2"] = true, true
+	fx.seed(PenaltySnapshot{
+		Version: PenaltySnapshotVersion,
+		Peers: map[string]PeerPenalty{
+			"n1": {DemotedUntil: fx.clock.Add(time.Hour), NextProbeAt: fx.clock.Add(time.Hour)},
+			"n2": {DemotedUntil: fx.clock.Add(time.Hour), NextProbeAt: fx.clock.Add(time.Hour)},
+		},
+	})
+	assert.True(t, fx.quicDemoted("someOtherPeer"), "two demoted nodes is a network-wide verdict, restored or earned")
+}
+
+func TestTransportPenalties_ResetClearsNetworkVerdict(t *testing.T) {
+	fx := newPenaltyFixture()
+	fx.nodeIds["n1"], fx.nodeIds["n2"] = true, true
+	for _, id := range []string{"n1", "n2"} {
+		fx.registerDegraded(id)
+		fx.registerDegraded(id)
+	}
+	require.True(t, fx.quicDemoted("someOtherPeer"))
+
+	fx.reset()
+	assert.False(t, fx.quicDemoted("someOtherPeer"), "a new network must not inherit the old one's verdict")
+}

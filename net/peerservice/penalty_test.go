@@ -250,3 +250,27 @@ func TestPeerService_WebtransportIsNotAFallback(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.Empty(t, fx.demotion.Snapshot().Peers, "udp demonstrably works, so nothing was learned against quic")
 }
+
+func TestPeerService_QuicFailureIsNotAFallbackFailure(t *testing.T) {
+	// Only a yamux dial says anything about the fallback. A quic-only peer
+	// whose dial fails must not be read as "tcp is broken", which would
+	// suspend demotion everywhere.
+	const peerId = "p1"
+	fx := newFixture(t)
+	defer fx.finish(t)
+	fx.PreferQuic(true)
+	fx.nodeIds[peerId], fx.nodeIds["demoted"] = true, true
+	fx.demotion.Seed(demotedSnapshot("demoted"))
+
+	fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"quic://203.0.113.1:1112"}, true)
+	fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, fmt.Errorf("connection refused"))
+	_, err := fx.Dial(ctx, peerId)
+	require.Error(t, err)
+
+	// the demoted peer must still be dialed yamux-first
+	fx.nodeConf.EXPECT().PeerAddresses("demoted").Return(demotionAddrs, true)
+	fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC("demoted"), nil)
+	p, err := fx.Dial(ctx, "demoted")
+	require.NoError(t, err)
+	assert.NotNil(t, p)
+}
