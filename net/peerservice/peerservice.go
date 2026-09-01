@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
@@ -72,7 +73,10 @@ type peerService struct {
 	preferQuic   bool
 	localAddrs   *localAddrDetector
 	penalties    *transportPenalties
-	mu           sync.RWMutex
+	// observer is bound once at Init (peerobserver.CName) and never changes
+	// afterwards, so it is read without locking; its zero value is a no-op
+	observer peerobserver.Notifier
+	mu       sync.RWMutex
 }
 
 func (p *peerService) Init(a *app.App) (err error) {
@@ -100,6 +104,7 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.penalties = newTransportPenalties(time.Now, func(peerId string) bool {
 		return len(p.nodeConf.NodeTypes(peerId)) > 0
 	})
+	p.observer = peerobserver.FromApp(a)
 	return nil
 }
 
@@ -187,11 +192,14 @@ func (p *peerService) PreferQuic(prefer bool) {
 }
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
+	dialStarted := time.Now()
 	p.mu.RLock()
 	preferQuic := p.preferQuic
 	addrs, err := p.getPeerAddrs(peerId)
 	p.mu.RUnlock()
 	if err != nil {
+		p.notifyDialStarted(peerId, 0)
+		p.notifyDialFailed(peerId, err, dialStarted)
 		return
 	}
 
@@ -203,16 +211,21 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 	ordered := p.orderAddrs(ctx, addrs, preferQuic)
 	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", logAddrs(ordered)))
+	p.notifyDialStarted(peerId, len(ordered))
 
 	var (
 		mc           transport.MultiConn
 		quicDegraded bool
+		connAddr     string
+		addrErrs     []error
 	)
 	err = ErrAddrsNotFound
 	for _, addr := range ordered {
 		if mc, err = p.dialAddr(ctx, addr); err == nil {
+			connAddr = addr
 			break
 		}
+		addrErrs = append(addrErrs, err)
 		if scheme(addr) == transport.Quic && quic.IsHandshakeTimeout(err) {
 			quicDegraded = true
 		}
@@ -225,23 +238,63 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		}
 	}
 	if err != nil {
+		// Dial keeps returning the last error; the observer gets every
+		// per-address error joined, since the first ones are often the
+		// informative ones (a refused TCP port says more than a QUIC
+		// timeout). Always joined, so consumers see one stable error shape.
+		if joined := errors.Join(addrErrs...); joined != nil {
+			p.notifyDialFailed(peerId, joined, dialStarted)
+		} else {
+			p.notifyDialFailed(peerId, err, dialStarted)
+		}
 		return
 	}
 	connPeerId, err := peer.CtxPeerId(mc.Context())
 	if err != nil {
 		_ = mc.Close()
+		p.notifyDialFailed(peerId, err, dialStarted)
 		return nil, err
 	}
 	if connPeerId != peerId {
 		_ = mc.Close()
+		p.notifyDialFailed(peerId, ErrPeerIdMismatched, dialStarted)
 		return nil, ErrPeerIdMismatched
 	}
 	pr, err = peer.NewPeer(mc, p.server)
 	if err != nil {
 		_ = mc.Close()
+		p.notifyDialFailed(peerId, err, dialStarted)
 		return nil, err
 	}
+	protoVersion, _ := peer.CtxProtoVersion(mc.Context())
+	// logAddr: an iroh ticket encodes the peer's relay and IP addresses,
+	// which have no place in a status surface either
+	p.observer.Notify(peerobserver.Event{
+		Kind:         peerobserver.KindConnected,
+		PeerId:       peerId,
+		Addr:         stripScheme(logAddr(connAddr)),
+		Scheme:       scheme(connAddr),
+		ProtoVersion: protoVersion,
+		Dur:          time.Since(dialStarted),
+	})
 	return pr, nil
+}
+
+func (p *peerService) notifyDialStarted(peerId string, addrCount int) {
+	p.observer.Notify(peerobserver.Event{
+		Kind:      peerobserver.KindDialStarted,
+		PeerId:    peerId,
+		AddrCount: addrCount,
+	})
+}
+
+func (p *peerService) notifyDialFailed(peerId string, err error, dialStarted time.Time) {
+	p.observer.Notify(peerobserver.Event{
+		Kind:   peerobserver.KindDialFailed,
+		PeerId: peerId,
+		Err:    err,
+		Dur:    time.Since(dialStarted),
+	})
 }
 
 // orderAddrs returns the dial candidates in preference order, dropping addrs
@@ -320,8 +373,25 @@ func (p *peerService) Accept(mc transport.MultiConn) (err error) {
 	if err != nil {
 		return err
 	}
+	// notify before AddPeer so Connected always precedes the Closed that the
+	// pool reports when the connection dies
+	protoVersion, _ := peer.CtxProtoVersion(mc.Context())
+	remoteAddr := mc.Addr()
+	p.observer.Notify(peerobserver.Event{
+		Kind:         peerobserver.KindConnected,
+		PeerId:       pr.Id(),
+		Addr:         stripScheme(remoteAddr),
+		Scheme:       explicitScheme(remoteAddr),
+		Inbound:      true,
+		ProtoVersion: protoVersion,
+	})
 	if err = p.pool.AddPeer(context.Background(), pr); err != nil {
 		_ = pr.Close()
+		p.observer.Notify(peerobserver.Event{
+			Kind:    peerobserver.KindClosed,
+			PeerId:  pr.Id(),
+			Inbound: true,
+		})
 	}
 	return
 }
@@ -369,6 +439,15 @@ func scheme(addr string) string {
 		return addr[:idx]
 	}
 	return transport.Yamux
+}
+
+// explicitScheme returns the scheme prefix of addr, or "" when it carries
+// none — unlike scheme, it does not assume yamux for a bare address
+func explicitScheme(addr string) string {
+	if idx := strings.Index(addr, "://"); idx != -1 {
+		return addr[:idx]
+	}
+	return ""
 }
 
 func stripScheme(addr string) string {

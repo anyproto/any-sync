@@ -4,8 +4,10 @@ import (
 	"context"
 	"os"
 	"path"
+	"sync/atomic"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/sys/unix"
 
 	"github.com/anyproto/any-sync/app"
@@ -14,8 +16,11 @@ import (
 )
 
 type spaceStorageProvider struct {
-	rootPath  string
-	anyStores map[string]anystore.DB
+	// failCreateStorage makes CreateSpaceStorage fail, to exercise the
+	// local-persist error path of a pull
+	failCreateStorage atomic.Bool
+	rootPath          string
+	anyStores         map[string]anystore.DB
 }
 
 func (s *spaceStorageProvider) Run(ctx context.Context) (err error) {
@@ -75,6 +80,9 @@ func (s *spaceStorageProvider) SpaceExists(id string) bool {
 }
 
 func (s *spaceStorageProvider) CreateSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+	if s.failCreateStorage.Load() {
+		return nil, assert.AnError
+	}
 	id := payload.SpaceHeaderWithId.Id
 	if s.SpaceExists(id) {
 		return nil, spacestorage.ErrSpaceStorageExists

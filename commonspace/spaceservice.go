@@ -79,6 +79,10 @@ type Deps struct {
 	AccountService accountservice.Service
 	recordVerifier recordverifier.RecordVerifier
 	Indexer        keyvaluestorage.Indexer
+	// PullObserver, when set, is notified about SpacePull attempts made while
+	// fetching a space absent from local storage; see PullObserver. Nil means
+	// no notifications.
+	PullObserver PullObserver
 }
 
 type spaceService struct {
@@ -92,6 +96,9 @@ type spaceService struct {
 	metric               metric.Metric
 	app                  *app.App
 	pool                 pool.Pool
+	// pullRetryInterval paces the wait for a responsible peer in
+	// getSpaceStorageFromRemote; a field so tests can shorten it
+	pullRetryInterval time.Duration
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -104,6 +111,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
+	s.pullRetryInterval = time.Second
 	return nil
 }
 
@@ -304,6 +312,14 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string,
 			log.Warn("failed to close peer manager")
 		}
 	}()
+	// notified before the lookup: some peer-manager implementations block
+	// inside GetResponsiblePeers until a peer appears, and the observer must
+	// see that the wait has begun either way
+	notifyPull(deps.PullObserver, PullEvent{Kind: PullEventWaiting, SpaceId: id})
+	retryInterval := s.pullRetryInterval
+	if retryInterval <= 0 {
+		retryInterval = time.Second
+	}
 	var peers []peer.Peer
 	for {
 		peers, err = pm.GetResponsiblePeers(ctx)
@@ -312,7 +328,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string,
 		}
 		if len(peers) == 0 {
 			select {
-			case <-time.After(time.Second):
+			case <-time.After(retryInterval):
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			}
@@ -321,7 +337,10 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string,
 		}
 	}
 	for i, p := range peers {
-		if st, err = s.spacePullWithPeer(ctx, p, id, deps); err != nil {
+		notifyPull(deps.PullObserver, PullEvent{Kind: PullEventAttempt, SpaceId: id, PeerId: p.Id()})
+		st, err = s.spacePullWithPeer(ctx, p, id, deps)
+		notifyPull(deps.PullObserver, PullEvent{Kind: PullEventResult, SpaceId: id, PeerId: p.Id(), Err: err})
+		if err != nil {
 			if i+1 == len(peers) {
 				return
 			} else {
@@ -332,6 +351,20 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string,
 		}
 	}
 	return nil, net.ErrUnableToConnect
+}
+
+// notifyPull calls the observer with panic containment: a status surface
+// must never break the pull. It is a no-op with no observer set.
+func notifyPull(observer PullObserver, ev PullEvent) {
+	if observer == nil {
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("pull observer panic", zap.Any("recover", r))
+		}
+	}()
+	observer.ObservePullEvent(ev)
 }
 
 func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id string, deps Deps) (st spacestorage.SpaceStorage, err error) {

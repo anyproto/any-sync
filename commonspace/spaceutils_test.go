@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -72,7 +73,7 @@ func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *c
 }
 
 type mockPeerManager struct {
-	peer peer.Peer
+	provider *mockPeerManagerProvider
 }
 
 func (p *mockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
@@ -92,8 +93,18 @@ func (p *mockPeerManager) Name() (name string) {
 }
 
 func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
-	if p.peer != nil {
-		return []peer.Peer{p.peer}, nil
+	if p.provider.lookupErr != nil {
+		return nil, p.provider.lookupErr
+	}
+	if p.provider.emptyCalls.Load() > 0 {
+		p.provider.emptyCalls.Add(-1)
+		return nil, nil
+	}
+	if len(p.provider.peers) > 0 {
+		return p.provider.peers, nil
+	}
+	if p.provider.peer != nil {
+		return []peer.Peer{p.provider.peer}, nil
 	}
 	return nil, nil
 }
@@ -121,6 +132,13 @@ func (m *testPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 
 type mockPeerManagerProvider struct {
 	peer peer.Peer
+	// peers, when set, takes precedence over peer
+	peers []peer.Peer
+	// emptyCalls makes GetResponsiblePeers report no peers that many times
+	// before serving, to exercise the wait loop
+	emptyCalls atomic.Int64
+	// lookupErr, when set, makes GetResponsiblePeers fail outright
+	lookupErr error
 }
 
 func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
@@ -132,7 +150,7 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
-	return &mockPeerManager{m.peer}, nil
+	return &mockPeerManager{provider: m}, nil
 }
 
 type mockPool struct {

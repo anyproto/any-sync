@@ -138,4 +138,3 @@ func (h *headSync) Close(ctx context.Context) (err error) {
 	h.periodicSync.Close()
 	return
 }
-

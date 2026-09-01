@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
@@ -61,7 +62,7 @@ func (p *poolService) Init(a *app.App) (err error) {
 				return value, err
 			}
 			if pr, ok := value.(peer.Peer); ok {
-				go p.pool.evictOnClose(pr, p.pool.outgoing)
+				go p.pool.evictOnClose(pr, p.pool.outgoing, false)
 			}
 			return value, nil
 		},
@@ -85,6 +86,7 @@ func (p *poolService) Init(a *app.App) (err error) {
 	}
 	p.statService = comp
 	p.statService.AddProvider(p)
+	p.pool.observer = peerobserver.FromApp(a)
 	return nil
 }
 

@@ -2,8 +2,11 @@ package commonspace
 
 import (
 	"context"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -92,7 +95,255 @@ func TestSpaceService_SpacePull(t *testing.T) {
 		require.Equal(t, spaceId, state.SpaceId)
 		require.Equal(t, payload.SpaceHeaderWithId.Id, state.SpaceId)
 	})
+
+	t.Run("pull reports attempt then success, in order", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		wantPeerId := fxC.managerProvider.peer.Id()
+
+		space, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, space)
+
+		want := []pullEvent{
+			{kind: "waiting", spaceId: spaceId},
+			{kind: "attempt", spaceId: spaceId, peerId: wantPeerId},
+			{kind: "result", spaceId: spaceId, peerId: wantPeerId},
+		}
+		require.Equal(t, want, stripErrs(obs.getEvents()))
+		require.NoError(t, obs.getEvents()[2].err)
+	})
+
+	t.Run("pull failure reports error result", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		obs := &pullEventRecorder{}
+		shortCtx, cancel := context.WithTimeout(ctx, time.Millisecond*500)
+		defer cancel()
+
+		_, err := fxC.spaceService.NewSpace(shortCtx, "missing.space", Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.Error(t, err)
+
+		events := obs.getEvents()
+		require.Len(t, events, 3)
+		require.Equal(t, "waiting", events[0].kind)
+		require.Equal(t, "attempt", events[1].kind)
+		require.Equal(t, "result", events[2].kind)
+		require.Error(t, events[2].err)
+	})
+
+	t.Run("failing peer reports its error before the next peer succeeds", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		good := fxC.managerProvider.peer
+
+		// a peer whose connection is already dead: SpacePull against it fails
+		mcBadS, _ := rpctest.MultiConnPair("bad", "badclient")
+		bad, err := peer.NewPeer(mcBadS, fxC.ts)
+		require.NoError(t, err)
+		require.NoError(t, bad.Close())
+		fxC.managerProvider.peers = []peer.Peer{bad, good}
+
+		space, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, space)
+
+		want := []pullEvent{
+			{kind: "waiting", spaceId: spaceId},
+			{kind: "attempt", spaceId: spaceId, peerId: bad.Id()},
+			{kind: "result", spaceId: spaceId, peerId: bad.Id()},
+			{kind: "attempt", spaceId: spaceId, peerId: good.Id()},
+			{kind: "result", spaceId: spaceId, peerId: good.Id()},
+		}
+		events := obs.getEvents()
+		require.Equal(t, want, stripErrs(events))
+		require.Error(t, events[2].err)
+		require.NoError(t, events[4].err)
+	})
+
+	t.Run("waiting for peers is reported once", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		wantPeerId := fxC.managerProvider.peer.Id()
+		fxC.managerProvider.emptyCalls.Store(2)
+
+		space, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, space)
+
+		want := []pullEvent{
+			{kind: "waiting", spaceId: spaceId},
+			{kind: "attempt", spaceId: spaceId, peerId: wantPeerId},
+			{kind: "result", spaceId: spaceId, peerId: wantPeerId},
+		}
+		require.Equal(t, want, stripErrs(obs.getEvents()))
+	})
+
+	t.Run("wait that never finds a peer reports waiting and nothing else", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		fxC.managerProvider.peer = nil // no responsible peer, ever
+
+		shortCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+		defer cancel()
+		_, err := fxC.spaceService.NewSpace(shortCtx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+
+		require.Equal(t, []pullEvent{{kind: "waiting", spaceId: spaceId}}, stripErrs(obs.getEvents()))
+	})
+
+	t.Run("failing peer lookup reports waiting and nothing else", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		fxC.managerProvider.lookupErr = assert.AnError
+
+		_, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.ErrorIs(t, err, assert.AnError)
+
+		require.Equal(t, []pullEvent{{kind: "waiting", spaceId: spaceId}}, stripErrs(obs.getEvents()))
+	})
+
+	t.Run("local persist failure still reports a terminal result", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+		obs := &pullEventRecorder{}
+		wantPeerId := fxC.managerProvider.peer.Id()
+		fxC.storage.(*spaceStorageProvider).failCreateStorage.Store(true)
+
+		_, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   obs,
+		})
+		require.Error(t, err)
+
+		want := []pullEvent{
+			{kind: "waiting", spaceId: spaceId},
+			{kind: "attempt", spaceId: spaceId, peerId: wantPeerId},
+			{kind: "result", spaceId: spaceId, peerId: wantPeerId},
+		}
+		events := obs.getEvents()
+		require.Equal(t, want, stripErrs(events))
+		require.Error(t, events[2].err)
+	})
+
+	t.Run("panicking pull observer does not break the pull", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		defer fxC.Finish(t)
+		defer fxS.Finish(t)
+
+		spaceId, _ := fxS.createTestSpace(t)
+
+		space, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     &mockTreeSyncer{},
+			AccountService: fxC.account,
+			PullObserver:   panickyPullObserver{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, space)
+	})
 }
+
+type pullEvent struct {
+	kind    string
+	spaceId string
+	peerId  string
+	err     error
+}
+
+// stripErrs zeroes the error field so sequences compare exactly; errors are
+// asserted separately
+func stripErrs(events []pullEvent) []pullEvent {
+	out := make([]pullEvent, len(events))
+	for i, ev := range events {
+		ev.err = nil
+		out[i] = ev
+	}
+	return out
+}
+
+type pullEventRecorder struct {
+	mu     sync.Mutex
+	events []pullEvent
+}
+
+func (r *pullEventRecorder) ObservePullEvent(ev PullEvent) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	kind := map[PullEventKind]string{
+		PullEventWaiting: "waiting",
+		PullEventAttempt: "attempt",
+		PullEventResult:  "result",
+	}[ev.Kind]
+	r.events = append(r.events, pullEvent{kind: kind, spaceId: ev.SpaceId, peerId: ev.PeerId, err: ev.Err})
+}
+
+func (r *pullEventRecorder) getEvents() []pullEvent {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]pullEvent(nil), r.events...)
+}
+
+type panickyPullObserver struct{}
+
+func (panickyPullObserver) ObservePullEvent(PullEvent) { panic("pull observer panic") }
 
 type spacePullFixture struct {
 	*spaceService
@@ -142,6 +393,13 @@ func newSpacePullFixture(t *testing.T) (fx *spacePullFixture) {
 
 	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(ts, &testSpaceSyncServer{spaceService: fx.spaceService}))
 	require.NoError(t, fx.app.Start(ctx))
+	// the wired default must be sane before tests override it: a zero value
+	// would busy-loop the responsible-peer wait
+	if fx.spaceService.pullRetryInterval != time.Second {
+		t.Fatalf("Init must set pullRetryInterval to 1s, got %v", fx.spaceService.pullRetryInterval)
+	}
+	// pace the responsible-peer wait loop fast so wait-path tests are cheap
+	fx.spaceService.pullRetryInterval = 10 * time.Millisecond
 
 	return fx
 }

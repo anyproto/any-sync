@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	net2 "net"
+	"sync"
+	atomic2 "sync/atomic"
 	"testing"
 	"time"
 
@@ -13,8 +15,10 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
@@ -557,6 +561,10 @@ func TestProvideStat(t *testing.T) {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureWithObserver(t, nil)
+}
+
+func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
 	fx := &fixture{
 		Service: New(),
 		Dialer:  &dialerMock{},
@@ -564,6 +572,9 @@ func newFixture(t *testing.T) *fixture {
 	a := new(app.App)
 	a.Register(fx.Service)
 	a.Register(fx.Dialer)
+	if obs != nil {
+		a.Register(peerobserver.New(obs))
+	}
 	require.NoError(t, a.Start(context.Background()))
 	fx.a = a
 	fx.t = t
@@ -754,7 +765,7 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		p.evictOnClose(tp, p.incoming)
+		p.evictOnClose(tp, p.incoming, true)
 		close(done)
 	}()
 
@@ -801,4 +812,205 @@ func TestPool_ReAddIncomingKeepsReplacement(t *testing.T) {
 		return err != nil || pk != peer.Peer(repl)
 	}, 300*time.Millisecond, 10*time.Millisecond)
 	require.False(t, repl.IsClosed(), "replacement must stay open")
+}
+
+func TestPool_PeerObserver(t *testing.T) {
+	t.Run("outgoing peer close is reported once", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		tp := newTestPeer("p1")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			return tp, nil
+		}
+
+		_, err := fx.Get(ctx, "p1")
+		require.NoError(t, err)
+		require.NoError(t, tp.Close())
+
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		closed := obs.getClosed()[0]
+		assert.Equal(t, "p1", closed.PeerId)
+		assert.False(t, closed.Inbound)
+		require.Never(t, func() bool { return len(obs.getClosed()) > 1 }, 100*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("incoming peer close is reported once", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		tp := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		require.NoError(t, tp.Close())
+
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		closed := obs.getClosed()[0]
+		assert.Equal(t, "p1", closed.PeerId)
+		assert.True(t, closed.Inbound)
+		require.Never(t, func() bool { return len(obs.getClosed()) > 1 }, 100*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("replaced incoming peer reports the old close only", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		old := newTestPeer("p1")
+		replacement := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, old))
+		// AddPeer closes and evicts the existing incoming peer with the same id
+		require.NoError(t, fx.AddPeer(ctx, replacement))
+
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		assert.True(t, obs.getClosed()[0].Inbound)
+		assert.False(t, replacement.IsClosed())
+		require.Never(t, func() bool { return len(obs.getClosed()) > 1 }, 100*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("flush closes and reports pooled peers", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		tp := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		require.NoError(t, fx.Flush(ctx))
+
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		assert.Equal(t, "p1", obs.getClosed()[0].PeerId)
+	})
+	t.Run("no close events once pool shutdown has begun", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+
+		tp := newTestPeer("inc1")
+		require.NoError(t, p.incoming.Add(tp.Id(), tp))
+		require.NoError(t, tp.Close())
+
+		// a RemoveSame that begins pool shutdown while the watcher is inside
+		// it: the watcher must re-check and swallow the event
+		cache := &shutdownOnRemoveSame{OCache: p.incoming, cancel: p.closingCancel}
+		done := make(chan struct{})
+		go func() {
+			p.evictOnClose(tp, cache, true)
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("watcher did not exit")
+		}
+		assert.Empty(t, obs.getClosed())
+	})
+	t.Run("peer self-close via TryClose reports closed", func(t *testing.T) {
+		// pins TryClose -> conn close -> watcher -> event; the ocache GC that
+		// invokes TryClose on idle entries is not driven here (testPeer
+		// ignores the TTL argument), so real TTL reaping stays uncovered
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		tp := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		closed, err := tp.TryClose(0)
+		require.NoError(t, err)
+		require.True(t, closed)
+
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		assert.Equal(t, "p1", obs.getClosed()[0].PeerId)
+	})
+	t.Run("pool call from a closed event is safe", func(t *testing.T) {
+		obs := &reentrantCloseObserver{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		obs.pool = fx.Service
+		tp := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		require.NoError(t, tp.Close())
+
+		require.Eventually(t, func() bool { return obs.done.Load() }, time.Second, 10*time.Millisecond)
+		// the re-entrant Pick returned promptly (peer already evicted or
+		// closed), without blocking behind any load
+		require.Error(t, obs.pickErr)
+		require.Less(t, obs.elapsed, 500*time.Millisecond)
+	})
+	t.Run("panicking observer does not break eviction", func(t *testing.T) {
+		obs := &countingPanickyObserver{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		tp := newTestPeer("p1")
+
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		require.NoError(t, tp.Close())
+
+		// the observer must actually be reached (the panic is contained on
+		// the detached watcher goroutine) and the eviction must complete
+		require.Eventually(t, func() bool { return obs.calls.Load() >= 1 }, time.Second, 10*time.Millisecond)
+		_, err := fx.Pick(ctx, "p1")
+		require.Error(t, err)
+	})
+}
+
+type poolEventRecorder struct {
+	mu     sync.Mutex
+	events []peerobserver.Event
+}
+
+func (r *poolEventRecorder) ObservePeerEvent(ev peerobserver.Event) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, ev)
+}
+
+func (r *poolEventRecorder) getClosed() []peerobserver.Event {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var closed []peerobserver.Event
+	for _, ev := range r.events {
+		if ev.Kind == peerobserver.KindClosed {
+			closed = append(closed, ev)
+		}
+	}
+	return closed
+}
+
+// reentrantCloseObserver calls back into the pool from a Closed event, which
+// the contract documents as safe (Closed is delivered outside any load)
+type reentrantCloseObserver struct {
+	pool    Service
+	pickErr error
+	elapsed time.Duration
+	done    atomic2.Bool
+}
+
+func (r *reentrantCloseObserver) ObservePeerEvent(ev peerobserver.Event) {
+	if ev.Kind != peerobserver.KindClosed {
+		return
+	}
+	pctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	started := time.Now()
+	_, r.pickErr = r.pool.Pick(pctx, ev.PeerId)
+	r.elapsed = time.Since(started)
+	r.done.Store(true)
+}
+
+type shutdownOnRemoveSame struct {
+	ocache.OCache
+	cancel context.CancelFunc
+}
+
+func (c *shutdownOnRemoveSame) RemoveSame(ctx context.Context, id string, value ocache.Object) (bool, error) {
+	c.cancel()
+	return c.OCache.RemoveSame(ctx, id, value)
+}
+
+type countingPanickyObserver struct {
+	calls atomic2.Int32
+}
+
+func (o *countingPanickyObserver) ObservePeerEvent(peerobserver.Event) {
+	o.calls.Add(1)
+	panic("observer panic")
 }

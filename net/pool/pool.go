@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
@@ -40,6 +41,9 @@ type pool struct {
 	statService   debugstat.StatService
 	closingCtx    context.Context
 	closingCancel context.CancelFunc
+	// observer is bound once at Init (peerobserver.CName) and never changes
+	// afterwards, so it is read without locking; its zero value is a no-op
+	observer peerobserver.Notifier
 }
 
 func (p *pool) Name() (name string) {
@@ -50,7 +54,7 @@ func (p *pool) Name() (name string) {
 // connection dies, instead of waiting for the next Get or the GC to notice.
 // When the whole pool is shutting down, cache.Close already evicts every peer,
 // so per-peer removal is skipped. It never outlives the peer.
-func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache) {
+func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache, inbound bool) {
 	select {
 	case <-pr.CloseChan():
 	case <-p.closingCtx.Done():
@@ -64,6 +68,16 @@ func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache) {
 	// the same id may have replaced pr (incoming AddPeer re-add, or outgoing
 	// redial); removing by id alone would close that live replacement.
 	_, _ = cache.RemoveSame(p.closingCtx, pr.Id(), pr)
+	// RemoveSame can park behind another closer; re-check so no Closed is
+	// delivered once pool shutdown has begun
+	if p.closingCtx.Err() != nil {
+		return
+	}
+	p.observer.Notify(peerobserver.Event{
+		Kind:    peerobserver.KindClosed,
+		PeerId:  pr.Id(),
+		Inbound: inbound,
+	})
 }
 
 func (p *pool) Get(ctx context.Context, id string) (pr peer.Peer, err error) {
@@ -176,7 +190,7 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 		}
 	}
 	if err == nil {
-		go p.evictOnClose(pr, p.incoming)
+		go p.evictOnClose(pr, p.incoming, true)
 	}
 	return err
 }

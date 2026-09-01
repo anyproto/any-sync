@@ -38,8 +38,8 @@ func collect(t *testing.T, hs HeadStorage, opts IterOpts) []HeadsEntry {
 	return out
 }
 
-func u64ptr(v uint64) *uint64                  { return &v }
-func dsPtr(v DeletedStatus) *DeletedStatus     { return &v }
+func u64ptr(v uint64) *uint64              { return &v }
+func dsPtr(v DeletedStatus) *DeletedStatus { return &v }
 
 func TestIterateEntries_MinLastAddSeq(t *testing.T) {
 	hs, cleanup := newTestStorage(t)
