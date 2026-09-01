@@ -24,7 +24,8 @@ type Pool interface {
 	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 	// AddPeer adds incoming peer to the pool
 	AddPeer(ctx context.Context, p peer.Peer) (err error)
-	// Pick check if connection with peer exist without dial
+	// Pick checks if a connection with the peer exists, without dialing.
+	// For a peer whose last dial failed it returns the cached dial error.
 	Pick(ctx context.Context, id string) (pr peer.Peer, err error)
 	// Flush removes all connections from the pool
 	Flush(ctx context.Context) error
@@ -126,25 +127,23 @@ func (p *pool) Flush(ctx context.Context) error {
 
 func (p *pool) getIfActive(ctx context.Context, peerIds []string) peer.Peer {
 	for _, peerId := range peerIds {
+		// a cached errObject (failed dial) only disqualifies this peerId,
+		// not the rest of the scan
 		if v, err := p.incoming.Pick(ctx, peerId); err == nil {
-			pr, err := getPeer(v)
-			if err != nil {
-				return nil
+			if pr, err := getPeer(v); err == nil {
+				if !pr.IsClosed() {
+					return pr
+				}
+				_, _ = p.incoming.Remove(ctx, peerId)
 			}
-			if !pr.IsClosed() {
-				return pr
-			}
-			_, _ = p.incoming.Remove(ctx, peerId)
 		}
 		if v, err := p.outgoing.Pick(ctx, peerId); err == nil {
-			pr, err := getPeer(v)
-			if err != nil {
-				return nil
+			if pr, err := getPeer(v); err == nil {
+				if !pr.IsClosed() {
+					return pr
+				}
+				_, _ = p.outgoing.Remove(ctx, peerId)
 			}
-			if !pr.IsClosed() {
-				return pr
-			}
-			_, _ = p.outgoing.Remove(ctx, peerId)
 		}
 	}
 	return nil
@@ -209,7 +208,12 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 	if err != nil {
 		return nil, err
 	}
-	pr := v.(peer.Peer)
+	// the cache can hold an *errObject for a failed dial: resolve through
+	// getPeer like get() does instead of panicking on the type assertion
+	pr, err := getPeer(v)
+	if err != nil {
+		return nil, err
+	}
 	if !pr.IsClosed() {
 		return pr, nil
 	}

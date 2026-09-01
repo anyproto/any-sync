@@ -886,3 +886,115 @@ func newFixtureWithWebTransport(t *testing.T) *fixtureWithWT {
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
+
+func TestPeerService_DialIroh(t *testing.T) {
+	const peerId = "p1"
+	const ticket = "endpointAAAAticket"
+	t.Run("iroh addr is ignored without global dial ctx", func(t *testing.T) {
+		fx := newFixtureWithIroh(t)
+		defer fx.finish(t)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"iroh://" + ticket}, true)
+
+		_, err := fx.Dial(ctx, peerId)
+		assert.ErrorIs(t, err, ErrAddrsNotFound)
+	})
+	t.Run("iroh addr is dialed with global dial ctx", func(t *testing.T) {
+		fx := newFixtureWithIroh(t)
+		defer fx.finish(t)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"iroh://" + ticket}, true)
+		fx.iroh.MockTransport.EXPECT().Dial(gomock.Any(), ticket).Return(fx.mockMC(peerId), nil)
+
+		p, err := fx.Dial(CtxWithGlobalDial(ctx), peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("iroh ranks after lan addrs", func(t *testing.T) {
+		fx := newFixtureWithIroh(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+			"iroh://" + ticket,
+			"quic://1.2.3.4:1112",
+			"yamux://1.2.3.4:1111",
+		}, true)
+		gomock.InOrder(
+			fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "1.2.3.4:1112").Return(nil, fmt.Errorf("quic failed")),
+			fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "1.2.3.4:1111").Return(nil, fmt.Errorf("yamux failed")),
+			fx.iroh.MockTransport.EXPECT().Dial(gomock.Any(), ticket).Return(fx.mockMC(peerId), nil),
+		)
+
+		p, err := fx.Dial(CtxWithGlobalDial(ctx), peerId)
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+	t.Run("iroh addr never hits the local resolver", func(t *testing.T) {
+		fx := newFixtureWithIroh(t)
+		defer fx.finish(t)
+		fx.PreferQuic(true)
+		fx.setResolver(func(ctx context.Context, host string) ([]net.IPAddr, error) {
+			t.Fatalf("resolver called for %q", host)
+			return nil, nil
+		})
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"iroh://" + ticket}, true)
+		fx.iroh.MockTransport.EXPECT().Dial(gomock.Any(), ticket).Return(fx.mockMC(peerId), nil)
+
+		_, err := fx.Dial(CtxWithGlobalDial(ctx), peerId)
+		require.NoError(t, err)
+	})
+	t.Run("iroh is the last preferred scheme", func(t *testing.T) {
+		fx := newFixtureWithIroh(t)
+		defer fx.finish(t)
+
+		ps := fx.PeerService.(*peerService)
+		for _, preferQuic := range []bool{false, true} {
+			schemes := ps.preferredSchemes(preferQuic)
+			assert.Equal(t, transport.Iroh, schemes[len(schemes)-1])
+		}
+	})
+	t.Run("global dial ctx flag", func(t *testing.T) {
+		assert.False(t, ctxIsGlobalDial(ctx))
+		assert.True(t, ctxIsGlobalDial(CtxWithGlobalDial(ctx)))
+	})
+	t.Run("tickets are shortened in logs", func(t *testing.T) {
+		assert.Equal(t, "iroh://endpointabcd…", logAddr("iroh://endpointabcdefghijklmnop"))
+		assert.Equal(t, "yamux://1.2.3.4:1", logAddr("yamux://1.2.3.4:1"))
+	})
+}
+
+type fixtureWithIroh struct {
+	*fixture
+	iroh mock_transport.TransportComponent
+}
+
+func newFixtureWithIroh(t *testing.T) *fixtureWithIroh {
+	ctrl := gomock.NewController(t)
+	fx := &fixtureWithIroh{
+		fixture: &fixture{
+			PeerService: New(),
+			ctrl:        ctrl,
+			a:           new(app.App),
+			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
+			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
+			nodeConf:    mock_nodeconf.NewMockService(ctrl),
+		},
+		iroh: mock_transport.NewTransportComponent(ctrl, transport.IrohCName),
+	}
+
+	fx.quic.EXPECT().SetAccepter(fx.PeerService)
+	fx.yamux.EXPECT().SetAccepter(fx.PeerService)
+	fx.iroh.EXPECT().SetAccepter(fx.PeerService)
+
+	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().Init(gomock.Any())
+	fx.nodeConf.EXPECT().Run(gomock.Any())
+	fx.nodeConf.EXPECT().Close(gomock.Any())
+
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.iroh).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer())
+
+	require.NoError(t, fx.a.Start(ctx))
+	return fx
+}

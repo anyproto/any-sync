@@ -18,6 +18,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
@@ -449,4 +450,318 @@ func (r *recordingStream) Send(kv *spacesyncproto.StoreKeyValue) error {
 	}
 	r.ts.mu.Unlock()
 	return r.DRPCSpaceSync_StoreElementsStream.Send(kv)
+}
+
+// rawWatermark hand-builds a signed deletion watermark, letting a test send
+// one from an arbitrary identity.
+func rawWatermark(t *testing.T, keys *accountdata.AccountKeys, prefix string, ts int64) *spacesyncproto.StoreKeyValue {
+	protoPeerKey, err := keys.PeerKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	protoIdentityKey, err := keys.SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	inner := spacesyncproto.StoreKeyInner{
+		Peer:           protoPeerKey,
+		Identity:       protoIdentityKey,
+		TimestampMicro: ts,
+		AclHeadId:      "acl-head",
+		Key:            prefix,
+		Delete:         &spacesyncproto.StoreDeletePrefix{Prefix: prefix},
+	}
+	innerBytes, err := inner.MarshalVT()
+	require.NoError(t, err)
+	peerSig, err := keys.PeerKey.Sign(innerBytes)
+	require.NoError(t, err)
+	identitySig, err := keys.SignKey.Sign(innerBytes)
+	require.NoError(t, err)
+	return &spacesyncproto.StoreKeyValue{
+		KeyPeerId:         prefix + "-" + keys.PeerKey.GetPublic().PeerId(),
+		Value:             innerBytes,
+		PeerSignature:     peerSig,
+		IdentitySignature: identitySig,
+	}
+}
+
+// prefixIds lists the raw stored row ids under a key prefix, watermark rows
+// included.
+func prefixIds(t *testing.T, store keyvaluestorage.Storage, prefix string) []string {
+	var ids []string
+	err := store.InnerStorage().IteratePrefix(ctx, prefix, func(kv innerstorage.KeyValue) error {
+		ids = append(ids, kv.KeyPeerId)
+		return nil
+	})
+	require.NoError(t, err)
+	sort.Strings(ids)
+	return ids
+}
+
+func TestDeletePrefix(t *testing.T) {
+	t.Run("drops locally, propagates via sync, rejects resurrection", func(t *testing.T) {
+		fxClient, fxServer, serverPeer := prepareFixtures(t)
+		fxClient.add(t, "read/sp1/a", []byte("va"))
+		fxClient.add(t, "read/sp1/b", []byte("vb"))
+		fxClient.add(t, "other/c", []byte("vc"))
+		fxServer.add(t, "read/sp1/d", []byte("vd"))
+		// syncWithPeer directly: the limiter permits one scheduled sync per
+		// peer and its Close is terminal, while this test needs two rounds.
+		require.NoError(t, fxClient.keyValueService.syncWithPeer(ctx, serverPeer))
+		require.Len(t, prefixIds(t, fxServer.defaultStore, "read/sp1/"), 3)
+
+		// Capture the pre-delete rows: a device restoring an old snapshot
+		// would push exactly these.
+		var stale []*spacesyncproto.StoreKeyValue
+		err := fxServer.defaultStore.InnerStorage().IteratePrefix(ctx, "read/sp1/", func(kv innerstorage.KeyValue) error {
+			p := kv.Proto()
+			p.Value = append([]byte(nil), p.Value...)
+			p.PeerSignature = append([]byte(nil), p.PeerSignature...)
+			p.IdentitySignature = append([]byte(nil), p.IdentitySignature...)
+			stale = append(stale, p)
+			return nil
+		})
+		require.NoError(t, err)
+		require.Len(t, stale, 3)
+
+		require.NoError(t, fxClient.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+		require.NoError(t, fxClient.keyValueService.syncWithPeer(ctx, serverPeer))
+
+		for _, fx := range []*fixture{fxClient, fxServer} {
+			ids := prefixIds(t, fx.defaultStore, "read/sp1/")
+			require.Len(t, ids, 1, "only the watermark row remains: %v", ids)
+			require.True(t, strings.HasPrefix(ids[0], "read/sp1/-"), "remaining row is the watermark: %v", ids)
+			require.False(t, fx.check(t, "read/sp1/a", []byte("va")))
+			require.False(t, fx.check(t, "read/sp1/d", []byte("vd")))
+			require.True(t, fx.check(t, "other/c", []byte("vc")), "rows outside the prefix survive")
+			// The public read surface hides the watermark row.
+			var seen []string
+			require.NoError(t, fx.defaultStore.Iterate(ctx, func(_ keyvaluestorage.Decryptor, key string, _ []innerstorage.KeyValue) (bool, error) {
+				seen = append(seen, key)
+				return true, nil
+			}))
+			require.Equal(t, []string{"other/c"}, seen)
+		}
+
+		// Resurrection attempt: replaying the captured pre-delete rows is a
+		// no-op on both replicas.
+		require.NoError(t, fxServer.defaultStore.SetRaw(ctx, stale...))
+		require.Len(t, prefixIds(t, fxServer.defaultStore, "read/sp1/"), 1)
+		require.NoError(t, fxClient.defaultStore.SetRaw(ctx, stale...))
+		require.Len(t, prefixIds(t, fxClient.defaultStore, "read/sp1/"), 1)
+	})
+
+	t.Run("watermark from a non-owner identity is rejected", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		fxClient.add(t, "read/sp1/a", []byte("va"))
+
+		strangerKeys, err := accountdata.NewRandom()
+		require.NoError(t, err)
+		wm := rawWatermark(t, strangerKeys, "read/sp1/", time.Now().Add(time.Hour).UnixMicro())
+		require.NoError(t, fxClient.defaultStore.SetRaw(ctx, wm))
+
+		require.True(t, fxClient.check(t, "read/sp1/a", []byte("va")), "rows survive a stranger's watermark")
+		require.Len(t, prefixIds(t, fxClient.defaultStore, "read/sp1/"), 1, "the stranger's watermark row must not be stored")
+	})
+}
+
+// recordingIndexer records Index/RemoveIndex calls; RemoveIndex makes it
+// deletion-aware.
+type recordingIndexer struct {
+	mu      sync.Mutex
+	indexed []string
+	removed []string
+}
+
+func (r *recordingIndexer) Init(a *app.App) error { return nil }
+func (r *recordingIndexer) Name() string          { return keyvaluestorage.IndexerCName }
+
+func (r *recordingIndexer) Index(_ keyvaluestorage.Decryptor, keyValues ...innerstorage.KeyValue) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, kv := range keyValues {
+		r.indexed = append(r.indexed, kv.KeyPeerId)
+	}
+	return nil
+}
+
+func (r *recordingIndexer) RemoveIndex(keyPeerIds ...string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.removed = append(r.removed, keyPeerIds...)
+	return nil
+}
+
+func (r *recordingIndexer) counts() (indexed, removed int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.indexed), len(r.removed)
+}
+
+// newBareStorage builds a keyvaluestorage.Storage without the rpc service
+// around it, with an arbitrary indexer.
+func newBareStorage(t *testing.T, keys *accountdata.AccountKeys, spacePayload spacestorage.SpaceStorageCreatePayload, indexer keyvaluestorage.Indexer) keyvaluestorage.Storage {
+	anyStore, err := anystore.Open(ctx, filepath.Join(t.TempDir(), "store.db"), nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = anyStore.Close() })
+	storage, err := spacestorage.Create(ctx, anyStore, spacePayload)
+	require.NoError(t, err)
+	aclStorage, err := storage.AclStorage()
+	require.NoError(t, err)
+	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.NewValidateFull())
+	require.NoError(t, err)
+	st, err := keyvaluestorage.New(ctx, "kv.storage", anyStore, storage.HeadStorage(), keys, &countingSyncClient{}, aclList, indexer)
+	require.NoError(t, err)
+	return st
+}
+
+// exportPrefix returns the wire protos of every raw row under the prefix.
+func exportPrefix(t *testing.T, store keyvaluestorage.Storage, prefix string) []*spacesyncproto.StoreKeyValue {
+	var protos []*spacesyncproto.StoreKeyValue
+	err := store.InnerStorage().IteratePrefix(ctx, prefix, func(kv innerstorage.KeyValue) error {
+		protos = append(protos, kv.Proto())
+		return nil
+	})
+	require.NoError(t, err)
+	return protos
+}
+
+// TestSetCoveredByWatermark: a local write under a newer watermark fails
+// loudly instead of returning success for a value every replica would drop.
+func TestSetCoveredByWatermark(t *testing.T) {
+	fxClient, _, _ := prepareFixtures(t)
+	_, err := fxClient.defaultStore.InnerStorage().Set(ctx, innerstorage.KeyValue{
+		KeyPeerId:      "read/sp1/-peerX",
+		Key:            "read/sp1/",
+		PeerId:         "peerX",
+		Identity:       "identity",
+		DeletePrefix:   "read/sp1/",
+		TimestampMicro: time.Now().Add(time.Hour).UnixMicro(),
+	})
+	require.NoError(t, err)
+
+	err = fxClient.defaultStore.Set(ctx, "read/sp1/a", []byte("va"))
+	require.ErrorIs(t, err, keyvaluestorage.ErrCoveredByWatermark)
+	require.ErrorIs(t, fxClient.defaultStore.DeletePrefix(ctx, "read/sp1/sub/"), keyvaluestorage.ErrCoveredByWatermark,
+		"a narrower watermark under a newer covering one is refused too")
+	require.NoError(t, fxClient.defaultStore.Set(ctx, "other/b", []byte("vb")), "keys outside the prefix write normally")
+}
+
+func TestDeletePrefixEmpty(t *testing.T) {
+	fxClient, _, _ := prepareFixtures(t)
+	require.ErrorIs(t, fxClient.defaultStore.DeletePrefix(ctx, ""), keyvaluestorage.ErrEmptyDeletePrefix)
+}
+
+// TestIndexerDeletionFlow pins the indexer contract around watermarks:
+// applied rows index, watermark-dropped rows un-index via the optional
+// DeletionAwareIndexer, and rows the store rejects never reach Index.
+func TestIndexerDeletionFlow(t *testing.T) {
+	firstKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	secondKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	secondKeys.SignKey = firstKeys.SignKey
+	payload := newStorageCreatePayload(t, firstKeys)
+
+	idx := &recordingIndexer{}
+	stA := newBareStorage(t, firstKeys, payload, keyvaluestorage.NoOpIndexer{})
+	stB := newBareStorage(t, secondKeys, payload, idx)
+
+	require.NoError(t, stA.Set(ctx, "read/sp1/a", []byte("va")))
+	require.NoError(t, stA.Set(ctx, "read/sp1/b", []byte("vb")))
+	stale := exportPrefix(t, stA, "read/sp1/")
+	require.Len(t, stale, 2)
+
+	require.NoError(t, stB.SetRaw(ctx, stale...))
+	indexed, removed := idx.counts()
+	require.Equal(t, 2, indexed, "applied rows index")
+	require.Equal(t, 0, removed)
+
+	require.NoError(t, stA.DeletePrefix(ctx, "read/sp1/"))
+	wmProtos := exportPrefix(t, stA, "read/sp1/")
+	require.Len(t, wmProtos, 1, "only the watermark row remains on A")
+	require.NoError(t, stB.SetRaw(ctx, wmProtos...))
+	indexed, removed = idx.counts()
+	require.Equal(t, 2, indexed, "the watermark row itself is not indexed")
+	require.Equal(t, 2, removed, "dropped rows are un-indexed")
+
+	// Resurrection attempt: the rejected rows must not reach Index.
+	require.NoError(t, stB.SetRaw(ctx, stale...))
+	indexed, _ = idx.counts()
+	require.Equal(t, 2, indexed, "rejected rows must not be indexed")
+}
+
+// attachPeer wires fx to hub's rpc server and returns the peer fx dials.
+func attachPeer(t *testing.T, fx *fixture, fxKeys *accountdata.AccountKeys, hub *fixture, hubKeys *accountdata.AccountKeys) peer.Peer {
+	hubConn, fxConn := rpctest.MultiConnPair(fxKeys.PeerId, hubKeys.PeerId)
+	hubPeer, err := peer.NewPeer(hubConn, fx.server)
+	require.NoError(t, err)
+	_, err = peer.NewPeer(fxConn, hub.server)
+	require.NoError(t, err)
+	return hubPeer
+}
+
+// TestDeletePrefix_OfflinePeers covers devices that were offline across a
+// prefix deletion:
+//   - stale unsynced rows (older than the watermark) are rejected by the hub
+//     and dropped by their writer once the watermark reaches it;
+//   - rows written after the deletion (newer than the watermark) win by LWW
+//     and propagate — the app-level reconciler's re-issued delete is what
+//     removes them, and does so everywhere.
+func TestDeletePrefix_OfflinePeers(t *testing.T) {
+	ownerKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	hubKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	hubKeys.SignKey = ownerKeys.SignKey
+	staleKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	staleKeys.SignKey = ownerKeys.SignKey
+	lateKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	lateKeys.SignKey = ownerKeys.SignKey
+	payload := newStorageCreatePayload(t, ownerKeys)
+
+	fxOwner := newFixture(t, ownerKeys, payload)
+	fxHub := newFixture(t, hubKeys, payload)
+	fxStale := newFixture(t, staleKeys, payload)
+	fxLate := newFixture(t, lateKeys, payload)
+	hubForOwner := attachPeer(t, fxOwner, ownerKeys, fxHub, hubKeys)
+	hubForStale := attachPeer(t, fxStale, staleKeys, fxHub, hubKeys)
+	hubForLate := attachPeer(t, fxLate, lateKeys, fxHub, hubKeys)
+
+	// Stale device writes while offline; owner writes and syncs.
+	fxStale.add(t, "read/sp1/x", []byte("vx"))
+	fxStale.add(t, "read/sp1/y", []byte("vy"))
+	fxStale.add(t, "notes/keep", []byte("vk"))
+	fxOwner.add(t, "read/sp1/a", []byte("va"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+
+	// Timestamps order the whole scenario; keep them strictly increasing.
+	time.Sleep(2 * time.Millisecond)
+	require.NoError(t, fxOwner.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 1, "hub holds only the watermark")
+
+	// The stale device comes online: one round pushes its rows (rejected)
+	// and pulls the watermark (drops its local copies).
+	require.NoError(t, fxStale.keyValueService.syncWithPeer(ctx, hubForStale))
+	require.Len(t, prefixIds(t, fxStale.defaultStore, "read/sp1/"), 1, "stale device drops its unsynced rows on receiving the watermark")
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 1, "stale rows must not stick on the hub")
+	require.True(t, fxStale.check(t, "notes/keep", []byte("vk")), "unsynced rows outside the prefix survive")
+	require.True(t, fxHub.check(t, "notes/keep", []byte("vk")), "out-of-prefix rows still sync")
+
+	// A device that writes AFTER the deletion (its clock is past the
+	// watermark) wins by LWW: the row propagates by design.
+	time.Sleep(2 * time.Millisecond)
+	fxLate.add(t, "read/sp1/z", []byte("vz"))
+	require.NoError(t, fxLate.keyValueService.syncWithPeer(ctx, hubForLate))
+	require.Len(t, prefixIds(t, fxHub.defaultStore, "read/sp1/"), 2, "post-deletion write survives the old watermark")
+
+	// The reconciler's re-issued delete removes the late row everywhere.
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	time.Sleep(2 * time.Millisecond)
+	require.NoError(t, fxOwner.defaultStore.DeletePrefix(ctx, "read/sp1/"))
+	require.NoError(t, fxOwner.keyValueService.syncWithPeer(ctx, hubForOwner))
+	require.NoError(t, fxLate.keyValueService.syncWithPeer(ctx, hubForLate))
+	for name, fx := range map[string]*fixture{"owner": fxOwner, "hub": fxHub, "late": fxLate} {
+		ids := prefixIds(t, fx.defaultStore, "read/sp1/")
+		require.Len(t, ids, 1, "%s converges to the watermark only: %v", name, ids)
+	}
 }
