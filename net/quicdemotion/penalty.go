@@ -2,6 +2,7 @@ package quicdemotion
 
 import (
 	"math/rand/v2"
+	"slices"
 	"sync"
 	"time"
 
@@ -87,12 +88,8 @@ type PenaltySnapshot struct {
 // keep dying under DPI-style degradation, and decides when to dial the peer
 // (or everyone) yamux-first.
 type transportPenalties struct {
-	mu sync.Mutex
-	// enabled gates the whole mechanism: demotion is opt-in for clients (via
-	// PeerService.EnableQuicDemotion) so server nodes keep their dial
-	// behavior unchanged.
-	enabled bool
-	peers   map[string]PeerPenalty
+	mu    sync.Mutex
+	peers map[string]PeerPenalty
 	// globalUntil is when the network-wide demotion lapses: the second-latest
 	// demotion deadline among network nodes, i.e. the moment fewer than
 	// globalDemotionMinPeers of them are still demoted. Cached because every
@@ -181,6 +178,9 @@ func (t *transportPenalties) registerHealthy(peerId string) {
 // quicDemoted reports whether the peer should be dialed yamux-first: either
 // the peer itself is demoted, or enough network nodes are demoted to treat
 // the whole network as QUIC-hostile.
+// quicDemoted reports the stored verdict alone, without the probe or the
+// fallback gate that decide an actual dial. Dialing goes through demoteDial;
+// this is the state query, used to inspect and assert on the verdict itself.
 func (t *transportPenalties) quicDemoted(peerId string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -231,25 +231,26 @@ func (t *transportPenalties) dueForProbe(next *time.Time, now time.Time) bool {
 // idle-timeout death, and a phone is not evidence about the network.
 func (t *transportPenalties) recomputeGlobalLocked() {
 	prev := t.globalUntil
-	defer func() {
-		// starting a fresh network-wide demotion arms its probe clock
-		if t.globalUntil.After(prev) && t.globalNextProbe.Before(t.now()) {
-			t.globalNextProbe = t.now().Add(demotionProbeInterval)
-		}
-	}()
-	var first, second time.Time
+	deadlines := make([]time.Time, 0, len(t.peers))
 	for id, s := range t.peers {
 		if s.DemotedUntil.IsZero() || !t.isNodePeer(id) {
 			continue
 		}
-		switch {
-		case s.DemotedUntil.After(first):
-			first, second = s.DemotedUntil, first
-		case s.DemotedUntil.After(second):
-			second = s.DemotedUntil
-		}
+		deadlines = append(deadlines, s.DemotedUntil)
 	}
-	t.globalUntil = second
+	if len(deadlines) < globalDemotionMinPeers {
+		t.globalUntil = time.Time{}
+	} else {
+		slices.SortFunc(deadlines, func(a, b time.Time) int { return b.Compare(a) })
+		// the moment fewer than globalDemotionMinPeers nodes are still demoted
+		t.globalUntil = deadlines[globalDemotionMinPeers-1]
+	}
+	// arm the probe only for a demotion that is actually in effect: an
+	// expired entry can push globalUntil forward without demoting anything
+	now := t.now()
+	if t.globalUntil.After(prev) && t.globalUntil.After(now) && t.globalNextProbe.Before(now) {
+		t.globalNextProbe = now.Add(demotionProbeInterval)
+	}
 }
 
 // pruneLocked drops peers that can no longer affect a decision: their

@@ -145,7 +145,3 @@ func (s *service) Reset() {
 }
 
 func (s *service) SetObserver(observer func()) { s.penalties.setObserver(observer) }
-
-// IsDialDegraded reports whether a quic dial error means the path swallowed
-// our packets; re-exported so callers need not import the transport.
-func IsDialDegraded(err error) bool { return quic.IsDialDegraded(err) }

@@ -203,11 +203,6 @@ func TestTransportPenalties_Observer(t *testing.T) {
 	})
 }
 
-// TestPeerService_EnableQuicDemotionBeforeStart pins the production call
-// order: heart enables demotion from its config component, whose Init runs
-// before peerService.Init. The call must not panic, must survive Init, and
-// must still end up with the conn observer registered.
-
 func TestTransportPenalties_Decay(t *testing.T) {
 	t.Run("strikes outside the window do not accumulate", func(t *testing.T) {
 		fx := newPenaltyFixture()
