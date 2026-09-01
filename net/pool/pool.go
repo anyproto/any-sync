@@ -64,6 +64,15 @@ func (p *pool) evictOnClose(pr peer.Peer, cache ocache.OCache, inbound bool) {
 		// pool is shutting down; let cache.Close handle eviction
 		return
 	}
+	if !inbound {
+		// The outgoing watcher is started from inside the ocache load func,
+		// before the value is published, and RemoveSame deliberately never
+		// matches a still-loading entry. A connection dying that early would
+		// otherwise leave the closed peer to be published with no watcher
+		// left to evict it. Pick waits the load out; incoming peers are
+		// published synchronously by AddPeer and need no wait.
+		_, _ = cache.Pick(p.closingCtx, pr.Id())
+	}
 	// Remove only if the cache still holds THIS peer. A newer connection for
 	// the same id may have replaced pr (incoming AddPeer re-add, or outgoing
 	// redial); removing by id alone would close that live replacement.
