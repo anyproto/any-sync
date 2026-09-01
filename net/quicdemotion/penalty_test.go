@@ -285,15 +285,16 @@ func TestTransportPenalties_FallbackEvidence(t *testing.T) {
 	// adversary filters better.
 	t.Run("no demotion while the fallback transport is failing", func(t *testing.T) {
 		fx := newPenaltyFixture()
+		fx.nodeIds["p1"] = true
 		fx.registerDegraded("p1")
 		fx.registerDegraded("p1")
 		assert.True(t, fx.demoteDial("p1"))
 
-		fx.recordFallback(false)
+		fx.recordFallback("p1", false)
 		assert.False(t, fx.demoteDial("p1"), "demoting onto a transport we just watched fail helps nobody")
 		assert.True(t, fx.quicDemoted("p1"), "the verdict is kept, only its effect is suspended")
 
-		fx.recordFallback(true)
+		fx.recordFallback("p1", true)
 		assert.True(t, fx.demoteDial("p1"))
 	})
 	t.Run("demotion applies before anything is known about the fallback", func(t *testing.T) {
@@ -323,5 +324,50 @@ func TestTransportPenalties_SnapshotVersion(t *testing.T) {
 		})
 		assert.False(t, fx.quicDemoted("p1"))
 		assert.Empty(t, fx.snapshot().Peers)
+	})
+}
+
+func TestTransportPenalties_FallbackEvidenceScope(t *testing.T) {
+	// The fallback verdict decides whether demotion applies at all, so its
+	// scope and lifetime matter more than its accuracy: a stuck "yamux is
+	// broken" disables the feature silently.
+	t.Run("an unrelated non-node peer does not suspend demotion", func(t *testing.T) {
+		fx := newPenaltyFixture()
+		fx.nodeIds["n1"] = true
+		fx.registerDegraded("n1")
+		fx.registerDegraded("n1")
+		require.True(t, fx.demoteDial("n1"))
+
+		// a sleeping LAN peer: dialed constantly, says nothing about whether
+		// tcp works toward the network nodes
+		fx.recordFallback("phone", false)
+		assert.True(t, fx.demoteDial("n1"))
+	})
+	t.Run("a stale failure verdict expires", func(t *testing.T) {
+		fx := newPenaltyFixture()
+		fx.nodeIds["n1"] = true
+		fx.registerDegraded("n1")
+		fx.registerDegraded("n1")
+
+		fx.recordFallback("n1", false)
+		require.False(t, fx.demoteDial("n1"))
+
+		// in the case this feature targets the quic dial keeps succeeding, so
+		// yamux is never dialed again and nothing can clear the verdict
+		fx.advance(fallbackWindow + time.Second)
+		assert.True(t, fx.demoteDial("n1"), "a fallback verdict must not outlive its evidence")
+	})
+	t.Run("reset clears the fallback verdict", func(t *testing.T) {
+		fx := newPenaltyFixture()
+		fx.nodeIds["n1"] = true
+		fx.registerDegraded("n1")
+		fx.registerDegraded("n1")
+		fx.recordFallback("n1", false)
+		require.False(t, fx.demoteDial("n1"))
+
+		fx.reset()
+		fx.registerDegraded("n1")
+		fx.registerDegraded("n1")
+		assert.True(t, fx.demoteDial("n1"), "a new network re-learns whether tcp works")
 	})
 }

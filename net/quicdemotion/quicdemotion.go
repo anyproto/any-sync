@@ -114,9 +114,9 @@ func (s *service) DemoteDial(peerId string) bool {
 
 func (s *service) ObserveDial(outcome DialOutcome) {
 	if outcome.SucceededScheme == transport.Yamux {
-		s.penalties.recordFallback(true)
+		s.penalties.recordFallback(outcome.PeerId, true)
 	} else if outcome.FallbackFailed {
-		s.penalties.recordFallback(false)
+		s.penalties.recordFallback(outcome.PeerId, false)
 	}
 	// A timed-out quic dial only says something about UDP if another
 	// transport then carried the same dial: when every scheme fails we are

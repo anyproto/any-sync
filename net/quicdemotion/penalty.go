@@ -30,6 +30,12 @@ const (
 	// many degradation episodes this install has seen - and lines the probes
 	// of many devices up with each other.
 	demotionJitter = 0.25
+	// fallbackWindow is how long a failed yamux dial keeps demotion
+	// suspended. The verdict is evidence about the network we are on right
+	// now, and in the case this feature targets it can never be refreshed:
+	// the quic dial keeps succeeding, so yamux is never dialed again and
+	// nothing would clear a permanent flag.
+	fallbackWindow = 5 * time.Minute
 	// strikeWindow is how long a degraded outcome stays relevant. Past it a
 	// peer starts from a clean slate: without decay, a peer that had one bad
 	// night stayed permanently one strike away from demotion and its entry
@@ -92,11 +98,11 @@ type transportPenalties struct {
 	// globalDemotionMinPeers of them are still demoted. Cached because every
 	// dial consults it; recomputed whenever the peer set changes.
 	globalUntil time.Time
-	// fallbackFailing records that the last yamux dial we watched failed.
-	// Demotion is suspended while it holds: preferring a transport we have
-	// just seen fail cannot help, and on a censored network it would hand the
-	// adversary the choice of which transport we use.
-	fallbackFailing bool
+	// fallbackFailedAt dates the last failed yamux dial to a network node.
+	// Demotion is suspended for fallbackWindow after it: preferring a
+	// transport we have just watched fail cannot help, and on a censored
+	// network it would hand the adversary the choice of our transport.
+	fallbackFailedAt time.Time
 	// globalNextProbe is the probe clock for the network-wide demotion, which
 	// applies to peers that have no entry of their own
 	globalNextProbe time.Time
@@ -192,7 +198,7 @@ func (t *transportPenalties) quicDemoted(peerId string) bool {
 func (t *transportPenalties) demoteDial(peerId string) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.fallbackFailing {
+	if !t.fallbackFailedAt.IsZero() && t.now().Sub(t.fallbackFailedAt) <= fallbackWindow {
 		return false
 	}
 	now := t.now()
@@ -262,13 +268,22 @@ func (t *transportPenalties) pruneLocked(now time.Time) {
 	}
 }
 
-// recordFallback notes the outcome of a yamux dial. Deliberately global and
-// not persisted: whether tcp works is a property of the network we are on
-// right now, and it must be re-learned rather than restored.
-func (t *transportPenalties) recordFallback(ok bool) {
+// recordFallback notes the outcome of a yamux dial. Only network nodes count,
+// for the same reason they alone drive the network-wide demotion: a LAN peer
+// that went to sleep fails its dial constantly and says nothing about whether
+// tcp works toward the network. Deliberately global across nodes and never
+// persisted - whether tcp works belongs to the network we are on right now.
+func (t *transportPenalties) recordFallback(peerId string, ok bool) {
 	t.mu.Lock()
-	t.fallbackFailing = !ok
-	t.mu.Unlock()
+	defer t.mu.Unlock()
+	if !t.isNodePeer(peerId) {
+		return
+	}
+	if ok {
+		t.fallbackFailedAt = time.Time{}
+		return
+	}
+	t.fallbackFailedAt = t.now()
 }
 
 func (t *transportPenalties) snapshot() PenaltySnapshot {
@@ -304,6 +319,8 @@ func (t *transportPenalties) reset() {
 	changed := len(t.peers) > 0
 	t.peers = map[string]PeerPenalty{}
 	t.globalUntil = time.Time{}
+	t.globalNextProbe = time.Time{}
+	t.fallbackFailedAt = time.Time{}
 	observer := t.observer
 	t.mu.Unlock()
 	if changed && observer != nil {

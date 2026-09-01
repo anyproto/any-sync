@@ -167,6 +167,7 @@ func TestPeerService_DialOutcomeReporting(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.finish(t)
 		fx.PreferQuic(true)
+		fx.nodeIds[peerId] = true
 		fx.demotion.Seed(demotedSnapshot(peerId))
 
 		// yamux is tried first because of the demotion, fails, and quic carries
@@ -191,6 +192,7 @@ func TestPeerService_TotalDialFailureIsNotAFallbackSuccess(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.finish(t)
 	fx.PreferQuic(true)
+	fx.nodeIds["dead"], fx.nodeIds["demoted"] = true, true
 	fx.demotion.Seed(demotedSnapshot("demoted"))
 
 	fx.nodeConf.EXPECT().PeerAddresses("dead").Return(demotionAddrs, true)

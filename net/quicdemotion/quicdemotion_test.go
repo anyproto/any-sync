@@ -133,6 +133,7 @@ func TestService_ObserveDial(t *testing.T) {
 	})
 	t.Run("a failing fallback suspends demotion", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.nodeIds["other"] = true
 		for i := 0; i < demoteThreshold; i++ {
 			fx.svc().onConnClosed(transport.ConnCloseEvent{PeerId: peerId, Kind: transport.ConnCloseDegraded})
 		}
@@ -142,6 +143,18 @@ func TestService_ObserveDial(t *testing.T) {
 		assert.False(t, fx.DemoteDial(peerId), "yamux is failing too, so preferring it helps nobody")
 
 		fx.ObserveDial(DialOutcome{PeerId: "other", SucceededScheme: transport.Yamux})
+		assert.True(t, fx.DemoteDial(peerId))
+	})
+	t.Run("a failing dial to a non-node peer does not suspend demotion", func(t *testing.T) {
+		// LAN peers are dialed constantly and go to sleep; their failures say
+		// nothing about whether tcp works toward the network
+		fx := newFixture(t)
+		for i := 0; i < demoteThreshold; i++ {
+			fx.svc().onConnClosed(transport.ConnCloseEvent{PeerId: peerId, Kind: transport.ConnCloseDegraded})
+		}
+		require.True(t, fx.DemoteDial(peerId))
+
+		fx.ObserveDial(DialOutcome{PeerId: "sleepingPhone", FallbackFailed: true})
 		assert.True(t, fx.DemoteDial(peerId))
 	})
 }
