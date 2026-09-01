@@ -1014,3 +1014,38 @@ func (o *countingPanickyObserver) ObservePeerEvent(peerobserver.Event) {
 	o.calls.Add(1)
 	panic("observer panic")
 }
+
+func TestPool_EvictsOutgoingClosedDuringLoad(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish()
+
+	p := fx.Service.(*poolService).pool
+	tp := newTestPeer("1")
+
+	loading := make(chan struct{})
+	release := make(chan struct{})
+	cache := ocache.New(func(ctx context.Context, id string) (ocache.Object, error) {
+		close(loading)
+		<-release
+		return tp, nil
+	})
+
+	go func() { _, _ = cache.Get(ctx, "1") }()
+	<-loading
+
+	// the connection dies while the entry is still loading, which is when the
+	// outgoing watcher is started: RemoveSame cannot match a nil-value entry
+	require.NoError(t, tp.Close())
+	done := make(chan struct{})
+	go func() {
+		p.evictOnClose(tp, cache, false)
+		close(done)
+	}()
+
+	// let the watcher reach RemoveSame before the value is published
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+
+	<-done
+	require.Equal(t, 0, cache.Len(), "closed peer must not stay cached after the load publishes")
+}
