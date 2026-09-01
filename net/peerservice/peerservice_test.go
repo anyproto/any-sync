@@ -965,6 +965,7 @@ func newFixtureWithWebTransport(t *testing.T) *fixtureWithWT {
 			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 			nodeConf:    mock_nodeconf.NewMockService(ctrl),
+			nodeIds:     map[string]bool{},
 		},
 		wt: wt,
 	}
@@ -974,11 +975,18 @@ func newFixtureWithWebTransport(t *testing.T) *fixtureWithWT {
 	fx.wt.EXPECT().SetAccepter(fx.PeerService)
 
 	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).DoAndReturn(func(id string) []nodeconf.NodeType {
+		if fx.nodeIds[id] {
+			return []nodeconf.NodeType{nodeconf.NodeTypeTree}
+		}
+		return nil
+	}).AnyTimes()
 	fx.nodeConf.EXPECT().Init(gomock.Any())
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
 
-	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.wt).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer())
+	fx.demotion = quicdemotion.New()
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.wt).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(fx.demotion)
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx

@@ -210,3 +210,43 @@ func TestPeerService_TotalDialFailureIsNotAFallbackSuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, p)
 }
+
+func TestPeerService_RejectedConnectionIsNotASuccess(t *testing.T) {
+	// A dial that connects and is then rejected (wrong peer behind a stale
+	// address) reached nobody: it must not count as the fallback working, nor
+	// attribute a quic timeout to a peer we never actually talked to.
+	const peerId = "p1"
+	fx := newFixture(t)
+	defer fx.finish(t)
+	fx.PreferQuic(true)
+	fx.nodeIds[peerId] = true
+
+	fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(demotionAddrs, true)
+	fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, &quicgo.IdleTimeoutError{})
+	fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(fx.mockMC("someoneElse"), nil)
+
+	_, err := fx.Dial(ctx, peerId)
+	require.ErrorIs(t, err, ErrPeerIdMismatched)
+	assert.Empty(t, fx.demotion.Snapshot().Peers, "a rejected connection is not evidence about the path")
+}
+
+func TestPeerService_WebtransportIsNotAFallback(t *testing.T) {
+	// webtransport runs over quic, so succeeding on it proves UDP works -
+	// the opposite of what a strike would record.
+	const peerId = "p1"
+	fx := newFixtureWithWebTransport(t)
+	defer fx.finish(t)
+	fx.PreferQuic(true)
+
+	fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{
+		"quic://203.0.113.1:1112",
+		"webtransport://203.0.113.1:4433",
+	}, true)
+	fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, &quicgo.IdleTimeoutError{})
+	fx.wt.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:4433").Return(fx.mockMC(peerId), nil)
+
+	p, err := fx.Dial(ctx, peerId)
+	require.NoError(t, err)
+	assert.NotNil(t, p)
+	assert.Empty(t, fx.demotion.Snapshot().Peers, "udp demonstrably works, so nothing was learned against quic")
+}

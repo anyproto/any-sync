@@ -122,8 +122,10 @@ func (s *service) ObserveDial(outcome DialOutcome) {
 	// transport then carried the same dial: when every scheme fails we are
 	// simply offline, and striking there would demote every peer during an
 	// ordinary outage. One strike per Dial, however many quic addrs timed out.
-	if !outcome.QuicTimedOut ||
-		outcome.SucceededScheme == "" || outcome.SucceededScheme == transport.Quic {
+	// Only yamux proves the path is usable without udp. webtransport and iroh
+	// are quic-based themselves, so succeeding on one of them means udp works
+	// - the opposite of what a strike would record.
+	if !outcome.QuicTimedOut || outcome.SucceededScheme != transport.Yamux {
 		return
 	}
 	if s.penalties.registerDegraded(outcome.PeerId) {

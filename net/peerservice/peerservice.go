@@ -159,6 +159,20 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		addrErrs []error
 		outcome  = quicdemotion.DialOutcome{PeerId: peerId}
 	)
+	// Reported once the dial is fully resolved: a connection that is opened
+	// and then rejected (a stale address pointing at another peer) reached
+	// nobody, so it is neither a working fallback nor evidence about quic
+	// toward the peer we asked for.
+	dialAccepted := false
+	defer func() {
+		if p.demotion == nil {
+			return
+		}
+		if !dialAccepted {
+			outcome.SucceededScheme = ""
+		}
+		p.demotion.ObserveDial(outcome)
+	}()
 	err = ErrAddrsNotFound
 	for _, addr := range ordered {
 		sch := scheme(addr)
@@ -172,11 +186,10 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		case sch == transport.Quic && quic.IsDialDegraded(err):
 			outcome.QuicTimedOut = true
 		case sch == transport.Yamux:
+			// yamux is the only scheme that is provably not udp, so it is the
+			// only one whose outcome says anything about the fallback
 			outcome.FallbackFailed = true
 		}
-	}
-	if p.demotion != nil {
-		p.demotion.ObserveDial(outcome)
 	}
 	if err != nil {
 		// Dial keeps returning the last error; the observer gets every
@@ -207,6 +220,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		p.notifyDialFailed(peerId, err, dialStarted)
 		return nil, err
 	}
+	dialAccepted = true
 	protoVersion, _ := peer.CtxProtoVersion(mc.Context())
 	// logAddr: an iroh ticket encodes the peer's relay and IP addresses,
 	// which have no place in a status surface either
