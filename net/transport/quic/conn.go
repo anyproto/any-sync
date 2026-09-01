@@ -33,7 +33,10 @@ func newConn(cctx context.Context, udpConn net.PacketConn, qconn connection, clo
 		connection:   qconn,
 		writeTimeout: writeTimeout,
 		closeTimeout: closeTimeout,
-		startTime:    time.Now(),
+		// Round(0) strips the monotonic reading so the lifetime is measured on
+		// the wall clock: the monotonic clock pauses while the machine sleeps,
+		// which would make a slept-through connection look seconds old.
+		startTime: time.Now().Round(0),
 	}
 }
 

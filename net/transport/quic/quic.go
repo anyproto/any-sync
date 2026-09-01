@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	libp2crypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -37,7 +38,7 @@ type Quic interface {
 type quicTransport struct {
 	secure        secureservice.SecureService
 	accepter      transport.Accepter
-	connObserver  func(ev transport.ConnCloseEvent)
+	connObserver  atomic.Pointer[func(ev transport.ConnCloseEvent)]
 	conf          Config
 	quicConf      *quic.Config
 	listeners     []*quic.Listener
@@ -76,9 +77,10 @@ func (q *quicTransport) SetAccepter(accepter transport.Accepter) {
 }
 
 // SetConnObserver registers an observer for close events of dialed
-// connections. This method should be called before app start.
+// connections. Safe to call at any point in the lifecycle, including
+// concurrently with dials.
 func (q *quicTransport) SetConnObserver(observer func(ev transport.ConnCloseEvent)) {
-	q.connObserver = observer
+	q.connObserver.Store(&observer)
 }
 
 func (q *quicTransport) Run(ctx context.Context) (err error) {
@@ -169,8 +171,8 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		return nil, err
 	}
 	mc = newConn(cctx, udpConn, qConn, time.Second*time.Duration(q.conf.CloseTimeoutSec), time.Second*time.Duration(q.conf.WriteTimeoutSec))
-	if q.connObserver != nil {
-		go mc.(*quicMultiConn).watch(q.connObserver)
+	if observer := q.connObserver.Load(); observer != nil {
+		go mc.(*quicMultiConn).watch(*observer)
 	}
 	return mc, nil
 }

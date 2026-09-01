@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/quicdemotion"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/quic"
@@ -40,23 +41,6 @@ type PeerService interface {
 	Dial(ctx context.Context, peerId string) (pr peer.Peer, err error)
 	SetPeerAddrs(peerId string, addrs []string)
 	PreferQuic(prefer bool)
-	// EnableQuicDemotion turns on QUIC degradation tracking: peers whose QUIC
-	// connections keep dying under DPI-style degradation get demoted to
-	// yamux-first dialing. Opt-in so server nodes keep their dial behavior
-	// unchanged; clients call this once at startup.
-	EnableQuicDemotion()
-	// TransportPenalties returns a copy of the QUIC penalty state, for
-	// persistence across restarts.
-	TransportPenalties() PenaltySnapshot
-	// SeedTransportPenalties replaces the QUIC penalty state with a
-	// previously stored snapshot.
-	SeedTransportPenalties(snap PenaltySnapshot)
-	// ResetTransportPenalties drops all QUIC penalty state (e.g. after a
-	// network change: a new network deserves a clean verdict).
-	ResetTransportPenalties()
-	// SetPenaltyObserver registers a callback fired after every penalty state
-	// mutation, so a client can persist the snapshot. Must not block.
-	SetPenaltyObserver(observer func())
 	transport.Accepter
 	app.Component
 }
@@ -72,7 +56,7 @@ type peerService struct {
 	server       server.DRPCServer
 	preferQuic   bool
 	localAddrs   *localAddrDetector
-	penalties    *transportPenalties
+	demotion     quicdemotion.Service
 	// observer is bound once at Init (peerobserver.CName) and never changes
 	// afterwards, so it is read without locking; its zero value is a no-op
 	observer peerobserver.Notifier
@@ -101,57 +85,13 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
 	p.localAddrs = newLocalAddrDetector()
-	p.penalties = newTransportPenalties(time.Now, func(peerId string) bool {
-		return len(p.nodeConf.NodeTypes(peerId)) > 0
-	})
+	// optional: registered by clients that want DPI-degraded quic paths
+	// demoted, left out by server nodes
+	if comp := a.Component(quicdemotion.CName); comp != nil {
+		p.demotion = comp.(quicdemotion.Service)
+	}
 	p.observer = peerobserver.FromApp(a)
 	return nil
-}
-
-func (p *peerService) EnableQuicDemotion() {
-	p.penalties.enable()
-	if setter, ok := p.quic.(transport.ConnObserverSetter); ok {
-		setter.SetConnObserver(p.onConnClosed)
-	}
-}
-
-// onConnClosed receives close events of dialed QUIC connections and feeds the
-// penalty state: degraded deaths accumulate strikes toward demoting the peer
-// to yamux-first, a healthy connection clears them.
-func (p *peerService) onConnClosed(ev transport.ConnCloseEvent) {
-	if ev.PeerId == "" {
-		return
-	}
-	switch ev.Kind {
-	case transport.ConnCloseDegraded:
-		demoted := p.penalties.registerDegraded(ev.PeerId)
-		log.Info("quic conn died degraded",
-			zap.String("peerId", ev.PeerId),
-			zap.Duration("lifetime", ev.Lifetime),
-			zap.Int64("bytesRead", ev.BytesRead),
-			zap.Int64("bytesWritten", ev.BytesWritten),
-			zap.Bool("demoted", demoted),
-			zap.Error(ev.Cause))
-	case transport.ConnCloseHealthy:
-		p.penalties.registerHealthy(ev.PeerId)
-	}
-}
-
-func (p *peerService) TransportPenalties() PenaltySnapshot {
-	return p.penalties.snapshot()
-}
-
-func (p *peerService) SeedTransportPenalties(snap PenaltySnapshot) {
-	p.penalties.seed(snap)
-}
-
-func (p *peerService) ResetTransportPenalties() {
-	log.Info("transport penalties reset")
-	p.penalties.reset()
-}
-
-func (p *peerService) SetPenaltyObserver(observer func()) {
-	p.penalties.setObserver(observer)
 }
 
 func (p *peerService) preferredSchemes(preferQuic bool) []string {
@@ -206,7 +146,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	// Pass expected peerId in context for transports that need it (e.g. WebTransport)
 	ctx = peer.CtxWithExpectedPeerId(ctx, peerId)
 
-	if preferQuic && p.penalties.quicDemoted(peerId) {
+	if preferQuic && p.demotion != nil && p.demotion.DemoteDial(peerId) {
 		preferQuic = false
 	}
 	ordered := p.orderAddrs(ctx, addrs, preferQuic)
@@ -214,27 +154,41 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	p.notifyDialStarted(peerId, len(ordered))
 
 	var (
-		mc           transport.MultiConn
-		quicDegraded bool
-		connAddr     string
-		addrErrs     []error
+		mc       transport.MultiConn
+		connAddr string
+		addrErrs []error
+		outcome  = quicdemotion.DialOutcome{PeerId: peerId}
 	)
+	// Reported once the dial is fully resolved: a connection that is opened
+	// and then rejected (a stale address pointing at another peer) reached
+	// nobody, so it is neither a working fallback nor evidence about quic
+	// toward the peer we asked for.
+	dialAccepted := false
+	defer func() {
+		if p.demotion == nil {
+			return
+		}
+		if !dialAccepted {
+			outcome.SucceededScheme = ""
+		}
+		p.demotion.ObserveDial(outcome)
+	}()
 	err = ErrAddrsNotFound
 	for _, addr := range ordered {
+		sch := scheme(addr)
 		if mc, err = p.dialAddr(ctx, addr); err == nil {
 			connAddr = addr
+			outcome.SucceededScheme = sch
 			break
 		}
 		addrErrs = append(addrErrs, err)
-		if scheme(addr) == transport.Quic && quic.IsHandshakeTimeout(err) {
-			quicDegraded = true
-		}
-	}
-	if quicDegraded {
-		// one strike per Dial, however many quic addrs timed out: UDP toward
-		// this peer looks blocked while other schemes may still work
-		if p.penalties.registerDegraded(peerId) {
-			log.Info("quic demoted after handshake timeouts", zap.String("peerId", peerId))
+		switch {
+		case sch == transport.Quic && quic.IsDialDegraded(err):
+			outcome.QuicTimedOut = true
+		case sch == transport.Yamux:
+			// yamux is the only scheme that is provably not udp, so it is the
+			// only one whose outcome says anything about the fallback
+			outcome.FallbackFailed = true
 		}
 	}
 	if err != nil {
@@ -266,6 +220,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		p.notifyDialFailed(peerId, err, dialStarted)
 		return nil, err
 	}
+	dialAccepted = true
 	protoVersion, _ := peer.CtxProtoVersion(mc.Context())
 	// logAddr: an iroh ticket encodes the peer's relay and IP addresses,
 	// which have no place in a status surface either
