@@ -183,3 +183,28 @@ func TestPeerService_DialOutcomeReporting(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestPeerService_TotalDialFailureIsNotAFallbackSuccess(t *testing.T) {
+	// A dial where nothing connected must be reported as the fallback
+	// failing, never as yamux succeeding - note scheme("") returns yamux, so
+	// deriving the winning scheme from an empty address silently inverts this.
+	fx := newFixture(t)
+	defer fx.finish(t)
+	fx.PreferQuic(true)
+	fx.demotion.Seed(demotedSnapshot("demoted"))
+
+	fx.nodeConf.EXPECT().PeerAddresses("dead").Return(demotionAddrs, true)
+	fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, &quicgo.IdleTimeoutError{})
+	fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").Return(nil, fmt.Errorf("network is unreachable"))
+
+	_, err := fx.Dial(ctx, "dead")
+	require.Error(t, err)
+
+	// yamux is known broken now, so the demoted peer must be dialed quic-first
+	fx.nodeConf.EXPECT().PeerAddresses("demoted").Return(demotionAddrs, true)
+	fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(fx.mockMC("demoted"), nil)
+
+	p, err := fx.Dial(ctx, "demoted")
+	require.NoError(t, err)
+	assert.NotNil(t, p)
+}
