@@ -828,8 +828,6 @@ type fixture struct {
 	quic     mock_transport.TransportComponent
 	yamux    mock_transport.TransportComponent
 	nodeConf *mock_nodeconf.MockService
-	// nodeIds marks peer ids the nodeconf reports as network nodes
-	nodeIds map[string]bool
 	// demotion is the optional quic demotion component, nil when not registered
 	demotion quicdemotion.Service
 }
@@ -852,7 +850,6 @@ func newFixtureWithIrohObserver(t *testing.T, obs peerobserver.Observer) *fixtur
 			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 			nodeConf:    mock_nodeconf.NewMockService(ctrl),
-			nodeIds:     map[string]bool{},
 		},
 		iroh: mock_transport.NewTransportComponent(ctrl, transport.IrohCName),
 	}
@@ -890,7 +887,6 @@ func newFixtureCustom(t *testing.T, poolComponent app.Component, extra ...app.Co
 		quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 		yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 		nodeConf:    mock_nodeconf.NewMockService(ctrl),
-		nodeIds:     map[string]bool{},
 	}
 	for _, comp := range extra {
 		if demotion, ok := comp.(quicdemotion.Service); ok {
@@ -902,12 +898,9 @@ func newFixtureCustom(t *testing.T, poolComponent app.Component, extra ...app.Co
 	fx.yamux.EXPECT().SetAccepter(fx.PeerService)
 
 	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
-	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).DoAndReturn(func(id string) []nodeconf.NodeType {
-		if fx.nodeIds[id] {
-			return []nodeconf.NodeType{nodeconf.NodeTypeTree}
-		}
-		return nil
-	}).AnyTimes()
+	// the demotion component asks whether a peer is a network node; these
+	// tests never exercise the network-wide rule, which lives in quicdemotion
+	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).Return(nil).AnyTimes()
 	fx.nodeConf.EXPECT().Init(gomock.Any())
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
@@ -965,7 +958,6 @@ func newFixtureWithWebTransport(t *testing.T) *fixtureWithWT {
 			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 			nodeConf:    mock_nodeconf.NewMockService(ctrl),
-			nodeIds:     map[string]bool{},
 		},
 		wt: wt,
 	}
@@ -975,18 +967,15 @@ func newFixtureWithWebTransport(t *testing.T) *fixtureWithWT {
 	fx.wt.EXPECT().SetAccepter(fx.PeerService)
 
 	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
-	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).DoAndReturn(func(id string) []nodeconf.NodeType {
-		if fx.nodeIds[id] {
-			return []nodeconf.NodeType{nodeconf.NodeTypeTree}
-		}
-		return nil
-	}).AnyTimes()
+	// the demotion component asks whether a peer is a network node; these
+	// tests never exercise the network-wide rule, which lives in quicdemotion
+	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).Return(nil).AnyTimes()
 	fx.nodeConf.EXPECT().Init(gomock.Any())
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
 
-	fx.demotion = quicdemotion.New()
-	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.wt).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(fx.demotion)
+	fx.demotion = &stubDemotion{}
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.wt).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(fx.demotion.(app.Component))
 
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
