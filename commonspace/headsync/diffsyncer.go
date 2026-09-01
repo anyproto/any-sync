@@ -70,14 +70,18 @@ type diffSyncer struct {
 func (d *diffSyncer) Init() {
 	d.ctx, d.cancel = context.WithCancel(context.Background())
 	d.headUpdater = newHeadUpdater(d.updateHeads)
+	// Subscribe here rather than in Run: app.Start finishes every component's
+	// Init before the first Run, so registration cannot race a component that
+	// already Run and dispatches through UpdateEntry (deletionmanager starts
+	// its delete loop that way). Updates arriving before Run are buffered.
+	d.storage.HeadStorage().AddObserver(d)
 }
 
-// Run starts the headUpdater goroutine and subscribes to head storage updates.
-// It must not be called from Init: if another component fails to Run, the
-// space app never reaches headSync.Close, and a goroutine started in Init
-// would leak together with everything it references (see diffSyncer fields).
+// Run starts the headUpdater goroutine, draining whatever Init buffered. The
+// goroutine must not start in Init: if another component fails to Run, the
+// space app never reaches headSync.Close, and it would leak together with
+// everything it references (see diffSyncer fields).
 func (d *diffSyncer) Run() {
-	d.storage.HeadStorage().AddObserver(d)
 	d.headUpdater.Run()
 }
 

@@ -113,7 +113,9 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 }
 
 func (h *headStorage) AddObserver(observer Observer) {
-	// we don't take lock here, because it shouldn't happen during the program execution
+	// no lock: observers are registered from a component's Init, and app.Start
+	// finishes every Init before the first Run, so no goroutine can be
+	// dispatching through UpdateEntry yet
 	h.observers = append(h.observers, observer)
 }
 
