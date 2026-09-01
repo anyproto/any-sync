@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peerobserver"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/quicdemotion"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/transport"
@@ -472,8 +473,7 @@ func TestPeerService_PeerObserver(t *testing.T) {
 		// entry the Connected event must already have been delivered
 		obs := &peerEventRecorder{}
 		ocp := &orderCheckPool{obs: obs}
-		fx := newFixtureCustom(t, ocp, peerobserver.New(obs))
-		fx.EnableQuicDemotion()
+		fx := newFixtureCustom(t, ocp, peerobserver.New(obs), quicdemotion.New())
 		defer fx.finish(t)
 
 		mc := fx.mockMC("p1")
@@ -828,18 +828,18 @@ type fixture struct {
 	quic     mock_transport.TransportComponent
 	yamux    mock_transport.TransportComponent
 	nodeConf *mock_nodeconf.MockService
+	// nodeIds marks peer ids the nodeconf reports as network nodes
+	nodeIds map[string]bool
+	// demotion is the optional quic demotion component, nil when not registered
+	demotion quicdemotion.Service
 }
 
 func newFixture(t *testing.T) *fixture {
-	fx := newFixtureNoDemotion(t)
-	fx.EnableQuicDemotion()
-	return fx
+	return newFixtureNoDemotion(t, quicdemotion.New())
 }
 
 func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
-	fx := newFixtureNoDemotion(t, peerobserver.New(obs))
-	fx.EnableQuicDemotion()
-	return fx
+	return newFixtureNoDemotion(t, peerobserver.New(obs), quicdemotion.New())
 }
 
 func newFixtureWithIrohObserver(t *testing.T, obs peerobserver.Observer) *fixtureWithIroh {
@@ -852,9 +852,11 @@ func newFixtureWithIrohObserver(t *testing.T, obs peerobserver.Observer) *fixtur
 			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 			nodeConf:    mock_nodeconf.NewMockService(ctrl),
+			nodeIds:     map[string]bool{},
 		},
 		iroh: mock_transport.NewTransportComponent(ctrl, transport.IrohCName),
 	}
+	fx.demotion = quicdemotion.New()
 
 	fx.quic.EXPECT().SetAccepter(fx.PeerService)
 	fx.yamux.EXPECT().SetAccepter(fx.PeerService)
@@ -865,17 +867,14 @@ func newFixtureWithIrohObserver(t *testing.T, obs peerobserver.Observer) *fixtur
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
 
-	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.iroh).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(peerobserver.New(obs))
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.iroh).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(peerobserver.New(obs)).Register(fx.demotion)
 
 	require.NoError(t, fx.a.Start(ctx))
-	fx.EnableQuicDemotion()
 	return fx
 }
 
 func newFixtureWithRefusingPool(t *testing.T, obs peerobserver.Observer) *fixture {
-	fx := newFixtureCustom(t, &refusingPool{}, peerobserver.New(obs))
-	fx.EnableQuicDemotion()
-	return fx
+	return newFixtureCustom(t, &refusingPool{}, peerobserver.New(obs), quicdemotion.New())
 }
 
 func newFixtureNoDemotion(t *testing.T, extra ...app.Component) *fixture {
@@ -891,12 +890,24 @@ func newFixtureCustom(t *testing.T, poolComponent app.Component, extra ...app.Co
 		quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
 		yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
 		nodeConf:    mock_nodeconf.NewMockService(ctrl),
+		nodeIds:     map[string]bool{},
+	}
+	for _, comp := range extra {
+		if demotion, ok := comp.(quicdemotion.Service); ok {
+			fx.demotion = demotion
+		}
 	}
 
 	fx.quic.EXPECT().SetAccepter(fx.PeerService)
 	fx.yamux.EXPECT().SetAccepter(fx.PeerService)
 
 	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().NodeTypes(gomock.Any()).DoAndReturn(func(id string) []nodeconf.NodeType {
+		if fx.nodeIds[id] {
+			return []nodeconf.NodeType{nodeconf.NodeTypeTree}
+		}
+		return nil
+	}).AnyTimes()
 	fx.nodeConf.EXPECT().Init(gomock.Any())
 	fx.nodeConf.EXPECT().Run(gomock.Any())
 	fx.nodeConf.EXPECT().Close(gomock.Any())
