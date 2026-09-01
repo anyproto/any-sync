@@ -4,6 +4,7 @@ package transport
 import (
 	"context"
 	"net"
+	"time"
 )
 
 var (
@@ -70,4 +71,38 @@ type MultiConn interface {
 
 type Accepter interface {
 	Accept(mc MultiConn) (err error)
+}
+
+// ConnCloseKind classifies how an outbound connection ended, for transport
+// quality tracking.
+type ConnCloseKind int
+
+const (
+	// ConnCloseNeutral carries no signal about path quality (local close,
+	// graceful remote close, short-lived non-timeout errors).
+	ConnCloseNeutral ConnCloseKind = iota
+	// ConnCloseDegraded means the path went black under an established
+	// connection: keepalives stopped being answered shortly after the
+	// handshake succeeded (the DPI-degradation signature).
+	ConnCloseDegraded
+	// ConnCloseHealthy means the connection lived long enough to prove the
+	// path works, whatever finally closed it.
+	ConnCloseHealthy
+)
+
+// ConnCloseEvent describes the end of an outbound (dialed) connection.
+type ConnCloseEvent struct {
+	PeerId       string
+	Kind         ConnCloseKind
+	Lifetime     time.Duration
+	BytesRead    int64
+	BytesWritten int64
+	Cause        error
+}
+
+// ConnObserverSetter is implemented by transports able to report close events
+// of the connections they dialed. The observer must not block: it is called
+// from per-connection watcher goroutines.
+type ConnObserverSetter interface {
+	SetConnObserver(observer func(ev ConnCloseEvent))
 }

@@ -298,6 +298,12 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
+	fx := newFixtureNoDemotion(t)
+	fx.EnableQuicDemotion()
+	return fx
+}
+
+func newFixtureNoDemotion(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		PeerService: New(),
