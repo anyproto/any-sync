@@ -267,10 +267,12 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		return nil, err
 	}
 	protoVersion, _ := peer.CtxProtoVersion(mc.Context())
+	// logAddr: an iroh ticket encodes the peer's relay and IP addresses,
+	// which have no place in a status surface either
 	p.observer.Notify(peerobserver.Event{
 		Kind:         peerobserver.KindConnected,
 		PeerId:       peerId,
-		Addr:         stripScheme(connAddr),
+		Addr:         stripScheme(logAddr(connAddr)),
 		Scheme:       scheme(connAddr),
 		ProtoVersion: protoVersion,
 		Dur:          time.Since(dialStarted),

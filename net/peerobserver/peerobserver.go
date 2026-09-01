@@ -70,12 +70,12 @@ type Event struct {
 	// AddrCount is the number of dial candidates after transport filtering
 	// and ordering; 0 means no dialable address was known.
 	AddrCount int
-	// Addr is the connection address without its transport scheme prefix,
-	// otherwise raw: outbound it is the address that was dialed, which may
-	// be a configured hostname; inbound it is whatever the transport reports
-	// as the remote address, whose form is transport-specific. The two are
-	// not comparable, and Addr may carry transport-specific identifiers —
-	// treat it as display/debug data.
+	// Addr is the connection address without its transport scheme prefix:
+	// outbound it is the address that was dialed, which may be a configured
+	// hostname; inbound it is whatever the transport reports as the remote
+	// address, whose form is transport-specific. The two are not comparable.
+	// Treat it as display/debug data; privacy-sensitive forms (an outbound
+	// iroh ticket, which encodes relay and IP addresses) arrive shortened.
 	Addr string
 	// Scheme is the transport scheme, taken from the connection's address.
 	// Outbound it is always one of the known schemes; empty only for an

@@ -620,6 +620,62 @@ func TestPeerService_PeerObserver(t *testing.T) {
 		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected, peerobserver.KindClosed}, kindsOf(events))
 		assert.True(t, events[1].Inbound)
 	})
+	t.Run("iroh accept reports node id and iroh scheme", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.finish(t)
+
+		cctx := peer.CtxWithProtoVersion(peer.CtxWithPeerId(ctx, "p1"), 13)
+		mc := fx.mockMCWithCtxAddr(cctx, "iroh://k51qzi5uqu5dgutdk6i1")
+		require.NoError(t, fx.Accept(mc))
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindConnected}, kindsOf(events))
+		assert.Equal(t, transport.Iroh, events[0].Scheme)
+		assert.Equal(t, "k51qzi5uqu5dgutdk6i1", events[0].Addr)
+		assert.True(t, events[0].Inbound)
+	})
+	t.Run("outbound iroh dial reports a shortened ticket", func(t *testing.T) {
+		// an iroh ticket encodes the peer's relay and IP addresses; the
+		// observer must receive it shortened, the way logs shorten it
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithIrohObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+		ticket := "abcdefghijklmnopqrstuvwxyz0123456789"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"iroh://" + ticket}, true)
+		fx.iroh.MockTransport.EXPECT().Dial(gomock.Any(), ticket).Return(fx.mockMC(peerId), nil)
+
+		_, err := fx.Dial(CtxWithGlobalDial(ctx), peerId)
+		require.NoError(t, err)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindConnected}, kindsOf(events))
+		assert.Equal(t, 1, events[0].AddrCount)
+		connected := events[1]
+		assert.Equal(t, transport.Iroh, connected.Scheme)
+		assert.Equal(t, "abcdefghijkl…", connected.Addr)
+		assert.NotContains(t, connected.Addr, ticket[12:], "the full ticket must not reach the observer")
+	})
+	t.Run("iroh addrs are not dial candidates without the global-dial ctx", func(t *testing.T) {
+		obs := &peerEventRecorder{}
+		fx := newFixtureWithIrohObserver(t, obs)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"iroh://someticket"}, true)
+
+		_, err := fx.Dial(ctx, peerId)
+		require.ErrorIs(t, err, ErrAddrsNotFound)
+
+		events := obs.getEvents()
+		require.Equal(t, []peerobserver.Kind{peerobserver.KindDialStarted, peerobserver.KindDialFailed}, kindsOf(events))
+		assert.Equal(t, 0, events[0].AddrCount)
+		assert.ErrorIs(t, events[1].Err, ErrAddrsNotFound)
+	})
 	t.Run("panicking observer does not break dialing or accepting", func(t *testing.T) {
 		fx := newFixtureWithObserver(t, panickyPeerObserver{})
 		defer fx.finish(t)
@@ -782,6 +838,36 @@ func newFixture(t *testing.T) *fixture {
 
 func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
 	fx := newFixtureNoDemotion(t, peerobserver.New(obs))
+	fx.EnableQuicDemotion()
+	return fx
+}
+
+func newFixtureWithIrohObserver(t *testing.T, obs peerobserver.Observer) *fixtureWithIroh {
+	ctrl := gomock.NewController(t)
+	fx := &fixtureWithIroh{
+		fixture: &fixture{
+			PeerService: New(),
+			ctrl:        ctrl,
+			a:           new(app.App),
+			quic:        mock_transport.NewTransportComponent(ctrl, quic.CName),
+			yamux:       mock_transport.NewTransportComponent(ctrl, yamux.CName),
+			nodeConf:    mock_nodeconf.NewMockService(ctrl),
+		},
+		iroh: mock_transport.NewTransportComponent(ctrl, transport.IrohCName),
+	}
+
+	fx.quic.EXPECT().SetAccepter(fx.PeerService)
+	fx.yamux.EXPECT().SetAccepter(fx.PeerService)
+	fx.iroh.EXPECT().SetAccepter(fx.PeerService)
+
+	fx.nodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.nodeConf.EXPECT().Init(gomock.Any())
+	fx.nodeConf.EXPECT().Run(gomock.Any())
+	fx.nodeConf.EXPECT().Close(gomock.Any())
+
+	fx.a.Register(fx.PeerService).Register(fx.quic).Register(fx.yamux).Register(fx.iroh).Register(fx.nodeConf).Register(pool.New()).Register(rpctest.NewTestServer()).Register(peerobserver.New(obs))
+
+	require.NoError(t, fx.a.Start(ctx))
 	fx.EnableQuicDemotion()
 	return fx
 }
