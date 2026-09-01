@@ -97,10 +97,13 @@ func (h *headSync) Name() (name string) {
 }
 
 func (h *headSync) Run(ctx context.Context) (err error) {
-	h.syncer.Run()
+	// FillDiff first: it bulk-Sets the diff from a storage snapshot, so a
+	// concurrent drain would have its RemoveId/Set undone by that snapshot.
+	// Draining after means buffered updates apply on top and converge.
 	if err := h.diffManager.FillDiff(ctx); err != nil {
 		return err
 	}
+	h.syncer.Run()
 	h.periodicSync.Run()
 	return
 }
