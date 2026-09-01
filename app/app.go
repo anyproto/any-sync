@@ -28,6 +28,10 @@ var (
 	StopWarningAfter     = time.Second * 10
 	StartWarningAfter    = time.Second * 10
 	ErrComponentNotFound = errors.New("component not found")
+	// ErrAppAlreadyStarted is returned by a second Start on the same App.
+	ErrAppAlreadyStarted = errors.New("app already started")
+	// ErrAppClosed is returned by Start on an App that has been closed.
+	ErrAppClosed = errors.New("app closed")
 )
 
 // Component is a minimal interface for a common app.Component
@@ -58,12 +62,24 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
-	parent            *App
-	components        []Component
-	mu                sync.RWMutex
-	startStat         Stat
-	stopStat          Stat
-	deviceState       int
+	parent      *App
+	components  []Component
+	mu          sync.RWMutex
+	startStat   Stat
+	stopStat    Stat
+	deviceState int
+	// lifecycleMu makes Start and Close mutually exclusive and guards the
+	// four fields below. It is NOT mu: a component's Init calls
+	// MustComponent, which takes mu.RLock, so Start can never hold mu's
+	// write lock.
+	lifecycleMu sync.Mutex
+	started     bool
+	closed      bool
+	// initialized is the Init high-water mark: components [0, initialized)
+	// had Init reached. closedUpTo is how far Start's own cleanup already
+	// closed, so Close covers exactly [closedUpTo, initialized).
+	initialized       int
+	closedUpTo        int
 	versionName       string
 	anySyncVersion    string
 	componentListener func(comp Component)
@@ -223,18 +239,37 @@ func (app *App) ComponentNames() (names []string) {
 
 // Start starts the application
 // All registered services will be initialized and started
+//
+// Start runs at most once per App: a second call returns ErrAppAlreadyStarted,
+// and an App that has already been closed returns ErrAppClosed. Start and
+// Close are mutually exclusive, so a component is never closed while its Init
+// is still running; a Close racing a Start waits for it.
 func (app *App) Start(ctx context.Context) (err error) {
+	app.lifecycleMu.Lock()
+	defer app.lifecycleMu.Unlock()
+	if app.started {
+		return ErrAppAlreadyStarted
+	}
+	if app.closed {
+		return ErrAppClosed
+	}
+	app.started = true
+
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	app.startStat.SpentMsPerComp = make(map[string]int64)
 	var currentComponentStarting string
 	done := make(chan struct{})
+	// Every return path stops the watchdog: otherwise a failed Start leaks a
+	// goroutine and a timer, and that goroutine reads stopStat's map while a
+	// concurrent Close writes it.
+	defer close(done)
 	go func() {
 		select {
 		case <-done:
 			return
 		case <-time.After(StartWarningAfter):
-			l := statLogger(app.stopStat, log).With(zap.String("in_progress", currentComponentStarting))
+			l := statLogger(app.startStat, log).With(zap.String("in_progress", currentComponentStarting))
 			l.Warn("components start in progress")
 		}
 	}()
@@ -246,18 +281,27 @@ func (app *App) Start(ctx context.Context) (err error) {
 				}
 			}
 		}
+		app.closedUpTo = idx + 1
 	}
 
 	for i, s := range app.components {
+		currentComponentStarting = s.Name()
 		if err = s.Init(app); err != nil {
 			log.Error("can't init service", zap.String("service", s.Name()), zap.Error(err))
+			// The failing component is closed too (documented), but nothing
+			// past it ever ran Init — its fields are nil.
+			app.initialized = i + 1
 			closeServices(i)
 			return fmt.Errorf("can't init service '%s': %w", s.Name(), err)
 		}
+		// Advance only once Init has returned: Close must never see a
+		// component that is still initialising.
+		app.initialized = i + 1
 	}
 
 	for i, s := range app.components {
 		if serviceRun, ok := s.(ComponentRunnable); ok {
+			currentComponentStarting = s.Name()
 			start := time.Now()
 			if err = serviceRun.Run(ctx); err != nil {
 				log.Error("can't run service", zap.String("service", serviceRun.Name()), zap.Error(err))
@@ -270,8 +314,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		}
 	}
 
-	close(done)
-	l := statLogger(app.stopStat, log)
+	l := statLogger(app.startStat, log)
 	if app.startStat.SpentMsTotal > StartWarningAfter.Milliseconds() {
 		l.Warn("all components started")
 	}
@@ -289,13 +332,11 @@ func (app *App) IterateComponents(fn func(Component)) {
 }
 
 func stackAllGoroutines() []byte {
-	buf := make([]byte, 1024)
-	for {
-		n := runtime.Stack(buf, true)
-		if n < len(buf) {
+	for size := 4096 * 1024; ; size *= 2 {
+		buf := make([]byte, size)
+		if n := runtime.Stack(buf, true); n < size {
 			return buf[:n]
 		}
-		buf = make([]byte, 2*len(buf))
 	}
 }
 
@@ -310,9 +351,21 @@ func statLogger(stat Stat, ctxLogger logger.CtxLogger) logger.CtxLogger {
 }
 
 // Close stops the application
-// All components with ComponentRunnable implementation will be closed in the reversed order
+//
+// Components with a ComponentRunnable implementation are closed in reverse
+// registration order, but only those whose Init was reached: a component past
+// a failed Init has nil fields and closing it would panic. Anything Start's
+// own error path already closed is not closed again. Close is idempotent —
+// a second call is a no-op returning nil — and waits for an in-flight Start.
 func (app *App) Close(ctx context.Context) error {
 	log.Debug("close components...")
+	app.lifecycleMu.Lock()
+	defer app.lifecycleMu.Unlock()
+	if app.closed {
+		return nil
+	}
+	app.closed = true
+
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	app.stopStat.SpentMsPerComp = make(map[string]int64)
@@ -341,7 +394,7 @@ func (app *App) Close(ctx context.Context) error {
 	}()
 
 	var errs []string
-	for i := len(app.components) - 1; i >= 0; i-- {
+	for i := app.initialized - 1; i >= app.closedUpTo; i-- {
 		if serviceClose, ok := app.components[i].(ComponentRunnable); ok {
 			start := time.Now()
 			currentComponentStopping = app.components[i].Name()

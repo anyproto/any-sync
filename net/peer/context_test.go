@@ -1,6 +1,9 @@
 package peer
 
 import (
+	"context"
+	"time"
+
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,4 +14,9 @@ func TestCtxProtoVersion(t *testing.T) {
 	ver, err := CtxProtoVersion(ctx)
 	require.NoError(t, err)
 	require.Equal(t, uint32(1), ver)
+}
+
+func TestCtxTTL(t *testing.T) {
+	require.Zero(t, CtxTTL(context.Background()))
+	require.Equal(t, time.Minute, CtxTTL(CtxWithTTL(context.Background(), time.Minute)))
 }

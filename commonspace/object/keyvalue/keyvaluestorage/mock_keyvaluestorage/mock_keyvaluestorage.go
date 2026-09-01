@@ -43,6 +43,20 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
+// DeletePrefix mocks base method.
+func (m *MockStorage) DeletePrefix(ctx context.Context, prefix string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePrefix", ctx, prefix)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePrefix indicates an expected call of DeletePrefix.
+func (mr *MockStorageMockRecorder) DeletePrefix(ctx, prefix any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrefix", reflect.TypeOf((*MockStorage)(nil).DeletePrefix), ctx, prefix)
+}
+
 // GetAll mocks base method.
 func (m *MockStorage) GetAll(ctx context.Context, key string, get func(keyvaluestorage.Decryptor, []innerstorage.KeyValue) error) error {
 	m.ctrl.T.Helper()

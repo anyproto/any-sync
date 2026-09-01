@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -16,7 +17,27 @@ var (
 	ErrClosed    = errors.New("object cache closed")
 	ErrExists    = errors.New("object exists")
 	ErrNotExists = errors.New("object not exists")
+	ErrNilValue  = errors.New("nil value")
 )
+
+// ErrLoadPanic is what every waiter on a load receives when the loadFunc
+// panicked instead of returning; the panic itself propagates to the loading
+// caller.
+var ErrLoadPanic = errors.New("loadFunc panicked")
+
+// isNilObject reports whether value is nil or a typed-nil pointer wrapped in
+// the interface — calling methods on either panics in the close paths.
+func isNilObject(value Object) bool {
+	if value == nil {
+		return true
+	}
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return rv.IsNil()
+	}
+	return false
+}
 
 var (
 	defaultTTL = time.Minute
@@ -46,6 +67,17 @@ var WithTTL = func(ttl time.Duration) Option {
 var WithGCPeriod = func(gcPeriod time.Duration) Option {
 	return func(cache *oCache) {
 		cache.gc = gcPeriod
+	}
+}
+
+// WithCloseTimeout bounds Close's waits on in-flight loads and on entries
+// another closer holds (default 10s). The value.Close calls themselves take
+// no ctx and are not bounded. Non-positive values are ignored.
+var WithCloseTimeout = func(d time.Duration) Option {
+	return func(cache *oCache) {
+		if d > 0 {
+			cache.closeTimeout = d
+		}
 	}
 }
 
@@ -82,14 +114,19 @@ type OCache interface {
 	// under a global lock, this will prevent a race which otherwise occurs
 	// when object is created in parallel with action
 	DoLockedIfNotExists(id string, action func() error) error
-	// Get gets an object from cache or create a new one via 'loadFunc'
-	// Increases the object refs counter on successful
-	// When 'loadFunc' returns a non-nil error, an object will not be stored to cache
+	// Get gets an object from cache or creates a new one via 'loadFunc';
+	// it also refreshes the object's GC deadline.
+	// When 'loadFunc' returns a non-nil error, an object will not be stored to cache.
+	// A load that completed by the time ctx is done still returns its value.
+	// Returns ErrClosed on a closed cache, including for waiters whose load
+	// lands after Close.
 	Get(ctx context.Context, id string) (value Object, err error)
-	// Pick returns value if it's presents in cache (will not call loadFunc)
+	// Pick returns value if it's present in cache (will not call loadFunc,
+	// does not refresh the GC deadline) — but it waits out an in-flight load
+	// for the id, bounded by ctx. Returns ErrClosed on a closed cache.
 	Pick(ctx context.Context, id string) (value Object, err error)
 	// Add adds new object to cache
-	// Returns error when object exists
+	// Returns error when the value is nil, the object exists or the cache is closed
 	Add(id string, value Object) (err error)
 	// Remove closes and removes object
 	Remove(ctx context.Context, id string) (ok bool, err error)
@@ -99,7 +136,10 @@ type OCache interface {
 	// that has replaced it under the same id. Returns ok=true only when this
 	// call performed the removal.
 	RemoveSame(ctx context.Context, id string, value Object) (ok bool, err error)
-	// TryRemove Tries to close and to remove the object
+	// TryRemove tries to close and to remove the object. ok reports whether
+	// this call removed it; (false, nil) means the object declined to close,
+	// is still loading, or another closer owns it. A non-nil err can
+	// accompany ok=true when the value closed with an error.
 	TryRemove(id string) (ok bool, err error)
 	// ForEach iterates over all loaded objects, breaks when callback returns false
 	ForEach(f func(v Object) (isContinue bool))
@@ -108,7 +148,10 @@ type OCache interface {
 	GC()
 	// Len returns current cache size
 	Len() int
-	// Close closes all objects and cache
+	// Close closes all objects and the cache. The pass is bounded by a close
+	// timeout; an entry held past it by an in-flight load or a busy closer is
+	// not waited for — its value is closed by that path's own closed-cache
+	// branch when it completes.
 	Close() (err error)
 }
 
@@ -146,8 +189,9 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 		}
 		e, ok := c.data[id]
 		load := false
+		var loadCtx context.Context
 		if !ok {
-			e = newEntry(id, nil, entryStateLoading)
+			e, loadCtx = newLoadingEntry(id, ctx)
 			load = true
 			c.data[id] = e
 		}
@@ -165,7 +209,7 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 			counted = true
 		}
 		if load {
-			c.load(ctx, id, e)
+			c.load(loadCtx, id, e)
 			value, err = e.value, e.loadErr
 		} else {
 			value, err = e.waitLoad(ctx, id)
@@ -193,6 +237,10 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 
 func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return nil, ErrClosed
+	}
 	val, ok := c.data[id]
 	if !ok || val.isClosing() {
 		c.mu.Unlock()
@@ -203,30 +251,57 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 	return val.waitLoad(ctx, id)
 }
 
+// ctx is the cancellable load context Get created together with the entry.
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
-	defer close(e.load)
-	ctx, cancel := context.WithCancel(ctx)
-	e.setCancel(cancel)
+	defer func() {
+		// a panicking loadFunc arrives here with no result recorded; mark the
+		// entry failed and drop it before releasing waiters, or the id wedges
+		// forever with Get/Pick returning (nil, nil). The panic propagates to
+		// the loading caller.
+		if e.value == nil && e.loadErr == nil {
+			c.mu.Lock()
+			e.loadErr = ErrLoadPanic
+			delete(c.data, id)
+			c.mu.Unlock()
+			e.cancelLoad() // release the load ctx the normal exits cancel
+		}
+		close(e.load)
+	}()
 	value, err := c.loadFunc(ctx, id)
-	// Read before cancel(): a done ctx here means the load was killed
+	// Read before cancelLoad(): a done ctx here means the load was killed
 	// (first caller gone, or cancelLoad on cache close) rather than the
 	// loadFunc failing on its own — recorded so Get's waiters can retry.
 	aborted := ctx.Err() != nil
-	cancel()
+	e.cancelLoad()
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if value == nil && err == nil {
-		err = fmt.Errorf("loaded value is nil, id: %s", id)
+	if isNilObject(value) && err == nil {
+		err = fmt.Errorf("loaded %w, id: %s", ErrNilValue, id)
 	}
 	if err != nil {
 		e.loadErr = err
 		e.loadAborted = aborted
 		delete(c.data, id)
-	} else {
-		e.value = value
-		e.setActive(false)
+		c.mu.Unlock()
+		return
 	}
+	if c.closed {
+		// Close has already run (and possibly given up waiting on this load):
+		// republishing the value into a closed cache would leak it, since no
+		// path closes entries after Close. Close it here instead; waiters get
+		// ErrClosed. The deferred close(e.load) fires after value.Close(), so
+		// anyone woken by it observes the value already closed.
+		e.loadErr = ErrClosed
+		delete(c.data, id)
+		c.mu.Unlock()
+		if cErr := value.Close(); cErr != nil {
+			c.log.With("object_id", id).Warnf("load after close: value close error: %v", cErr)
+		}
+		return
+	}
+	e.value = value
+	e.setActive(false)
+	c.mu.Unlock()
 }
 
 func (c *oCache) Remove(ctx context.Context, id string) (ok bool, err error) {
@@ -242,30 +317,28 @@ func (c *oCache) Remove(ctx context.Context, id string) (ok bool, err error) {
 		return false, ErrNotExists
 	}
 	c.mu.Unlock()
-	return c.remove(ctx, e)
+	return c.removeCtx(ctx, e)
 }
 
 // closeAndDelete finalizes a closing entry under c.mu. The deferred unlock
-// guarantees c.mu is released even if setClosed panics, so a panic in the
-// close path can never leave the whole cache wedged (GO-7332 hardening).
+// keeps c.mu released even if setClosed panics, and deleting first means a
+// panicking setClosed cannot leave a closed-state entry in the map for Get
+// to reload against forever.
 func (c *oCache) closeAndDelete(e *entry) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	e.setClosed()
 	delete(c.data, e.id)
+	e.setClosed()
 }
 
-func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
-	return c.removeCtx(ctx, ctx, e)
-}
-
-// loadCtx bounds waiting for an in-flight load, closingCtx bounds waiting for
-// another closer to release the entry
-func (c *oCache) removeCtx(loadCtx, closingCtx context.Context, e *entry) (ok bool, err error) {
-	if _, err = e.waitLoad(loadCtx, e.id); err != nil {
+// removeCtx waits out an in-flight load and any other closer (both bounded by
+// ctx), then closes and deletes the entry if this call acquired the closing
+// transition.
+func (c *oCache) removeCtx(ctx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(ctx, e.id); err != nil {
 		return false, err
 	}
-	_, curState, err := e.setClosing(closingCtx, true)
+	_, curState, err := e.setClosing(ctx, true)
 	if err != nil {
 		return false, err
 	}
@@ -285,16 +358,18 @@ func (c *oCache) RemoveSame(ctx context.Context, id string, value Object) (ok bo
 	}
 	e, exists := c.data[id]
 	// e.value is written only under c.mu (in Add/load), so reading it here is
-	// race-free. remove() acts on this exact entry: it deletes/closes it only
+	// race-free. A nil value never matches: a mid-load entry's value is still
+	// nil, and matching it would wait the load out and close whatever object
+	// it publishes. remove() acts on this exact entry: it deletes/closes it only
 	// if this call is the one that transitions it to closing. If e was already
 	// replaced under the same id it is in a closed state and remove() is a
 	// no-op, so a stale caller can never close the newer value that took the id.
-	same := exists && e.value == value
+	same := exists && value != nil && e.value == value
 	c.mu.Unlock()
 	if !same {
 		return false, ErrNotExists
 	}
-	return c.remove(ctx, e)
+	return c.removeCtx(ctx, e)
 }
 
 func (c *oCache) TryRemove(id string) (ok bool, err error) {
@@ -313,24 +388,56 @@ func (c *oCache) TryRemove(id string) (ok bool, err error) {
 
 	c.mu.Unlock()
 
-	prevState, _, _ := e.setClosing(context.Background(), false)
-	if prevState == entryStateClosing || prevState == entryStateClosed {
-		return false, nil
-	}
-
-	closed, err := e.value.TryClose(c.ttl)
+	ok, err = c.tryCloseEntry(e)
 	if err != nil {
 		c.log.With("object_id", e.id).Warnf("try remove err: %v", err)
-		return closed, err
 	}
+	return ok, err
+}
 
-	if !closed {
-		e.setActive(true)
+// tryCloseEntry acquires the closing transition and asks the value whether it
+// can close. Only prevState == entryStateActive means this call acquired the
+// transition and may touch e.value; loading refuses it, closing/closed belong
+// to another closer. A value that declined or errored is restored to active —
+// abandoning an acquired transition would park the entry in closing behind a
+// close channel nobody ever closes, wedging the id. A closed value is
+// finalized even when TryClose also returned an error.
+func (c *oCache) tryCloseEntry(e *entry) (closed bool, err error) {
+	prevState, _, _ := e.setClosing(context.Background(), false)
+	if prevState != entryStateActive {
 		return false, nil
 	}
-
+	closed, err = e.value.TryClose(c.ttl)
+	if !closed {
+		restored := func() bool {
+			// the restore happens under the same c.mu hold that reads
+			// c.closed: Close's set-closed-and-snapshot section then runs
+			// either before this check (the escalation below is taken) or
+			// after the restore (the snapshot holds the entry and Close's
+			// pass closes it) — never between, where the restored value
+			// would leak
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			if c.closed {
+				return false
+			}
+			e.setActive(true)
+			return true
+		}()
+		if restored {
+			return false, err
+		}
+		// Close's pass may already have given up waiting on this entry:
+		// restoring it to active would resurrect a live value into a closed
+		// cache with no remaining closer. Escalate the decline instead — the
+		// mirror of load's closed-cache branch. If Close is still parked on
+		// e.close, setClosed wakes it into a safe refusal.
+		err = errors.Join(err, e.value.Close())
+		c.closeAndDelete(e)
+		return true, err
+	}
 	c.closeAndDelete(e)
-	return true, nil
+	return true, err
 }
 
 func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
@@ -346,8 +453,16 @@ func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
 }
 
 func (c *oCache) Add(id string, value Object) (err error) {
+	// a nil value would panic every close path; the GC one runs on the
+	// unrecovered ticker goroutine and would take the process down
+	if isNilObject(value) {
+		return ErrNilValue
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return ErrClosed
+	}
 	if _, ok := c.data[id]; ok {
 		return ErrExists
 	}
@@ -360,6 +475,10 @@ func (c *oCache) Add(id string, value Object) (err error) {
 func (c *oCache) ForEach(f func(obj Object) (isContinue bool)) {
 	var objects []Object
 	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return
+	}
 	for _, v := range c.data {
 		select {
 		case <-v.load:
@@ -407,20 +526,12 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 	closedNum := 0
 	for _, e := range toClose {
-		prevState, _, _ := e.setClosing(context.Background(), false)
-		if prevState == entryStateClosing || prevState == entryStateClosed {
-			continue
-		}
-		closed, err := e.value.TryClose(c.ttl)
+		closed, err := c.tryCloseEntry(e)
 		if err != nil {
 			c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
 		}
-		if !closed {
-			e.setActive(true)
-			continue
-		} else {
+		if closed {
 			closedNum++
-			c.closeAndDelete(e)
 		}
 	}
 	c.metricsClosed(closedNum, size)
@@ -446,14 +557,24 @@ func (c *oCache) Close() (err error) {
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
-	// one deadline for the whole pass, spent only on entries another closer holds:
-	// that closer can be a gc stuck in TryClose on an unresponsive peer. Loads are
-	// already cancelled above, and value.Close takes no ctx, so uncontended entries
-	// still close normally once the deadline has passed.
+	// one deadline for the whole pass, spent only on entries another closer or
+	// an unresponsive load holds: that closer can be a gc stuck in TryClose on
+	// an unresponsive peer, and a loadFunc that ignores its cancelled ctx must
+	// forfeit its entry rather than wedge Close — its value is closed by
+	// c.load itself when it finally completes (the c.closed branch there).
+	// Completed loads win over the spent deadline inside waitLoad, and
+	// value.Close takes no ctx, so uncontended entries still close normally
+	// once the deadline has passed. ErrClosed from waitLoad means c.load
+	// already handled the entry, so it is not worth a warning.
 	closingCtx, cancel := context.WithTimeout(context.Background(), c.closeTimeout)
 	defer cancel()
 	for _, e := range toClose {
-		if _, err := c.removeCtx(context.Background(), closingCtx, e); err != nil && err != ErrNotExists {
+		// ErrClosed means c.load already handled the entry, context.Canceled
+		// is the loadErr of a load this Close killed itself, and ErrNotExists
+		// is a loadFunc verdict (a load that found nothing left nothing to
+		// close) — none are worth a warning
+		if _, err := c.removeCtx(closingCtx, e); err != nil &&
+			!errors.Is(err, ErrNotExists) && !errors.Is(err, ErrClosed) && !errors.Is(err, context.Canceled) {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}

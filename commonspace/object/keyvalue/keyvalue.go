@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	anystore "github.com/anyproto/any-store"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
@@ -98,6 +99,11 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 	for _, id := range append(removedIds, changedIds...) {
 		kv, err := innerStorage.GetKeyPeerId(ctx, id)
 		if err != nil {
+			if errors.Is(err, anystore.ErrDocNotFound) {
+				// A concurrently applied deletion watermark dropped the row
+				// between CompareDiff and this load; skip it for the round.
+				continue
+			}
 			return err
 		}
 		err = stream.Send(kv.Proto())

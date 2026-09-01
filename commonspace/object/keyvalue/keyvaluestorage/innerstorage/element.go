@@ -9,7 +9,16 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
-var ErrInvalidSignature = errors.New("invalid signature")
+var (
+	ErrInvalidSignature = errors.New("invalid signature")
+	ErrInvalidKeyPeerId = errors.New("keyPeerId does not match key and peer")
+	ErrInvalidWatermark = errors.New("invalid deletion watermark")
+)
+
+// KeyPeerId is the row id of key written by peerId.
+func KeyPeerId(key, peerId string) string {
+	return key + "-" + peerId
+}
 
 type KeyValue struct {
 	KeyPeerId string
@@ -23,6 +32,13 @@ type KeyValue struct {
 	Identity       string
 	PeerId         string
 	AclId          string
+	// DeletePrefix marks the row as a deletion watermark (see
+	// StoreKeyInner.deletePrefix). Key mirrors the prefix; the encrypted
+	// payload stays empty.
+	DeletePrefix string
+	// IdentityPubKey is the parsed identity from the inner payload; set by
+	// KeyValueFromProto for permission checks, never persisted.
+	IdentityPubKey crypto.PubKey
 }
 
 type Value struct {
@@ -50,10 +66,21 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 		return kv, err
 	}
 	kv.Identity = identity.Account()
+	kv.IdentityPubKey = identity
 	kv.PeerId = peerId.PeerId()
 	kv.Key = innerValue.Key
 	kv.AclId = innerValue.AclHeadId
-	// TODO: check that key-peerId is equal to key+peerId?
+	kv.DeletePrefix = innerValue.GetDelete().GetPrefix()
+	// The id must be derived from the signed payload: an unchecked KeyPeerId
+	// would let any writer occupy (and overwrite) another peer's row.
+	if kv.KeyPeerId != KeyPeerId(kv.Key, kv.PeerId) {
+		return kv, ErrInvalidKeyPeerId
+	}
+	// A watermark's key mirrors its prefix, keeping it inside the key range
+	// it governs (prefix iteration, id-derived invariants).
+	if kv.DeletePrefix != "" && kv.Key != kv.DeletePrefix {
+		return kv, ErrInvalidWatermark
+	}
 	if verify {
 		if verify, _ = identity.Verify(proto.Value, proto.IdentitySignature); !verify {
 			return kv, ErrInvalidSignature
@@ -84,6 +111,9 @@ func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 	obj.Set("t", a.NewNumberFloat64(float64(kv.TimestampMicro)))
 	obj.Set("i", a.NewString(kv.Identity))
 	obj.Set("p", a.NewString(kv.PeerId))
+	if kv.DeletePrefix != "" {
+		obj.Set("dp", a.NewString(kv.DeletePrefix))
+	}
 	return obj
 }
 

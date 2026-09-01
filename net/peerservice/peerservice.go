@@ -64,6 +64,7 @@ type peerService struct {
 	yamux        transport.Transport
 	quic         transport.Transport
 	webtransport transport.Transport
+	iroh         transport.Transport
 	nodeConf     nodeconf.NodeConf
 	peerAddrs    map[string][]string
 	pool         pool.Pool
@@ -86,6 +87,10 @@ func (p *peerService) Init(a *app.App) (err error) {
 	if comp := a.Component(webtransport.CName); comp != nil {
 		p.webtransport = comp.(transport.Transport)
 		p.webtransport.SetAccepter(p)
+	}
+	if comp := a.Component(transport.IrohCName); comp != nil {
+		p.iroh = comp.(transport.Transport)
+		p.iroh.SetAccepter(p)
 	}
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
@@ -164,6 +169,10 @@ func (p *peerService) preferredSchemes(preferQuic bool) []string {
 	if p.webtransport != nil {
 		schemes = append(schemes, transport.WebTransport)
 	}
+	// relay dials are the slowest and opt-in (see CtxWithGlobalDial)
+	if p.iroh != nil {
+		schemes = append(schemes, transport.Iroh)
+	}
 	return schemes
 }
 
@@ -193,7 +202,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		preferQuic = false
 	}
 	ordered := p.orderAddrs(ctx, addrs, preferQuic)
-	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", ordered))
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", logAddrs(ordered)))
 
 	var (
 		mc           transport.MultiConn
@@ -244,16 +253,28 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 // sockets used for dialing. Non-local addresses follow the global preferQuic
 // order. The sort is stable, so the given order is kept within equal
 // preference — and with preferQuic unset the order is unchanged, since yamux
-// comes first either way.
+// comes first either way. Iroh addresses are tickets, not hosts: they skip
+// the local check, always rank last, and are dropped unless the ctx opts in
+// to global dials.
 func (p *peerService) orderAddrs(ctx context.Context, addrs []string, preferQuic bool) []string {
 	type candidate struct {
 		addr string
 		rank int
 	}
 	candidates := make([]candidate, 0, len(addrs))
+	globalDial := ctxIsGlobalDial(ctx)
 	for _, addr := range addrs {
-		schemes := p.preferredSchemes(preferQuic && !p.localAddrs.isLocal(ctx, stripScheme(addr)))
-		rank := slices.Index(schemes, scheme(addr))
+		sch := scheme(addr)
+		var schemes []string
+		if sch == transport.Iroh {
+			if !globalDial {
+				continue
+			}
+			schemes = p.preferredSchemes(preferQuic)
+		} else {
+			schemes = p.preferredSchemes(preferQuic && !p.localAddrs.isLocal(ctx, stripScheme(addr)))
+		}
+		rank := slices.Index(schemes, sch)
 		if rank == -1 {
 			continue
 		}
@@ -275,7 +296,7 @@ func (p *peerService) dialAddr(ctx context.Context, addr string) (mc transport.M
 		return nil, fmt.Errorf("transport %v not available", scheme(addr))
 	}
 	if mc, err = tr.Dial(ctx, stripScheme(addr)); err != nil {
-		log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
+		log.InfoCtx(ctx, "can't connect to host", zap.String("addr", logAddr(addr)), zap.Error(err))
 	}
 	return
 }
@@ -288,6 +309,8 @@ func (p *peerService) transport(sch string) transport.Transport {
 		return p.yamux
 	case transport.WebTransport:
 		return p.webtransport
+	case transport.Iroh:
+		return p.iroh
 	}
 	return nil
 }
@@ -318,6 +341,27 @@ func (p *peerService) getPeerAddrs(peerId string) ([]string, error) {
 		return nil, ErrAddrsNotFound
 	}
 	return addrs, nil
+}
+
+// logAddr shortens iroh tickets: a ticket encodes the peer's relay and IP
+// addresses, which have no place in shipped logs.
+func logAddr(addr string) string {
+	const keep = 12
+	if scheme(addr) != transport.Iroh {
+		return addr
+	}
+	if ticket := stripScheme(addr); len(ticket) > keep {
+		return transport.Iroh + "://" + ticket[:keep] + "…"
+	}
+	return addr
+}
+
+func logAddrs(addrs []string) []string {
+	out := make([]string, len(addrs))
+	for i, addr := range addrs {
+		out[i] = logAddr(addr)
+	}
+	return out
 }
 
 func scheme(addr string) string {
