@@ -1,6 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.26
+go 1.26.0
 
 require (
 	filippo.io/edwards25519 v1.2.0
@@ -38,7 +38,7 @@ require (
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef
 	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.22.0
