@@ -1,6 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.26
+go 1.26.0
 
 require (
 	filippo.io/edwards25519 v1.2.0
@@ -30,7 +30,7 @@ require (
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/quic-go/quic-go v0.61.0
+	github.com/quic-go/quic-go v0.62.0
 	github.com/quic-go/webtransport-go v0.12.0
 	github.com/stretchr/testify v1.12.1
 	github.com/tmc/go-iroh v0.1.0
