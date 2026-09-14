@@ -13,8 +13,9 @@ type configGetter interface {
 }
 
 type Config struct {
-	RequireClientAuth    bool     `yaml:"requireClientAuth"`
-	CompatibleVersions   []uint32 `yaml:"compatibleVersions"`
+	RequireClientAuth  bool            `yaml:"requireClientAuth"`
+	CompatibleVersions []uint32        `yaml:"compatibleVersions"`
+	Admission          AdmissionConfig `yaml:"admission"`
 }
 
 // CtxAllowAccountCheck upgrades the context to allow identity check on handshake
