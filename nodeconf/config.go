@@ -28,6 +28,7 @@ const (
 	NodeTypeCoordinator           NodeType = "coordinator"
 	NodeTypeNamingNode            NodeType = "namingNode"
 	NodeTypePaymentProcessingNode NodeType = "paymentProcessingNode"
+	NodeTypePublish               NodeType = "publish"
 )
 
 type Node struct {
