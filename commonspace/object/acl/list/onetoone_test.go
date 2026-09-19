@@ -3,6 +3,7 @@ package list
 import (
 	"crypto/rand"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
@@ -451,4 +452,57 @@ type errPubKey struct {
 
 func (errPubKey) Marshall() ([]byte, error) {
 	return nil, errors.New("marshall failure")
+}
+
+func TestAclState_CopyPreservesOneToOne(t *testing.T) {
+	a := NewAclExecutor("spaceId")
+	require.NoError(t, a.Execute("a;b.init-onetoone::a;b"))
+	st := a.ActualAccounts()["a"].Acl.AclState()
+	require.True(t, st.IsOneToOne())
+
+	// Copy backs the preflight validation in BuildRequestRemove and friends. A copy that forgets
+	// isOneToOne validates one-to-one records as ordinary ones, so the builder accepts a request
+	// that ApplyRecord - and a state rebuilt from storage - both reject.
+	assert.True(t, st.Copy().IsOneToOne())
+}
+
+// TestAclState_CopyLeavesNoFieldBehind guards Copy against the next field added to AclState:
+// isOneToOne was missed for exactly this reason. Rather than enumerating fields by hand, it walks
+// them reflectively and requires that whatever the original has set, the copy has set too.
+func TestAclState_CopyLeavesNoFieldBehind(t *testing.T) {
+	states := map[string]*AclState{
+		"one-to-one": func() *AclState {
+			a := NewAclExecutor("spaceId")
+			require.NoError(t, a.Execute("a;b.init-onetoone::a;b"))
+			return a.ActualAccounts()["a"].Acl.AclState()
+		}(),
+		// a shared acl reaches the fields a one-to-one acl cannot have: invites, and the request
+		// records and pending requests of a join that has not been approved yet
+		"shared with a pending join": func() *AclState {
+			a := NewAclExecutor("spaceId")
+			for _, cmd := range []string{"a.init::a", "a.invite::invId", "b.join::invId"} {
+				require.NoError(t, a.Execute(cmd))
+			}
+			return a.ActualAccounts()["a"].Acl.AclState()
+		}(),
+	}
+
+	for name, st := range states {
+		t.Run(name, func(t *testing.T) {
+			original := reflect.ValueOf(st).Elem()
+			copied := reflect.ValueOf(st.Copy()).Elem()
+			var checked int
+			for i := 0; i < original.NumField(); i++ {
+				field := original.Type().Field(i).Name
+				if original.Field(i).IsZero() {
+					// nothing to carry over, so nothing this test can say about it
+					continue
+				}
+				checked++
+				assert.False(t, copied.Field(i).IsZero(), "Copy() left %s behind", field)
+			}
+			// a state that carried almost nothing would make the loop above vacuous
+			assert.Greater(t, checked, 8, "fixture does not populate enough of AclState to be a guard")
+		})
+	}
 }
