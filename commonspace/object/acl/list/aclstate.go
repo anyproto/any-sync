@@ -418,6 +418,7 @@ func (st *AclState) Copy() *AclState {
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        st.keyStore,
+		isOneToOne:      st.isOneToOne,
 	}
 	for k, v := range st.keys {
 		newSt.keys[k] = v
