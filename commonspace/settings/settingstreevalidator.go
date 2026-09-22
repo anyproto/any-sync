@@ -2,17 +2,20 @@ package settings
 
 import (
 	"context"
+	"errors"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
 // objectAuthor resolves the effective author of an object. For child/derived objects
-// (those with a ParentId), it resolves to the parent object's author.
+// (those with a ParentId), it resolves to the parent object's author; a parent that
+// has not arrived here yet falls back to the child's own root author.
 func objectAuthor(store spacestorage.SpaceStorage, objectId string) (crypto.PubKey, error) {
 	ctx := context.Background()
 	entry, err := store.HeadStorage().GetEntry(ctx, objectId)
@@ -24,6 +27,9 @@ func objectAuthor(store spacestorage.SpaceStorage, objectId string) (crypto.PubK
 		targetId = entry.ParentId
 	}
 	treeStorage, err := store.TreeStorage(ctx, targetId)
+	if err != nil && targetId != objectId && errors.Is(err, treestorage.ErrUnknownTreeId) {
+		treeStorage, err = store.TreeStorage(ctx, objectId)
+	}
 	if err != nil {
 		return nil, err
 	}

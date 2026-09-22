@@ -24,6 +24,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
@@ -350,6 +351,63 @@ func TestSettingsObject_DeleteObject_Restricted_AuthorCanDelete(t *testing.T) {
 
 	err := fx.doc.DeleteObject(ctx, delId)
 	require.NoError(t, err)
+}
+
+// A child whose parent has not arrived here resolves its author from
+// its own root: the child's changes are present by construction, the
+// parent's may follow in a later sync round.
+func TestSettingsObject_DeleteObject_Restricted_ParentAbsentFallsBackToChild(t *testing.T) {
+	fx := newSettingsFixture(t)
+	defer fx.stop(t)
+	fx.init(t)
+
+	delId, parentId := "delId", "parentId"
+	DoSnapshot = func(len int) bool {
+		return false
+	}
+
+	aclSetup := newValidatorTestSetup(t, true)
+	aclState := aclSetup.acl.AclState()
+	writerKeys := aclSetup.executor.ActualAccounts()["b"].Keys
+
+	fx.syncTree.EXPECT().Id().Return("syncId")
+	fx.syncTree.EXPECT().Len().Return(10)
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), delId).Return(headstorage.HeadsEntry{
+		Id:       delId,
+		ParentId: parentId,
+	}, nil).Times(2)
+	fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), delId).Return(nil, nil)
+
+	fx.syncTree.EXPECT().AclList().Return(fx.aclList)
+	fx.aclList.EXPECT().RLock()
+	fx.aclList.EXPECT().AclState().Return(aclState).AnyTimes()
+	fx.aclList.EXPECT().RUnlock()
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	// The parent is unknown here; the child's own root names writer "b".
+	fx.spaceStorage.EXPECT().TreeStorage(gomock.Any(), parentId).Return(nil, treestorage.ErrUnknownTreeId)
+	mockTreeStorage := mock_objecttree.NewMockStorage(fx.ctrl)
+	fx.spaceStorage.EXPECT().TreeStorage(gomock.Any(), delId).Return(mockTreeStorage, nil)
+	mockTreeStorage.EXPECT().Root(gomock.Any()).Return(objecttree.StorageChange{
+		RawChange: makeRootChangeBytes(t, writerKeys.SignKey.GetPublic()),
+		Id:        "rootId",
+	}, nil)
+	fx.account.EXPECT().Account().Return(writerKeys)
+
+	res := []byte("settingsData")
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange([]string{delId}, fx.doc.state, false).Return(res, nil)
+	fx.account.EXPECT().Account().Return(writerKeys)
+	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
+		Data:              res,
+		Key:               writerKeys.SignKey,
+		IsSnapshot:        false,
+		ShouldBeEncrypted: false,
+	}).Return(objecttree.AddResult{}, nil)
+	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
+	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
+
+	require.NoError(t, fx.doc.DeleteObject(ctx, delId))
 }
 
 func TestSettingsObject_DeleteObject_Restricted_AdminCanDelete(t *testing.T) {

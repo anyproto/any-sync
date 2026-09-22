@@ -214,6 +214,15 @@ func (t *treeBuilder) DeriveTree(ctx context.Context, payload objecttree.ObjectT
 		err = ErrSpaceClosed
 		return
 	}
+	if payload.ParentId != "" {
+		// A derived object cannot be a parent: it is never deleted, so the
+		// binding could never cascade. Checked here, where the creator
+		// holds the parent; replication stores what it is given.
+		if entry, entryErr := t.spaceStorage.HeadStorage().GetEntry(ctx, payload.ParentId); entryErr == nil && entry.IsDerived {
+			err = objecttree.ErrDerivedParent
+			return
+		}
+	}
 	root, err := objecttree.DeriveObjectTreeRoot(payload, t.aclList)
 	if err != nil {
 		return

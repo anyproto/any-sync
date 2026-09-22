@@ -89,7 +89,7 @@ type storage struct {
 
 var (
 	StorageChangeBuilder = NewChangeBuilder
-	// Deprecated: an absent parent no longer refuses the child.
+	// Deprecated: no longer returned; kept for compatibility.
 	ErrParentNotFound = errors.New("parent object not found")
 	ErrDerivedParent  = errors.New("derived object cannot be a parent")
 )
@@ -152,31 +152,24 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 		IsDerived:      &unmarshalled.IsDerived,
 	}
 	if unmarshalled.ParentId != "" {
-		headsUpdate.ParentId = &unmarshalled.ParentId
 		// The parent may arrive later or from another peer: the child is
 		// stored now and the binding cascades either way (deletion walks
-		// children by ParentId). Only a parent present and derived refuses.
-		if parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId); parentErr == nil && parentEntry.IsDerived {
-			return nil, ErrDerivedParent
+		// children by ParentId). A parent already gone takes the child
+		// with it. "A derived object cannot be a parent" is enforced where
+		// the child is created (objecttreebuilder.DeriveTree).
+		headsUpdate.ParentId = &unmarshalled.ParentId
+		parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId)
+		switch {
+		case parentErr == nil && parentEntry.DeletedStatus >= headstorage.DeletedStatusQueued:
+			queued := headstorage.DeletedStatusQueued
+			headsUpdate.DeletedStatus = &queued
+		case parentErr != nil && !errors.Is(parentErr, anystore.ErrDocNotFound):
+			return nil, parentErr
 		}
 	}
 	err = st.headStorage.UpdateEntry(ctx, headsUpdate)
 	if err != nil {
 		return nil, err
-	}
-	// Late-arriving child check: if the parent is already deleted/queued, immediately queue this child for deletion
-	if unmarshalled.ParentId != "" {
-		parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId)
-		if parentErr == nil && parentEntry.DeletedStatus >= headstorage.DeletedStatusQueued {
-			deletedStatus := headstorage.DeletedStatusQueued
-			err = st.headStorage.UpdateEntry(ctx, headstorage.HeadsUpdate{
-				Id:            root.Id,
-				DeletedStatus: &deletedStatus,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 	return st, nil
 }
