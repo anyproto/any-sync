@@ -132,6 +132,11 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 		childRoot := creator.CreateDerivedRootWithParent("child4", "derived-parent")
 		_, err = CreateStorage(ctx, childRoot, hs, store)
 		require.NoError(t, err)
+
+		childEntry, err := hs.GetEntry(ctx, "child4")
+		require.NoError(t, err)
+		require.Equal(t, "derived-parent", childEntry.ParentId)
+		require.Equal(t, headstorage.DeletedStatusNotDeleted, childEntry.DeletedStatus)
 	})
 
 	t.Run("parent lookup error - propagates", func(t *testing.T) {
