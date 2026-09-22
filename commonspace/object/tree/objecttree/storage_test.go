@@ -85,7 +85,7 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 		require.Equal(t, headstorage.DeletedStatusNotDeleted, childEntry.DeletedStatus)
 	})
 
-	t.Run("parent does not exist - returns error", func(t *testing.T) {
+	t.Run("parent does not exist - child stored with the binding", func(t *testing.T) {
 		ctx := context.Background()
 		store := newTestStore(t)
 		hs, err := headstorage.New(ctx, store)
@@ -93,10 +93,23 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 
 		creator := NewMockChangeCreator(nil)
 
-		// Create child with ParentId pointing to non-existent parent
-		childRoot := creator.CreateDerivedRootWithParent("child3", "nonexistent-parent")
+		// The parent may arrive later or from another peer; the child
+		// must not wait for it.
+		childRoot := creator.CreateDerivedRootWithParent("child3", "later-parent")
 		_, err = CreateStorage(ctx, childRoot, hs, store)
-		require.ErrorIs(t, err, ErrParentNotFound)
+		require.NoError(t, err)
+
+		childEntry, err := hs.GetEntry(ctx, "child3")
+		require.NoError(t, err)
+		require.Equal(t, "later-parent", childEntry.ParentId)
+		require.Equal(t, headstorage.DeletedStatusNotDeleted, childEntry.DeletedStatus)
+
+		// The binding is queryable before the parent exists, so a later
+		// parent deletion still cascades.
+		children, err := hs.GetEntriesByParentId(ctx, "later-parent")
+		require.NoError(t, err)
+		require.Len(t, children, 1)
+		require.Equal(t, "child3", children[0].Id)
 	})
 
 	t.Run("parent is derived - returns error", func(t *testing.T) {

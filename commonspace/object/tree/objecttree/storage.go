@@ -89,8 +89,9 @@ type storage struct {
 
 var (
 	StorageChangeBuilder = NewChangeBuilder
-	ErrParentNotFound    = errors.New("parent object not found")
-	ErrDerivedParent     = errors.New("derived object cannot be a parent")
+	// Deprecated: an absent parent no longer refuses the child.
+	ErrParentNotFound = errors.New("parent object not found")
+	ErrDerivedParent  = errors.New("derived object cannot be a parent")
 )
 
 func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
@@ -152,11 +153,10 @@ func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWit
 	}
 	if unmarshalled.ParentId != "" {
 		headsUpdate.ParentId = &unmarshalled.ParentId
-		parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId)
-		if parentErr != nil {
-			return nil, ErrParentNotFound
-		}
-		if parentEntry.IsDerived {
+		// The parent may arrive later or from another peer: the child is
+		// stored now and the binding cascades either way (deletion walks
+		// children by ParentId). Only a parent present and derived refuses.
+		if parentEntry, parentErr := st.headStorage.GetEntry(ctx, unmarshalled.ParentId); parentErr == nil && parentEntry.IsDerived {
 			return nil, ErrDerivedParent
 		}
 	}
