@@ -102,7 +102,9 @@ func (s *secureService) Init(a *app.App) (err error) {
 		return
 	}
 	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion, s.compatibleVersions, a.VersionName())
-	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, s.compatibleVersions, a.VersionName(), account.Account())
+	if s.peerSignVerifier, err = newPeerSignVerifier(s.protoVersion, s.compatibleVersions, a.VersionName(), account.Account()); err != nil {
+		return
+	}
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 

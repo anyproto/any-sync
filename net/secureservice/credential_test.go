@@ -17,8 +17,8 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	identity1, _ := a1.SignKey.GetPublic().Marshall()
 	identity2, _ := a2.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(1, []uint32{1}, "test:v1", a1)
-	cc2 := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
+	cc1, err := newPeerSignVerifier(1, []uint32{1}, "test:v1", a1)
+	cc2, err := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
 
 	c1 := a2.PeerId
 	c2 := a1.PeerId
@@ -42,15 +42,15 @@ func TestIncompatibleVersion(t *testing.T) {
 	a2 := newTestAccData(t)
 	_, _ = a1.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(0, []uint32{0}, "test:v1", a1)
-	cc2 := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
+	cc1, err := newPeerSignVerifier(0, []uint32{0}, "test:v1", a1)
+	cc2, err := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
 
 	c1 := a2.PeerId
 	c2 := a1.PeerId
 
 	cr1 := cc1.MakeCredentials(c1)
 	cr2 := cc2.MakeCredentials(c2)
-	_, err := cc1.CheckCredential(c1, cr2)
+	_, err = cc1.CheckCredential(c1, cr2)
 	assert.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
 
 	_, err = cc2.CheckCredential(c2, cr1)
@@ -65,8 +65,8 @@ func TestIncompatibleVersion_Issue4423(t *testing.T) {
 	a2 := newTestAccData(t)
 	identity2, _ := a2.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(1, []uint32{1}, "Linux:0.43.3/middle:v0.36.6/any-sync:v0.5.11", a1)
-	cc2 := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
+	cc1, err := newPeerSignVerifier(1, []uint32{1}, "Linux:0.43.3/middle:v0.36.6/any-sync:v0.5.11", a1)
+	cc2, err := newPeerSignVerifier(1, []uint32{1}, "test:v1", a2)
 
 	c1 := a2.PeerId
 	c2 := a1.PeerId

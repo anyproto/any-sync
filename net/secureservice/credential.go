@@ -1,6 +1,8 @@
 package secureservice
 
 import (
+	"bufio"
+	"os"
 	"strings"
 
 	"go.uber.org/zap"
@@ -48,13 +50,50 @@ func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakepro
 	}, nil
 }
 
-func newPeerSignVerifier(protoVersion uint32, compatibleProtoVersions []uint32, clientVersion string, account *accountdata.AccountKeys) handshake.CredentialChecker {
-	return &peerSignVerifier{
+func newPeerSignVerifier(protoVersion uint32, compatibleProtoVersions []uint32, clientVersion string, account *accountdata.AccountKeys) (handshake.CredentialChecker, error) {
+	peerSignVerifier := &peerSignVerifier{
 		protoVersion:       protoVersion,
 		clientVersion:      clientVersion,
 		account:            account,
 		compatibleVersions: compatibleProtoVersions,
 	}
+
+	path, ok := os.LookupEnv("ALLOWED_PEERS")
+	if !ok {
+		peerSignVerifier.allowedPeerPubKeys = nil
+		return peerSignVerifier, nil
+	}
+	path = strings.TrimSpace(path)
+
+	file, err := os.Open(path)
+	if err != nil {
+		return peerSignVerifier, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	pubKeys := make(map[[32]byte]crypto.PubKey, 5)
+	for scanner.Scan() {
+		line := scanner.Text()
+		pub, err := crypto.UnmarshalEd25519PublicKey([]byte(line))
+		if err != nil {
+			return peerSignVerifier, err
+		}
+
+		raw, err := pub.Raw()
+		if err != nil {
+			return peerSignVerifier, err
+		}
+
+		pubKeys[[32]byte(raw)] = pub
+	}
+
+	if err = scanner.Err(); err != nil {
+		return peerSignVerifier, err
+	}
+
+	peerSignVerifier.allowedPeerPubKeys = pubKeys
+	return peerSignVerifier, nil
 }
 
 type peerSignVerifier struct {
@@ -62,6 +101,8 @@ type peerSignVerifier struct {
 	clientVersion      string
 	account            *accountdata.AccountKeys
 	compatibleVersions []uint32
+
+	allowedPeerPubKeys map[[32]byte]crypto.PubKey
 }
 
 func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
@@ -103,6 +144,11 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 		err = handshake.ErrInvalidCredentials
 		return
 	}
+
+	if err = p.validateAllowList(pubKey); err != nil {
+		return
+	}
+
 	ok, err := pubKey.Verify([]byte((remotePeerId + p.account.PeerId)), msg.Sign)
 	if err != nil {
 		return
@@ -121,4 +167,27 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 		ProtoVersion:  cred.Version,
 		ClientVersion: cred.ClientVersion,
 	}, nil
+}
+
+func (p *peerSignVerifier) validateAllowList(pubKey crypto.PubKey) (err error) {
+	err = nil
+
+	if p.allowedPeerPubKeys == nil {
+		return
+	}
+
+	var raw []byte
+	raw, err = pubKey.Raw()
+	if err != nil {
+		err = handshake.ErrInvalidCredentials
+		return
+	}
+
+	_, ok := p.allowedPeerPubKeys[[32]byte(raw)]
+	if !ok {
+		err = handshake.ErrInvalidCredentials
+		return
+	}
+
+	return
 }
