@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync/atomic"
 
+	anystore "github.com/anyproto/any-store"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -213,6 +214,21 @@ func (t *treeBuilder) DeriveTree(ctx context.Context, payload objecttree.ObjectT
 	if t.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
+	}
+	if payload.ParentId != "" {
+		// A derived object cannot be a parent: it is never deleted, so the
+		// binding could never cascade. Checked on the device that creates
+		// the child and holds the parent; replication stores what it is
+		// given.
+		entry, entryErr := t.spaceStorage.HeadStorage().GetEntry(ctx, payload.ParentId)
+		switch {
+		case entryErr == nil && entry.IsDerived:
+			err = objecttree.ErrDerivedParent
+			return
+		case entryErr != nil && !errors.Is(entryErr, anystore.ErrDocNotFound):
+			err = entryErr
+			return
+		}
 	}
 	root, err := objecttree.DeriveObjectTreeRoot(payload, t.aclList)
 	if err != nil {
