@@ -446,6 +446,66 @@ func TestIrohTransport_RunRequiresFilter(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoFilter)
 }
 
+func TestIrohTransport_BindFallback(t *testing.T) {
+	taken, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer taken.Close()
+	takenAddr := taken.LocalAddr().(*net.UDPAddr).AddrPort()
+
+	t.Run("fallback binds an ephemeral port", func(t *testing.T) {
+		fx := newFixtureConf(t, Config{BindAddr: takenAddr.String(), BindFallback: true})
+		defer fx.finish(t)
+		got := fx.LocalAddr()
+		assert.Equal(t, takenAddr.Addr(), got.Addr())
+		assert.NotZero(t, got.Port())
+		assert.NotEqual(t, takenAddr.Port(), got.Port())
+	})
+	t.Run("without fallback Run fails", func(t *testing.T) {
+		_, err := startFixture(t, Config{BindAddr: takenAddr.String()}, func(string) bool { return true })
+		var opErr *net.OpError
+		require.ErrorAs(t, err, &opErr)
+		assert.Equal(t, "listen", opErr.Op)
+	})
+	t.Run("dual-stack fallback", func(t *testing.T) {
+		taken6, err := net.ListenPacket("udp", "[::]:0")
+		if err != nil {
+			t.Skipf("no IPv6: %v", err)
+		}
+		defer taken6.Close()
+		port := taken6.LocalAddr().(*net.UDPAddr).AddrPort().Port()
+		fx := newFixtureConf(t, Config{BindAddr: netip.AddrPortFrom(netip.IPv6Unspecified(), port).String(), BindFallback: true})
+		defer fx.finish(t)
+		got := fx.LocalAddr()
+		assert.Equal(t, netip.IPv6Unspecified(), got.Addr())
+		assert.NotZero(t, got.Port())
+		assert.NotEqual(t, port, got.Port())
+	})
+	t.Run("both binds fail", func(t *testing.T) {
+		// TEST-NET-1: an address no host interface holds.
+		if probe, err := net.ListenPacket("udp4", "192.0.2.1:0"); err == nil {
+			probe.Close()
+			t.Skip("host binds non-local addresses")
+		}
+		_, err := startFixture(t, Config{BindAddr: "192.0.2.1:4000", BindFallback: true}, func(string) bool { return true })
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "192.0.2.1:4000")
+		assert.ErrorContains(t, err, "192.0.2.1:0")
+	})
+	t.Run("free port is bound as asked", func(t *testing.T) {
+		free, err := net.ListenPacket("udp4", "127.0.0.1:0")
+		require.NoError(t, err)
+		want := free.LocalAddr().(*net.UDPAddr).AddrPort()
+		require.NoError(t, free.Close())
+		fx := newFixtureConf(t, Config{BindAddr: want.String(), BindFallback: true})
+		defer fx.finish(t)
+		assert.Equal(t, want, fx.LocalAddr())
+	})
+}
+
+func TestIrohTransport_LocalAddrBeforeRun(t *testing.T) {
+	assert.False(t, New().LocalAddr().IsValid())
+}
+
 func TestIrohTransport_DialTimeout(t *testing.T) {
 	fxS := newFixture(t)
 	defer fxS.finish(t)

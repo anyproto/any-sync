@@ -14,11 +14,15 @@ type Config struct {
 	InsecureRelay bool `yaml:"insecureRelay"`
 	// BindAddr is the UDP "ip:port" to bind. Empty binds an ephemeral port on
 	// all interfaces.
-	BindAddr        string `yaml:"bindAddr"`
-	WriteTimeoutSec int    `yaml:"writeTimeoutSec"`
-	CloseTimeoutSec int    `yaml:"closeTimeoutSec"`
-	DialTimeoutSec  int    `yaml:"dialTimeoutSec"`
-	MaxStreams      int64  `yaml:"maxStreams"`
+	BindAddr string `yaml:"bindAddr"`
+	// BindFallback makes BindAddr's port a preference: when the UDP socket
+	// can't be bound on it, Run retries once on an ephemeral port of the
+	// same IP. Ignored without a BindAddr port.
+	BindFallback    bool  `yaml:"bindFallback"`
+	WriteTimeoutSec int   `yaml:"writeTimeoutSec"`
+	CloseTimeoutSec int   `yaml:"closeTimeoutSec"`
+	DialTimeoutSec  int   `yaml:"dialTimeoutSec"`
+	MaxStreams      int64 `yaml:"maxStreams"`
 	// InitialPacketSize overrides the initial QUIC packet size; 0 keeps the
 	// go-iroh default.
 	InitialPacketSize uint16 `yaml:"initialPacketSize"`

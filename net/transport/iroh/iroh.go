@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"slices"
 	"sync"
 	"time"
 
@@ -73,6 +74,9 @@ type Iroh interface {
 	// RelayConnected reports whether the home-relay session is up. Always
 	// false without relays.
 	RelayConnected() bool
+	// LocalAddr returns the bound UDP address; the zero value until Run
+	// binds. A dual-stack bind reports an IPv6 address.
+	LocalAddr() netip.AddrPort
 	// SetIncomingFilter gates inbound connections by remote peer id before
 	// the any-sync handshake runs. The endpoint is reachable from the whole
 	// internet through the relay, so Run refuses to start without one.
@@ -255,14 +259,7 @@ func (i *irohTransport) Run(ctx context.Context) (err error) {
 		log.Warn("iroh: no relay configured, endpoint is reachable by direct addresses only")
 	}
 	opts = append(opts, goiroh.WithRelayMode(mode))
-	if i.conf.BindAddr != "" {
-		ap, err := netip.ParseAddrPort(i.conf.BindAddr)
-		if err != nil {
-			return fmt.Errorf("iroh: bind addr %q: %w", i.conf.BindAddr, err)
-		}
-		opts = append(opts, goiroh.WithBindAddr(ap))
-	}
-	ep, err := goiroh.Bind(ctx, opts...)
+	ep, err := i.bind(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -276,6 +273,42 @@ func (i *irohTransport) Run(ctx context.Context) (err error) {
 	return nil
 }
 
+// bind binds the endpoint on BindAddr. With BindFallback, a UDP socket
+// that can't be bound on BindAddr's port is retried once on an
+// ephemeral port of the same IP; other Bind failures are returned as is.
+func (i *irohTransport) bind(ctx context.Context, opts []goiroh.Option) (*goiroh.Endpoint, error) {
+	if i.conf.BindAddr == "" {
+		return goiroh.Bind(ctx, opts...)
+	}
+	ap, err := netip.ParseAddrPort(i.conf.BindAddr)
+	if err != nil {
+		return nil, fmt.Errorf("iroh: bind addr %q: %w", i.conf.BindAddr, err)
+	}
+	bindAt := func(ap netip.AddrPort) (*goiroh.Endpoint, error) {
+		return goiroh.Bind(ctx, append(slices.Clip(opts), goiroh.WithBindAddr(ap))...)
+	}
+	if !i.conf.BindFallback || ap.Port() == 0 {
+		return bindAt(ap)
+	}
+	ep, err := bindAt(ap)
+	if err == nil || !isSocketBindErr(err) {
+		return ep, err
+	}
+	ep, fallbackErr := bindAt(netip.AddrPortFrom(ap.Addr(), 0))
+	if fallbackErr != nil {
+		return nil, errors.Join(err, fallbackErr)
+	}
+	log.Warn("iroh: bind addr unavailable, bound an ephemeral port", zap.String("bindAddr", i.conf.BindAddr), zap.Stringer("localAddr", ep.LocalAddr()), zap.Error(err))
+	return ep, nil
+}
+
+// isSocketBindErr reports whether Bind failed binding the UDP socket
+// itself, as opposed to a later endpoint setup step.
+func isSocketBindErr(err error) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "listen"
+}
+
 func (i *irohTransport) endpoint() *goiroh.Endpoint {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -286,6 +319,14 @@ func (i *irohTransport) Ticket() string {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	return i.ticket
+}
+
+func (i *irohTransport) LocalAddr() netip.AddrPort {
+	ep := i.endpoint()
+	if ep == nil {
+		return netip.AddrPort{}
+	}
+	return ep.LocalAddr()
 }
 
 func (i *irohTransport) TicketUpdates() <-chan struct{} {
