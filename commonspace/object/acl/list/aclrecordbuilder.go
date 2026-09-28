@@ -1000,7 +1000,20 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 	if err != nil {
 		return
 	}
+	// The record has no id until the network accepts it, and whatever it creates is keyed by its id. An
+	// empty one would let a later value in the record reference an earlier one, so admission would accept
+	// what replay, under the real id, cannot resolve. The id of the unaccepted bytes cannot be named by any
+	// of the record's content, since a record cannot contain its own hash.
+	marshalledRaw, err := rawRecord.MarshalVT()
+	if err != nil {
+		return
+	}
+	provisionalId, err := cidutil.NewCidFromBytes(marshalledRaw)
+	if err != nil {
+		return
+	}
 	rec = &AclRecord{
+		Id:                provisionalId,
 		PrevId:            aclRecord.PrevId,
 		Timestamp:         aclRecord.Timestamp,
 		AcceptorTimestamp: rawRecord.AcceptorTimestamp,

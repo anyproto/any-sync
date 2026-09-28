@@ -520,7 +520,11 @@ func (st *AclState) applyInviteChange(ch *aclrecordproto.AclAccountInviteChange,
 	if err != nil {
 		return err
 	}
-	invite := st.invites[ch.InviteRecordId]
+	invite, exists := st.invites[ch.InviteRecordId]
+	if !exists {
+		// validation refuses this; without it, a stored record whose reference does not resolve is a no-op
+		return nil
+	}
 	invite.Permissions = AclPermissions(ch.Permissions)
 	st.invites[ch.InviteRecordId] = invite
 	return nil
@@ -659,7 +663,11 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	if err != nil {
 		return err
 	}
-	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
+	requestRecord, exists := st.requestRecords[ch.RequestRecordId]
+	if !exists {
+		// validation refuses this; without it, a stored record whose reference does not resolve is a no-op
+		return nil
+	}
 	pKeyString := mapKeyFromPubKey(acceptIdentity)
 	state, exists := st.accountStates[pKeyString]
 	permissions := AclPermissions(ch.Permissions)
@@ -676,7 +684,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		Status:            StatusActive,
 		PermissionChanges: permissionChanges,
 	}
-	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
+	delete(st.pendingRequests, mapKeyFromPubKey(requestRecord.RequestIdentity))
 	delete(st.requestRecords, ch.RequestRecordId)
 
 	// If the current account is the one being accepted, then decrypt the read key using its private key
@@ -788,14 +796,19 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	if err != nil {
 		return err
 	}
-	pk := mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity)
+	requestRecord, exists := st.requestRecords[ch.RequestRecordId]
+	if !exists {
+		// validation refuses this; without it, a stored record whose reference does not resolve is a no-op
+		return nil
+	}
+	pk := mapKeyFromPubKey(requestRecord.RequestIdentity)
 	accSt, exists := st.accountStates[pk]
 	if !exists {
 		return ErrNoSuchAccount
 	}
 	accSt.Status = StatusDeclined
 	st.accountStates[pk] = accSt
-	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
+	delete(st.pendingRequests, pk)
 	delete(st.requestRecords, ch.RequestRecordId)
 	return nil
 }
@@ -805,19 +818,23 @@ func (st *AclState) applyRequestCancel(ch *aclrecordproto.AclAccountRequestCance
 	if err != nil {
 		return err
 	}
-	pk := mapKeyFromPubKey(st.requestRecords[ch.RecordId].RequestIdentity)
+	rec, exists := st.requestRecords[ch.RecordId]
+	if !exists {
+		// validation refuses this; without it, a stored record whose reference does not resolve is a no-op
+		return nil
+	}
+	pk := mapKeyFromPubKey(rec.RequestIdentity)
 	accSt, exists := st.accountStates[pk]
 	if !exists {
 		return ErrNoSuchAccount
 	}
-	rec := st.requestRecords[ch.RecordId]
 	if rec.Type == RequestTypeJoin {
 		accSt.Status = StatusCanceled
 	} else {
 		accSt.Status = StatusActive
 	}
 	st.accountStates[pk] = accSt
-	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RecordId].RequestIdentity))
+	delete(st.pendingRequests, pk)
 	delete(st.requestRecords, ch.RecordId)
 	return nil
 }
