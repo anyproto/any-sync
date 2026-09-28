@@ -3,6 +3,7 @@ package migration
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,11 +57,40 @@ func TestMigratePoolTryAddWhenFull(t *testing.T) {
 	pool.Run()
 	block := make(chan struct{})
 	defer close(block)
+	started := make(chan struct{})
 	err := pool.TryAdd(func() {
+		close(started)
 		<-block
 	})
 	require.NoError(t, err)
+	// the worker holds the first task, the second one fills the queue
+	<-started
+	require.NoError(t, pool.TryAdd(func() {}))
 	require.Error(t, pool.TryAdd(func() {}))
+}
+
+func TestMigratePoolTaskDoneBeforeAddReturns(t *testing.T) {
+	ctx := context.Background()
+	for i := 0; i < 2000; i++ {
+		pool := newMigratePool(ctx, 4, 10)
+		pool.Run()
+		for j := 0; j < 10; j++ {
+			require.NoError(t, pool.Add(ctx, func() {}))
+		}
+		require.NoError(t, pool.Wait())
+	}
+}
+
+func TestMigratePoolAddMany(t *testing.T) {
+	ctx := context.Background()
+	pool := newMigratePool(ctx, 2, 10)
+	pool.Run()
+	var count atomic.Int32
+	task := func() { count.Add(1) }
+	require.NoError(t, pool.Add(ctx, task, task, task))
+	require.NoError(t, pool.TryAdd(task, task))
+	require.NoError(t, pool.Wait())
+	require.Equal(t, int32(5), count.Load())
 }
 
 func TestContextWaitGroupNormalWait(t *testing.T) {

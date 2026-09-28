@@ -29,17 +29,18 @@ type migratePool struct {
 }
 
 func (mp *migratePool) Add(ctx context.Context, f ...func()) (err error) {
-	err = mp.batch.Add(ctx, f...)
-	if err == nil {
-		mp.wg.Add(1)
+	// counted before queued: a worker can finish a task before Add returns
+	mp.wg.Add(len(f))
+	if err = mp.batch.Add(ctx, f...); err != nil {
+		mp.wg.Add(-len(f))
 	}
 	return err
 }
 
 func (mp *migratePool) TryAdd(f ...func()) (err error) {
-	err = mp.batch.TryAdd(f...)
-	if err == nil {
-		mp.wg.Add(1)
+	mp.wg.Add(len(f))
+	if err = mp.batch.TryAdd(f...); err != nil {
+		mp.wg.Add(-len(f))
 	}
 	return err
 }
