@@ -271,10 +271,10 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 		return
 	}
 	objChange.OrderId = lexId.Next(ot.tree.attached[ot.tree.lastIteratedHeadId].OrderId)
+	commonSnapshot := ot.tree.root.Id
 	if content.IsSnapshot {
 		objChange.SnapshotCounter = ot.tree.root.SnapshotCounter + 1
-		// clearing tree, because we already saved everything in the last snapshot
-		ot.tree = &Tree{}
+		commonSnapshot = objChange.Id
 	}
 	storageChange := StorageChange{
 		RawChange:       rawChange.RawChange,
@@ -291,14 +291,20 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 			return
 		}
 	}
+	// the tree takes the change only once it is stored: a change the storage
+	// refused must not become the parent of the next one
+	added := []StorageChange{storageChange}
+	err = ot.storage.AddAll(ctx, added, []string{objChange.Id}, commonSnapshot)
+	if err != nil {
+		return
+	}
+	if content.IsSnapshot {
+		// clearing tree, because we already saved everything in the last snapshot
+		ot.tree = &Tree{}
+	}
 	err = ot.tree.AddMergedHead(objChange)
 	if err != nil {
 		panic(err)
-	}
-	added := []StorageChange{storageChange}
-	err = ot.storage.AddAll(ctx, added, ot.Heads(), ot.tree.root.Id)
-	if err != nil {
-		return
 	}
 
 	mode := Append
