@@ -239,7 +239,7 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid
 		return
 	}
 	stateCopy := a.aclState.Copy()
-	stateCopy.contentValidator = newContentValidator(stateCopy.keyStore, stateCopy, recordverifier.NewValidateFull())
+	stateCopy.contentValidator = newAdmissionValidator(stateCopy.keyStore, stateCopy)
 	err = stateCopy.ApplyRecord(record)
 	if err != nil || afterValid == nil {
 		return
