@@ -145,8 +145,14 @@ func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.Accoun
 
 func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
 	c.acl.Lock()
+	inviteIds := c.acl.AclState().InviteIds()
+	if len(inviteIds) == 0 {
+		// nothing to revoke: a record without content would be refused
+		c.acl.Unlock()
+		return nil
+	}
 	payload := list.BatchRequestPayload{
-		InviteRevokes: c.acl.AclState().InviteIds(),
+		InviteRevokes: inviteIds,
 	}
 	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {

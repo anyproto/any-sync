@@ -9,9 +9,11 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list/listtest"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 // Permission checks live in the per-type apply handlers, so a record whose content reaches none of them
@@ -30,6 +32,8 @@ var noApplicableContent = []struct {
 	{name: "no data", data: nil, err: ErrNoAclContent},
 	// AclData carrying only an unknown field (99, varint): non-empty bytes, no content values
 	{name: "only an unknown field", data: []byte{0x98, 0x06, 0x01}, err: ErrNoAclContent},
+	// one permissionChanges (field 10) with no changes: its handler checks the author per change
+	{name: "empty permission changes", data: []byte{0x0a, 0x02, 0x52, 0x00}, err: ErrNoAclContent},
 }
 
 func signAclRecord(t *testing.T, keys *accountdata.AccountKeys, prevId string, data []byte) (*consensusproto.RawRecord, *consensusproto.RawRecordWithId) {
@@ -59,6 +63,46 @@ func TestAclList_ValidateRawRecordRejectsNoApplicableContent(t *testing.T) {
 			raw, _ := signAclRecord(t, stranger, head, tc.data)
 			require.ErrorIs(t, fx.ownerAcl.ValidateRawRecord(raw, nil), tc.err)
 			require.Equal(t, head, fx.ownerAcl.AclState().LastRecordId())
+		})
+	}
+}
+
+// A valid change does not carry an inapplicable one past admission, in either order, and the caller's
+// check never sees the partly applied state.
+func TestAclList_ValidateRawRecordRejectsMixedContent(t *testing.T) {
+	fx := newFixture(t)
+	head := fx.ownerAcl.AclState().LastRecordId()
+	_, inviteKey, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	protoInviteKey, err := inviteKey.Marshall()
+	require.NoError(t, err)
+	invite := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: &aclrecordproto.AclAccountInvite{
+		InviteKey:  protoInviteKey,
+		InviteType: aclrecordproto.AclInviteType_RequestToJoin,
+	}}}
+	marshal := func(content ...*aclrecordproto.AclContentValue) []byte {
+		data, err := (&aclrecordproto.AclData{AclContent: content}).MarshalVT()
+		require.NoError(t, err)
+		return data
+	}
+
+	raw, _ := signAclRecord(t, fx.ownerKeys, head, marshal(invite))
+	require.NoError(t, fx.ownerAcl.ValidateRawRecord(raw, nil))
+
+	for name, data := range map[string][]byte{
+		"valid then empty":                    marshal(invite, &aclrecordproto.AclContentValue{}),
+		"empty then valid":                    marshal(&aclrecordproto.AclContentValue{}, invite),
+		"valid then empty permission changes": marshal(invite, &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{PermissionChanges: &aclrecordproto.AclAccountPermissionChanges{}}}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw, _ := signAclRecord(t, fx.ownerKeys, head, data)
+			err := fx.ownerAcl.ValidateRawRecord(raw, func(*AclState) error {
+				t.Fatal("afterValid ran for a rejected record")
+				return nil
+			})
+			require.Error(t, err)
+			require.Equal(t, head, fx.ownerAcl.AclState().LastRecordId())
+			require.Empty(t, fx.ownerAcl.AclState().Invites())
 		})
 	}
 }

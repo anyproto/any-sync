@@ -204,6 +204,12 @@ func (c *contentValidator) ValidateAclData(data *aclrecordproto.AclData) (err er
 	if len(data.GetAclContent()) == 0 {
 		return ErrNoAclContent
 	}
+	for _, content := range data.GetAclContent() {
+		// a permission-change batch checks its author per change, so an empty one checks nothing
+		if changes := content.GetPermissionChanges(); changes != nil && len(changes.GetChanges()) == 0 {
+			return ErrNoAclContent
+		}
+	}
 	return nil
 }
 
