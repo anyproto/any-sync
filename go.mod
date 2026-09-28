@@ -30,7 +30,7 @@ require (
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/quic-go/quic-go v0.62.0
+	github.com/quic-go/quic-go v0.63.0
 	github.com/quic-go/webtransport-go v0.13.0
 	github.com/stretchr/testify v1.12.1
 	github.com/tmc/go-iroh v0.2.1
