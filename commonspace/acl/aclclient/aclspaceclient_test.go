@@ -105,6 +105,16 @@ func TestAclSpaceClient_RevokeAllInvites(t *testing.T) {
 	})
 }
 
+// a caller that drops the changes a member already has may be left with none, e.g. a retry of a change
+// that already landed; that must succeed without sending a record, which would carry no content
+func TestAclSpaceClient_ChangePermissionsWithoutChanges(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+	head := fx.acl.AclState().LastRecordId()
+	require.NoError(t, fx.ChangePermissions(ctx, list.PermissionChangesPayload{}))
+	require.Equal(t, head, fx.acl.AclState().LastRecordId())
+}
+
 func TestAclSpaceClient_StopSharing(t *testing.T) {
 	t.Run("not empty", func(t *testing.T) {
 		fx := newFixture(t)

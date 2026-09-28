@@ -111,6 +111,10 @@ func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
 }
 
 func (c *aclSpaceClient) ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error) {
+	if len(permChange.Changes) == 0 {
+		// nothing to change: a record without changes would be refused
+		return nil
+	}
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildPermissionChanges(permChange)
 	if err != nil {
