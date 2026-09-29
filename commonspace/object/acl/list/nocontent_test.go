@@ -107,10 +107,10 @@ func TestAclList_ValidateRawRecordRejectsMixedContent(t *testing.T) {
 	}
 }
 
-// An acl may already hold such records: the network accepted them before admission checked for them, and
-// a content type added later reaches old clients the same way. Ingesting, rebuilding and migrating the log
-// must not fail on them, whichever verifier the list uses — node stats, migration and some client paths
-// build from storage with a validating one.
+// An acl can hold such records: a network that did not check for them at admission accepted them, and a
+// content type added in a later release reaches older clients the same way. Ingesting, rebuilding and
+// migrating the log must not fail on them, whichever verifier the list uses — node stats, migration and
+// some client paths build from storage with a validating one.
 func TestAclList_StoredNoApplicableContentStillBuilds(t *testing.T) {
 	verifiers := map[string]recordverifier.AcceptorVerifier{
 		"validating":     recordverifier.NewValidateFull(),
