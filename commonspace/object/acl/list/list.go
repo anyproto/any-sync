@@ -19,6 +19,7 @@ type IterFunc = func(record *AclRecord) (IsContinue bool)
 var (
 	ErrIncorrectCID        = errors.New("incorrect CID")
 	ErrRecordAlreadyExists = errors.New("record already exists")
+	ErrEmptyRecordId       = errors.New("acl record has no id")
 )
 
 type RWLocker interface {

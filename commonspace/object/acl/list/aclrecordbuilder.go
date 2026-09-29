@@ -1017,6 +1017,11 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 		err = ErrInvalidSignature
 		return
 	}
+	// The record has no id until the network accepts it, and what it creates is keyed by its id. The hash
+	// of its payload stands in for it, and none of the record's content can name it (a payload cannot
+	// contain its own hash). So a later value in the record cannot refer to what an earlier one created:
+	// that reference would resolve here but not on replay under the real id, and validation refuses it.
+	rec.Id, err = cidutil.NewCidFromBytes(rawRecord.Payload)
 	return
 }
 
