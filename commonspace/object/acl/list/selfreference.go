@@ -1,11 +1,16 @@
 package list
 
 import (
+	"errors"
+
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 )
+
+// ErrEmptyRecordId refuses a record without an id: what it creates would be keyed by "".
+var ErrEmptyRecordId = errors.New("acl record has no id")
 
 // withResolvedSelfReferences returns the record with every empty request or invite reference in its content
 // replaced by the record's own id. An empty reference can only name the record carrying it: admission used

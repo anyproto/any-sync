@@ -39,7 +39,6 @@ var (
 	ErrOwnerNotFound             = errors.New("owner not found")
 	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
 	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
-	ErrEmptyRecordId             = errors.New("acl record has no id")
 	ErrReadKeyChangeNotAlone     = errors.New("a batch read key change can only accompany invite revokes and declines")
 )
 
