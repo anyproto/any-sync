@@ -273,7 +273,7 @@ func (s *storage) GetAfterAddSeq(ctx context.Context, addSeq uint64, storageIter
 	return nil
 }
 
-func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) (err error) {
 	arena := s.arena
 	defer arena.Reset()
 	tx, err := s.store.WriteTx(ctx)
@@ -307,7 +307,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	return err
 }
 
-func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) (err error) {
 	arena := s.arena
 	defer arena.Reset()
 	tx, err := s.store.WriteTx(ctx)

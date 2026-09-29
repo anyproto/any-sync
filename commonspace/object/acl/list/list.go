@@ -270,17 +270,22 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if err = copyState.ApplyRecord(record); err != nil {
 		return
 	}
-	a.setState(copyState)
-	a.records = append(a.records, record)
-	a.indexes[record.Id] = len(a.records) - 1
 	storageRec := StorageRecord{
 		RawRecord:  rawRec.Payload,
 		PrevId:     record.PrevId,
 		Id:         record.Id,
-		Order:      len(a.records),
+		Order:      len(a.records) + 1,
 		ChangeSize: len(rawRec.Payload),
 	}
-	return a.storage.AddAll(context.Background(), []StorageRecord{storageRec})
+	// the list takes the record only once it is stored: a record the storage
+	// refused must not become the previous of the next one
+	if err = a.storage.AddAll(context.Background(), []StorageRecord{storageRec}); err != nil {
+		return
+	}
+	a.setState(copyState)
+	a.records = append(a.records, record)
+	a.indexes[record.Id] = len(a.records) - 1
+	return nil
 }
 
 func (a *aclList) setState(state *AclState) {

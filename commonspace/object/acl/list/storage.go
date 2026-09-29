@@ -196,7 +196,7 @@ func (s *storage) getWithQuery(ctx context.Context, qry anystore.Query, storageI
 	return nil
 }
 
-func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
+func (s *storage) AddAll(ctx context.Context, records []StorageRecord) (err error) {
 	if len(records) == 0 {
 		return nil
 	}
