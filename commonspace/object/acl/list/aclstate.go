@@ -288,7 +288,7 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 		return
 	}
 	// what a record creates is keyed by its id: the real one, or before acceptance a provisional one (see
-	// Unmarshall)
+	// Unmarshall), never ""
 	if record.Id == "" {
 		return ErrEmptyRecordId
 	}
@@ -307,7 +307,7 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 		record.Model = aclData
 	}
 	// applying records contents
-	err = st.applyChangeData(withResolvedSelfReferences(record))
+	err = st.applyChangeData(record)
 	if err != nil {
 		return
 	}
@@ -452,6 +452,9 @@ func (st *AclState) Copy() *AclState {
 	return newSt
 }
 
+// applyChangeContent applies one content value. A request or invite reference that does not resolve applies
+// as a no-op in the handlers that look one up (accept, decline, cancel, invite change, invite join):
+// validation refuses it, so it is reached only without validation, for a record already in the log.
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
 	case ch.GetOwnershipChange() != nil:
@@ -527,7 +530,7 @@ func (st *AclState) applyInviteChange(ch *aclrecordproto.AclAccountInviteChange,
 	}
 	invite, exists := st.invites[ch.InviteRecordId]
 	if !exists {
-		// an unresolved reference is a no-op, see withResolvedSelfReferences
+		// an unresolved reference is a no-op, see applyChangeContent
 		return nil
 	}
 	invite.Permissions = AclPermissions(ch.Permissions)
@@ -670,7 +673,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	}
 	requestRecord, exists := st.requestRecords[ch.RequestRecordId]
 	if !exists {
-		// an unresolved reference is a no-op, see withResolvedSelfReferences
+		// an unresolved reference is a no-op, see applyChangeContent
 		return nil
 	}
 	pKeyString := mapKeyFromPubKey(acceptIdentity)
@@ -712,7 +715,7 @@ func (st *AclState) applyInviteJoinWithoutApprove(ch *aclrecordproto.AclAccountI
 	}
 	inviteRecord, exists := st.invites[ch.InviteRecordId]
 	if !exists {
-		// an unresolved reference is a no-op, see withResolvedSelfReferences
+		// an unresolved reference is a no-op, see applyChangeContent
 		return nil
 	}
 	permissions := AclPermissions(ch.Permissions)
@@ -807,7 +810,7 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	}
 	requestRecord, exists := st.requestRecords[ch.RequestRecordId]
 	if !exists {
-		// an unresolved reference is a no-op, see withResolvedSelfReferences
+		// an unresolved reference is a no-op, see applyChangeContent
 		return nil
 	}
 	pk := mapKeyFromPubKey(requestRecord.RequestIdentity)
@@ -829,7 +832,7 @@ func (st *AclState) applyRequestCancel(ch *aclrecordproto.AclAccountRequestCance
 	}
 	rec, exists := st.requestRecords[ch.RecordId]
 	if !exists {
-		// an unresolved reference is a no-op, see withResolvedSelfReferences
+		// an unresolved reference is a no-op, see applyChangeContent
 		return nil
 	}
 	pk := mapKeyFromPubKey(rec.RequestIdentity)
