@@ -39,6 +39,7 @@ var (
 	ErrOwnerNotFound             = errors.New("owner not found")
 	ErrAddRecordOneToOne         = errors.New("adding a record to one-to-one space is forbidden")
 	ErrEmptyAclRecordData        = errors.New("acl record has neither model nor data")
+	ErrNoAclContent              = errors.New("acl record has no content")
 	ErrReadKeyChangeNotAlone     = errors.New("a batch read key change can only accompany invite revokes and declines")
 )
 
@@ -398,6 +399,9 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 
 func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
+	if err = st.contentValidator.ValidateAclData(model); err != nil {
+		return err
+	}
 	for _, ch := range model.GetAclContent() {
 		if err = st.applyChangeContent(ch, record); err != nil {
 			log.Info("error while applying changes", zap.Error(err))
@@ -483,7 +487,7 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applySpaceOptionsChange(ch.GetSpaceOptionsChange(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
-		return nil
+		return st.contentValidator.ValidateUnexpectedContent()
 	}
 }
 

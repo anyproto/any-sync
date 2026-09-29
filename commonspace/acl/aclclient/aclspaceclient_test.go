@@ -78,6 +78,43 @@ func TestAclSpaceClient_RevokeAndRotate(t *testing.T) {
 	})
 }
 
+func TestAclSpaceClient_RevokeAllInvites(t *testing.T) {
+	t.Run("revokes every invite", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		require.NoError(t, fx.exec.Execute("a.invite_anyone::invite1,r"))
+		require.NoError(t, fx.exec.Execute("a.invite_anyone::invite2,rw"))
+		require.Len(t, fx.acl.AclState().Invites(), 2)
+
+		fx.nodeClient.EXPECT().AclAddRecord(ctx, fx.spaceState.SpaceId, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
+				return marshallRecord(t, rec), nil
+			})
+		require.NoError(t, fx.RevokeAllInvites(ctx))
+		require.Empty(t, fx.acl.AclState().Invites())
+	})
+
+	// a record with nothing to revoke would carry no content and be refused; e.g. a retry after the
+	// revocation landed but the caller's cleanup failed must still succeed
+	t.Run("without invites sends nothing", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		head := fx.acl.AclState().LastRecordId()
+		require.NoError(t, fx.RevokeAllInvites(ctx))
+		require.Equal(t, head, fx.acl.AclState().LastRecordId())
+	})
+}
+
+// a caller that drops the changes a member already has may be left with none, e.g. a retry of a change
+// that already landed; that must succeed without sending a record, which would carry no content
+func TestAclSpaceClient_ChangePermissionsWithoutChanges(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+	head := fx.acl.AclState().LastRecordId()
+	require.NoError(t, fx.ChangePermissions(ctx, list.PermissionChangesPayload{}))
+	require.Equal(t, head, fx.acl.AclState().LastRecordId())
+}
+
 func TestAclSpaceClient_StopSharing(t *testing.T) {
 	t.Run("not empty", func(t *testing.T) {
 		fx := newFixture(t)

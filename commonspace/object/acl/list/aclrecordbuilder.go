@@ -338,7 +338,7 @@ func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord) (
 		return
 	}
 	cp := a.state.Copy()
-	cp.contentValidator.(*contentValidator).verifier = recordverifier.NewValidateFull()
+	cp.contentValidator = newAdmissionValidator(cp.keyStore, cp)
 	return cp.ApplyRecord(aclRec)
 }
 

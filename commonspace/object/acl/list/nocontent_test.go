@@ -1,0 +1,165 @@
+package list
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list/listtest"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/crypto"
+)
+
+// Permission checks live in the per-type apply handlers, so a record whose content reaches none of them
+// would be applied without checking its author. These records carry no applicable content and are signed
+// by an identity that is not in the acl at all.
+var noApplicableContent = []struct {
+	name string
+	data []byte
+	err  error
+}{
+	// AclData{AclContent: [{}]}: one content value with the oneof unset
+	{name: "empty content value", data: []byte{0x0a, 0x00}, err: ErrUnexpectedContentType},
+	// one content value whose only field (99, length-delimited, empty) this build does not know — how a
+	// content type added in a later release decodes
+	{name: "unknown content type", data: []byte{0x0a, 0x03, 0x9a, 0x06, 0x00}, err: ErrUnexpectedContentType},
+	{name: "no data", data: nil, err: ErrNoAclContent},
+	// AclData carrying only an unknown field (99, varint): non-empty bytes, no content values
+	{name: "only an unknown field", data: []byte{0x98, 0x06, 0x01}, err: ErrNoAclContent},
+	// one permissionChanges (field 10) with no changes: its handler checks the author per change
+	{name: "empty permission changes", data: []byte{0x0a, 0x02, 0x52, 0x00}, err: ErrNoAclContent},
+}
+
+func signAclRecord(t *testing.T, keys *accountdata.AccountKeys, prevId string, data []byte) (*consensusproto.RawRecord, *consensusproto.RawRecordWithId) {
+	identity, err := keys.SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	payload, err := (&consensusproto.Record{
+		PrevId:    prevId,
+		Identity:  identity,
+		Data:      data,
+		Timestamp: time.Now().Unix(),
+	}).MarshalVT()
+	require.NoError(t, err)
+	signature, err := keys.SignKey.Sign(payload)
+	require.NoError(t, err)
+	raw := &consensusproto.RawRecord{Payload: payload, Signature: signature}
+	return raw, listtest.WrapAclRecord(raw)
+}
+
+func TestAclList_ValidateRawRecordRejectsNoApplicableContent(t *testing.T) {
+	for _, tc := range noApplicableContent {
+		t.Run(tc.name, func(t *testing.T) {
+			fx := newFixture(t)
+			stranger, err := accountdata.NewRandom()
+			require.NoError(t, err)
+			head := fx.ownerAcl.AclState().LastRecordId()
+
+			raw, _ := signAclRecord(t, stranger, head, tc.data)
+			require.ErrorIs(t, fx.ownerAcl.ValidateRawRecord(raw, nil), tc.err)
+			require.Equal(t, head, fx.ownerAcl.AclState().LastRecordId())
+		})
+	}
+}
+
+// A valid change does not carry an inapplicable one past admission, in either order, and the caller's
+// check never sees the partly applied state.
+func TestAclList_ValidateRawRecordRejectsMixedContent(t *testing.T) {
+	fx := newFixture(t)
+	head := fx.ownerAcl.AclState().LastRecordId()
+	_, inviteKey, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	protoInviteKey, err := inviteKey.Marshall()
+	require.NoError(t, err)
+	invite := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: &aclrecordproto.AclAccountInvite{
+		InviteKey:  protoInviteKey,
+		InviteType: aclrecordproto.AclInviteType_RequestToJoin,
+	}}}
+	marshal := func(content ...*aclrecordproto.AclContentValue) []byte {
+		data, err := (&aclrecordproto.AclData{AclContent: content}).MarshalVT()
+		require.NoError(t, err)
+		return data
+	}
+
+	raw, _ := signAclRecord(t, fx.ownerKeys, head, marshal(invite))
+	require.NoError(t, fx.ownerAcl.ValidateRawRecord(raw, nil))
+
+	for name, data := range map[string][]byte{
+		"valid then empty":                    marshal(invite, &aclrecordproto.AclContentValue{}),
+		"empty then valid":                    marshal(&aclrecordproto.AclContentValue{}, invite),
+		"valid then empty permission changes": marshal(invite, &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{PermissionChanges: &aclrecordproto.AclAccountPermissionChanges{}}}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw, _ := signAclRecord(t, fx.ownerKeys, head, data)
+			err := fx.ownerAcl.ValidateRawRecord(raw, func(*AclState) error {
+				t.Fatal("afterValid ran for a rejected record")
+				return nil
+			})
+			require.Error(t, err)
+			require.Equal(t, head, fx.ownerAcl.AclState().LastRecordId())
+			require.Empty(t, fx.ownerAcl.AclState().Invites())
+		})
+	}
+}
+
+// An acl can hold such records: a network that did not check for them at admission accepted them, and a
+// content type added in a later release reaches older clients the same way. Ingesting, rebuilding and
+// migrating the log must not fail on them, whichever verifier the list uses — node stats, migration and
+// some client paths build from storage with a validating one.
+func TestAclList_StoredNoApplicableContentStillBuilds(t *testing.T) {
+	verifiers := map[string]recordverifier.AcceptorVerifier{
+		"validating":     recordverifier.NewValidateFull(),
+		"non-validating": noValidateVerifier{},
+	}
+	for _, tc := range noApplicableContent {
+		for vName, verifier := range verifiers {
+			t.Run(tc.name+"/"+vName, func(t *testing.T) {
+				fx := newFixture(t)
+				stranger, err := accountdata.NewRandom()
+				require.NoError(t, err)
+
+				_, withId := signAclRecord(t, stranger, fx.ownerAcl.AclState().LastRecordId(), tc.data)
+				require.NoError(t, fx.ownerAcl.AddRawRecord(withId))
+				require.Equal(t, withId.Id, fx.ownerAcl.AclState().LastRecordId())
+
+				rebuilt, err := BuildAclListWithIdentity(fx.ownerKeys, fx.ownerAcl.storage, verifier)
+				require.NoError(t, err)
+				require.Equal(t, withId.Id, rebuilt.AclState().LastRecordId())
+				require.True(t, rebuilt.AclState().Permissions(stranger.SignKey.GetPublic()).NoPermissions())
+
+				// the owner still builds on top of it
+				_, err = rebuilt.RecordBuilder().BuildInvite()
+				require.NoError(t, err)
+
+				// and a fresh list ingests the whole log, as the storage migration does
+				ctx := context.Background()
+				store := createStore(ctx, t)
+				headStorage, err := headstorage.New(ctx, store)
+				require.NoError(t, err)
+				storage, err := CreateStorage(ctx, fx.ownerAcl.Root(), headStorage, store)
+				require.NoError(t, err)
+				migrated, err := BuildAclListWithIdentity(fx.ownerKeys, storage, verifier)
+				require.NoError(t, err)
+				var records []*consensusproto.RawRecordWithId
+				for _, rec := range fx.ownerAcl.Records()[1:] {
+					raw, err := fx.ownerAcl.storage.Get(ctx, rec.Id)
+					require.NoError(t, err)
+					records = append(records, raw.RawRecordWithId())
+				}
+				require.NoError(t, migrated.AddRawRecords(records))
+				require.Equal(t, withId.Id, migrated.AclState().LastRecordId())
+			})
+		}
+	}
+}
+
+func TestAclRecordBuilder_EmptyBatchRequest(t *testing.T) {
+	fx := newFixture(t)
+	_, err := fx.ownerAcl.RecordBuilder().BuildBatchRequest(BatchRequestPayload{})
+	require.ErrorIs(t, err, ErrNoAclContent)
+}

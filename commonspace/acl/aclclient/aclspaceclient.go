@@ -111,6 +111,10 @@ func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
 }
 
 func (c *aclSpaceClient) ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error) {
+	if len(permChange.Changes) == 0 {
+		// nothing to change: a record without changes would be refused
+		return nil
+	}
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildPermissionChanges(permChange)
 	if err != nil {
@@ -145,8 +149,14 @@ func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.Accoun
 
 func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
 	c.acl.Lock()
+	inviteIds := c.acl.AclState().InviteIds()
+	if len(inviteIds) == 0 {
+		// nothing to revoke: a record without content would be refused
+		c.acl.Unlock()
+		return nil
+	}
 	payload := list.BatchRequestPayload{
-		InviteRevokes: c.acl.AclState().InviteIds(),
+		InviteRevokes: inviteIds,
 	}
 	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {

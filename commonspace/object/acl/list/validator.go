@@ -10,6 +10,8 @@ import (
 
 type ContentValidator interface {
 	ValidateAclRecordContents(ch *AclRecord) (err error)
+	ValidateAclData(data *aclrecordproto.AclData) (err error)
+	ValidateUnexpectedContent() (err error)
 	ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error)
 	ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error)
 	ValidateOwnershipChange(ch *aclrecordproto.AclOwnershipChange, authorIdentity crypto.PubKey) (err error)
@@ -32,6 +34,10 @@ type contentValidator struct {
 	keyStore crypto.KeyStorage
 	aclState *AclState
 	verifier recordverifier.AcceptorVerifier
+	// admission marks validation of a record that is not in the log yet (ValidateRawRecord, the builder's
+	// preflight). Only there is a record without applicable content rejected: once the network has
+	// accepted one, replaying it (build, migration, sync) must not fail.
+	admission bool
 }
 
 func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
@@ -39,6 +45,17 @@ func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifie
 		keyStore: keyStore,
 		aclState: aclState,
 		verifier: verifier,
+	}
+}
+
+// newAdmissionValidator validates a record before it enters the log: in full, and also rejecting content
+// that no per-type validator would check.
+func newAdmissionValidator(keyStore crypto.KeyStorage, aclState *AclState) ContentValidator {
+	return &contentValidator{
+		keyStore:  keyStore,
+		aclState:  aclState,
+		verifier:  recordverifier.NewValidateFull(),
+		admission: true,
 	}
 }
 
@@ -176,6 +193,34 @@ func (c *contentValidator) ValidateAclRecordContents(ch *AclRecord) (err error) 
 		}
 	}
 	return
+}
+
+// ValidateAclData rejects a new record that carries no content: nothing in it reaches a per-type
+// validator, so applying it would move the head without checking its author.
+func (c *contentValidator) ValidateAclData(data *aclrecordproto.AclData) (err error) {
+	if !c.admission {
+		return nil
+	}
+	if len(data.GetAclContent()) == 0 {
+		return ErrNoAclContent
+	}
+	for _, content := range data.GetAclContent() {
+		// a permission-change batch checks its author per change, so an empty one checks nothing
+		if changes := content.GetPermissionChanges(); changes != nil && len(changes.GetChanges()) == 0 {
+			return ErrNoAclContent
+		}
+	}
+	return nil
+}
+
+// ValidateUnexpectedContent covers a content value no apply case handles: an unset oneof, or a type added
+// after this build. No per-type validator checks its author, so a new record carrying one is rejected. A
+// stored one applies as a no-op, so a client keeps loading an acl that carries a type it predates.
+func (c *contentValidator) ValidateUnexpectedContent() (err error) {
+	if !c.admission {
+		return nil
+	}
+	return ErrUnexpectedContentType
 }
 
 func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclContentValue, authorIdentity crypto.PubKey) (err error) {
