@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/net/connutil"
+	"github.com/anyproto/any-sync/net/transport"
 )
 
 // newSessionPair returns a client MultiConn whose SYN semaphore holds a single
@@ -198,4 +199,110 @@ func TestYamuxConn_OpenClosedSession(t *testing.T) {
 	require.NoError(t, mc.Session.Close())
 	_, err := mc.Open(ctx)
 	require.ErrorIs(t, err, yamux.ErrSessionShutdown)
+}
+
+// streamPair opens a stream from mc and accepts it on server
+func streamPair(t *testing.T, mc *yamuxConn, server *yamux.Session) (client, remote net.Conn) {
+	accepted := make(chan net.Conn, 1)
+	go func() {
+		s, err := server.Accept()
+		if err == nil {
+			accepted <- s
+		}
+	}()
+	client, err := mc.Open(ctx)
+	require.NoError(t, err)
+	// the server sees the stream only once something is written
+	_, err = client.Write([]byte("x"))
+	require.NoError(t, err)
+	select {
+	case remote = <-accepted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("stream not accepted")
+	}
+	buf := make([]byte, 1)
+	_, err = io.ReadFull(remote, buf)
+	require.NoError(t, err)
+	return client, remote
+}
+
+func readErr(t *testing.T, conn net.Conn) chan error {
+	res := make(chan error, 1)
+	go func() {
+		_, err := conn.Read(make([]byte, 16))
+		res <- err
+	}()
+	return res
+}
+
+func waitErr(t *testing.T, ch chan error) error {
+	select {
+	case err := <-ch:
+		return err
+	case <-time.After(5 * time.Second):
+		t.Fatal("read did not return")
+		return nil
+	}
+}
+
+func TestYamuxStream_SessionDeathNormalized(t *testing.T) {
+	t.Run("local session close mid-read", func(t *testing.T) {
+		mc, server := newSessionPair(t)
+		client, _ := streamPair(t, mc, server)
+		res := readErr(t, client)
+		time.Sleep(20 * time.Millisecond)
+		require.NoError(t, mc.Session.Close())
+		err := waitErr(t, res)
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		assert.ErrorIs(t, err, io.EOF, "the original error stays reachable")
+
+		_, err = client.Write([]byte("more"))
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		// yamux force-closed the stream on shutdown
+		assert.ErrorIs(t, err, yamux.ErrStreamClosed)
+	})
+	t.Run("remote session close mid-read", func(t *testing.T) {
+		mc, server := newSessionPair(t)
+		client, _ := streamPair(t, mc, server)
+		res := readErr(t, client)
+		time.Sleep(20 * time.Millisecond)
+		require.NoError(t, server.Close())
+		err := waitErr(t, res)
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		assert.True(t, mc.Session.IsClosed())
+	})
+	t.Run("accepted stream, remote session close", func(t *testing.T) {
+		mc, server := newSessionPair(t)
+		accepted := make(chan net.Conn, 1)
+		go func() {
+			if s, err := mc.Accept(); err == nil {
+				accepted <- s
+			}
+		}()
+		remote, err := server.Open()
+		require.NoError(t, err)
+		_, err = remote.Write([]byte("x"))
+		require.NoError(t, err)
+		var local net.Conn
+		select {
+		case local = <-accepted:
+		case <-time.After(5 * time.Second):
+			t.Fatal("stream not accepted")
+		}
+		_, err = io.ReadFull(local, make([]byte, 1))
+		require.NoError(t, err)
+		res := readErr(t, local)
+		time.Sleep(20 * time.Millisecond)
+		require.NoError(t, server.Close())
+		assert.ErrorIs(t, waitErr(t, res), transport.ErrConnClosed)
+	})
+	t.Run("remote stream close is a plain EOF", func(t *testing.T) {
+		mc, server := newSessionPair(t)
+		client, remote := streamPair(t, mc, server)
+		res := readErr(t, client)
+		require.NoError(t, remote.Close())
+		err := waitErr(t, res)
+		assert.Equal(t, io.EOF, err, "a normal stream close must stay io.EOF")
+		assert.False(t, mc.Session.IsClosed())
+	})
 }

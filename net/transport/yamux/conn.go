@@ -2,6 +2,7 @@ package yamux
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -70,6 +71,13 @@ type openResult struct {
 // to finish. The cap is checked before the helper starts, so callers racing
 // past it together can overshoot it by their number.
 func (y *yamuxConn) Open(ctx context.Context) (conn net.Conn, err error) {
+	if conn, err = y.open(ctx); err != nil {
+		return nil, err
+	}
+	return y.wrapStream(conn), nil
+}
+
+func (y *yamuxConn) open(ctx context.Context) (conn net.Conn, err error) {
 	if ctx.Done() == nil {
 		// a context that can never end needs no helper
 		return y.Session.Open()
@@ -179,5 +187,67 @@ func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 		}
 		return
 	}
-	return
+	return y.wrapStream(conn), nil
+}
+
+func (y *yamuxConn) wrapStream(conn net.Conn) net.Conn {
+	return yamuxStream{Conn: conn, sess: y.Session}
+}
+
+// yamuxStream normalizes stream errors caused by the whole session going
+// away, like the QUIC transport does: on shutdown yamux force-closes every
+// stream, so a pending Read returns a bare io.EOF and a Write
+// ErrSessionShutdown or ErrStreamClosed, indistinguishable from a normal
+// remote close.
+type yamuxStream struct {
+	net.Conn
+	sess *yamux.Session
+}
+
+func (s yamuxStream) Read(b []byte) (n int, err error) {
+	n, err = s.Conn.Read(b)
+	return n, s.wrapSessionDead(err)
+}
+
+func (s yamuxStream) Write(b []byte) (n int, err error) {
+	n, err = s.Conn.Write(b)
+	return n, s.wrapSessionDead(err)
+}
+
+// wrapSessionDead wraps err into sessionDeadError when it was caused by the
+// session shutting down. io.EOF, a stream reset and a closed stream count
+// only while the session is closed: on a live session they are stream-level
+// outcomes (a remote close or reset) and are returned unchanged.
+func (s yamuxStream) wrapSessionDead(err error) error {
+	if err == nil {
+		return nil
+	}
+	var already sessionDeadError
+	if errors.As(err, &already) {
+		return err
+	}
+	switch {
+	case errors.Is(err, yamux.ErrSessionShutdown):
+	case errors.Is(err, io.EOF), errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed):
+		if !s.sess.IsClosed() {
+			return err
+		}
+	default:
+		return err
+	}
+	return sessionDeadError{cause: err}
+}
+
+// sessionDeadError matches transport.ErrConnClosed and still unwraps to the
+// original yamux error
+type sessionDeadError struct {
+	cause error
+}
+
+func (e sessionDeadError) Error() string {
+	return transport.ErrConnClosed.Error() + ": " + e.cause.Error()
+}
+
+func (e sessionDeadError) Unwrap() []error {
+	return []error{transport.ErrConnClosed, e.cause}
 }
