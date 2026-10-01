@@ -41,6 +41,13 @@ func (he HandshakeError) Error() string {
 	return he.e.String()
 }
 
+// Unwrap exposes the underlying error (e.g. the TLS transport's EOF, reset or
+// timeout), so callers can match it with errors.Is/As. Protocol-level
+// handshake errors carry none and unwrap to nil.
+func (he HandshakeError) Unwrap() error {
+	return he.Err
+}
+
 var (
 	ErrUnexpectedPayload       = HandshakeError{e: handshakeproto.Error_UnexpectedPayload}
 	ErrDeadlineExceeded        = HandshakeError{e: handshakeproto.Error_DeadlineExceeded}

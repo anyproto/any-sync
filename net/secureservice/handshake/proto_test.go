@@ -2,8 +2,10 @@ package handshake
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -315,4 +317,16 @@ func TestOutgoingProtoHandshakeWithCloser_IOErrorUsesCloser(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("I/O error close did not go through the closer")
 	}
+}
+
+func TestHandshakeError_Unwrap(t *testing.T) {
+	err := error(HandshakeError{Err: io.EOF})
+	assert.ErrorIs(t, err, io.EOF)
+	assert.ErrorIs(t, HandshakeError{Err: os.ErrDeadlineExceeded}, os.ErrDeadlineExceeded)
+	// protocol-level sentinels keep matching by value and wrap nothing
+	assert.ErrorIs(t, ErrIncompatibleVersion, ErrIncompatibleVersion)
+	assert.NotErrorIs(t, ErrIncompatibleProto, ErrIncompatibleVersion)
+	assert.Nil(t, errors.Unwrap(ErrIncompatibleVersion))
+	// a wrapped transport error is not mistaken for a protocol sentinel
+	assert.NotErrorIs(t, HandshakeError{Err: io.EOF}, ErrIncompatibleVersion)
 }
