@@ -202,37 +202,44 @@ func TestPool_Flush(t *testing.T) {
 		assert.Len(t, poolStat.PeerStats, 2)
 		err = fx.Flush(ctx)
 		require.NoError(t, err)
-		stat = statProvider.ProvideStat()
-		poolStat, ok = stat.(*poolStats)
-		require.True(t, ok)
-		assert.Len(t, poolStat.PeerStats, 0)
+		// Flush only queues the removals
+		require.Eventually(t, func() bool {
+			return len(statProvider.ProvideStat().(*poolStats).PeerStats) == 0
+		}, time.Second, 10*time.Millisecond)
 	})
-	t.Run("flush does not remove peers loading during flush", func(t *testing.T) {
+	t.Run("peer dialed across flush is rejected and redialed", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		dialStarted := make(chan struct{})
 		blockDial := make(chan struct{})
-		loadingPeer := newTestPeer("loading-peer")
+		latePeer := newTestPeer("loading-peer")
+		freshPeer := newTestPeer("loading-peer")
+		var dials atomic2.Int32
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			close(dialStarted)
-			<-blockDial
-			return loadingPeer, nil
+			if dials.Add(1) == 1 {
+				close(dialStarted)
+				<-blockDial
+				return latePeer, nil
+			}
+			return freshPeer, nil
 		}
 		resultChan := make(chan peer.Peer, 1)
 		go func() {
 			p, err := fx.Get(ctx, "loading-peer")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			resultChan <- p
 		}()
 		<-dialStarted
-		err := fx.Flush(ctx)
-		require.NoError(t, err)
+		require.NoError(t, fx.Flush(ctx))
 		close(blockDial)
+		// the dial started before the flush: its peer is published late but
+		// rejected by the very lookup waiting on it, which dials again
 		p := <-resultChan
-		require.Equal(t, loadingPeer, p)
+		require.Equal(t, freshPeer, p)
+		require.Eventually(t, latePeer.IsClosed, time.Second, 10*time.Millisecond)
 		pickedPeer, err := fx.Pick(ctx, "loading-peer")
 		require.NoError(t, err)
-		assert.Equal(t, loadingPeer, pickedPeer)
+		assert.Equal(t, freshPeer, pickedPeer)
 	})
 }
 
@@ -639,6 +646,7 @@ var _ peer.Peer = (*testPeer)(nil)
 
 type testPeer struct {
 	id             string
+	closeMu        sync.Mutex
 	closed         chan struct{}
 	created        time.Time
 	subConnections int
@@ -697,6 +705,9 @@ func (t *testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 }
 
 func (t *testPeer) Close() error {
+	// the pool may close a rejected peer from several paths at once
+	t.closeMu.Lock()
+	defer t.closeMu.Unlock()
 	select {
 	case <-t.closed:
 		return fmt.Errorf("already closed")

@@ -54,15 +54,25 @@ func (p *poolService) Init(a *app.App) (err error) {
 	}
 	p.pool.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			// the generation is taken at dial start: a dial that spans a
+			// Flush publishes a peer the lookups already reject
+			gen := p.pool.gen.Load()
 			value, err = p.dialer.Dial(ctx, id)
 			if err != nil {
 				if errors.Is(err, handshake.ErrIncompatibleVersion) {
-					return &errObject{err: err, createdTime: atomic.NewTime(time.Now())}, nil
+					return &errObject{id: id, gen: gen, err: err, createdTime: atomic.NewTime(time.Now())}, nil
 				}
 				return value, err
 			}
 			if pr, ok := value.(peer.Peer); ok {
+				p.pool.stamp(pr, gen, p.pool.outgoing)
 				go p.pool.evictOnClose(pr, p.pool.outgoing, false)
+				if p.pool.isStale(pr) {
+					// a Flush ran during the dial, before the stamp was
+					// visible to it: close the peer now rather than on
+					// its first lookup
+					p.pool.discard(p.pool.outgoing, pr)
+				}
 			}
 			return value, nil
 		},
@@ -106,12 +116,23 @@ func (p *pool) Close(ctx context.Context) (err error) {
 }
 
 type errObject struct {
+	id string
+	// gen is the pool generation the failed dial started in
+	gen         uint64
 	err         error
 	createdTime *atomic.Time
 }
 
 func (e *errObject) Error() error {
 	return e.err
+}
+
+// flushed reports whether a Flush that brought the pool to generation cur
+// drops this cached error. An incompatible-version verdict survives: it says
+// nothing about the network, and dropping it would defeat its 20-minute
+// backoff on every recovery.
+func (e *errObject) flushed(cur uint64) bool {
+	return e.gen < cur && !errors.Is(e.err, handshake.ErrIncompatibleVersion)
 }
 
 func (e *errObject) Close() (err error) {
