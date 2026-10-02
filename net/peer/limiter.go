@@ -10,9 +10,16 @@ type limiter struct {
 }
 
 func (l limiter) wait(count int) <-chan time.Time {
-	if count > l.startThreshold {
-		wait := l.slowDownStep * time.Duration(count-l.startThreshold)
-		return time.After(wait)
+	if d := l.delay(count); d > 0 {
+		return time.After(d)
 	}
 	return nil
+}
+
+// delay is how long to hold off a new conn when count are already open
+func (l limiter) delay(count int) time.Duration {
+	if count > l.startThreshold {
+		return l.slowDownStep * time.Duration(count-l.startThreshold)
+	}
+	return 0
 }

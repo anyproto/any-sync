@@ -199,17 +199,13 @@ func (s yamuxStream) Write(b []byte) (n int, err error) {
 	return n, s.wrapSessionDead(err)
 }
 
-// wrapSessionDead wraps err into sessionDeadError when it was caused by the
-// session shutting down. io.EOF, a stream reset and a closed stream count
+// wrapSessionDead wraps err with transport.NewConnClosedError when it was
+// caused by the session shutting down. io.EOF, a stream reset and a closed stream count
 // only while the session is closed: on a live session they are stream-level
 // outcomes (a remote close or reset) and are returned unchanged.
 func (s yamuxStream) wrapSessionDead(err error) error {
 	if err == nil {
 		return nil
-	}
-	var already sessionDeadError
-	if errors.As(err, &already) {
-		return err
 	}
 	switch {
 	case errors.Is(err, yamux.ErrSessionShutdown):
@@ -220,19 +216,5 @@ func (s yamuxStream) wrapSessionDead(err error) error {
 	default:
 		return err
 	}
-	return sessionDeadError{cause: err}
-}
-
-// sessionDeadError matches transport.ErrConnClosed and still unwraps to the
-// original yamux error
-type sessionDeadError struct {
-	cause error
-}
-
-func (e sessionDeadError) Error() string {
-	return transport.ErrConnClosed.Error() + ": " + e.cause.Error()
-}
-
-func (e sessionDeadError) Unwrap() []error {
-	return []error{transport.ErrConnClosed, e.cause}
+	return transport.NewConnClosedError(err)
 }

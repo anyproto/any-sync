@@ -1230,6 +1230,10 @@ func TestPool_FlushSwap(t *testing.T) {
 		require.NoError(t, fx.Service.Close(cctx))
 		require.Less(t, time.Since(start), time.Second)
 		require.False(t, hung.IsClosed())
+		// the teardown finishes once the peer lets it; a second Close is a no-op
+		doReleaseClose()
+		fx.Finish()
+		require.Eventually(t, hung.IsClosed, time.Second, 10*time.Millisecond)
 	})
 	t.Run("hung incoming close does not hold back the other incoming peers", func(t *testing.T) {
 		fx := newFixtureCfg(t, nil, func(ps *poolService, a *app.App) {
@@ -1258,6 +1262,343 @@ func TestPool_FlushSwap(t *testing.T) {
 			return true
 		}, 100*time.Millisecond, time.Millisecond)
 		require.False(t, hung.IsClosed())
+	})
+	t.Run("add during shutdown returns ErrClosed without spinning", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		require.NoError(t, fx.AddPeer(ctx, newTestPeer("d")))
+		// shutdown has begun: nothing is evicted any more, so the duplicate
+		// can never be added; it must not be retried either (this used to
+		// loop ~340k times in 200ms)
+		p.closingCancel()
+		dup := newCtlPeer("d")
+		got := make(chan error, 1)
+		go func() { got <- fx.AddPeer(context.Background(), dup) }()
+		select {
+		case err := <-got:
+			require.ErrorIs(t, err, ocache.ErrClosed)
+		case <-time.After(2 * time.Second):
+			t.Fatal("AddPeer did not return")
+		}
+		require.LessOrEqual(t, dup.idCall.Load(), int32(2), "AddPeer kept retrying")
+	})
+	t.Run("add never waits on a flushed pair's teardown", func(t *testing.T) {
+		fx := newFixtureCfg(t, nil, func(ps *poolService, a *app.App) {
+			ps.closeTimeout = time.Second
+		})
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		old := newCtlPeer("d")
+		releaseClose, doReleaseClose := newRelease()
+		defer doReleaseClose()
+		old.closeHook = func(int32) { <-releaseClose }
+		require.NoError(t, fx.AddPeer(ctx, old))
+		repl := newCtlPeer("d")
+		repl.idHook = func(call int32) {
+			if call == 2 {
+				// between ErrExists and the Pick: the pair holding old is
+				// replaced; old's hung teardown is now the flush's problem
+				assert.NoError(t, fx.Flush(ctx))
+			}
+		}
+		got := make(chan error, 1)
+		go func() { got <- fx.AddPeer(context.Background(), repl) }()
+		select {
+		case err := <-got:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			t.Fatal("AddPeer waited on the old pair's teardown")
+		}
+		require.True(t, inCurrent(p, repl))
+		require.False(t, repl.IsClosed())
+	})
+	t.Run("a live incoming arriving while a dead outgoing is evicted is used instead of a dial", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		dead := newCtlPeer("p1")
+		close(dead.closed)
+		inClose := make(chan struct{})
+		releaseClose, doReleaseClose := newRelease()
+		defer doReleaseClose()
+		dead.closeHook = func(call int32) {
+			if call == 1 {
+				close(inClose)
+			}
+			<-releaseClose
+		}
+		require.NoError(t, p.current.Load().outgoing.Add("p1", dead))
+		var dials atomic.Int32
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			dials.Add(1)
+			return newTestPeer(peerId), nil
+		}
+		got := make(chan peer.Peer, 1)
+		go func() {
+			gctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			pr, err := fx.Get(gctx, "p1")
+			assert.NoError(t, err)
+			got <- pr
+		}()
+		// the Get is evicting dead; the peer connects to us meanwhile
+		<-inClose
+		live := newTestPeer("p1")
+		require.NoError(t, fx.AddPeer(ctx, live))
+		doReleaseClose()
+		require.Same(t, live, <-got)
+		require.Zero(t, dials.Load(), "dialed although an incoming connection was available")
+	})
+	t.Run("flush reports Closed before it returns, once per instance, before the redial", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		// Connected comes from peerservice, before the peer reaches the pool
+		connected := func(id string, inbound bool) {
+			p.observer.Notify(peerobserver.Event{Kind: peerobserver.KindConnected, PeerId: id, Inbound: inbound})
+		}
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			connected(peerId, false)
+			return newTestPeer(peerId), nil
+		}
+		for round := 0; round < 3; round++ {
+			_, err := fx.Get(ctx, "x")
+			require.NoError(t, err)
+			connected("y", true)
+			require.NoError(t, fx.AddPeer(ctx, newTestPeer("y")))
+			require.NoError(t, fx.Flush(ctx))
+			// delivered synchronously, in both directions
+			require.Len(t, obs.getClosed(), 2*(round+1))
+		}
+		// the watchers of the flushed peers must not report them again
+		require.Never(t, func() bool { return len(obs.getClosed()) > 6 }, 200*time.Millisecond, 10*time.Millisecond)
+		for _, id := range []string{"x", "y"} {
+			kinds := obs.kindsFor(id)
+			require.Len(t, kinds, 6, id)
+			for i, k := range kinds {
+				want := peerobserver.KindConnected
+				if i%2 == 1 {
+					want = peerobserver.KindClosed
+				}
+				require.Equal(t, want, k, "%s: event %d", id, i)
+			}
+		}
+	})
+	t.Run("hung outgoing close does not delay closing the incoming cache", func(t *testing.T) {
+		fx := newFixtureCfg(t, nil, func(ps *poolService, a *app.App) {
+			ps.closeTimeout = 2 * time.Second
+		})
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		hung := newCtlPeer("out")
+		releaseClose, doReleaseClose := newRelease()
+		defer doReleaseClose()
+		hung.closeHook = func(int32) { <-releaseClose }
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			return hung, nil
+		}
+		_, err := fx.Get(ctx, "out")
+		require.NoError(t, err)
+		in := newTestPeer("in")
+		require.NoError(t, fx.AddPeer(ctx, in))
+		oldPair := p.current.Load()
+		require.NoError(t, fx.Flush(ctx))
+		// well within closeTimeout: the incoming cache does not queue behind
+		// the outgoing pass that is stuck on hung
+		require.Eventually(t, func() bool {
+			_, err := oldPair.incoming.Pick(ctx, "in")
+			return err == ocache.ErrClosed && in.IsClosed()
+		}, 500*time.Millisecond, time.Millisecond)
+		require.False(t, hung.IsClosed())
+	})
+	t.Run("add gives up on an entry that cannot be evicted", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		// an incoming cache that never removes anything stands in for an
+		// entry some other closer keeps hold of
+		orig := p.newCaches
+		p.newCaches = func() *caches {
+			c := orig()
+			c.incoming = &stickyCache{OCache: c.incoming, peek: c.peekIncoming}
+			c.peekIncoming = mustPeeker(c.incoming)
+			return c
+		}
+		require.NoError(t, fx.Flush(ctx))
+		require.NoError(t, fx.AddPeer(ctx, newTestPeer("d")))
+		dup := newCtlPeer("d")
+		got := make(chan error, 1)
+		go func() { got <- fx.AddPeer(context.Background(), dup) }()
+		select {
+		case err := <-got:
+			require.ErrorIs(t, err, ocache.ErrExists)
+		case <-time.After(2 * time.Second):
+			t.Fatal("AddPeer kept retrying an entry it cannot evict")
+		}
+		// one pass plus the three retries, two Id calls each (Add, Pick)
+		require.Equal(t, int32(8), dup.idCall.Load())
+	})
+	t.Run("add waits for the old connection's close before giving up", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		old := newCtlPeer("d")
+		inClose := make(chan struct{})
+		releaseClose, doReleaseClose := newRelease()
+		defer doReleaseClose()
+		old.closeHook = func(call int32) {
+			if call == 1 {
+				close(inClose)
+			}
+			<-releaseClose
+		}
+		require.NoError(t, fx.AddPeer(ctx, old))
+		// the connection dies: its watcher evicts it, and the close hangs
+		close(old.closed)
+		<-inClose
+		// the remote reconnects while the old entry is still mid-close
+		repl := newTestPeer("d")
+		got := make(chan error, 1)
+		go func() {
+			actx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			got <- fx.AddPeer(actx, repl)
+		}()
+		require.Never(t, func() bool { return len(got) > 0 }, 100*time.Millisecond, 10*time.Millisecond)
+		doReleaseClose()
+		require.NoError(t, <-got)
+		require.True(t, inCurrent(p, repl))
+		require.False(t, repl.IsClosed())
+	})
+	t.Run("add parked on an old connection's close moves on when the pair is flushed", func(t *testing.T) {
+		fx := newFixtureCfg(t, nil, func(ps *poolService, a *app.App) {
+			ps.closeTimeout = time.Second
+		})
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		old := newCtlPeer("d")
+		inClose := make(chan struct{})
+		releaseClose, doReleaseClose := newRelease()
+		defer doReleaseClose()
+		old.closeHook = func(call int32) {
+			if call == 1 {
+				close(inClose)
+			}
+			<-releaseClose
+		}
+		require.NoError(t, fx.AddPeer(ctx, old))
+		repl := newTestPeer("d")
+		got := make(chan error, 1)
+		// Accept passes a Background ctx: only the pair can end the wait
+		go func() { got <- fx.AddPeer(context.Background(), repl) }()
+		<-inClose
+		require.NoError(t, fx.Flush(ctx))
+		select {
+		case err := <-got:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			t.Fatal("AddPeer stayed parked on the flushed pair's teardown")
+		}
+		require.True(t, inCurrent(p, repl))
+	})
+	t.Run("a watcher evicting a peer while flush snapshots it reports it once", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		// the watcher's RemoveSame starts a Flush and lets it snapshot the
+		// still-present peer, then removes; Flush may only mark after that
+		snapshotDone := make(chan struct{})
+		proceed := make(chan struct{})
+		var flushed sync.WaitGroup
+		var once sync.Once
+		installIncoming(t, fx, func(inner ocache.OCache, peek ocache.Peeker) ocache.OCache {
+			hc := &hookedCache{OCache: inner, peek: peek}
+			hc.onForEach = func() {
+				once.Do(func() {
+					close(snapshotDone)
+					<-proceed
+				})
+			}
+			hc.onRemoveSame = func() {
+				flushed.Add(1)
+				go func() {
+					defer flushed.Done()
+					assert.NoError(t, fx.Flush(ctx))
+				}()
+				<-snapshotDone
+			}
+			return hc
+		})
+		tp := newTestPeer("x")
+		require.NoError(t, fx.AddPeer(ctx, tp))
+		require.NoError(t, tp.Close())
+		<-snapshotDone
+		// the watcher's removal runs now, with Flush holding the snapshot
+		time.Sleep(20 * time.Millisecond)
+		close(proceed)
+		flushed.Wait()
+		require.Eventually(t, func() bool { return len(obs.getClosed()) == 1 }, time.Second, 10*time.Millisecond)
+		require.Never(t, func() bool { return len(obs.getClosed()) > 1 }, 200*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("flush racing close reports nothing after shutdown began", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureCfg(t, obs, func(ps *poolService, a *app.App) {
+			ps.closeTimeout = 2 * time.Second
+		})
+		p := fx.Service.(*poolService).pool
+		inSnapshot := make(chan struct{})
+		proceed := make(chan struct{})
+		var once sync.Once
+		installIncoming(t, fx, func(inner ocache.OCache, peek ocache.Peeker) ocache.OCache {
+			return &hookedCache{OCache: inner, peek: peek, onForEach: func() {
+				once.Do(func() {
+					close(inSnapshot)
+					<-proceed
+				})
+			}}
+		})
+		require.NoError(t, fx.AddPeer(ctx, newTestPeer("x")))
+		flushed := make(chan struct{})
+		go func() {
+			assert.NoError(t, fx.Flush(ctx))
+			close(flushed)
+		}()
+		<-inSnapshot
+		// Close begins while Flush holds its snapshot and has not reported yet
+		closed := make(chan struct{})
+		go func() {
+			_ = fx.Service.Close(ctx)
+			close(closed)
+		}()
+		require.Eventually(t, func() bool { return p.closingCtx.Err() != nil }, time.Second, time.Millisecond)
+		close(proceed)
+		<-flushed
+		<-closed
+		require.Empty(t, obs.getClosed())
+	})
+	t.Run("get whose ctx ends as the eviction completes does not dial", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		var dials atomic.Int32
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			dials.Add(1)
+			return newTestPeer(peerId), nil
+		}
+		for i := 0; i < 20; i++ {
+			gctx, cancel := context.WithCancel(ctx)
+			dead := newCtlPeer("p1")
+			close(dead.closed)
+			// the eviction's Close cancels the Get's ctx as it completes
+			dead.closeHook = func(int32) { cancel() }
+			require.NoError(t, p.current.Load().outgoing.Add("p1", dead))
+			_, err := fx.Get(gctx, "p1")
+			require.ErrorIs(t, err, context.Canceled)
+			cancel()
+		}
+		require.Zero(t, dials.Load(), "dialed with a done ctx after the eviction")
 	})
 	t.Run("connected and closed pairing for flushed peers", func(t *testing.T) {
 		obs := &poolEventRecorder{}
@@ -1564,4 +1905,141 @@ func TestPool_FlushGoroutines(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// kindsFor returns the kinds of every event recorded for peerId, in order
+func (r *poolEventRecorder) kindsFor(peerId string) (kinds []peerobserver.Kind) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, ev := range r.events {
+		if ev.PeerId == peerId {
+			kinds = append(kinds, ev.Kind)
+		}
+	}
+	return
+}
+
+// TestPool_FastPathMetrics pins the series of the hit path against what a Get
+// or Pick through the caches counts: exactly once per cache per call, also
+// when the fast path finds a closed peer and falls through to lookup
+func TestPool_FastPathMetrics(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	fx := newFixtureCfg(t, nil, func(ps *poolService, a *app.App) {
+		a.Register(&testMetric{reg: reg})
+	})
+	defer fx.Finish()
+	p := fx.Service.(*poolService).pool
+	fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+		return newTestPeer(peerId), nil
+	}
+	counters := func() map[string]float64 {
+		families, err := reg.Gather()
+		require.NoError(t, err)
+		out := map[string]float64{}
+		for _, mf := range families {
+			if m := mf.GetMetric()[0]; m.GetCounter() != nil {
+				out[mf.GetName()] = m.GetCounter().GetValue()
+			}
+		}
+		return out
+	}
+	expect := func(step string, incomingHit, incomingMiss, outgoingHit, outgoingMiss float64) {
+		got := counters()
+		assert.Equal(t, map[string]float64{
+			"netpool_incoming_hit": incomingHit, "netpool_incoming_miss": incomingMiss, "netpool_incoming_gc": 0,
+			"netpool_outgoing_hit": outgoingHit, "netpool_outgoing_miss": outgoingMiss, "netpool_outgoing_gc": 0,
+		}, got, step)
+	}
+	_, err := fx.Get(ctx, "out") // incoming miss, outgoing miss (dial)
+	require.NoError(t, err)
+	expect("dial", 0, 1, 0, 1)
+	_, err = fx.Get(ctx, "out") // fast: incoming miss, outgoing hit
+	require.NoError(t, err)
+	expect("fast get", 0, 2, 1, 1)
+	_, err = fx.Pick(ctx, "out") // fast: Pick counts the hit only
+	require.NoError(t, err)
+	expect("fast pick", 0, 2, 2, 1)
+	_, err = fx.GetOneOf(ctx, []string{"zz", "out"}) // a Pick miss counts nothing, then the hit
+	require.NoError(t, err)
+	expect("fast getoneof", 0, 2, 3, 1)
+
+	// a closed peer in the cache: fast counts nothing and lookup takes over
+	// (incoming miss, outgoing hit on the closed entry, then after the
+	// eviction incoming miss and outgoing miss for the dial)
+	dead := newTestPeer("d")
+	require.NoError(t, dead.Close())
+	require.NoError(t, p.current.Load().outgoing.Add("d", dead))
+	_, err = fx.Get(ctx, "d")
+	require.NoError(t, err)
+	expect("fallback", 0, 4, 4, 2)
+
+	require.NoError(t, fx.AddPeer(ctx, newTestPeer("in")))
+	_, err = fx.Get(ctx, "in") // fast: incoming hit
+	require.NoError(t, err)
+	_, err = fx.Pick(ctx, "in")
+	require.NoError(t, err)
+	expect("incoming", 2, 4, 4, 2)
+}
+
+// stickyCache is an OCache whose RemoveSame never removes anything
+type stickyCache struct {
+	ocache.OCache
+	peek ocache.Peeker
+}
+
+func (c *stickyCache) RemoveSame(ctx context.Context, id string, value ocache.Object) (bool, error) {
+	return false, nil
+}
+
+func (c *stickyCache) Peek(id string, touch bool) (ocache.Object, bool) {
+	return c.peek.Peek(id, touch)
+}
+
+func (c *stickyCache) WaitClosing(ctx context.Context, id string) error {
+	return c.peek.WaitClosing(ctx, id)
+}
+
+// hookedCache is an incoming cache whose RemoveSame and ForEach can be
+// intercepted: the seams for racing a Flush against a watcher's eviction
+type hookedCache struct {
+	ocache.OCache
+	peek         ocache.Peeker
+	onRemoveSame func()
+	onForEach    func()
+}
+
+func (c *hookedCache) RemoveSame(ctx context.Context, id string, value ocache.Object) (bool, error) {
+	if c.onRemoveSame != nil {
+		c.onRemoveSame()
+	}
+	return c.OCache.RemoveSame(ctx, id, value)
+}
+
+func (c *hookedCache) ForEach(f func(v ocache.Object) bool) {
+	c.OCache.ForEach(f)
+	if c.onForEach != nil {
+		c.onForEach()
+	}
+}
+
+func (c *hookedCache) Peek(id string, touch bool) (ocache.Object, bool) {
+	return c.peek.Peek(id, touch)
+}
+
+func (c *hookedCache) WaitClosing(ctx context.Context, id string) error {
+	return c.peek.WaitClosing(ctx, id)
+}
+
+// installIncoming makes every pair the pool builds from now on use wrap(inner)
+// as its incoming cache, and flushes once so the current pair has it
+func installIncoming(t *testing.T, fx *fixture, wrap func(inner ocache.OCache, peek ocache.Peeker) ocache.OCache) {
+	p := fx.Service.(*poolService).pool
+	orig := p.newCaches
+	p.newCaches = func() *caches {
+		c := orig()
+		c.incoming = wrap(c.incoming, c.peekIncoming)
+		c.peekIncoming = mustPeeker(c.incoming)
+		return c
+	}
+	require.NoError(t, fx.Flush(ctx))
 }

@@ -16,40 +16,52 @@ type ProtoChecker struct {
 	SupportedEncodings []handshakeproto.Encoding
 }
 
-// OutgoingProtoHandshake negotiates the sub-connection protocol.
-//
-// Contract: on an I/O error or ctx cancellation the conn is closed; on a
+// OutgoingProtoHandshake negotiates the sub-connection protocol. On an I/O
+// error or ctx cancellation the conn is closed before it returns; on a
 // protocol-level error (incompatible, declined or unexpected proto) it is
-// left to the caller. On cancellation the function returns at once and the
-// close happens in the background: a stream close can block on the transport
-// (a yamux FIN waits up to the connection write timeout), and the caller is
-// typically racing a deadline. I/O errors close it asynchronously as well, so
-// the conn may still be open when the function returns; it is unusable
-// afterwards either way.
+// left to the caller. The close is synchronous and can block on the
+// transport; OutgoingProtoHandshakeWithCloser moves it off the caller's path.
 func OutgoingProtoHandshake(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto) (*handshakeproto.Proto, error) {
-	return OutgoingProtoHandshakeWithCloser(ctx, conn, proto, nil)
-}
-
-// OutgoingProtoHandshakeWithCloser is OutgoingProtoHandshake with every close
-// of conn going through closeConn, which must not block (e.g. it hands the
-// conn to a bounded cleanup worker). With a closer the conn is handed to it
-// exactly once on any error, protocol-level ones included, so the caller
-// never closes it itself. A nil closeConn keeps OutgoingProtoHandshake's
-// contract and closes in a new goroutine.
-func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto, closeConn func(net.Conn)) (*handshakeproto.Proto, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	closeOnAnyErr := closeConn != nil
+	h := newHandshake()
+	done := make(chan struct{})
+	var (
+		err         error
+		remoteProto *handshakeproto.Proto
+	)
+	go func() {
+		defer close(done)
+		remoteProto, err = outgoingProtoHandshake(h, conn, proto, nil, nil)
+	}()
+	select {
+	case <-done:
+		return remoteProto, err
+	case <-ctx.Done():
+		_ = conn.Close()
+		return nil, ctx.Err()
+	}
+}
+
+// OutgoingProtoHandshakeWithCloser is OutgoingProtoHandshake for a caller
+// racing a deadline: every close of conn goes through closeConn, which must
+// not block (e.g. it closes the conn in the background), and on any error,
+// protocol-level ones included, the conn is handed to it exactly once, so the
+// caller never closes it itself. On cancellation it returns at once. A nil
+// closeConn falls back to OutgoingProtoHandshake.
+func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto, closeConn func(net.Conn)) (*handshakeproto.Proto, error) {
 	if closeConn == nil {
-		closeConn = closeAsync
-	} else {
-		var handedOff atomic.Bool
-		hook := closeConn
-		closeConn = func(c net.Conn) {
-			if handedOff.CompareAndSwap(false, true) {
-				hook(c)
-			}
+		return OutgoingProtoHandshake(ctx, conn, proto)
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	var handedOff atomic.Bool
+	hook := closeConn
+	closeConn = func(c net.Conn) {
+		if handedOff.CompareAndSwap(false, true) {
+			hook(c)
 		}
 	}
 	h := newHandshake()
@@ -65,7 +77,7 @@ func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto 
 	go func() {
 		defer close(done)
 		remoteProto, err = outgoingProtoHandshake(h, conn, proto, closeConn, &claimed)
-		if err != nil && closeOnAnyErr {
+		if err != nil {
 			// a no-op if the handshake or an abandoning caller closed it
 			closeConn(conn)
 		}
@@ -88,10 +100,6 @@ func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto 
 		closeConn(conn)
 		return nil, ctx.Err()
 	}
-}
-
-func closeAsync(conn net.Conn) {
-	go func() { _ = conn.Close() }()
 }
 
 var noEncodings = []handshakeproto.Encoding{handshakeproto.Encoding_None}

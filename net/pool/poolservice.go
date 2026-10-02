@@ -51,9 +51,6 @@ type poolService struct {
 
 func (p *poolService) Init(a *app.App) (err error) {
 	p.dialer = a.MustComponent("net.peerservice").(dialer)
-	if p.pool.closeTimeout <= 0 {
-		p.pool.closeTimeout = closeTimeout
-	}
 	p.pool.closingCtx, p.pool.closingCancel = context.WithCancel(context.Background())
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
@@ -74,7 +71,7 @@ func (p *poolService) Init(a *app.App) (err error) {
 			return p.pool.current.Load().incoming.Len()
 		})
 		outgoingMetrics, incomingMetrics = outgoing.Option(), incoming.Option()
-		p.pool.incomingMiss = incoming.Miss
+		p.pool.metrics = &fastMetrics{incomingHit: incoming.Hit, incomingMiss: incoming.Miss, outgoingHit: outgoing.Hit}
 	}
 	p.pool.newCaches = func() *caches {
 		return p.newCaches(outgoingMetrics, incomingMetrics)
@@ -110,7 +107,7 @@ func (p *poolService) newCaches(outgoingMetrics, incomingMetrics ocache.Option) 
 				return value, err
 			}
 			if pr, ok := value.(peer.Peer); ok {
-				go p.pool.evictOnClose(pr, c.outgoing, false)
+				go p.pool.evictOnClose(pr, c, false)
 			}
 			return value, nil
 		},

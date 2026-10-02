@@ -88,33 +88,15 @@ func isConnDead(err error) bool {
 	return errors.Is(err, quic.ErrServerClosed) || errors.Is(err, net.ErrClosed)
 }
 
-// connDeadError is a stream error caused by the whole connection going away.
-// It matches transport.ErrConnClosed, so callers classify it like a failed
-// Open or Accept, and still unwraps to the original quic error for telemetry.
-type connDeadError struct {
-	cause error
-}
-
-func (e connDeadError) Error() string {
-	return transport.ErrConnClosed.Error() + ": " + e.cause.Error()
-}
-
-func (e connDeadError) Unwrap() []error {
-	return []error{transport.ErrConnClosed, e.cause}
-}
-
 // wrapConnDead normalizes a stream Read/Write error: one meaning the
-// connection is dead is wrapped into connDeadError, anything else (io.EOF,
-// stream resets, deadlines) is returned as is.
+// connection is dead is wrapped with transport.NewConnClosedError, so callers
+// classify it like a failed Open or Accept while the original quic error stays
+// reachable; anything else (io.EOF, stream resets, deadlines) is returned as is.
 func wrapConnDead(err error) error {
 	if err == nil || !isConnDead(err) {
 		return err
 	}
-	var already connDeadError
-	if errors.As(err, &already) {
-		return err
-	}
-	return connDeadError{cause: err}
+	return transport.NewConnClosedError(err)
 }
 
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {

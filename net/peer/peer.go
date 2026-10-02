@@ -57,7 +57,10 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
 	}
-	pr.cleanup = newCleanupOwner(pr.id)
+	pr.slowClose = slowCloseWarn
+	pr.onSlowClose = func() {
+		log.Warn("sub connection close is taking too long", zap.String("peerId", pr.id), zap.Duration("after", pr.slowClose))
+	}
 	go pr.acceptLoop()
 	return pr, nil
 }
@@ -98,9 +101,9 @@ type Peer interface {
 type subConn struct {
 	encoding.ConnUnblocked
 	*connutil.LastUsageConn
-	// doomed is set by gc when it takes an active conn away and hands its
-	// close to the cleanup owner: the holder must not return it for reuse,
-	// even though the close may not have landed yet
+	// doomed is set by gc when it takes an active conn away and closes it in
+	// the background: the holder must not return it for reuse, even though
+	// the close may not have landed yet
 	doomed atomic.Bool
 }
 
@@ -129,8 +132,14 @@ type peer struct {
 
 	limiter limiter
 
-	// cleanup closes sub connections off the callers' path
-	cleanup *cleanupOwner
+	// churnClosing counts background closes of sub conns callers churned
+	// through (released unusable, or failed in the handshake) that have not
+	// finished yet; the open limiter counts them as sub conns
+	churnClosing atomic.Int32
+	// slowClose and onSlowClose log a background close that hangs; fields
+	// so tests can shorten them
+	slowClose   time.Duration
+	onSlowClose func()
 
 	mu        sync.Mutex
 	created   time.Time
@@ -144,26 +153,37 @@ func (p *peer) Id() string {
 }
 
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+	// one throttling deadline for the whole call: a retry may shorten the
+	// wait, never push it back, or steady wake-ups would starve the caller
+	var deadline time.Time
 	for {
-		conn, retry, err := p.acquireDrpcConn(ctx)
+		conn, retry, err := p.acquireDrpcConn(ctx, &deadline)
 		if !retry {
 			return conn, err
 		}
 	}
 }
 
-// acquireDrpcConn makes one acquisition attempt; retry means start over
-// with a fresh look at the pool and a fresh limiter wait
-func (p *peer) acquireDrpcConn(ctx context.Context) (conn drpc.Conn, retry bool, err error) {
+// acquireDrpcConn makes one acquisition attempt; retry means start over with
+// a fresh look at the pool and the limiter wait recomputed (see deadline)
+func (p *peer) acquireDrpcConn(ctx context.Context, deadline *time.Time) (conn drpc.Conn, retry bool, err error) {
 	if p.IsClosed() {
 		return nil, false, transport.ErrConnClosed
 	}
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
-		// closes still in progress count too: they used to run on the
-		// releasing callers' goroutines while the conn was still active,
-		// and the owner must not turn into a way around the throttling
-		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()) + p.cleanup.inFlight())
+		// released conns still closing in the background count too, so
+		// that closing them off the releasing callers' path does not bypass
+		// the throttling
+		var wait <-chan time.Time
+		if delay := p.limiter.delay(len(p.active) + int(p.openingWaitCount.Load()) + int(p.churnClosing.Load())); delay > 0 {
+			if until := time.Now().Add(delay); deadline.IsZero() || until.Before(*deadline) {
+				*deadline = until
+			}
+			timer := time.NewTimer(time.Until(*deadline))
+			defer timer.Stop()
+			wait = timer.C
+		}
 		p.openingWaitCount.Add(1)
 		defer p.openingWaitCount.Add(-1)
 		p.mu.Unlock()
@@ -178,10 +198,9 @@ func (p *peer) acquireDrpcConn(ctx context.Context) (conn drpc.Conn, retry bool,
 					return dconn, false, nil
 				}
 				// The released conn was closed, or gc doomed it on the way.
-				// Its close may still be in flight in the cleanup owner, so
-				// opening right away would bypass the throttling: start
-				// over, which picks up an inactive conn or recomputes the
-				// wait with the closes still in flight.
+				// Its close may still be running, so opening right away
+				// would bypass the throttling: start over, which picks up an
+				// inactive conn or waits out the (never later) deadline.
 				return nil, true, nil
 			case <-wait:
 			}
@@ -202,11 +221,8 @@ func (p *peer) acquireDrpcConn(ctx context.Context) (conn drpc.Conn, retry bool,
 		return nil, true, nil
 	default:
 	}
-	if res.doomed.Load() {
-		// gc took it while it was being re-pooled; its close is pending
-		p.mu.Unlock()
-		return nil, true, nil
-	}
+	// never doomed: gc dooms active conns only, and ReleaseDrpcConn
+	// re-checks the flag under p.mu before re-pooling
 	p.active[res] = struct{}{}
 	p.mu.Unlock()
 	return res, false, nil
@@ -284,7 +300,7 @@ func (p *peer) checkReleased(ctx context.Context, conn drpc.Conn) (closed bool) 
 		case <-conn.Closed():
 			// both were ready: nothing left to close
 		default:
-			p.cleanup.close(conn)
+			p.closeAsync(conn, true)
 		}
 		closed = true
 	default:
@@ -300,7 +316,7 @@ func (p *peer) checkReleased(ctx context.Context, conn drpc.Conn) (closed bool) 
 				// means the connection has some unfinished work,
 				// e.g. not fully read stream
 				// we cannot reuse this connection so let's close it
-				p.cleanup.close(conn)
+				p.closeAsync(conn, true)
 				closed = true
 			}
 		} else {
@@ -309,7 +325,7 @@ func (p *peer) checkReleased(ctx context.Context, conn drpc.Conn) (closed bool) 
 			// the caller passed a foreign conn; close it defensively instead
 			// of crashing the process.
 			log.Warn("released conn does not implement encoding.ConnUnblocked, closing", zap.String("peerId", p.id))
-			p.cleanup.close(conn)
+			p.closeAsync(conn, true)
 			closed = true
 		}
 	}
@@ -338,8 +354,8 @@ func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 		return nil, err
 	}
 	lastUsageConn := connutil.NewLastUsageConn(conn)
-	// on any error the handshake hands the stream to the cleanup owner, once:
-	// on a stalled transport the close blocks, so it never runs here
+	// on any error the handshake hands the stream over once, to be closed in
+	// the background: on a stalled transport the close blocks
 	proto, err := handshake.OutgoingProtoHandshakeWithCloser(ctx, lastUsageConn, defaultHandshakeProto, p.closeSubConn)
 	if err != nil {
 		return nil, err
@@ -359,7 +375,53 @@ func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 }
 
 func (p *peer) closeSubConn(conn net.Conn) {
-	p.cleanup.close(conn)
+	// counted: one per failed open, so a peer whose handshakes keep failing
+	// on a stalled transport opens ever more slowly
+	p.closeAsync(conn, true)
+}
+
+// slowCloseWarn is how long a background close may run before it is logged.
+// It is above the default transport bounds; with a yamux WriteTimeoutSec of
+// a minute or more a legitimate close can reach it, which only logs.
+const slowCloseWarn = time.Minute
+
+// closeAsync closes c off the caller's path, one goroutine per close.
+// Closing a drpc conn waits for its reader, stream manager and transport,
+// and a yamux stream close sends a FIN under a write timeout, so on a
+// stalled connection a synchronous close turns a caller's expired deadline
+// into a long hang.
+//
+// The goroutines are not capped but self-limited by the open limiter. Each
+// close is bounded by the transport (yamux StreamCloseTimeout and
+// ConnectionWriteTimeout, both WriteTimeoutSec and never 0; QUIC, iroh and
+// webtransport closes do not block), and every close comes from a sub conn
+// this peer opened. counted marks a close of a conn a caller churned through
+// (ReleaseDrpcConn of an unusable conn, or a failed handshake): the open
+// limiter counts those like sub conns, so with closes of duration T in flight
+// the number settles around 10+sqrt(10*T), T in seconds, instead of growing
+// with the callers' rate. Closes from gc are not counted: they say nothing about how
+// fast callers churn. A close running longer than slowClose is logged once;
+// nothing else happens to it.
+//
+// Nothing waits for these goroutines: peer.Close and pool.Close return while
+// they run, and they finish promptly once the connection is closed.
+func (p *peer) closeAsync(c io.Closer, counted bool) {
+	if counted {
+		p.churnClosing.Add(1)
+	}
+	go func() {
+		if counted {
+			defer p.churnClosing.Add(-1)
+		}
+		var timer *time.Timer
+		if p.onSlowClose != nil {
+			timer = time.AfterFunc(p.slowClose, p.onSlowClose)
+		}
+		_ = c.Close()
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
 }
 
 func (p *peer) acceptLoop() {
@@ -451,12 +513,12 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	// drpc conn Close blocks until its reader unwinds, which on a stalled stream
 	// takes until the yamux stream close timeout: collect the doomed conns and
-	// hand them to the cleanup owner after releasing the lock, so a stalled
+	// close them in the background after releasing the lock, so a stalled
 	// peer does not hold up the GC pass of every other peer
 	var toClose []*subConn
 	defer func() {
 		for _, conn := range toClose {
-			p.cleanup.close(conn)
+			p.closeAsync(conn, false)
 		}
 	}()
 	p.mu.Lock()

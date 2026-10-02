@@ -762,7 +762,7 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		p.evictOnClose(tp, p.current.Load().incoming, true)
+		p.evictOnClose(tp, p.current.Load(), true)
 		close(done)
 	}()
 
@@ -889,7 +889,7 @@ func TestPool_PeerObserver(t *testing.T) {
 		cache := &shutdownOnRemoveSame{OCache: p.current.Load().incoming, cancel: p.closingCancel}
 		done := make(chan struct{})
 		go func() {
-			p.evictOnClose(tp, cache, true)
+			p.evictOnClose(tp, &caches{incoming: cache}, true)
 			close(done)
 		}()
 		select {
@@ -1035,7 +1035,7 @@ func TestPool_EvictsOutgoingClosedDuringLoad(t *testing.T) {
 	require.NoError(t, tp.Close())
 	done := make(chan struct{})
 	go func() {
-		p.evictOnClose(tp, cache, false)
+		p.evictOnClose(tp, &caches{outgoing: cache}, false)
 		close(done)
 	}()
 

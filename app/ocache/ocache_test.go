@@ -1404,7 +1404,7 @@ func TestOCache_ForEachAfterClose(t *testing.T) {
 }
 
 func TestOCache_Peek(t *testing.T) {
-	t.Run("hit touches and counts, miss counts nothing", func(t *testing.T) {
+	t.Run("hit touches, nothing is counted", func(t *testing.T) {
 		reg := prometheus.NewRegistry()
 		obj := NewTestObject("a", true, nil)
 		c := New(func(ctx context.Context, id string) (Object, error) {
@@ -1437,9 +1437,9 @@ func TestOCache_Peek(t *testing.T) {
 				values[mf.GetName()] = m.GetCounter().GetValue()
 			}
 		}
-		// one miss from Get's load, two hits from the two peeks
+		// one miss from Get's load; the peeks count nothing
 		require.Equal(t, float64(1), values["peek_test_miss"])
-		require.Equal(t, float64(2), values["peek_test_hit"])
+		require.Equal(t, float64(0), values["peek_test_hit"])
 	})
 	t.Run("loading, closing and closed are misses", func(t *testing.T) {
 		loading := make(chan struct{})

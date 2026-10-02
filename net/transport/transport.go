@@ -3,6 +3,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"net"
 	"time"
 )
@@ -21,6 +22,30 @@ type connClosedError struct{}
 func (connClosedError) Error() string { return "transport connection closed" }
 
 func (connClosedError) Unwrap() error { return net.ErrClosed }
+
+// NewConnClosedError wraps cause, an error a transport got because the whole
+// connection went away, so that it matches ErrConnClosed while errors.As
+// still finds the original error. A cause that is already wrapped is
+// returned as is.
+func NewConnClosedError(cause error) error {
+	var already connClosedCauseError
+	if errors.As(cause, &already) {
+		return cause
+	}
+	return connClosedCauseError{cause: cause}
+}
+
+type connClosedCauseError struct {
+	cause error
+}
+
+func (e connClosedCauseError) Error() string {
+	return ErrConnClosed.Error() + ": " + e.cause.Error()
+}
+
+func (e connClosedCauseError) Unwrap() []error {
+	return []error{ErrConnClosed, e.cause}
+}
 
 const (
 	Yamux        = "yamux"

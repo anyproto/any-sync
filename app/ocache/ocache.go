@@ -256,10 +256,16 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 type Peeker interface {
 	// Peek returns the value for id only if it is loaded and not being
 	// closed, without loading, waiting or allocating: the hot path for
-	// callers that handle a miss themselves. A hit counts as a cache hit and,
-	// with touch, refreshes the GC deadline like Get; a miss counts nothing
-	// (ok=false also for a loading entry, a closing one or a closed cache).
+	// callers that handle a miss themselves. With touch a hit refreshes the
+	// GC deadline like Get. ok=false also for a loading entry, a closing one
+	// or a closed cache. Peek counts no metrics: the caller, which decides
+	// whether the result is used, accounts for it.
 	Peek(id string, touch bool) (value Object, ok bool)
+	// WaitClosing blocks while the entry for id is being closed, bounded by
+	// ctx, and returns at once when there is no such entry or it is not
+	// closing. It is the wait a caller needs before it can add a replacement
+	// for a value whose removal is still running.
+	WaitClosing(ctx context.Context, id string) error
 }
 
 func (c *oCache) Peek(id string, touch bool) (value Object, ok bool) {
@@ -288,8 +294,18 @@ func (c *oCache) Peek(id string, touch bool) (value Object, ok bool) {
 	}
 	value = e.value
 	c.mu.Unlock()
-	c.metricsGet(true)
 	return value, true
+}
+
+func (c *oCache) WaitClosing(ctx context.Context, id string) error {
+	c.mu.Lock()
+	e, ok := c.data[id]
+	c.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	_, err := e.waitClose(ctx, id)
+	return err
 }
 
 // ctx is the cancellable load context Get created together with the entry.
