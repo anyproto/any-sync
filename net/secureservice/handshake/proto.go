@@ -22,26 +22,7 @@ type ProtoChecker struct {
 // left to the caller. The close is synchronous and can block on the
 // transport; OutgoingProtoHandshakeWithCloser moves it off the caller's path.
 func OutgoingProtoHandshake(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto) (*handshakeproto.Proto, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	h := newHandshake()
-	done := make(chan struct{})
-	var (
-		err         error
-		remoteProto *handshakeproto.Proto
-	)
-	go func() {
-		defer close(done)
-		remoteProto, err = outgoingProtoHandshake(h, conn, proto, nil, nil)
-	}()
-	select {
-	case <-done:
-		return remoteProto, err
-	case <-ctx.Done():
-		_ = conn.Close()
-		return nil, ctx.Err()
-	}
+	return outgoingProtoHandshakeCloser(ctx, conn, proto, closeSync, false)
 }
 
 // OutgoingProtoHandshakeWithCloser is OutgoingProtoHandshake for a caller
@@ -54,6 +35,17 @@ func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto 
 	if closeConn == nil {
 		return OutgoingProtoHandshake(ctx, conn, proto)
 	}
+	return outgoingProtoHandshakeCloser(ctx, conn, proto, closeConn, true)
+}
+
+func closeSync(conn net.Conn) {
+	_ = conn.Close()
+}
+
+// outgoingProtoHandshakeCloser runs the handshake, closing conn through
+// closeConn at most once: on an I/O error, on cancellation, and with
+// closeOnAnyErr on a protocol-level error as well
+func outgoingProtoHandshakeCloser(ctx context.Context, conn net.Conn, proto *handshakeproto.Proto, closeConn func(net.Conn), closeOnAnyErr bool) (*handshakeproto.Proto, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -77,7 +69,7 @@ func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto 
 	go func() {
 		defer close(done)
 		remoteProto, err = outgoingProtoHandshake(h, conn, proto, closeConn, &claimed)
-		if err != nil {
+		if err != nil && closeOnAnyErr {
 			// a no-op if the handshake or an abandoning caller closed it
 			closeConn(conn)
 		}
@@ -95,7 +87,7 @@ func OutgoingProtoHandshakeWithCloser(ctx context.Context, conn net.Conn, proto 
 		// The deadline unblocks a pending read at once where supported; the
 		// close is what reliably ends the handshake everywhere (a yamux write
 		// waiting for the send loop ignores deadlines, and some conns have
-		// no deadlines at all). Neither blocks the caller.
+		// no deadlines at all).
 		_ = conn.SetDeadline(time.Now())
 		closeConn(conn)
 		return nil, ctx.Err()

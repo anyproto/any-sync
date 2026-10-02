@@ -62,6 +62,10 @@ type openResult struct {
 // past it together can overshoot it by their number.
 func (y *yamuxConn) Open(ctx context.Context) (conn net.Conn, err error) {
 	if conn, err = y.open(ctx); err != nil {
+		if errors.Is(err, yamux.ErrSessionShutdown) {
+			// like Accept and the QUIC transport
+			err = transport.NewConnClosedError(err)
+		}
 		return nil, err
 	}
 	return y.wrapStream(conn), nil
@@ -75,6 +79,9 @@ func (y *yamuxConn) open(ctx context.Context) (conn net.Conn, err error) {
 	if err = ctx.Err(); err != nil {
 		return nil, err
 	}
+	// The helper is needed even with free SYN slots: Session.Open also sends
+	// the SYN through the session's send queue, which on a congested link
+	// waits up to ConnectionWriteTimeout regardless of ctx.
 	if err = y.waitBacklog(ctx); err != nil {
 		return nil, err
 	}
@@ -193,24 +200,33 @@ func (s yamuxStream) Write(b []byte) (n int, err error) {
 }
 
 // wrapSessionDead wraps err with transport.NewConnClosedError when it was
-// caused by the session dying. ErrSessionShutdown always is. io.EOF, a stream
-// reset, a closed stream and a connection write timeout count only while the
-// session is closed: on a live session they are stream-level outcomes (a
-// remote close or reset, or a send that waited out ConnectionWriteTimeout on a
-// slow but live peer, which yamux does not treat as fatal) and are returned
-// unchanged. A truly stalled session ends through missed keepalives, after
-// which its streams fail with errors covered here.
+// caused by the session dying. ErrSessionShutdown always is. A stream reset, a
+// closed stream and a connection write timeout count only while the session is
+// closed: on a live session they are stream-level outcomes (a remote reset, or
+// a send that waited out ConnectionWriteTimeout on a slow but live peer, which
+// yamux does not treat as fatal) and are returned unchanged; on a closed one
+// they are reported as caused by ErrSessionShutdown, with the original error
+// still in the chain. A truly stalled session
+// ends through missed keepalives, after which its streams fail with errors
+// covered here.
+//
+// io.EOF is never wrapped: a stream that got its data and FIN before the
+// session died must still end in a plain io.EOF (io.ReadAll, io.Copy and
+// err == io.EOF checks rely on it). An RPC cut short by the session dying is
+// classified above the transport, in the peer's sub conn.
 func (s yamuxStream) wrapSessionDead(err error) error {
 	if err == nil {
 		return nil
 	}
 	switch {
 	case errors.Is(err, yamux.ErrSessionShutdown):
-	case errors.Is(err, io.EOF), errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed),
+	case errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed),
 		errors.Is(err, yamux.ErrConnectionWriteTimeout):
 		if !s.sess.IsClosed() {
 			return err
 		}
+		// keeps the cause (and a write timeout's Timeout()) reachable
+		err = errors.Join(yamux.ErrSessionShutdown, err)
 	default:
 		return err
 	}

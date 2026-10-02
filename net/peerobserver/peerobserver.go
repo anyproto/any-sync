@@ -134,8 +134,9 @@ type Event struct {
 // connection a pool.Flush invalidates, synchronously on the goroutine that
 // called Flush before it returns (so for that caller those KindClosed precede
 // the KindConnected of its redials; the caller must not hold a lock the
-// observer takes); implementations must be safe for concurrent use. Dial-path events (KindDialStarted, outbound KindConnected,
-// KindDialFailed) run inside the pool's single-flight load for that peer: an
+// observer takes); implementations must be safe for concurrent use. Dial-path
+// events (KindDialStarted, outbound KindConnected, KindDialFailed) run inside
+// the pool's single-flight load for that peer: an
 // implementation must never call the pool for the peer such an event names —
 // the load is still open and the call blocks until the caller's context dies.
 // A pool call for a DIFFERENT peer is allowed, but it can synchronously

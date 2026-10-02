@@ -92,15 +92,22 @@ func (p *poolService) Init(a *app.App) (err error) {
 	return nil
 }
 
-// newCaches builds one cache pair. The outgoing loader binds its watcher to
-// the cache it loads into, not to whichever pair is current when the dial
-// finishes: after a Flush that is a different one.
+// newCaches builds one cache pair. The outgoing loader belongs to its pair: it
+// never dials for a pair that has been replaced or is closing (the load fails
+// with ErrClosed, and a lookup retries on the current pair), the dial itself
+// ends with the pair, and the watcher it starts is bound to the cache it
+// loads into, not to whichever pair is current when the dial finishes.
 func (p *poolService) newCaches(outgoingMetrics, incomingMetrics ocache.Option) *caches {
 	c := &caches{}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	c.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			value, err = p.dialer.Dial(ctx, id)
+			if c.ctx.Err() != nil {
+				return nil, ocache.ErrClosed
+			}
+			dctx, release := c.bind(ctx)
+			defer release()
+			value, err = p.dialer.Dial(dctx, id)
 			if err != nil {
 				if errors.Is(err, handshake.ErrIncompatibleVersion) {
 					return &errObject{id: id, err: err, createdTime: atomic.NewTime(time.Now())}, nil

@@ -61,7 +61,16 @@ type peerService struct {
 	// afterwards, so it is read without locking; its zero value is a no-op
 	observer peerobserver.Notifier
 	mu       sync.RWMutex
+	// acceptAddTimeout bounds how long Accept waits for the pool to make
+	// room for an incoming peer; zero means acceptAddTimeoutDefault
+	acceptAddTimeout time.Duration
 }
+
+// acceptAddTimeoutDefault bounds Accept's pool.AddPeer: replacing an old
+// incoming connection with the same peer waits for the old one's teardown,
+// which a hung transport could otherwise stretch indefinitely while holding
+// up the transport's accept path
+const acceptAddTimeoutDefault = 10 * time.Second
 
 func (p *peerService) Init(a *app.App) (err error) {
 	if comp := a.Component(yamux.CName); comp != nil {
@@ -168,10 +177,13 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	// back for the fallback window on the strength of a dead context. That
 	// drops a QuicTimedOut recorded before the cancel on purpose: without the
 	// yamux try that the cancel cut short there is no proof the path works
-	// without udp, which is what a strike requires.
+	// without udp, which is what a strike requires. Cancellation is recorded
+	// where it cut an attempt short, not when the dial returns: a dial whose
+	// addresses all failed on their own is reported even if ctx ends after.
 	dialAccepted := false
+	cancelled := false
 	defer func() {
-		if p.demotion == nil || (!dialAccepted && ctx.Err() != nil) {
+		if p.demotion == nil || (!dialAccepted && cancelled) {
 			return
 		}
 		if !dialAccepted {
@@ -185,6 +197,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 			// cancelled: the remaining addresses would only fail at once
 			// with the same dead context
 			err = ctx.Err()
+			cancelled = true
 			break
 		}
 		sch := scheme(addr)
@@ -194,6 +207,10 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 			break
 		}
 		addrErrs = append(addrErrs, err)
+		if cerr := ctx.Err(); cerr != nil && errors.Is(err, cerr) {
+			// the attempt was cut short by the caller, not by the path
+			cancelled = true
+		}
 		// a failure under a done ctx is classified like any other: the
 		// outcome of a cancelled dial is never reported, see above
 		switch {
@@ -354,7 +371,13 @@ func (p *peerService) Accept(mc transport.MultiConn) (err error) {
 		Inbound:      true,
 		ProtoVersion: protoVersion,
 	})
-	if err = p.pool.AddPeer(context.Background(), pr); err != nil {
+	addTimeout := p.acceptAddTimeout
+	if addTimeout <= 0 {
+		addTimeout = acceptAddTimeoutDefault
+	}
+	addCtx, cancel := context.WithTimeout(context.Background(), addTimeout)
+	defer cancel()
+	if err = p.pool.AddPeer(addCtx, pr); err != nil {
 		_ = pr.Close()
 		p.observer.Notify(peerobserver.Event{
 			Kind:    peerobserver.KindClosed,

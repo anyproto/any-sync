@@ -295,6 +295,25 @@ func TestPeerService_CancelledDialReportsNoOutcome(t *testing.T) {
 		o := stub.only(t)
 		assert.Equal(t, transport.Quic, o.SucceededScheme)
 	})
+	t.Run("a dial whose addresses all failed on their own is reported even if ctx ends after", func(t *testing.T) {
+		fx, stub := newFixtureWithStubDemotion(t)
+		defer fx.finish(t)
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(demotionAddrs, true)
+		dctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, &quicgo.HandshakeTimeoutError{})
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				// refused for real; the caller gives up as it returns
+				cancel()
+				return nil, fmt.Errorf("refused")
+			})
+		_, err := fx.Dial(dctx, peerId)
+		require.Error(t, err)
+		o := stub.only(t)
+		assert.True(t, o.QuicTimedOut)
+		assert.True(t, o.FallbackFailed)
+	})
 	t.Run("a cancelled dial does not stop later dials from being reported", func(t *testing.T) {
 		fx, stub := newFixtureWithStubDemotion(t)
 		defer fx.finish(t)

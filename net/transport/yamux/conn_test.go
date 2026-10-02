@@ -200,6 +200,12 @@ func TestYamuxConn_OpenClosedSession(t *testing.T) {
 	require.NoError(t, mc.Session.Close())
 	_, err := mc.Open(ctx)
 	require.ErrorIs(t, err, yamux.ErrSessionShutdown)
+	require.ErrorIs(t, err, transport.ErrConnClosed)
+	// the helper path as well
+	cctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	_, err = mc.Open(cctx)
+	require.ErrorIs(t, err, transport.ErrConnClosed)
 }
 
 // streamPair opens a stream from mc and accepts it on server
@@ -254,13 +260,13 @@ func TestYamuxStream_SessionDeathNormalized(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 		require.NoError(t, mc.Session.Close())
 		err := waitErr(t, res)
-		assert.ErrorIs(t, err, transport.ErrConnClosed)
-		assert.ErrorIs(t, err, io.EOF, "the original error stays reachable")
+		// a read ends in a plain io.EOF: the peer's sub conn, not the
+		// transport, classifies an RPC cut short this way
+		assert.Equal(t, io.EOF, err)
 
 		_, err = client.Write([]byte("more"))
 		assert.ErrorIs(t, err, transport.ErrConnClosed)
-		// yamux force-closed the stream on shutdown
-		assert.ErrorIs(t, err, yamux.ErrStreamClosed)
+		assert.ErrorIs(t, err, yamux.ErrSessionShutdown)
 	})
 	t.Run("remote session close mid-read", func(t *testing.T) {
 		mc, server := newSessionPair(t)
@@ -269,7 +275,7 @@ func TestYamuxStream_SessionDeathNormalized(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 		require.NoError(t, server.Close())
 		err := waitErr(t, res)
-		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		assert.Equal(t, io.EOF, err)
 		assert.True(t, mc.Session.IsClosed())
 	})
 	t.Run("accepted stream, remote session close", func(t *testing.T) {
@@ -295,7 +301,9 @@ func TestYamuxStream_SessionDeathNormalized(t *testing.T) {
 		res := readErr(t, local)
 		time.Sleep(20 * time.Millisecond)
 		require.NoError(t, server.Close())
-		assert.ErrorIs(t, waitErr(t, res), transport.ErrConnClosed)
+		assert.Equal(t, io.EOF, waitErr(t, res))
+		_, err = local.Write([]byte("more"))
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
 	})
 	t.Run("remote stream close is a plain EOF", func(t *testing.T) {
 		mc, server := newSessionPair(t)
@@ -320,11 +328,36 @@ func TestYamuxStream_SessionFatalErrorsNormalized(t *testing.T) {
 	}
 	// once the session is closed they mean it died
 	require.NoError(t, mc.Session.Close())
-	for _, cause := range []error{io.EOF, yamux.ErrConnectionReset, yamux.ErrStreamClosed, yamux.ErrConnectionWriteTimeout} {
+	for _, cause := range []error{yamux.ErrConnectionReset, yamux.ErrStreamClosed, yamux.ErrConnectionWriteTimeout} {
 		err := s.wrapSessionDead(cause)
 		assert.ErrorIs(t, err, transport.ErrConnClosed, cause.Error())
-		assert.ErrorIs(t, err, cause)
+		assert.ErrorIs(t, err, yamux.ErrSessionShutdown)
+		assert.ErrorIs(t, err, cause, "the original error stays reachable")
+		assert.NotErrorIs(t, err, io.EOF)
 	}
+	// io.EOF never is: a stream that got its FIN must end in a plain EOF
+	assert.Equal(t, io.EOF, s.wrapSessionDead(io.EOF))
+}
+
+// TestYamuxStream_ReadAllAfterFINThenSessionDeath: data and FIN received
+// before the session dies still read as a complete stream ending in io.EOF
+func TestYamuxStream_ReadAllAfterFINThenSessionDeath(t *testing.T) {
+	mc, server := newSessionPair(t)
+	client, remote := streamPair(t, mc, server)
+	payload := []byte("the whole message")
+	_, err := remote.Write(payload)
+	require.NoError(t, err)
+	require.NoError(t, remote.Close())
+	// let the data and FIN arrive, then the session dies
+	time.Sleep(50 * time.Millisecond)
+	require.NoError(t, server.Close())
+	require.Eventually(t, mc.Session.IsClosed, 5*time.Second, time.Millisecond)
+
+	got, err := io.ReadAll(client)
+	require.NoError(t, err, "io.ReadAll sees a plain io.EOF")
+	assert.Equal(t, payload, got)
+	_, err = client.Read(make([]byte, 1))
+	assert.True(t, err == io.EOF, "err == io.EOF must hold, got %v", err)
 }
 
 // slowReader reads slowly, so the writer's sends queue up

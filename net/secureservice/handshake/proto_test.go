@@ -233,11 +233,18 @@ func TestOutgoingProtoHandshakeWithCloser_CancelDoesNotWaitForClose(t *testing.T
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	start := time.Now()
 	closer := func(c net.Conn) { go func() { _ = c.Close() }() }
-	_, err := OutgoingProtoHandshakeWithCloser(ctx, conn, &handshakeproto.Proto{Proto: 1}, closer)
-	require.ErrorIs(t, err, context.DeadlineExceeded)
-	assert.Less(t, time.Since(start), time.Second, "the caller must not wait on the blocked close")
+	res := make(chan error, 1)
+	go func() {
+		_, err := OutgoingProtoHandshakeWithCloser(ctx, conn, &handshakeproto.Proto{Proto: 1}, closer)
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	case <-time.After(3 * time.Second):
+		t.Fatal("the caller must not wait on the blocked close")
+	}
 
 	// the conn is still closed, off the caller's path
 	select {
@@ -423,4 +430,45 @@ func TestHandshakeError_Unwrap(t *testing.T) {
 	assert.Nil(t, errors.Unwrap(ErrIncompatibleVersion))
 	// a wrapped transport error is not mistaken for a protocol sentinel
 	assert.NotErrorIs(t, HandshakeError{Err: io.EOF}, ErrIncompatibleVersion)
+}
+
+// countingConn counts writes and closes
+type countingConn struct {
+	writes, closes atomic.Int32
+}
+
+func (c *countingConn) Read([]byte) (int, error)         { return 0, io.EOF }
+func (c *countingConn) Write(b []byte) (int, error)      { c.writes.Add(1); return len(b), nil }
+func (c *countingConn) Close() error                     { c.closes.Add(1); return nil }
+func (c *countingConn) LocalAddr() net.Addr              { return nil }
+func (c *countingConn) RemoteAddr() net.Addr             { return nil }
+func (c *countingConn) SetDeadline(time.Time) error      { return nil }
+func (c *countingConn) SetReadDeadline(time.Time) error  { return nil }
+func (c *countingConn) SetWriteDeadline(time.Time) error { return nil }
+
+func TestHandshake_AbandonedSkipsReplyAndClose(t *testing.T) {
+	conn := &countingConn{}
+	var abandoned atomic.Bool
+	abandoned.Store(true)
+	h := &handshake{conn: conn, abandoned: &abandoned, localAck: &handshakeproto.Ack{}}
+	h.tryWriteErrAndClose(ErrUnexpected)
+	assert.Zero(t, conn.writes.Load(), "no ack to a caller that gave up")
+	assert.Zero(t, conn.closes.Load(), "the caller closes it")
+
+	abandoned.Store(false)
+	h.tryWriteErrAndClose(ErrUnexpected)
+	assert.Equal(t, int32(1), conn.writes.Load())
+	assert.Equal(t, int32(1), conn.closes.Load())
+}
+
+func TestHandshake_ReleaseClearsCloser(t *testing.T) {
+	h := newHandshake()
+	h.conn = &countingConn{}
+	h.closeConn = func(net.Conn) {}
+	h.abandoned = &atomic.Bool{}
+	h.release()
+	// a recycled handshake must not carry a previous caller's closer
+	assert.Nil(t, h.closeConn)
+	assert.Nil(t, h.abandoned)
+	assert.Nil(t, h.conn)
 }

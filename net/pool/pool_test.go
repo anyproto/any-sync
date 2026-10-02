@@ -633,6 +633,7 @@ var _ peer.Peer = (*testPeer)(nil)
 type testPeer struct {
 	id             string
 	closeMu        sync.Mutex
+	closes         int
 	closed         chan struct{}
 	created        time.Time
 	subConnections int
@@ -692,9 +693,11 @@ func (t *testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 
 func (t *testPeer) Close() error {
 	// the pool may close a rejected peer from several paths at once;
-	// idempotent and silent like the real peer (its MultiConn.Close is)
+	// idempotent and silent like the real peer (its MultiConn.Close is).
+	// closes counts every call, for tests that pin how often that happens
 	t.closeMu.Lock()
 	defer t.closeMu.Unlock()
+	t.closes++
 	select {
 	case <-t.closed:
 	default:

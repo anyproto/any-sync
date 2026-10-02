@@ -85,8 +85,7 @@ func TestQuicNetConn_ConnCloseNormalized(t *testing.T) {
 	fxC := newFixture(t)
 	defer fxC.finish(t)
 
-	mcC, err := fxC.Dial(ctx, fxS.addr)
-	require.NoError(t, err)
+	mcC := dialRetry(t, fxC, fxS.addr)
 	var mcS transport.MultiConn
 	select {
 	case mcS = <-fxS.accepter.mcs:
@@ -131,12 +130,11 @@ func TestQuicNetConn_StreamResetNotNormalized(t *testing.T) {
 	fxC := newFixture(t)
 	defer fxC.finish(t)
 
-	mcC, err := fxC.Dial(ctx, fxS.addr)
-	require.NoError(t, err)
+	mcC := dialRetry(t, fxC, fxS.addr)
 	var mcS transport.MultiConn
 	select {
 	case mcS = <-fxS.accepter.mcs:
-	case <-time.After(time.Second * 5):
+	case <-time.After(30 * time.Second):
 		t.Fatal("timeout")
 	}
 
@@ -153,12 +151,38 @@ func TestQuicNetConn_StreamResetNotNormalized(t *testing.T) {
 	// only the stream goes away: the server cancels its read side, which
 	// makes the client's writes fail with a stream error
 	sConn.(quicNetConn).CancelRead(42)
-	require.Eventually(t, func() bool {
-		_, err = conn.Write([]byte("more"))
-		return err != nil
-	}, 5*time.Second, 10*time.Millisecond)
+	// the STOP_SENDING takes a round trip: keep writing until it lands
+	writeErr := make(chan error, 1)
+	go func() {
+		for {
+			if _, wErr := conn.Write([]byte("more")); wErr != nil {
+				writeErr <- wErr
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}()
+	select {
+	case err = <-writeErr:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the stream reset never reached the writer")
+	}
 	var streamErr *quic.StreamError
 	require.ErrorAs(t, err, &streamErr)
 	assert.False(t, errors.Is(err, transport.ErrConnClosed))
 	assert.False(t, mcC.IsClosed())
+}
+
+// dialRetry dials, retrying a dial that timed out: under a loaded -race run a
+// loopback QUIC handshake can idle out, which is not what these tests are about
+func dialRetry(t *testing.T, fx *fixture, addr string) transport.MultiConn {
+	var err error
+	for i := 0; i < 3; i++ {
+		var mc transport.MultiConn
+		if mc, err = fx.Dial(ctx, addr); err == nil {
+			return mc
+		}
+	}
+	require.NoError(t, err)
+	return nil
 }
