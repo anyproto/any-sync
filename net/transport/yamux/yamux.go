@@ -132,7 +132,7 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 	if err != nil {
 		return
 	}
-	mc = newMultiConn(cctx, luc, addr, sess, time.Duration(y.conf.WriteTimeoutSec)*time.Second)
+	mc = NewMultiConn(cctx, luc, addr, sess)
 	return
 }
 
@@ -179,7 +179,7 @@ func (y *yamuxTransport) accept(conn net.Conn) {
 		log.Info("incoming connection yamux session error", zap.Error(err), zap.String("remoteAddr", conn.RemoteAddr().String()))
 		return
 	}
-	mc := newMultiConn(cctx, luc, conn.RemoteAddr().String(), sess, time.Duration(y.conf.WriteTimeoutSec)*time.Second)
+	mc := NewMultiConn(cctx, luc, conn.RemoteAddr().String(), sess)
 	if err = y.accepter.Accept(mc); err != nil {
 		log.Info("connection accept error", zap.Error(err), zap.String("remoteAddr", conn.RemoteAddr().String()))
 	}

@@ -72,13 +72,6 @@ type MultiConn interface {
 	BytesWritten() int64
 }
 
-// WriteTimeouter is optionally implemented by a MultiConn whose writes are
-// bounded by a timeout; consumers use it to tell a slow close from a stalled
-// transport
-type WriteTimeouter interface {
-	WriteTimeout() time.Duration
-}
-
 type Accepter interface {
 	Accept(mc MultiConn) (err error)
 }

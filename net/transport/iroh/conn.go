@@ -43,11 +43,6 @@ type irohMultiConn struct {
 	bytesWritten atomic.Int64
 }
 
-// WriteTimeout implements transport.WriteTimeouter
-func (c *irohMultiConn) WriteTimeout() time.Duration {
-	return c.writeTimeout
-}
-
 func (c *irohMultiConn) Context() context.Context {
 	return c.cctx
 }

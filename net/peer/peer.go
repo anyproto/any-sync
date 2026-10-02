@@ -57,7 +57,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
 	}
-	pr.cleanup = newCleanupOwner(mc)
+	pr.cleanup = newCleanupOwner(pr.id)
 	go pr.acceptLoop()
 	return pr, nil
 }

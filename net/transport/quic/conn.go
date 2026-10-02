@@ -59,11 +59,6 @@ func (q *quicMultiConn) BytesWritten() int64 {
 	return q.bytesWritten.Load()
 }
 
-// WriteTimeout implements transport.WriteTimeouter
-func (q *quicMultiConn) WriteTimeout() time.Duration {
-	return q.writeTimeout
-}
-
 func (q *quicMultiConn) Context() context.Context {
 	return q.cctx
 }

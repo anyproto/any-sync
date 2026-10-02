@@ -17,17 +17,12 @@ import (
 )
 
 func NewMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session) transport.MultiConn {
-	return newMultiConn(cctx, luConn, addr, sess, 0)
-}
-
-func newMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session, writeTimeout time.Duration) *yamuxConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Yamux+"://"+sess.RemoteAddr().String())
 	return &yamuxConn{
 		ctx:          cctx,
 		luConn:       luConn,
 		addr:         addr,
 		Session:      sess,
-		writeTimeout: writeTimeout,
 		backlogFreed: make(chan struct{}),
 	}
 }
@@ -41,11 +36,6 @@ type yamuxConn struct {
 	luConn *connutil.LastUsageConn
 	addr   string
 	*yamux.Session
-	// writeTimeout is the configured WriteTimeoutSec, which yamux uses as
-	// both ConnectionWriteTimeout and StreamCloseTimeout: a stream close is
-	// bounded by it, and the peer's cleanup owner derives its stall
-	// threshold from it (see WriteTimeout)
-	writeTimeout time.Duration
 
 	backlogMu sync.Mutex
 	// abandonedOpens counts Open helpers still running after their caller
@@ -153,11 +143,6 @@ func (y *yamuxConn) abandoned() int {
 	y.backlogMu.Lock()
 	defer y.backlogMu.Unlock()
 	return y.abandonedOpens
-}
-
-// WriteTimeout implements transport.WriteTimeouter
-func (y *yamuxConn) WriteTimeout() time.Duration {
-	return y.writeTimeout
 }
 
 func (y *yamuxConn) LastUsage() time.Time {

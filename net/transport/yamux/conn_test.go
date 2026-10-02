@@ -30,8 +30,8 @@ func newSessionPair(t *testing.T) (*yamuxConn, *yamux.Session) {
 		_ = client.Close()
 		_ = server.Close()
 	})
-	mc := newMultiConn(context.Background(), connutil.NewLastUsageConn(cc), "pipe", client, time.Second)
-	return mc, server
+	mc := NewMultiConn(context.Background(), connutil.NewLastUsageConn(cc), "pipe", client)
+	return mc.(*yamuxConn), server
 }
 
 func TestYamuxConn_OpenHonoursContext(t *testing.T) {

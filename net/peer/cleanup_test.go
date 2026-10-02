@@ -18,7 +18,6 @@ import (
 	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anyproto/any-sync/net/transport/mock_transport"
 )
 
 type rawMsg []byte
@@ -90,27 +89,9 @@ func (q *quickCloser) Close() error {
 	return nil
 }
 
-type writeTimeoutMC struct {
-	*mock_transport.MockMultiConn
-	wt time.Duration
-}
-
-func (w writeTimeoutMC) WriteTimeout() time.Duration { return w.wt }
-
 func TestCleanupOwner(t *testing.T) {
-	newMC := func(t *testing.T) (*mock_transport.MockMultiConn, *atomic.Int32) {
-		ctrl := gomock.NewController(t)
-		mc := mock_transport.NewMockMultiConn(ctrl)
-		var mcCloses atomic.Int32
-		mc.EXPECT().Close().DoAndReturn(func() error {
-			mcCloses.Add(1)
-			return nil
-		}).AnyTimes()
-		return mc, &mcCloses
-	}
-	t.Run("burst on a healthy connection never closes it", func(t *testing.T) {
-		mc, mcCloses := newMC(t)
-		c := newCleanupOwner(mc)
+	t.Run("burst never blocks the caller and never drops a close", func(t *testing.T) {
+		c := newCleanupOwner("p1")
 
 		const burst = 300
 		var running, maxSeen atomic.Int32
@@ -136,8 +117,6 @@ func TestCleanupOwner(t *testing.T) {
 				t.Fatal("a close was dropped")
 			}
 		}
-		assert.Zero(t, c.escalations.Load())
-		assert.Zero(t, mcCloses.Load(), "a healthy connection must not be closed")
 		assert.LessOrEqual(t, int(maxSeen.Load()), cleanupMaxWorkers)
 		// workers exit once idle: an idle peer costs no goroutines
 		require.Eventually(t, func() bool {
@@ -145,39 +124,27 @@ func TestCleanupOwner(t *testing.T) {
 			return r == 0 && p == 0
 		}, time.Second, time.Millisecond)
 	})
-	t.Run("stalled transport closes the multiconn", func(t *testing.T) {
-		mc, mcCloses := newMC(t)
-		c := newCleanupOwner(mc)
-		c.stallTimeout = 50 * time.Millisecond
-
+	t.Run("saturated workers queue and drain", func(t *testing.T) {
+		c := newCleanupOwner("p1")
 		release := make(chan struct{})
+		var releaseOnce sync.Once
+		doRelease := func() { releaseOnce.Do(func() { close(release) }) }
+		defer doRelease()
+
 		var closers []*blockingCloser
-		enqueue := func() *blockingCloser {
+		for i := 0; i < cleanupMaxWorkers+5; i++ {
 			cl := newBlockingCloser(release)
 			closers = append(closers, cl)
+			start := time.Now()
 			c.close(cl)
-			return cl
+			require.Less(t, time.Since(start), 100*time.Millisecond, "close must never block")
 		}
-		for i := 0; i < cleanupMaxWorkers; i++ {
-			enqueue()
-		}
-		// saturated but not stalled yet: the close just queues
-		enqueue()
 		r, p := c.stats()
 		assert.Equal(t, cleanupMaxWorkers, r)
-		assert.Equal(t, 1, p)
-		assert.Zero(t, c.escalations.Load())
+		assert.Equal(t, 5, p)
+		assert.Equal(t, cleanupMaxWorkers+5, c.inFlight())
 
-		time.Sleep(2 * c.stallTimeout)
-		start := time.Now()
-		enqueue()
-		enqueue()
-		assert.Less(t, time.Since(start), 100*time.Millisecond, "close must never block")
-		assert.Equal(t, int64(2), c.escalations.Load())
-		require.Eventually(t, func() bool { return mcCloses.Load() == 1 }, time.Second, time.Millisecond)
-
-		// nothing is dropped, and the multiconn is closed only once
-		close(release)
+		doRelease()
 		for _, cl := range closers {
 			select {
 			case <-cl.closed:
@@ -185,11 +152,42 @@ func TestCleanupOwner(t *testing.T) {
 				t.Fatal("a queued close was dropped")
 			}
 		}
-		assert.Equal(t, int32(1), mcCloses.Load())
+		require.Eventually(t, func() bool {
+			r, p := c.stats()
+			return r == 0 && p == 0 && c.inFlight() == 0
+		}, time.Second, time.Millisecond)
 	})
-	t.Run("sustained close rate on a healthy connection never closes it", func(t *testing.T) {
-		mc, mcCloses := newMC(t)
-		c := newCleanupOwner(mc)
+	t.Run("a hung close blocks neither the caller nor other closes", func(t *testing.T) {
+		c := newCleanupOwner("p1")
+		hang := make(chan struct{})
+		defer close(hang)
+		hung := newBlockingCloser(hang)
+		start := time.Now()
+		c.close(hung)
+		require.Less(t, time.Since(start), 100*time.Millisecond)
+
+		var running, maxSeen atomic.Int32
+		var closers []*quickCloser
+		for i := 0; i < 200; i++ {
+			cl := &quickCloser{d: time.Millisecond, running: &running, maxSeen: &maxSeen, closed: make(chan struct{})}
+			closers = append(closers, cl)
+			c.close(cl)
+		}
+		for _, cl := range closers {
+			select {
+			case <-cl.closed:
+			case <-time.After(5 * time.Second):
+				t.Fatal("a close was held up by the hung one")
+			}
+		}
+		// only the hung close is left, on its own worker
+		require.Eventually(t, func() bool {
+			r, p := c.stats()
+			return r == 1 && p == 0 && c.inFlight() == 1
+		}, time.Second, time.Millisecond)
+	})
+	t.Run("sustained close rate", func(t *testing.T) {
+		c := newCleanupOwner("p1")
 
 		// far more closes than workers, arriving faster than they finish
 		const total = 3000
@@ -213,24 +211,35 @@ func TestCleanupOwner(t *testing.T) {
 				t.Fatal("a close was dropped")
 			}
 		}
-		assert.Zero(t, c.escalations.Load())
-		assert.Zero(t, mcCloses.Load(), "a healthy connection must not be closed")
+		assert.LessOrEqual(t, int(maxSeen.Load()), cleanupMaxWorkers)
 		// closes in flight are visible to the peer's open limiter
 		assert.Greater(t, sawInFlight, cleanupMaxWorkers)
 		require.Eventually(t, func() bool { return c.inFlight() == 0 }, time.Second, time.Millisecond)
 	})
-	t.Run("stall threshold follows the transport write timeout", func(t *testing.T) {
-		mc, _ := newMC(t)
-		assert.Equal(t, cleanupDefaultStallTimeout, newCleanupOwner(mc).stallTimeout)
-		assert.Equal(t, 30*time.Second, newCleanupOwner(writeTimeoutMC{mc, 15 * time.Second}).stallTimeout)
-		assert.Equal(t, cleanupDefaultStallTimeout, newCleanupOwner(writeTimeoutMC{mc, 0}).stallTimeout)
+	t.Run("slow close is logged once", func(t *testing.T) {
+		c := newCleanupOwner("p1")
+		c.slowClose = 20 * time.Millisecond
+		var logged atomic.Int32
+		c.onSlowClose = func(io.Closer) { logged.Add(1) }
+		release := make(chan struct{})
+		cl := newBlockingCloser(release)
+		c.close(cl)
+		require.Eventually(t, func() bool { return logged.Load() == 1 }, time.Second, time.Millisecond)
+		require.Never(t, func() bool { return logged.Load() > 1 }, 100*time.Millisecond, 10*time.Millisecond)
+		close(release)
+		<-cl.closed
+		// a quick close is not logged
+		quick := newBlockingCloser(release)
+		c.close(quick)
+		<-quick.closed
+		require.Never(t, func() bool { return logged.Load() > 1 }, 50*time.Millisecond, 10*time.Millisecond)
 	})
 	t.Run("nil owner", func(t *testing.T) {
 		var c *cleanupOwner
 		release := make(chan struct{})
-		close(release)
 		cl := newBlockingCloser(release)
-		c.close(cl)
+		returnsWithin(t, 100*time.Millisecond, "close must never block", func() { c.close(cl) })
+		close(release)
 		select {
 		case <-cl.closed:
 		case <-time.After(time.Second):
@@ -359,14 +368,13 @@ func TestPeer_RPCDeadlineWithBlockedClose(t *testing.T) {
 		assert.Empty(t, fx.inactive, "repetition %d", i)
 		assert.Empty(t, fx.active, "repetition %d", i)
 		fx.mu.Unlock()
-		// at most one blocked close per repetition, nothing escalated
+		// at most one blocked close per repetition
 		running, _ := fx.cleanup.stats()
 		require.LessOrEqual(t, running, i+1)
 	}
 	connsMu.Lock()
 	require.Len(t, conns, repetitions, "each repetition opens a fresh sub conn")
 	connsMu.Unlock()
-	require.Zero(t, fx.cleanup.escalations.Load())
 
 	// once the transport lets go, every stream is closed and nothing leaks
 	releaseAll()
@@ -578,4 +586,196 @@ func TestPeer_NilWakeKeepsThrottling(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("acquire did not return on ctx")
 	}
+}
+
+// TestPeer_HungCloseThrottlesAcquireOnlyWhileInFlight: a close that never
+// returns counts towards the open limiter while it is in flight, and nothing
+// more
+func TestPeer_HungCloseThrottlesAcquireOnlyWhileInFlight(t *testing.T) {
+	fx := newFixture(t, "p1")
+	defer fx.finish()
+	hang := make(chan struct{})
+	var hangOnce sync.Once
+	unhang := func() { hangOnce.Do(func() { close(hang) }) }
+	defer unhang()
+	// one past the limiter threshold: the next open waits slowDownStep
+	var hung []*blockingCloser
+	for i := 0; i <= fx.limiter.startThreshold; i++ {
+		cl := newBlockingCloser(hang)
+		hung = append(hung, cl)
+		fx.cleanup.close(cl)
+	}
+
+	var opens atomic.Int32
+	in, out := net.Pipe()
+	defer out.Close()
+	go func() { _, _ = handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker) }()
+	fx.mc.EXPECT().Open(gomock.Any()).DoAndReturn(func(context.Context) (net.Conn, error) {
+		opens.Add(1)
+		return in, nil
+	}).Times(1)
+
+	actx, cancel := context.WithTimeout(ctx, fx.limiter.slowDownStep/2)
+	_, err := fx.AcquireDrpcConn(actx)
+	cancel()
+	require.ErrorIs(t, err, context.DeadlineExceeded, "throttled while the closes are in flight")
+	require.Zero(t, opens.Load())
+
+	unhang()
+	for _, cl := range hung {
+		<-cl.closed
+	}
+	require.Eventually(t, func() bool { return fx.cleanup.inFlight() == 0 }, time.Second, time.Millisecond)
+	actx, cancel = context.WithTimeout(ctx, fx.limiter.slowDownStep/2)
+	defer cancel()
+	_, err = fx.AcquireDrpcConn(actx)
+	require.NoError(t, err, "no throttling once the closes are done")
+	require.Equal(t, int32(1), opens.Load())
+}
+
+// pendingConn is a released sub conn that is not closed yet, never unblocks,
+// and whose Close blocks until released
+type pendingConn struct {
+	closedCh   chan struct{}
+	release    chan struct{}
+	closeCalls atomic.Int32
+	once       sync.Once
+}
+
+func newPendingConn(release chan struct{}) *pendingConn {
+	return &pendingConn{closedCh: make(chan struct{}), release: release}
+}
+
+func (c *pendingConn) Close() error {
+	c.closeCalls.Add(1)
+	<-c.release
+	c.once.Do(func() { close(c.closedCh) })
+	return nil
+}
+func (c *pendingConn) Closed() <-chan struct{}    { return c.closedCh }
+func (c *pendingConn) Unblocked() <-chan struct{} { return nil }
+func (c *pendingConn) NewStream(context.Context, string, drpc.Encoding) (drpc.Stream, error) {
+	return nil, io.EOF
+}
+func (c *pendingConn) Invoke(context.Context, string, drpc.Encoding, drpc.Message, drpc.Message) error {
+	return io.EOF
+}
+
+// returnsWithin fails the test, instead of hanging it, when fn blocks
+func returnsWithin(t *testing.T, d time.Duration, msg string, fn func()) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fn()
+	}()
+	select {
+	case <-done:
+	case <-time.After(d):
+		t.Fatal(msg)
+	}
+}
+
+func waitClosed(t *testing.T, c *pendingConn) {
+	select {
+	case <-c.closedCh:
+	case <-time.After(time.Second):
+		t.Fatal("the conn was never closed")
+	}
+}
+
+func TestPeer_ReleaseClosesInBackground(t *testing.T) {
+	newActive := func(fx *fixture, release chan struct{}) (*subConn, *pendingConn) {
+		pc := newPendingConn(release)
+		sc := &subConn{ConnUnblocked: pc}
+		fx.mu.Lock()
+		fx.active[sc] = struct{}{}
+		fx.mu.Unlock()
+		return sc, pc
+	}
+	t.Run("cancelled ctx", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		release := make(chan struct{})
+		sc, pc := newActive(fx, release)
+		cctx, cancel := context.WithCancel(ctx)
+		cancel()
+
+		returnsWithin(t, 100*time.Millisecond, "the blocked close must not run on the caller", func() {
+			fx.ReleaseDrpcConn(cctx, sc)
+		})
+		require.Equal(t, 1, fx.cleanup.inFlight())
+		fx.mu.Lock()
+		assert.Empty(t, fx.inactive)
+		assert.Empty(t, fx.active)
+		fx.mu.Unlock()
+
+		close(release)
+		waitClosed(t, pc)
+		require.Eventually(t, func() bool { return fx.cleanup.inFlight() == 0 }, time.Second, time.Millisecond)
+	})
+	t.Run("never unblocked", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		release := make(chan struct{})
+		sc, pc := newActive(fx, release)
+
+		// it waits the 200ms reuse window, then hands the close over
+		returnsWithin(t, 300*time.Millisecond, "the blocked close must not run on the caller", func() {
+			fx.ReleaseDrpcConn(ctx, sc)
+		})
+		require.Equal(t, 1, fx.cleanup.inFlight())
+		fx.mu.Lock()
+		assert.Empty(t, fx.inactive, "an unfinished conn is not reused")
+		fx.mu.Unlock()
+
+		close(release)
+		waitClosed(t, pc)
+	})
+}
+
+func TestPeer_GCClosesInBackground(t *testing.T) {
+	newSub := func(t *testing.T, release chan struct{}) (*subConn, *pendingConn) {
+		a, b := net.Pipe()
+		t.Cleanup(func() { _ = a.Close(); _ = b.Close() })
+		pc := newPendingConn(release)
+		// a LastUsageConn never used reports a zero last usage: expired
+		return &subConn{ConnUnblocked: pc, LastUsageConn: connutil.NewLastUsageConn(a)}, pc
+	}
+	t.Run("expired inactive conn", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		release := make(chan struct{})
+		sc, pc := newSub(t, release)
+		fx.mu.Lock()
+		fx.inactive = append(fx.inactive, sc)
+		fx.mu.Unlock()
+
+		returnsWithin(t, 100*time.Millisecond, "gc must not wait on the close", func() {
+			fx.gc(time.Millisecond)
+		})
+		fx.mu.Lock()
+		assert.Empty(t, fx.inactive)
+		fx.mu.Unlock()
+		require.Equal(t, 1, fx.cleanup.inFlight())
+		close(release)
+		waitClosed(t, pc)
+	})
+	t.Run("doomed active conn", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		fx.mc.EXPECT().Addr().Return("").AnyTimes()
+		release := make(chan struct{})
+		sc, pc := newSub(t, release)
+		fx.mu.Lock()
+		fx.active[sc] = struct{}{}
+		fx.mu.Unlock()
+
+		returnsWithin(t, 100*time.Millisecond, "gc must not wait on the close", func() {
+			fx.gc(time.Millisecond)
+		})
+		require.True(t, sc.doomed.Load())
+		require.Equal(t, 1, fx.cleanup.inFlight())
+		close(release)
+		waitClosed(t, pc)
+	})
 }

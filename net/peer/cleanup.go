@@ -7,32 +7,15 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/anyproto/any-sync/net/transport"
 )
 
 const (
 	// cleanupMaxWorkers bounds the sub-connection closes a peer runs at once
 	cleanupMaxWorkers = 64
-	// cleanupDefaultStallTimeout is the stall threshold for a transport that
-	// does not report its write timeout: twice the default yamux one
-	cleanupDefaultStallTimeout = 20 * time.Second
+	// cleanupSlowClose is how long a single close may run before it is
+	// logged as hung; nothing else happens to it
+	cleanupSlowClose = time.Minute
 )
-
-// closeStallTimeout is how long a single close may run before the transport
-// counts as stalled. A healthy close takes about one round trip (drpc waits
-// for the remote FIN), but on a congested link a FIN may wait up to the
-// transport's write timeout, so the threshold is twice that. For yamux this
-// is WriteTimeoutSec, which also sets ConnectionWriteTimeout and
-// StreamCloseTimeout: a single stream close cannot legitimately outlast it.
-func closeStallTimeout(mc transport.MultiConn) time.Duration {
-	if wt, ok := mc.(transport.WriteTimeouter); ok {
-		if d := wt.WriteTimeout(); d > 0 {
-			return 2 * d
-		}
-	}
-	return cleanupDefaultStallTimeout
-}
 
 // cleanupOwner closes a peer's sub connections off the callers' path. Closing
 // a drpc conn waits for its reader, stream manager and transport, and a yamux
@@ -42,43 +25,42 @@ func closeStallTimeout(mc transport.MultiConn) time.Duration {
 // Workers are started on demand, up to cleanupMaxWorkers, and exit once there
 // is nothing left to close, so an idle peer costs no goroutines. close never
 // blocks and never drops a close; closes beyond the workers wait in a pending
-// list. Its size is bounded by the peer's sub conns, and the peer's open
-// limiter counts every close in flight (inFlight), so a peer that closes
-// faster than the transport can keep up is throttled rather than piling up.
+// list.
 //
-// Only on evidence of a stall, every worker busy and one of them on a close
-// older than stallTimeout, is the whole MultiConn closed, which makes every
-// pending and further close quick. A burst or a sustained rate of closes on a
-// healthy connection just queues. The check runs when a close is handed over,
-// so a stall is detected on the first close queued after stallTimeout;
-// meanwhile the stuck closes are still bounded by the transport's own
-// timeouts, so the cost of the delay is latency only.
+// The pending list is not capped, and nothing escalates on a slow close (one
+// running longer than cleanupSlowClose is only logged). The backlog is
+// bounded in practice, not by construction:
+//   - every close comes from a sub conn this peer opened, and the peer's open
+//     limiter counts closes in flight (inFlight): past its threshold each
+//     new open waits 100ms per extra conn, so opens settle at about 10/s per
+//     peer while closes fall behind, and the list grows ever more slowly;
+//   - each close is bounded by the transport: yamux stream closes by
+//     StreamCloseTimeout and ConnectionWriteTimeout (both WriteTimeoutSec,
+//     never 0), while QUIC, iroh and webtransport closes do not block;
+//   - callers give up on their own deadlines rather than opening forever.
+//
+// Keepalive is not a bound: it can be disabled.
 type cleanupOwner struct {
-	mc           transport.MultiConn
-	stallTimeout time.Duration
+	peerId string
 
 	mu      sync.Mutex
 	pending []io.Closer
-	// running is the set of live workers
-	running map[*cleanupWorker]struct{}
+	workers int
 
 	// inflight counts closes handed over and not yet finished
-	inflight    atomic.Int32
-	escalated   atomic.Bool
-	escalations atomic.Int64
+	inflight atomic.Int32
+
+	// slowClose and onSlowClose are fields for tests
+	slowClose   time.Duration
+	onSlowClose func(cl io.Closer)
 }
 
-type cleanupWorker struct {
-	// started is when the current close began; guarded by cleanupOwner.mu
-	started time.Time
-}
-
-func newCleanupOwner(mc transport.MultiConn) *cleanupOwner {
-	return &cleanupOwner{
-		mc:           mc,
-		stallTimeout: closeStallTimeout(mc),
-		running:      map[*cleanupWorker]struct{}{},
+func newCleanupOwner(peerId string) *cleanupOwner {
+	c := &cleanupOwner{peerId: peerId, slowClose: cleanupSlowClose}
+	c.onSlowClose = func(io.Closer) {
+		log.Warn("sub connection close is taking too long", zap.String("peerId", c.peerId), zap.Duration("after", c.slowClose))
 	}
+	return c
 }
 
 // close hands cl over to be closed in the background. It never blocks.
@@ -90,40 +72,23 @@ func (c *cleanupOwner) close(cl io.Closer) {
 	}
 	c.inflight.Add(1)
 	c.mu.Lock()
-	if len(c.running) < cleanupMaxWorkers {
-		w := &cleanupWorker{started: time.Now()}
-		c.running[w] = struct{}{}
+	if c.workers < cleanupMaxWorkers {
+		c.workers++
 		c.mu.Unlock()
-		go c.work(w, cl)
+		go c.work(cl)
 		return
 	}
-	if !c.stalledLocked() {
-		c.pending = append(c.pending, cl)
-		c.mu.Unlock()
-		return
-	}
+	c.pending = append(c.pending, cl)
 	c.mu.Unlock()
-	c.escalate(cl)
 }
 
-// stalledLocked reports whether a running close has outlived stallTimeout
-func (c *cleanupOwner) stalledLocked() bool {
-	now := time.Now()
-	for w := range c.running {
-		if now.Sub(w.started) > c.stallTimeout {
-			return true
-		}
-	}
-	return false
-}
-
-func (c *cleanupOwner) work(w *cleanupWorker, cl io.Closer) {
+func (c *cleanupOwner) work(cl io.Closer) {
 	for {
-		_ = cl.Close()
+		c.closeOne(cl)
 		c.inflight.Add(-1)
 		c.mu.Lock()
 		if len(c.pending) == 0 {
-			delete(c.running, w)
+			c.workers--
 			c.pending = nil
 			c.mu.Unlock()
 			return
@@ -131,31 +96,15 @@ func (c *cleanupOwner) work(w *cleanupWorker, cl io.Closer) {
 		cl = c.pending[0]
 		c.pending[0] = nil
 		c.pending = c.pending[1:]
-		w.started = time.Now()
 		c.mu.Unlock()
 	}
 }
 
-// escalate closes the whole connection: the transport is stalled, so the
-// closes queued behind it would otherwise wait out its timeouts. A dead
-// transport makes cl's close quick; the goroutines spawned here are bounded by
-// the sub conns alive when the MultiConn closed, as no new ones can be opened
-// afterwards.
-func (c *cleanupOwner) escalate(cl io.Closer) {
-	c.escalations.Add(1)
-	first := c.escalated.CompareAndSwap(false, true)
-	if first {
-		log.Warn("sub connection cleanup is stalled: closing the connection")
-	}
-	go func() {
-		if first {
-			if err := c.mc.Close(); err != nil {
-				log.Debug("close connection on stalled cleanup", zap.Error(err))
-			}
-		}
-		_ = cl.Close()
-		c.inflight.Add(-1)
-	}()
+// closeOne closes cl, logging once if the close outlives slowClose
+func (c *cleanupOwner) closeOne(cl io.Closer) {
+	timer := time.AfterFunc(c.slowClose, func() { c.onSlowClose(cl) })
+	_ = cl.Close()
+	timer.Stop()
 }
 
 // inFlight returns the number of closes handed over and not yet finished
@@ -170,5 +119,5 @@ func (c *cleanupOwner) inFlight() int {
 func (c *cleanupOwner) stats() (running, pending int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return len(c.running), len(c.pending)
+	return c.workers, len(c.pending)
 }
