@@ -162,10 +162,16 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	// Reported once the dial is fully resolved: a connection that is opened
 	// and then rejected (a stale address pointing at another peer) reached
 	// nobody, so it is neither a working fallback nor evidence about quic
-	// toward the peer we asked for.
+	// toward the peer we asked for. A dial the caller cancelled (a pool Flush
+	// on wake, a request that gave up) says nothing about any transport
+	// either: it is not reported at all, or every peer's quic would be held
+	// back for the fallback window on the strength of a dead context. That
+	// drops a QuicTimedOut recorded before the cancel on purpose: without the
+	// yamux try that the cancel cut short there is no proof the path works
+	// without udp, which is what a strike requires.
 	dialAccepted := false
 	defer func() {
-		if p.demotion == nil {
+		if p.demotion == nil || (!dialAccepted && ctx.Err() != nil) {
 			return
 		}
 		if !dialAccepted {
@@ -175,6 +181,12 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}()
 	err = ErrAddrsNotFound
 	for _, addr := range ordered {
+		if ctx.Err() != nil {
+			// cancelled: the remaining addresses would only fail at once
+			// with the same dead context
+			err = ctx.Err()
+			break
+		}
 		sch := scheme(addr)
 		if mc, err = p.dialAddr(ctx, addr); err == nil {
 			connAddr = addr
@@ -182,6 +194,8 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 			break
 		}
 		addrErrs = append(addrErrs, err)
+		// a failure under a done ctx is classified like any other: the
+		// outcome of a cancelled dial is never reported, see above
 		switch {
 		case sch == transport.Quic && quic.IsDialDegraded(err):
 			outcome.QuicTimedOut = true

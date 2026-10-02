@@ -2,6 +2,7 @@ package yamux
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"testing"
@@ -305,4 +306,68 @@ func TestYamuxStream_SessionDeathNormalized(t *testing.T) {
 		assert.Equal(t, io.EOF, err, "a normal stream close must stay io.EOF")
 		assert.False(t, mc.Session.IsClosed())
 	})
+}
+
+func TestYamuxStream_SessionFatalErrorsNormalized(t *testing.T) {
+	mc, _ := newSessionPair(t)
+	s := yamuxStream{sess: mc.Session}
+	err := s.wrapSessionDead(yamux.ErrSessionShutdown)
+	assert.ErrorIs(t, err, transport.ErrConnClosed)
+	assert.ErrorIs(t, err, yamux.ErrSessionShutdown, "the original error stays reachable")
+	// stream-level outcomes on a live session pass through unchanged
+	for _, cause := range []error{io.EOF, yamux.ErrConnectionReset, yamux.ErrStreamClosed, yamux.ErrConnectionWriteTimeout, yamux.ErrTimeout} {
+		assert.Equal(t, cause, s.wrapSessionDead(cause))
+	}
+	// once the session is closed they mean it died
+	require.NoError(t, mc.Session.Close())
+	for _, cause := range []error{io.EOF, yamux.ErrConnectionReset, yamux.ErrStreamClosed, yamux.ErrConnectionWriteTimeout} {
+		err := s.wrapSessionDead(cause)
+		assert.ErrorIs(t, err, transport.ErrConnClosed, cause.Error())
+		assert.ErrorIs(t, err, cause)
+	}
+}
+
+// slowReader reads slowly, so the writer's sends queue up
+type slowReader struct{ net.Conn }
+
+func (s *slowReader) Read(b []byte) (int, error) {
+	time.Sleep(10 * time.Millisecond)
+	if len(b) > 4096 {
+		b = b[:4096]
+	}
+	return s.Conn.Read(b)
+}
+
+// TestYamuxStream_WriteTimeoutOnLiveSession: a write that waits out
+// ConnectionWriteTimeout on a slow but live peer is not a dead connection
+func TestYamuxStream_WriteTimeoutOnLiveSession(t *testing.T) {
+	c1, c2 := net.Pipe()
+	cfg := yamux.DefaultConfig()
+	cfg.ConnectionWriteTimeout = 200 * time.Millisecond
+	cfg.EnableKeepAlive = false
+	cfg.LogOutput = io.Discard
+	client, err := yamux.Client(c1, cfg)
+	require.NoError(t, err)
+	server, err := yamux.Server(&slowReader{c2}, cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = server.Close()
+	})
+	go func() {
+		for {
+			st, aErr := server.Accept()
+			if aErr != nil {
+				return
+			}
+			go func() { _, _ = io.Copy(io.Discard, st) }()
+		}
+	}()
+	mc := NewMultiConn(context.Background(), connutil.NewLastUsageConn(c1), "pipe", client)
+	st, err := mc.Open(ctx)
+	require.NoError(t, err)
+	_, err = st.Write(make([]byte, 256*1024))
+	require.ErrorIs(t, err, yamux.ErrConnectionWriteTimeout)
+	assert.False(t, errors.Is(err, transport.ErrConnClosed), "a slow live peer is not a dead connection")
+	assert.False(t, client.IsClosed())
 }

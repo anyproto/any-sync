@@ -138,13 +138,6 @@ func (y *yamuxConn) waitBacklog(ctx context.Context) error {
 	}
 }
 
-// abandoned returns the number of Open helpers left behind by their callers
-func (y *yamuxConn) abandoned() int {
-	y.backlogMu.Lock()
-	defer y.backlogMu.Unlock()
-	return y.abandonedOpens
-}
-
 func (y *yamuxConn) LastUsage() time.Time {
 	return y.luConn.LastUsage()
 }
@@ -200,16 +193,21 @@ func (s yamuxStream) Write(b []byte) (n int, err error) {
 }
 
 // wrapSessionDead wraps err with transport.NewConnClosedError when it was
-// caused by the session shutting down. io.EOF, a stream reset and a closed stream count
-// only while the session is closed: on a live session they are stream-level
-// outcomes (a remote close or reset) and are returned unchanged.
+// caused by the session dying. ErrSessionShutdown always is. io.EOF, a stream
+// reset, a closed stream and a connection write timeout count only while the
+// session is closed: on a live session they are stream-level outcomes (a
+// remote close or reset, or a send that waited out ConnectionWriteTimeout on a
+// slow but live peer, which yamux does not treat as fatal) and are returned
+// unchanged. A truly stalled session ends through missed keepalives, after
+// which its streams fail with errors covered here.
 func (s yamuxStream) wrapSessionDead(err error) error {
 	if err == nil {
 		return nil
 	}
 	switch {
 	case errors.Is(err, yamux.ErrSessionShutdown):
-	case errors.Is(err, io.EOF), errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed):
+	case errors.Is(err, io.EOF), errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed),
+		errors.Is(err, yamux.ErrConnectionWriteTimeout):
 		if !s.sess.IsClosed() {
 			return err
 		}

@@ -86,10 +86,10 @@ func (c *caches) reportedByFlush(pr peer.Peer) bool {
 	return ok
 }
 
-// fastMetrics are the counters the hit path bumps itself (nil without a
-// registry): ocache.Peek counts nothing, so a Get or Pick served by fast or
-// by the caches counts exactly once per cache, as a Get through the caches
-// did before the fast path existed
+// fastMetrics are the counters the pool bumps itself where it reads a cache
+// through Peek, which counts nothing (nil without a registry): a Get or Pick
+// counts exactly once per cache, whichever path serves it, the series being
+// those a Get through both caches produced before
 type fastMetrics struct {
 	incomingHit, incomingMiss, outgoingHit prometheus.Counter
 }
@@ -273,29 +273,72 @@ func (p *pool) Get(ctx context.Context, id string) (peer.Peer, error) {
 	return p.lookup(ctx, func(ctx context.Context, c *caches) (pr peer.Peer, err error) {
 		for {
 			// if we have incoming connection - try to reuse it
-			if pr, err = p.get(ctx, c.incoming, id); err == nil {
+			if pr, err = p.getIncoming(ctx, c, id); err == nil {
 				return pr, nil
 			}
-			// or try to get or create outgoing
-			if pr, err = p.get(ctx, c.outgoing, id); err != errRedial {
-				return pr, err
+			if err != errRedial {
+				// or try to get or create outgoing
+				if pr, err = p.get(ctx, c.outgoing, id); err != errRedial {
+					return pr, err
+				}
 			}
-			// a closed peer was evicted: start over from incoming, where a
-			// live connection may have arrived meanwhile, before dialing (a
-			// ctx that ended meanwhile fails the next Get at once)
+			// A closed peer was evicted: start over from incoming, where a
+			// live connection may have arrived meanwhile, before dialing. Not
+			// on a pair that was replaced meanwhile: the swap cancels this
+			// ctx through an AfterFunc, which runs asynchronously, so the pair
+			// is checked directly or the old cache could be dialed into with
+			// a ctx about to die (lookup retries on the current pair). And
+			// not during shutdown, when nothing is evicted any more and the
+			// closed peer would be found again and again. A caller ctx that
+			// ended was seen by the eviction's select already.
+			if c.ctx.Err() != nil || p.closingCtx.Err() != nil {
+				return nil, ocache.ErrClosed
+			}
 		}
 	})
 }
 
-// errRedial is get's verdict after it evicted a closed peer: look again,
+// errRedial is the verdict after a closed peer was evicted: look again,
 // starting from the incoming cache
 var errRedial = errors.New("closed peer evicted")
+
+// getIncoming reads the incoming cache without loading: its entries come from
+// AddPeer only, so a load would just insert a failing entry for the time of
+// the probe (and make every AddPeer for that id trip over it). Counted like a
+// Get on the cache would be: a hit, or a miss before the outgoing lookup.
+func (p *pool) getIncoming(ctx context.Context, c *caches, id string) (peer.Peer, error) {
+	v, ok := c.peekIncoming.Peek(id, true)
+	if !ok && c.ctx.Err() != nil {
+		// a replaced or closing pair: no verdict about the peer, and not a
+		// miss (a Get on the cache would have failed with ErrClosed uncounted)
+		return nil, ocache.ErrClosed
+	}
+	if m := p.metrics; m != nil {
+		if ok {
+			m.incomingHit.Inc()
+		} else {
+			m.incomingMiss.Inc()
+		}
+	}
+	if !ok {
+		return nil, ocache.ErrNotExists
+	}
+	return p.live(ctx, c.incoming, v)
+}
 
 func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.Peer, error) {
 	v, err := source.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+	return p.live(ctx, source, v)
+}
+
+// live resolves a cached value to an open peer. A closed one is evicted first:
+// the entry must be gone before looking again or the cache would return the
+// same instance, so this waits (bounded by ctx) for the background discard,
+// and a teardown that blocks never runs on this path.
+func (p *pool) live(ctx context.Context, source ocache.OCache, v ocache.Object) (peer.Peer, error) {
 	pr, err := getPeer(v)
 	if err != nil {
 		return nil, err
@@ -303,9 +346,6 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 	if !pr.IsClosed() {
 		return pr, nil
 	}
-	// The entry must be gone before looking again or source.Get would return
-	// the same instance: wait (bounded by ctx) for the background discard, so
-	// a teardown that blocks never runs on this path.
 	select {
 	case <-p.discard(source, pr):
 	case <-ctx.Done():
@@ -326,12 +366,12 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 // skip those events (see evictOnClose); a peer a GC TryClose holds at that
 // moment is reported by its watcher once it closes, and once pool shutdown
 // has begun the events are suppressed like the watchers' (the peers close
-// anyway). Cached dial errors go with the old pair, except
-// incompatible-version verdicts (see errObject), which are carried over so
-// their backoff survives (one still loading at the swap is not: its verdict
-// lands in the old pair and the fresh one redials once). A no-op once the
-// pool is closed; concurrent flushes are serialized, so each replaced pair is
-// closed exactly once.
+// anyway). Cached dial verdicts (today only incompatible-version ones, see
+// the loader) are carried over so their backoff survives; one still loading
+// at the swap is not, and the fresh pair redials once. A no-op once the pool
+// is closed. Concurrent flushes are safe: swapMu serializes the swaps, and
+// each replaced pair is walked, reported and closed exactly once, by the
+// Flush that replaced it.
 func (p *pool) Flush(ctx context.Context) error {
 	p.swapMu.Lock()
 	if p.closed {
@@ -340,8 +380,10 @@ func (p *pool) Flush(ctx context.Context) error {
 	}
 	old := p.current.Load()
 	fresh := p.newCaches()
+	// the verdicts must be in the fresh pair before it is published, so this
+	// one read of the old outgoing cache happens before the swap
 	old.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {
-		if eo, ok := v.(*errObject); ok && eo.keepOnFlush() {
+		if eo, ok := v.(*errObject); ok {
 			// cheap and non-blocking: a fresh cache has no closers
 			_ = fresh.outgoing.Add(eo.id, eo)
 		}
@@ -353,33 +395,17 @@ func (p *pool) Flush(ctx context.Context) error {
 	// can follow its Wait
 	p.closing.Add(1)
 	p.swapMu.Unlock()
-	// Snapshot and mark under reportedMu: a watcher that evicts one of these
-	// peers concurrently checks the mark after its removal, which the cache
-	// lock orders against this snapshot, so each instance is reported once.
-	// The events themselves go out without any lock held.
-	type flushedPeer struct {
-		pr      peer.Peer
-		inbound bool
-	}
-	var flushed []flushedPeer
-	old.reportedMu.Lock()
-	old.reported = map[peer.Peer]struct{}{}
-	for _, inbound := range []bool{true, false} {
-		old.cache(inbound).ForEach(func(v ocache.Object) (isContinue bool) {
-			if pr, ok := v.(peer.Peer); ok {
-				old.reported[pr] = struct{}{}
-				flushed = append(flushed, flushedPeer{pr: pr, inbound: inbound})
-			}
-			return true
-		})
-	}
-	old.reportedMu.Unlock()
+	// The walk over the old pair comes after the swap: addIncoming adds under
+	// the read lock, so every incoming peer of the old pair is visible now,
+	// and only this Flush (the one that replaced the pair) walks it, so the
+	// marks are set exactly once. It serves the marking, the Closed events
+	// and the parallel pre-close alike.
+	peers := old.snapshot(true)
 	go func() {
 		defer p.closing.Done()
-		peers, _ := closeCaches(old)
-		peers.Wait()
+		_ = closeCaches(old, peers)
 	}()
-	for _, f := range flushed {
+	for _, f := range peers {
 		if p.closingCtx.Err() != nil {
 			// a Close that began meanwhile: Closed is suppressed from here on
 			break
@@ -393,31 +419,55 @@ func (p *pool) Flush(ctx context.Context) error {
 	return nil
 }
 
-// closeCaches tears down a pair that is no longer current. Each loaded peer is
-// closed on its own goroutine first, because ocache.Close closes entries one
-// at a time with no ctx and one hung teardown would hold the rest back; the
-// two caches are then closed concurrently (each Close cancels its in-flight
-// loads and closes its peers a second time, which peer.Close tolerates; the
-// pool relies on that already, see discard), so a hung peer in one cache
-// never delays the other. A RemoveSame per peer would not do: once a cache
-// is marked closed every RemoveSame is refused. Known gap: a peer a GC
-// TryClose holds past closeTimeout closes only when TryClose returns (ocache
-// escalates the decline), never if it never returns. Returns once both caches
-// are closed; the WaitGroup tracks the per-peer closes still running, and err
-// is the outgoing cache's close error.
-func closeCaches(c *caches) (peers *sync.WaitGroup, err error) {
-	peers = &sync.WaitGroup{}
-	for _, cache := range []ocache.OCache{c.outgoing, c.incoming} {
-		cache.ForEach(func(v ocache.Object) (isContinue bool) {
+type snapshotPeer struct {
+	pr      peer.Peer
+	inbound bool
+}
+
+// snapshot lists the loaded peers of both caches (not the ones another closer
+// holds). With mark, every peer found is recorded as reported by Flush (see
+// evictOnClose) under reportedMu, which stays held across the walk so the
+// marks are complete by the time a watcher reads them.
+func (c *caches) snapshot(mark bool) (peers []snapshotPeer) {
+	if mark {
+		c.reportedMu.Lock()
+		defer c.reportedMu.Unlock()
+		c.reported = map[peer.Peer]struct{}{}
+	}
+	for _, inbound := range []bool{true, false} {
+		c.cache(inbound).ForEach(func(v ocache.Object) (isContinue bool) {
 			if pr, ok := v.(peer.Peer); ok {
-				peers.Add(1)
-				go func() {
-					defer peers.Done()
-					_ = pr.Close()
-				}()
+				if mark {
+					c.reported[pr] = struct{}{}
+				}
+				peers = append(peers, snapshotPeer{pr: pr, inbound: inbound})
 			}
 			return true
 		})
+	}
+	return peers
+}
+
+// closeCaches tears down a pair that is no longer current and returns once
+// its caches and the given peers are closed. Each peer is closed on its own
+// goroutine first, because ocache.Close closes entries one at a time with no
+// ctx and one hung teardown would hold the rest back; the two caches are then
+// closed concurrently (each Close cancels its in-flight loads and closes its
+// peers a second time, which peer.Close tolerates; the pool relies on that
+// already, see discard), so a hung peer in one cache never delays the other.
+// A RemoveSame per peer would not do: once a cache is marked closed every
+// RemoveSame is refused. Known gap: a peer a GC TryClose holds past
+// closeTimeout closes only when TryClose returns (ocache escalates the
+// decline), never if it never returns. err is the outgoing cache's close
+// error.
+func closeCaches(c *caches, peers []snapshotPeer) (err error) {
+	var wg sync.WaitGroup
+	for _, sp := range peers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = sp.pr.Close()
+		}()
 	}
 	incomingClosed := make(chan error, 1)
 	go func() { incomingClosed <- c.incoming.Close() }()
@@ -425,7 +475,8 @@ func closeCaches(c *caches) (peers *sync.WaitGroup, err error) {
 	if e := <-incomingClosed; e != nil {
 		log.Warn("close incoming cache error", zap.Error(e))
 	}
-	return peers, err
+	wg.Wait()
+	return err
 }
 
 func (p *pool) getIfActive(ctx context.Context, peerIds []string) peer.Peer {
@@ -484,13 +535,14 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 // the pool evicts it by instance.
 func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) error {
 	// Bounds the passes over an entry for the same id that is still there
-	// after this call dealt with it: one whose close another closer holds
-	// (waited for below), or one another AddPeer keeps replacing. Then
+	// after this call dealt with it: one another closer holds (its close is
+	// waited for below), or one another AddPeer keeps replacing. Then
 	// ErrExists, as before. A swap does not count: the add simply moves to
 	// the current pair, as many times as flushes come (in practice the caller
 	// coalesces its flushes).
 	const retries = 3
-	for attempt := 0; ; attempt++ {
+	attempts := 0
+	for {
 		if p.closingCtx.Err() != nil {
 			// shutting down: nothing is evicted any more (discard is a no-op),
 			// so there is nothing to retry towards
@@ -513,20 +565,19 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) error {
 		if e == ocache.ErrClosed {
 			return e
 		}
-		if attempt == retries {
+		if attempts++; attempts > retries {
 			return ocache.ErrExists
 		}
 		if e != nil {
 			if err = ctx.Err(); err != nil {
 				return err
 			}
-			// The entry is transient: a loading one a concurrent Get(id)
-			// created (Pick waited it out; the incoming loader fails it) or
-			// the previous connection mid-close. Pick does not wait for a
-			// close, so wait here: a remote that reconnects while its old
-			// connection is still being torn down must get in once that is
-			// done, not be refused within microseconds. Bounded by ctx and by
-			// the pair staying current.
+			// The entry is mid-close (nothing else is ever in this cache
+			// unloaded: it is filled by AddPeer alone, never by a load). Pick
+			// does not wait for a close, so wait here: a remote that
+			// reconnects while its old connection is still being torn down
+			// must get in once that is done, not be refused within
+			// microseconds. Bounded by ctx and by the pair staying current.
 			if err = p.waitClosing(ctx, c, pr.Id()); err != nil && c.ctx.Err() == nil {
 				return err
 			}
@@ -599,7 +650,7 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 	if !pr.IsClosed() {
 		return pr, nil
 	}
-	p.discard(source, pr)
+	// a closed peer is on its way out: its watcher evicts it
 	return nil, errPeerNotFound
 }
 

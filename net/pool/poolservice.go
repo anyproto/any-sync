@@ -59,8 +59,9 @@ func (p *poolService) Init(a *app.App) (err error) {
 	// once here and shared by every instance (WithPrometheus would register
 	// the same names again and panic). The names stay
 	// netpool_{outgoing,incoming}_{hit,miss,gc,size}; size reads the current
-	// cache, so it is registered only once a pair is published. ocache skips a
-	// nil option.
+	// pair, so it is registered only once one is published. The hit path
+	// reads the caches through Peek, which counts nothing, and counts for
+	// itself through fastMetrics. ocache skips a nil option.
 	var outgoing, incoming ocache.PrometheusCollectors
 	var outgoingMetrics, incomingMetrics ocache.Option
 	if p.metricReg != nil {
@@ -167,8 +168,7 @@ func (p *pool) Close(ctx context.Context) (err error) {
 	cur.cancel()
 	done := make(chan error, 1)
 	go func() {
-		peers, err := closeCaches(cur)
-		peers.Wait()
+		err := closeCaches(cur, cur.snapshot(false))
 		p.closing.Wait()
 		done <- err
 	}()
@@ -184,6 +184,9 @@ func (p *pool) Close(ctx context.Context) (err error) {
 	return err
 }
 
+// errObject is a cached dial verdict. The loader stores only
+// incompatible-version ones: they say nothing about the network, so Flush
+// carries them over and their 20-minute backoff survives a recovery.
 type errObject struct {
 	id          string
 	err         error
@@ -192,15 +195,6 @@ type errObject struct {
 
 func (e *errObject) Error() error {
 	return e.err
-}
-
-// keepOnFlush reports whether Flush carries this cached error over into the
-// fresh cache. An incompatible-version verdict survives: it says nothing
-// about the network, and dropping it would defeat its 20-minute backoff on
-// every recovery. Only published verdicts are carried; one whose dial is
-// still in flight at the swap stays with the old pair (one extra dial).
-func (e *errObject) keepOnFlush() bool {
-	return errors.Is(e.err, handshake.ErrIncompatibleVersion)
 }
 
 func (e *errObject) Close() (err error) {
