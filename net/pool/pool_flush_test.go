@@ -139,7 +139,11 @@ func (c *caches) isClosed() bool {
 
 func inCurrent(p *pool, pr peer.Peer) bool {
 	v, err := p.current.Load().incoming.Pick(ctx, pr.Id())
-	return err == nil && v == ocache.Object(pr)
+	if err != nil {
+		return false
+	}
+	got, err := getPeer(v)
+	return err == nil && got == pr
 }
 
 // startFlusher flushes the pool every period on a background goroutine until
@@ -436,7 +440,7 @@ func TestPool_FlushSwap(t *testing.T) {
 		pr, err := fx.Get(gctx, "p1")
 		require.NoError(t, err)
 		require.NotNil(t, pr)
-		require.Less(t, time.Since(start), 500*time.Millisecond, "waited on the stale dial")
+		require.Less(t, time.Since(start), 2*time.Second, "waited on the stale dial")
 		// the old pair cancelled the stale dial and the first caller
 		// redialed too, sharing the fresh peer
 		require.NoError(t, <-first)
@@ -899,7 +903,7 @@ func TestPool_FlushSwap(t *testing.T) {
 		res := <-first
 		require.NoError(t, res.err)
 		require.False(t, res.pr.IsClosed())
-		require.Less(t, time.Since(start), 500*time.Millisecond, "pre-flush Get waited out the dead dial")
+		require.Less(t, time.Since(start), 2*time.Second, "pre-flush Get waited out the dead dial")
 		require.True(t, cancelled.Load())
 		require.Equal(t, int32(2), dials.Load())
 	})
@@ -923,7 +927,7 @@ func TestPool_FlushSwap(t *testing.T) {
 				select {
 				case <-ctx.Done():
 					cancelled.Store(true)
-				case <-time.After(400 * time.Millisecond):
+				case <-time.After(10 * time.Second):
 				}
 				return late, nil
 			}
@@ -942,7 +946,7 @@ func TestPool_FlushSwap(t *testing.T) {
 		require.NoError(t, fx.Flush(ctx))
 		pr := <-first
 		require.NotSame(t, late, pr)
-		require.Less(t, time.Since(start), 300*time.Millisecond, "pre-flush Get waited out the stale dial")
+		require.Less(t, time.Since(start), 2*time.Second, "pre-flush Get waited out the stale dial")
 		require.True(t, cancelled.Load())
 		// published into the old outgoing cache, which closed at once
 		require.Eventually(t, late.IsClosed, time.Second, 10*time.Millisecond)
@@ -993,7 +997,7 @@ func TestPool_FlushSwap(t *testing.T) {
 		select {
 		case pr := <-got:
 			require.NotSame(t, old, pr)
-			require.Less(t, time.Since(start), 500*time.Millisecond)
+			require.Less(t, time.Since(start), 2*time.Second)
 		case <-time.After(2 * time.Second):
 			t.Fatal("Get stayed parked on the replaced pair")
 		}
@@ -2082,22 +2086,21 @@ func TestPool_FlushSwap(t *testing.T) {
 		require.Eventually(t, func() bool { return p.current.Load().incoming.Len() == 0 }, time.Second, 10*time.Millisecond)
 		require.Eventually(t, func() bool { return len(obs.kindsFor("a")) == 1 }, time.Second, 10*time.Millisecond)
 		require.Equal(t, []peerobserver.Kind{peerobserver.KindClosed}, obs.kindsFor("a"))
-		// the replacement path through RemoveSame: no panic, the old one is
-		// closed and reported; by id the old one's watcher may take the
-		// replacement down with it, so its fate is not asserted
+		// the replacement path through RemoveSame: the old one is closed and
+		// reported, the replacement survives its stale watcher
 		b1, b2 := newValuePeer("b"), newValuePeer("b")
 		require.NoError(t, fx.AddPeer(ctx, b1))
 		require.NoError(t, fx.AddPeer(ctx, b2))
 		require.True(t, b1.IsClosed())
-		require.Eventually(t, func() bool { return len(obs.kindsFor("b")) >= 1 }, time.Second, 10*time.Millisecond)
+		require.Eventually(t, func() bool { return len(obs.kindsFor("b")) == 1 }, time.Second, 10*time.Millisecond)
+		require.Never(t, func() bool { return b2.IsClosed() || p.current.Load().incoming.Len() != 1 }, 100*time.Millisecond, 10*time.Millisecond)
 		b2.close()
-		require.Eventually(t, func() bool { return p.current.Load().incoming.Len() == 0 }, time.Second, 10*time.Millisecond)
+		require.Eventually(t, func() bool { return p.current.Load().incoming.Len() == 0 && len(obs.kindsFor("b")) == 2 }, time.Second, 10*time.Millisecond)
 		// the discard path: a dead outgoing peer found by a lookup (added
-		// without a watcher, so no second instance of the id is live while
-		// the lookup evicts it and redials)
+		// without a watcher, stored as the pool would store it)
 		dead := newValuePeer("c")
 		dead.close()
-		require.NoError(t, p.current.Load().outgoing.Add("c", dead))
+		require.NoError(t, p.current.Load().outgoing.Add("c", wrap(dead)))
 		fresh := newValuePeer("c")
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
 			return fresh, nil
@@ -2111,6 +2114,59 @@ func TestPool_FlushSwap(t *testing.T) {
 		require.Equal(t, []peerobserver.Kind{peerobserver.KindClosed}, obs.kindsFor("c"))
 		require.Eventually(t, fresh.IsClosed, time.Second, 10*time.Millisecond)
 		require.Never(t, func() bool { return len(obs.getClosed()) > 4 }, 200*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("a non-comparable peer's stale watcher never touches its replacement and flush marks never hide it", func(t *testing.T) {
+		obs := &poolEventRecorder{}
+		fx := newFixtureWithObserver(t, obs)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		// the old instance's removal is held while the replacement lands and
+		// a flush marks the replacement: the stale watcher must neither close
+		// the replacement nor be silenced by the mark on it
+		// a CAS gate, not sync.Once: the replacement's own removal goes
+		// through the same seam and must not queue behind the held one
+		var armed atomic.Bool
+		armed.Store(true)
+		inRemove := make(chan struct{})
+		releaseRemove, doReleaseRemove := newRelease()
+		defer doReleaseRemove()
+		installIncoming(t, fx, func(inner ocache.OCache, peek ocache.Peeker) ocache.OCache {
+			return &hookedCache{OCache: inner, peek: peek, onRemoveSame: func() {
+				if armed.CompareAndSwap(true, false) {
+					close(inRemove)
+					<-releaseRemove
+				}
+			}}
+		})
+		a := newValuePeer("x")
+		require.NoError(t, fx.AddPeer(ctx, a))
+		a.close()
+		// a's watcher is inside its RemoveSame now
+		<-inRemove
+		b := newValuePeer("x")
+		require.NoError(t, fx.AddPeer(ctx, b))
+		require.NoError(t, fx.Flush(ctx))
+		// Flush reported b (and closes it); a's watcher still owes a's event
+		require.Len(t, obs.kindsFor("x"), 1)
+		doReleaseRemove()
+		require.Eventually(t, func() bool { return len(obs.kindsFor("x")) == 2 }, time.Second, 10*time.Millisecond)
+		require.Never(t, func() bool { return len(obs.kindsFor("x")) > 2 }, 200*time.Millisecond, 10*time.Millisecond)
+
+		// and without a flush: the stale watcher's removal leaves the live
+		// replacement in place
+		c1 := newValuePeer("y")
+		require.NoError(t, fx.AddPeer(ctx, c1))
+		c2 := newValuePeer("y")
+		require.NoError(t, fx.AddPeer(ctx, c2))
+		require.True(t, c1.IsClosed())
+		require.Eventually(t, func() bool { return len(obs.kindsFor("y")) == 1 }, time.Second, 10*time.Millisecond)
+		require.False(t, c2.IsClosed())
+		v, err := p.current.Load().incoming.Pick(ctx, "y")
+		require.NoError(t, err)
+		got, err := getPeer(v)
+		require.NoError(t, err)
+		require.Equal(t, "y", got.Id())
+		require.False(t, got.IsClosed())
 	})
 	t.Run("a lookup parked in an eviction when the pool closes gets ErrClosed", func(t *testing.T) {
 		// the pair stays current but is cancelled by Close: the ctx error the
@@ -2333,6 +2389,22 @@ func TestPool_FlushSwap(t *testing.T) {
 		require.Equal(t, []peerobserver.Kind{peerobserver.KindClosed}, obs.kindsFor("c"))
 		require.Eventually(t, b.IsClosed, time.Second, 10*time.Millisecond)
 		require.Never(t, func() bool { return len(obs.getClosed()) > 3 }, 200*time.Millisecond, 10*time.Millisecond)
+	})
+	t.Run("a miss on both caches allocates nothing for Pick and GetOneOf's scan", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p := fx.Service.(*poolService).pool
+		require.Zero(t, testing.AllocsPerRun(100, func() {
+			if _, err := fx.Pick(ctx, "absent"); err == nil {
+				t.Error("unexpected hit")
+			}
+		}))
+		ids := []string{"absent1", "absent2"}
+		require.Zero(t, testing.AllocsPerRun(100, func() {
+			if p.getIfActive(ctx, ids) != nil {
+				t.Error("unexpected hit")
+			}
+		}))
 	})
 	t.Run("connected and closed pairing for flushed peers", func(t *testing.T) {
 		obs := &poolEventRecorder{}

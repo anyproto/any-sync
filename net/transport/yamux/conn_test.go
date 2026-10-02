@@ -404,3 +404,45 @@ func TestYamuxStream_WriteTimeoutOnLiveSession(t *testing.T) {
 	assert.False(t, errors.Is(err, transport.ErrConnClosed), "a slow live peer is not a dead connection")
 	assert.False(t, client.IsClosed())
 }
+
+// BenchmarkYamuxConn_Open compares an open with a context that can never end
+// (Session.Open called directly, as before the ctx-bound Open) with one that
+// can be cancelled (helper goroutine and result channel)
+func BenchmarkYamuxConn_Open(b *testing.B) {
+	run := func(b *testing.B, octx context.Context) {
+		cc, sc := net.Pipe()
+		conf := yamux.DefaultConfig()
+		conf.LogOutput = io.Discard
+		client, err := yamux.Client(cc, conf)
+		require.NoError(b, err)
+		server, err := yamux.Server(sc, conf)
+		require.NoError(b, err)
+		defer client.Close()
+		defer server.Close()
+		go func() {
+			for {
+				s, aErr := server.Accept()
+				if aErr != nil {
+					return
+				}
+				_ = s.Close()
+			}
+		}()
+		mc := NewMultiConn(context.Background(), connutil.NewLastUsageConn(cc), "pipe", client)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			conn, oErr := mc.Open(octx)
+			if oErr != nil {
+				b.Fatal(oErr)
+			}
+			_ = conn.Close()
+		}
+	}
+	b.Run("background ctx", func(b *testing.B) { run(b, context.Background()) })
+	b.Run("cancellable ctx", func(b *testing.B) {
+		cctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		run(b, cctx)
+	})
+}

@@ -133,10 +133,9 @@ type OCache interface {
 	// RemoveSame closes and removes the object only if the value currently
 	// stored under id is exactly the given one (pointer identity). It lets a
 	// caller evict a specific instance it owns without racing a newer value
-	// that has replaced it under the same id. A value of a non-comparable
-	// type has no identity: for such values RemoveSame removes whatever is
-	// stored under id. Returns ok=true only when this call performed the
-	// removal.
+	// that has replaced it under the same id. A value that is not comparable
+	// has no identity and is never matched (store such values behind a
+	// pointer). Returns ok=true only when this call performed the removal.
 	RemoveSame(ctx context.Context, id string, value Object) (ok bool, err error)
 	// TryRemove tries to close and to remove the object. ok reports whether
 	// this call removed it; (false, nil) means the object declined to close,
@@ -452,21 +451,18 @@ func (c *oCache) RemoveSame(ctx context.Context, id string, value Object) (ok bo
 // sameObject reports whether stored is the very instance given. Pointer
 // implementations (the usual kind) compare by identity. A value that is not
 // comparable has no identity to check and must not panic the comparison: it
-// is treated as the stored one, so RemoveSame degrades to Remove by id for
-// such values. Checked on the values, not the types: a struct with an
-// interface field is comparable as a type and still panics when that field
-// holds a slice.
+// never matches, so nothing is removed by mistake (a caller that needs
+// instance-safe removal of such values stores them behind a pointer). Checked
+// on the values, not the types: a struct with an interface field is
+// comparable as a type and still panics when that field holds a slice.
 func sameObject(stored, given Object) bool {
 	if stored == nil || given == nil {
 		// a still-loading entry has no value yet; nothing matches it
 		return false
 	}
 	sv, gv := reflect.ValueOf(stored), reflect.ValueOf(given)
-	if sv.Type() != gv.Type() {
+	if sv.Type() != gv.Type() || !sv.Comparable() || !gv.Comparable() {
 		return false
-	}
-	if !sv.Comparable() || !gv.Comparable() {
-		return true
 	}
 	return stored == given
 }

@@ -115,7 +115,8 @@ func (p *poolService) newCaches(outgoingMetrics, incomingMetrics ocache.Option) 
 				return value, err
 			}
 			if pr, ok := value.(peer.Peer); ok {
-				go p.pool.evictOnClose(pr, c, false)
+				value = wrap(pr)
+				go p.pool.evictOnClose(value, c, false)
 			}
 			return value, nil
 		},
@@ -165,12 +166,16 @@ func (p *pool) Close(ctx context.Context) (err error) {
 		return nil
 	}
 	p.closed = true
+	cur := p.current.Load()
 	p.swapMu.Unlock()
+	if cur == nil {
+		// never initialised: nothing to close
+		return nil
+	}
 	if p.closingCancel != nil {
 		p.closingCancel()
 	}
 	p.statService.RemoveProvider(p)
-	cur := p.current.Load()
 	// lookups blocked on the current pair fail now with ErrClosed (see lookup)
 	cur.cancel()
 	done := make(chan error, 1)

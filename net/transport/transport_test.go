@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"storj.io/drpc/drpcerr"
 )
 
 func TestErrConnClosed(t *testing.T) {
@@ -30,4 +31,14 @@ func TestNewConnClosedError(t *testing.T) {
 	assert.Equal(t, "transport connection closed: cause", err.Error())
 	// idempotent
 	assert.Equal(t, err, NewConnClosedError(err))
+}
+
+func TestNewConnClosedError_CodeAndBare(t *testing.T) {
+	// a drpc error code survives the wrapping
+	err := NewConnClosedError(drpcerr.WithCode(errors.New("coded"), 7))
+	assert.ErrorIs(t, err, ErrConnClosed)
+	assert.Equal(t, uint64(7), drpcerr.Code(err))
+	assert.Zero(t, drpcerr.Code(NewConnClosedError(errors.New("plain"))))
+	// a bare ErrConnClosed is not wrapped again
+	assert.Equal(t, ErrConnClosed, NewConnClosedError(ErrConnClosed))
 }

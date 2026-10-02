@@ -2,6 +2,7 @@ package pool
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -106,6 +107,16 @@ func BenchmarkPool_PickOutgoing(b *testing.B) {
 func BenchmarkPool_GetOneOf(b *testing.B) {
 	ids := []string{"x1", "x2", "out"}
 	benchPool(b, func(ctx context.Context, s Service) error { _, err := s.GetOneOf(ctx, ids); return err })
+}
+
+// a Pick for a peer that is not pooled: servers probe connectivity this way
+func BenchmarkPool_PickMiss(b *testing.B) {
+	benchPool(b, func(ctx context.Context, s Service) error {
+		if _, err := s.Pick(ctx, "absent"); err == nil {
+			return fmt.Errorf("unexpected hit")
+		}
+		return nil
+	})
 }
 
 // servers pass request contexts, which are cancellable

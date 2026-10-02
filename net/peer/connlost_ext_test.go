@@ -136,6 +136,62 @@ func TestPeer_RPCOnDeadYamuxSessionIsConnClosed(t *testing.T) {
 		assert.False(t, errors.Is(err, context.Canceled), "must not look like the caller's cancellation: %v", err)
 		assert.False(t, mcC.IsClosed(), "the session is alive")
 	})
+	t.Run("stream receive on a dead session", func(t *testing.T) {
+		mcS, mcC := multiconntest.MultiConnPair(
+			peer.CtxWithPeerId(context.Background(), "client"),
+			peer.CtxWithPeerId(context.Background(), "server"),
+		)
+		_, err := peer.NewPeer(mcS, silentCtrl{})
+		require.NoError(t, err)
+		pr, err := peer.NewPeer(mcC, silentCtrl{})
+		require.NoError(t, err)
+		defer pr.Close()
+		dc, err := pr.AcquireDrpcConn(context.Background())
+		require.NoError(t, err)
+		st, err := dc.NewStream(context.Background(), "/x/y", nil)
+		require.NoError(t, err)
+		require.NoError(t, st.MsgSend(&handshakeproto.Proto{Proto: 1}, nil))
+		res := make(chan error, 1)
+		go func() { res <- st.MsgRecv(&handshakeproto.Proto{}, nil) }()
+		time.Sleep(100 * time.Millisecond)
+		_ = mcS.Close()
+		select {
+		case err = <-res:
+		case <-time.After(10 * time.Second):
+			t.Fatal("the receive did not return")
+		}
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		assert.False(t, errors.Is(err, context.Canceled), "must not look like the caller's cancellation: %v", err)
+		// a send after it as well
+		assert.ErrorIs(t, st.MsgSend(&handshakeproto.Proto{Proto: 1}, nil), transport.ErrConnClosed)
+	})
+	t.Run("stream cancelled by its caller stays canceled", func(t *testing.T) {
+		mcS, mcC := multiconntest.MultiConnPair(
+			peer.CtxWithPeerId(context.Background(), "client"),
+			peer.CtxWithPeerId(context.Background(), "server"),
+		)
+		_, err := peer.NewPeer(mcS, silentCtrl{})
+		require.NoError(t, err)
+		pr, err := peer.NewPeer(mcC, silentCtrl{})
+		require.NoError(t, err)
+		defer pr.Close()
+		dc, err := pr.AcquireDrpcConn(context.Background())
+		require.NoError(t, err)
+		sctx, cancel := context.WithCancel(context.Background())
+		st, err := dc.NewStream(sctx, "/x/y", nil)
+		require.NoError(t, err)
+		res := make(chan error, 1)
+		go func() { res <- st.MsgRecv(&handshakeproto.Proto{}, nil) }()
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+		select {
+		case err = <-res:
+		case <-time.After(10 * time.Second):
+			t.Fatal("the receive did not return")
+		}
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.NotErrorIs(t, err, transport.ErrConnClosed)
+	})
 	t.Run("caller cancel stays canceled", func(t *testing.T) {
 		mcS, mcC := multiconntest.MultiConnPair(
 			peer.CtxWithPeerId(context.Background(), "client"),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	quicgo "github.com/quic-go/quic-go"
 	"github.com/stretchr/testify/assert"
@@ -237,7 +238,13 @@ func TestPeerService_CancelledDialReportsNoOutcome(t *testing.T) {
 		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(demotionAddrs, true).AnyTimes()
 		// quic first; the first attempt is the dial a Flush catches in flight
 		// and only ends with its ctx; the yamux fallback must not be tried
-		// with the dead ctx (no expectation: gomock fails on a call)
+		// with the dead ctx
+		var yamuxDials atomic.Int32
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				yamuxDials.Add(1)
+				return nil, fmt.Errorf("must not be dialed")
+			}).AnyTimes()
 		dialStarted := make(chan struct{})
 		var dials atomic.Int32
 		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").DoAndReturn(
@@ -257,7 +264,13 @@ func TestPeerService_CancelledDialReportsNoOutcome(t *testing.T) {
 		}()
 		<-dialStarted
 		require.NoError(t, pl.Flush(ctx))
-		require.NoError(t, <-got)
+		select {
+		case err := <-got:
+			require.NoError(t, err)
+		case <-time.After(10 * time.Second):
+			t.Fatal("the get did not return")
+		}
+		assert.Zero(t, yamuxDials.Load(), "no address is tried with a dead ctx")
 		// the cancelled attempt left no trace; the redial reported normally
 		o := stub.only(t)
 		assert.Equal(t, transport.Quic, o.SucceededScheme)
@@ -294,6 +307,23 @@ func TestPeerService_CancelledDialReportsNoOutcome(t *testing.T) {
 		require.NotNil(t, pr)
 		o := stub.only(t)
 		assert.Equal(t, transport.Quic, o.SucceededScheme)
+	})
+	t.Run("a fallback attempt cut short by the caller is not reported", func(t *testing.T) {
+		fx, stub := newFixtureWithStubDemotion(t)
+		defer fx.finish(t)
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return(demotionAddrs, true)
+		dctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		fx.quic.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1112").Return(nil, &quicgo.HandshakeTimeoutError{})
+		fx.yamux.MockTransport.EXPECT().Dial(gomock.Any(), "203.0.113.1:1111").DoAndReturn(
+			func(ctx context.Context, addr string) (transport.MultiConn, error) {
+				// the caller gives up while the fallback is being dialed
+				cancel()
+				return nil, fmt.Errorf("dial: %w", ctx.Err())
+			})
+		_, err := fx.Dial(dctx, peerId)
+		require.ErrorIs(t, err, context.Canceled)
+		require.Empty(t, stub.outcomes, "a fallback the caller cut short proves nothing about it")
 	})
 	t.Run("a dial whose addresses all failed on their own is reported even if ctx ends after", func(t *testing.T) {
 		fx, stub := newFixtureWithStubDemotion(t)

@@ -1507,10 +1507,10 @@ func TestOCache_SameObject(t *testing.T) {
 	require.False(t, sameObject(a, b))
 	// different types never match
 	require.False(t, sameObject(a, sliceObject{}))
-	// values that cannot be compared are taken as the stored one
-	require.True(t, sameObject(sliceObject{tags: []string{"x"}}, sliceObject{tags: []string{"y"}}))
-	// comparable as a type, not as a value: still no panic
-	require.True(t, sameObject(ifaceObject{payload: []string{"x"}}, ifaceObject{payload: []string{"y"}}))
+	// values that cannot be compared have no identity: never a match
+	require.False(t, sameObject(sliceObject{tags: []string{"x"}}, sliceObject{tags: []string{"y"}}))
+	// comparable as a type, not as a value: still no panic, no match
+	require.False(t, sameObject(ifaceObject{payload: []string{"x"}}, ifaceObject{payload: []string{"y"}}))
 	require.False(t, sameObject(ifaceObject{payload: "x"}, ifaceObject{payload: "y"}))
 	require.True(t, sameObject(ifaceObject{payload: "x"}, ifaceObject{payload: "x"}))
 }

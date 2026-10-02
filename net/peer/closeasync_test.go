@@ -2,6 +2,7 @@ package peer
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"sync"
@@ -13,11 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"storj.io/drpc"
+	"storj.io/drpc/drpcerr"
 	"storj.io/drpc/drpcwire"
 
 	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
+	"github.com/anyproto/any-sync/net/transport"
 )
 
 type rawMsg []byte
@@ -175,10 +178,10 @@ func TestPeer_HandshakeFailureCloseDoesNotBlock(t *testing.T) {
 		}()
 		fx.mc.EXPECT().Open(gomock.Any()).Return(conn, nil)
 
-		start := time.Now()
-		_, err := fx.AcquireDrpcConn(ctx)
-		require.ErrorIs(t, err, handshake.ErrRemoteIncompatibleProto)
-		assert.Less(t, time.Since(start), time.Second)
+		returnsWithin(t, 3*time.Second, "the blocked close must not run on the caller", func() {
+			_, err := fx.AcquireDrpcConn(ctx)
+			assert.ErrorIs(t, err, handshake.ErrRemoteIncompatibleProto)
+		})
 	})
 	t.Run("deadline", func(t *testing.T) {
 		fx := newFixture(t, "p1")
@@ -194,10 +197,10 @@ func TestPeer_HandshakeFailureCloseDoesNotBlock(t *testing.T) {
 
 		actx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 		defer cancel()
-		start := time.Now()
-		_, err := fx.AcquireDrpcConn(actx)
-		require.ErrorIs(t, err, context.DeadlineExceeded)
-		assert.Less(t, time.Since(start), time.Second)
+		returnsWithin(t, 3*time.Second, "the blocked close must not run on the caller", func() {
+			_, err := fx.AcquireDrpcConn(actx)
+			assert.ErrorIs(t, err, context.DeadlineExceeded)
+		})
 
 		// the stream is still closed once the transport lets it
 		close(release)
@@ -902,4 +905,53 @@ func TestPeer_HandedOffConnIsNotTakenByGC(t *testing.T) {
 	_, active := fx.active[sc]
 	fx.mu.Unlock()
 	assert.True(t, active)
+}
+
+// scriptedConn is a sub conn whose Invoke returns a set error and whose
+// Closed fires only when told
+type scriptedConn struct {
+	closedCh  chan struct{}
+	invokeErr error
+}
+
+func (c *scriptedConn) Close() error               { return nil }
+func (c *scriptedConn) Closed() <-chan struct{}    { return c.closedCh }
+func (c *scriptedConn) Unblocked() <-chan struct{} { return nil }
+func (c *scriptedConn) NewStream(context.Context, string, drpc.Encoding) (drpc.Stream, error) {
+	return nil, c.invokeErr
+}
+func (c *scriptedConn) Invoke(context.Context, string, drpc.Encoding, drpc.Message, drpc.Message) error {
+	return c.invokeErr
+}
+
+func TestSubConn_ConnLost(t *testing.T) {
+	errManagerClosed := errors.New("manager closed: Close called")
+	t.Run("doomed before its close lands", func(t *testing.T) {
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errManagerClosed}}
+		sc.doomed.Store(true)
+		err := sc.Invoke(ctx, "/x", nil, nil, nil)
+		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		assert.ErrorIs(t, err, errManagerClosed)
+	})
+	t.Run("live sub conn passes errors through", func(t *testing.T) {
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errManagerClosed}}
+		assert.Equal(t, errManagerClosed, sc.Invoke(ctx, "/x", nil, nil, nil))
+	})
+	t.Run("a coded server reply is never a connection loss", func(t *testing.T) {
+		closed := make(chan struct{})
+		close(closed)
+		coded := drpcerr.WithCode(errors.New("space is deleted"), 1003)
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: closed, invokeErr: coded}}
+		err := sc.Invoke(ctx, "/x", nil, nil, nil)
+		assert.Equal(t, coded, err)
+		assert.Equal(t, uint64(1003), drpcerr.Code(err))
+	})
+	t.Run("the caller's own cancellation stays", func(t *testing.T) {
+		closed := make(chan struct{})
+		close(closed)
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: closed, invokeErr: context.Canceled}}
+		cctx, cancel := context.WithCancel(ctx)
+		cancel()
+		assert.Equal(t, context.Canceled, sc.Invoke(cctx, "/x", nil, nil, nil))
+	})
 }

@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcerr"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
@@ -134,10 +135,45 @@ func (s *subConn) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in,
 }
 
 // NewStream reports a stream refused because the sub conn closed as
-// transport.ErrConnClosed (see connLost)
+// transport.ErrConnClosed (see connLost), and so does the returned stream
+// for a send or receive cut short the same way
 func (s *subConn) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
 	stream, err := s.ConnUnblocked.NewStream(ctx, rpc, enc)
-	return stream, s.connLost(ctx, err)
+	if err != nil {
+		return nil, s.connLost(ctx, err)
+	}
+	return connLostStream{Stream: stream, sc: s, ctx: ctx}, nil
+}
+
+// connLostStream passes a stream's errors through its sub conn's connLost,
+// judged against the ctx the caller opened the stream with
+type connLostStream struct {
+	drpc.Stream
+	sc  *subConn
+	ctx context.Context
+}
+
+func (s connLostStream) MsgSend(msg drpc.Message, enc drpc.Encoding) error {
+	return s.sc.connLost(s.ctx, s.Stream.MsgSend(msg, enc))
+}
+
+func (s connLostStream) MsgRecv(msg drpc.Message, enc drpc.Encoding) error {
+	return s.sc.connLost(s.ctx, s.Stream.MsgRecv(msg, enc))
+}
+
+func (s connLostStream) CloseSend() error {
+	return s.sc.connLost(s.ctx, s.Stream.CloseSend())
+}
+
+// RawWrite forwards the encoding layer's raw write
+func (s connLostStream) RawWrite(kind drpcwire.Kind, data []byte) error {
+	rw, ok := s.Stream.(interface {
+		RawWrite(kind drpcwire.Kind, data []byte) error
+	})
+	if !ok {
+		return fmt.Errorf("stream does not support raw writes")
+	}
+	return s.sc.connLost(s.ctx, rw.RawWrite(kind, data))
 }
 
 // connLost reports an error the caller did not cause, returned while this sub
@@ -147,9 +183,10 @@ func (s *subConn) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) 
 // shows such an end as context.Canceled (its stand-in for a transport
 // io.EOF) or as "manager closed"; callers must be able to tell either from
 // their own cancellation. context.Canceled is kept out of the error chain on
-// purpose; other causes stay reachable.
+// purpose; other causes stay reachable. A reply carrying a drpc error code is
+// the server's answer, never a connection loss, and is returned unchanged.
 func (s *subConn) connLost(ctx context.Context, err error) error {
-	if err == nil || ctx.Err() != nil {
+	if err == nil || ctx.Err() != nil || drpcerr.Code(err) != 0 {
 		return err
 	}
 	select {
@@ -500,7 +537,7 @@ func (p *peer) closeAsync(c io.Closer, counted bool) {
 func (p *peer) acceptLoop() {
 	var exitErr error
 	defer func() {
-		if exitErr != transport.ErrConnClosed {
+		if !errors.Is(exitErr, transport.ErrConnClosed) {
 			log.Warn("accept error: close connection", zap.Error(exitErr))
 			_ = p.MultiConn.Close()
 		}

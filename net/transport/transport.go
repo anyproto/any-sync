@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net"
 	"time"
+
+	"storj.io/drpc/drpcerr"
 )
 
 var (
@@ -25,11 +27,10 @@ func (connClosedError) Unwrap() error { return net.ErrClosed }
 
 // NewConnClosedError wraps cause, an error a transport got because the whole
 // connection went away, so that it matches ErrConnClosed while errors.As
-// still finds the original error. A cause that is already wrapped is
-// returned as is.
+// still finds the original error and drpcerr.Code still finds its code. A
+// cause that already matches ErrConnClosed is returned as is.
 func NewConnClosedError(cause error) error {
-	var already connClosedCauseError
-	if errors.As(cause, &already) {
+	if errors.Is(cause, ErrConnClosed) {
 		return cause
 	}
 	return connClosedCauseError{cause: cause}
@@ -45,6 +46,12 @@ func (e connClosedCauseError) Error() string {
 
 func (e connClosedCauseError) Unwrap() []error {
 	return []error{ErrConnClosed, e.cause}
+}
+
+// Code exposes the cause's drpc error code: drpcerr.Code does not follow a
+// multi-error Unwrap
+func (e connClosedCauseError) Code() uint64 {
+	return drpcerr.Code(e.cause)
 }
 
 const (
