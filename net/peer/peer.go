@@ -3,6 +3,8 @@ package peer
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"slices"
@@ -13,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcerr"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
@@ -56,6 +59,10 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
 	}
+	pr.slowClose = slowCloseWarn
+	pr.onSlowClose = func() {
+		log.Warn("sub connection close is taking too long", zap.String("peerId", pr.id), zap.Duration("after", pr.slowClose))
+	}
 	go pr.acceptLoop()
 	return pr, nil
 }
@@ -96,10 +103,126 @@ type Peer interface {
 type subConn struct {
 	encoding.ConnUnblocked
 	*connutil.LastUsageConn
+	// mc is the connection the sub conn runs over; nil in some tests
+	mc transport.MultiConn
+	// doomed is set by gc when it takes an active conn away and closes it in
+	// the background: the holder must not return it for reuse, even though
+	// the close may not have landed yet
+	doomed atomic.Bool
+	// acquiredAt (unix nanos) is when a caller last took the conn; gc
+	// counts it as usage, so a conn that sat idle in the pool is not taken
+	// away from the caller that has just acquired it
+	acquiredAt atomic.Int64
 }
 
 func (s *subConn) Unblocked() <-chan struct{} {
 	return s.ConnUnblocked.Unblocked()
+}
+
+// idleSince is the later of the last read or write and the last acquisition
+func (s *subConn) idleSince() time.Time {
+	last := s.LastUsage()
+	if at := s.acquiredAt.Load(); at > last.UnixNano() {
+		return time.Unix(0, at)
+	}
+	return last
+}
+
+// Invoke reports an RPC cut short by the sub conn closing as
+// transport.ErrConnClosed (see connLost)
+func (s *subConn) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
+	return s.connLost(ctx, s.ConnUnblocked.Invoke(ctx, rpc, enc, in, out))
+}
+
+// NewStream reports a stream refused because the sub conn closed as
+// transport.ErrConnClosed (see connLost), and so does the returned stream
+// for a send or receive cut short the same way
+func (s *subConn) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
+	stream, err := s.ConnUnblocked.NewStream(ctx, rpc, enc)
+	if err != nil {
+		return nil, s.connLost(ctx, err)
+	}
+	return connLostStream{Stream: stream, sc: s, ctx: ctx}, nil
+}
+
+// connLostStream passes a stream's errors through its sub conn's connLost,
+// judged against the ctx the caller opened the stream with
+type connLostStream struct {
+	drpc.Stream
+	sc  *subConn
+	ctx context.Context
+}
+
+func (s connLostStream) MsgSend(msg drpc.Message, enc drpc.Encoding) error {
+	return s.sc.connLost(s.ctx, s.Stream.MsgSend(msg, enc))
+}
+
+func (s connLostStream) MsgRecv(msg drpc.Message, enc drpc.Encoding) error {
+	return s.sc.connLost(s.ctx, s.Stream.MsgRecv(msg, enc))
+}
+
+func (s connLostStream) CloseSend() error {
+	return s.sc.connLost(s.ctx, s.Stream.CloseSend())
+}
+
+// RawWrite forwards the encoding layer's raw write
+func (s connLostStream) RawWrite(kind drpcwire.Kind, data []byte) error {
+	rw, ok := s.Stream.(interface {
+		RawWrite(kind drpcwire.Kind, data []byte) error
+	})
+	if !ok {
+		return fmt.Errorf("stream does not support raw writes")
+	}
+	return s.sc.connLost(s.ctx, rw.RawWrite(kind, data))
+}
+
+// connLost reports an error that says the sub conn ended under the caller,
+// returned while this sub conn is closed or doomed, as
+// transport.ErrConnClosed: the RPC ended because the sub conn did, whether
+// the whole connection died, the remote ended just this sub stream on a live
+// session, or gc or a release closed it here. drpc shows such an end as
+// context.Canceled (its stand-in for a transport io.EOF), as a "manager
+// closed" or drpc.ClosedError, or as a transport error matching
+// net.ErrClosed; callers must be able to tell those from their own
+// cancellation. Every other error is returned untouched, even on a closed sub
+// conn: a plain io.EOF (the server ended the stream normally; callers compare
+// it with ==), a reply carrying a drpc error code, any application error.
+// context.Canceled is kept out of the error chain on purpose; other causes
+// stay reachable.
+func (s *subConn) connLost(ctx context.Context, err error) error {
+	if err == nil || err == io.EOF || ctx.Err() != nil || drpcerr.Code(err) != 0 || !subConnEnded(err) {
+		return err
+	}
+	select {
+	case <-s.Closed():
+	default:
+		if !s.doomed.Load() && (s.mc == nil || !s.mc.IsClosed()) {
+			return err
+		}
+	}
+	if errors.Is(err, context.Canceled) {
+		return transport.NewConnClosedError(fmt.Errorf("rpc ended by the sub conn closing: %v", err))
+	}
+	return transport.NewConnClosedError(err)
+}
+
+// drpcManagerClosed is the name of drpc's (unexported) error class for a
+// terminated manager
+const drpcManagerClosed = "manager closed"
+
+// subConnEnded reports whether err is how drpc or the transport report the
+// sub conn ending
+func subConnEnded(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) || drpc.ClosedError.Has(err) {
+		return true
+	}
+	var named interface{ Name() (string, bool) }
+	if errors.As(err, &named) {
+		if name, ok := named.Name(); ok && name == drpcManagerClosed {
+			return true
+		}
+	}
+	return false
 }
 
 type peer struct {
@@ -123,6 +246,15 @@ type peer struct {
 
 	limiter limiter
 
+	// churnClosing counts background closes of sub conns callers churned
+	// through (released unusable, or failed in the handshake) that have not
+	// finished yet; the open limiter counts them as sub conns
+	churnClosing atomic.Int32
+	// slowClose and onSlowClose log a background close that hangs; fields
+	// so tests can shorten them
+	slowClose   time.Duration
+	onSlowClose func()
+
 	mu        sync.Mutex
 	created   time.Time
 	useSnappy bool
@@ -135,12 +267,37 @@ func (p *peer) Id() string {
 }
 
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+	// one throttling deadline for the whole call: a retry may shorten the
+	// wait, never push it back, or steady wake-ups would starve the caller
+	var deadline time.Time
+	for {
+		conn, retry, err := p.acquireDrpcConn(ctx, &deadline)
+		if !retry {
+			return conn, err
+		}
+	}
+}
+
+// acquireDrpcConn makes one acquisition attempt; retry means start over with
+// a fresh look at the pool and the limiter wait recomputed (see deadline)
+func (p *peer) acquireDrpcConn(ctx context.Context, deadline *time.Time) (conn drpc.Conn, retry bool, err error) {
 	if p.IsClosed() {
-		return nil, transport.ErrConnClosed
+		return nil, false, transport.ErrConnClosed
 	}
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
-		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))
+		// released conns still closing in the background count too, so
+		// that closing them off the releasing callers' path does not bypass
+		// the throttling
+		var wait <-chan time.Time
+		if delay := p.limiter.delay(len(p.active) + int(p.openingWaitCount.Load()) + int(p.churnClosing.Load())); delay > 0 {
+			if until := time.Now().Add(delay); deadline.IsZero() || until.Before(*deadline) {
+				*deadline = until
+			}
+			timer := time.NewTimer(time.Until(*deadline))
+			defer timer.Stop()
+			wait = timer.C
+		}
 		p.openingWaitCount.Add(1)
 		defer p.openingWaitCount.Add(-1)
 		p.mu.Unlock()
@@ -148,18 +305,23 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 			// throttle new connection opening
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return nil, false, ctx.Err()
 			case dconn := <-p.subConnRelease:
 				// nil conn means connection was closed, used to wake up AcquireDrpcConn
-				if dconn != nil {
-					return dconn, nil
+				if dconn != nil && p.claimHandoff(dconn) {
+					return dconn, false, nil
 				}
+				// The released conn was closed, or gc doomed it on the way.
+				// Its close may still be running, so opening right away
+				// would bypass the throttling: start over, which picks up an
+				// inactive conn or waits out the (never later) deadline.
+				return nil, true, nil
 			case <-wait:
 			}
 		}
 		dconn, err := p.openDrpcConn(ctx)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		p.mu.Lock()
 		p.inactive = append(p.inactive, dconn)
@@ -170,51 +332,48 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	select {
 	case <-res.Closed():
 		p.mu.Unlock()
-		return p.AcquireDrpcConn(ctx)
+		return nil, true, nil
 	default:
 	}
+	// never doomed: gc dooms active conns only, and ReleaseDrpcConn
+	// re-checks the flag under p.mu before re-pooling
+	res.acquiredAt.Store(time.Now().UnixNano())
 	p.active[res] = struct{}{}
 	p.mu.Unlock()
-	return res, nil
+	return res, false, nil
+}
+
+// claimHandoff takes a conn a releaser handed over directly. The check runs
+// under p.mu, where gc dooms conns: one doomed on the way is refused, and the
+// claimed one counts as just used, so a gc right after does not take it.
+func (p *peer) claimHandoff(conn drpc.Conn) bool {
+	sc, ok := conn.(*subConn)
+	if !ok {
+		return true
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if sc.doomed.Load() {
+		return false
+	}
+	sc.acquiredAt.Store(time.Now().UnixNano())
+	return true
+}
+
+func isDoomed(conn drpc.Conn) bool {
+	sc, ok := conn.(*subConn)
+	return ok && sc.doomed.Load()
 }
 
 // ReleaseDrpcConn releases the connection back to the pool.
 // you should pass the same ctx you passed to AcquireDrpcConn
 func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 	var closed bool
-	select {
-	case <-conn.Closed():
+	if isDoomed(conn) {
+		// gc has taken it out of active and owns its close
 		closed = true
-	case <-ctx.Done():
-		// in case ctx is closed the connection may be not yet closed because of the signal logic in the drpc manager
-		// but, we want to shortcut to avoid race conditions
-		_ = conn.Close()
-		closed = true
-	default:
-		if connCasted, ok := conn.(encoding.ConnUnblocked); ok {
-			select {
-			case <-conn.Closed():
-				closed = true
-			case <-connCasted.Unblocked():
-				// semi-safe to reuse this connection
-				// it may be still a chance that connection will be closed in next milliseconds
-				// but this is a trade-off for performance
-			case <-time.After(time.Second / 5):
-				// means the connection has some unfinished work,
-				// e.g. not fully read stream
-				// we cannot reuse this connection so let's close it
-				_ = conn.Close()
-				closed = true
-			}
-		} else {
-			// By construction, conns returned from AcquireDrpcConn are *subConn
-			// which embeds encoding.ConnUnblocked. Reaching this branch means
-			// the caller passed a foreign conn; close it defensively instead
-			// of crashing the process.
-			log.Warn("released conn does not implement encoding.ConnUnblocked, closing", zap.String("peerId", p.id))
-			_ = conn.Close()
-			closed = true
-		}
+	} else {
+		closed = p.checkReleased(ctx, conn)
 	}
 
 	if !closed {
@@ -237,6 +396,11 @@ func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 		delete(p.active, sc)
 	}
 
+	if !closed && sc.doomed.Load() {
+		// gc doomed it after the check above; doomed is set under p.mu, so
+		// this re-check is final
+		closed = true
+	}
 	if !closed {
 		// put it back into the pool
 		p.inactive = append(p.inactive, sc)
@@ -252,6 +416,52 @@ func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 		default:
 		}
 	}
+}
+
+// checkReleased reports whether a released conn is closed or must not be
+// reused; a conn that must not is closed in the background
+func (p *peer) checkReleased(ctx context.Context, conn drpc.Conn) (closed bool) {
+	select {
+	case <-conn.Closed():
+		closed = true
+	case <-ctx.Done():
+		// in case ctx is closed the connection may be not yet closed because of the signal logic in the drpc manager
+		// but, we want to shortcut to avoid race conditions: the conn is never reused, and it is closed in the
+		// background, since a drpc close waits for its reader and the transport and the caller is past its deadline
+		select {
+		case <-conn.Closed():
+			// both were ready: nothing left to close
+		default:
+			p.closeAsync(conn, true)
+		}
+		closed = true
+	default:
+		if connCasted, ok := conn.(encoding.ConnUnblocked); ok {
+			select {
+			case <-conn.Closed():
+				closed = true
+			case <-connCasted.Unblocked():
+				// semi-safe to reuse this connection
+				// it may be still a chance that connection will be closed in next milliseconds
+				// but this is a trade-off for performance
+			case <-time.After(time.Second / 5):
+				// means the connection has some unfinished work,
+				// e.g. not fully read stream
+				// we cannot reuse this connection so let's close it
+				p.closeAsync(conn, true)
+				closed = true
+			}
+		} else {
+			// By construction, conns returned from AcquireDrpcConn are *subConn
+			// which embeds encoding.ConnUnblocked. Reaching this branch means
+			// the caller passed a foreign conn; close it defensively instead
+			// of crashing the process.
+			log.Warn("released conn does not implement encoding.ConnUnblocked, closing", zap.String("peerId", p.id))
+			p.closeAsync(conn, true)
+			closed = true
+		}
+	}
+	return closed
 }
 
 func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
@@ -276,13 +486,10 @@ func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 		return nil, err
 	}
 	lastUsageConn := connutil.NewLastUsageConn(conn)
-	proto, err := handshake.OutgoingProtoHandshake(ctx, lastUsageConn, defaultHandshakeProto)
+	// on any error the handshake hands the stream over once, to be closed in
+	// the background: on a stalled transport the close blocks
+	proto, err := handshake.OutgoingProtoHandshakeWithCloser(ctx, lastUsageConn, defaultHandshakeProto, p.closeSubConn)
 	if err != nil {
-		// OutgoingProtoHandshake closes the conn on I/O errors and ctx
-		// cancellation, but returns without closing on some protocol-level
-		// errors (incompatible/declined/unexpected proto). Close here so the
-		// sub-stream we opened above never leaks. Double close is harmless.
-		_ = lastUsageConn.Close()
 		return nil, err
 	}
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
@@ -296,13 +503,64 @@ func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 	return &subConn{
 		ConnUnblocked: encoding.WrapConnEncoding(drpcConn, isSnappy),
 		LastUsageConn: lastUsageConn,
+		mc:            p.MultiConn,
 	}, nil
+}
+
+func (p *peer) closeSubConn(conn net.Conn) {
+	// counted: one per failed open, so a peer whose handshakes keep failing
+	// on a stalled transport opens ever more slowly
+	p.closeAsync(conn, true)
+}
+
+// slowCloseWarn is how long a background close may run before it is logged.
+// It is above the default transport bounds; with a yamux WriteTimeoutSec of
+// a minute or more a legitimate close can reach it, which only logs.
+const slowCloseWarn = time.Minute
+
+// closeAsync closes c off the caller's path, one goroutine per close.
+// Closing a drpc conn waits for its reader, stream manager and transport,
+// and a yamux stream close sends a FIN under a write timeout, so on a
+// stalled connection a synchronous close turns a caller's expired deadline
+// into a long hang.
+//
+// The goroutines are not capped but self-limited by the open limiter. Each
+// close is bounded by the transport (yamux StreamCloseTimeout and
+// ConnectionWriteTimeout, both WriteTimeoutSec and never 0; QUIC, iroh and
+// webtransport closes do not block), and every close comes from a sub conn
+// this peer opened. counted marks a close of a conn a caller churned through
+// (ReleaseDrpcConn of an unusable conn, or a failed handshake): the open
+// limiter counts those like sub conns, so with closes of duration T in flight
+// the number settles around 10+sqrt(10*T), T in seconds, instead of growing
+// with the callers' rate. Closes from gc are not counted: they say nothing about how
+// fast callers churn. A close running longer than slowClose is logged once;
+// nothing else happens to it.
+//
+// Nothing waits for these goroutines: peer.Close and pool.Close return while
+// they run, and they finish promptly once the connection is closed.
+func (p *peer) closeAsync(c io.Closer, counted bool) {
+	if counted {
+		p.churnClosing.Add(1)
+	}
+	go func() {
+		if counted {
+			defer p.churnClosing.Add(-1)
+		}
+		var timer *time.Timer
+		if p.onSlowClose != nil {
+			timer = time.AfterFunc(p.slowClose, p.onSlowClose)
+		}
+		_ = c.Close()
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
 }
 
 func (p *peer) acceptLoop() {
 	var exitErr error
 	defer func() {
-		if exitErr != transport.ErrConnClosed {
+		if !errors.Is(exitErr, transport.ErrConnClosed) {
 			log.Warn("accept error: close connection", zap.Error(exitErr))
 			_ = p.MultiConn.Close()
 		}
@@ -324,7 +582,7 @@ func (p *peer) acceptLoop() {
 			p.incomingCount.Add(1)
 			defer p.incomingCount.Add(-1)
 			serveErr := p.serve(conn)
-			if serveErr != io.EOF && serveErr != transport.ErrConnClosed {
+			if serveErr != io.EOF && !errors.Is(serveErr, transport.ErrConnClosed) {
 				log.InfoCtx(p.Context(), "serve connection error", zap.Error(serveErr))
 			}
 		}()
@@ -388,11 +646,12 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	// drpc conn Close blocks until its reader unwinds, which on a stalled stream
 	// takes until the yamux stream close timeout: collect the doomed conns and
-	// close them after releasing the lock
+	// close them in the background after releasing the lock, so a stalled
+	// peer does not hold up the GC pass of every other peer
 	var toClose []*subConn
 	defer func() {
 		for _, conn := range toClose {
-			_ = conn.Close()
+			p.closeAsync(conn, false)
 		}
 	}()
 	p.mu.Lock()
@@ -406,7 +665,7 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 			hasClosed = true
 		default:
 		}
-		if in.LastUsage().Before(minLastUsage) {
+		if in.idleSince().Before(minLastUsage) {
 			toClose = append(toClose, in)
 			p.inactive[i] = nil
 			hasClosed = true
@@ -428,8 +687,9 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 			continue
 		default:
 		}
-		if act.LastUsage().Before(minLastUsage) {
+		if act.idleSince().Before(minLastUsage) {
 			log.Warn("close active connection because no activity", zap.String("peerId", p.id), zap.String("addr", p.Addr()))
+			act.doomed.Store(true)
 			toClose = append(toClose, act)
 			delete(p.active, act)
 			continue

@@ -133,8 +133,9 @@ type OCache interface {
 	// RemoveSame closes and removes the object only if the value currently
 	// stored under id is exactly the given one (pointer identity). It lets a
 	// caller evict a specific instance it owns without racing a newer value
-	// that has replaced it under the same id. Returns ok=true only when this
-	// call performed the removal.
+	// that has replaced it under the same id. A value that is not comparable
+	// has no identity and is never matched (store such values behind a
+	// pointer). Returns ok=true only when this call performed the removal.
 	RemoveSame(ctx context.Context, id string, value Object) (ok bool, err error)
 	// TryRemove tries to close and to remove the object. ok reports whether
 	// this call removed it; (false, nil) means the object declined to close,
@@ -251,6 +252,81 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 	return val.waitLoad(ctx, id)
 }
 
+// PeekState is Peek's verdict about an id.
+type PeekState int
+
+const (
+	// PeekMiss: no entry for id (or the cache is closed)
+	PeekMiss PeekState = iota
+	// PeekBusy: an entry exists but is still loading or is being closed; a
+	// Get or Pick would wait for it
+	PeekBusy
+	// PeekHit: a loaded value, returned
+	PeekHit
+)
+
+// Peeker is the non-blocking read the cache returned by New offers on top of
+// OCache; kept off that interface so other implementations stay valid.
+type Peeker interface {
+	// Peek returns the value for id only if it is loaded and not being
+	// closed, without loading, waiting or allocating: the hot path for
+	// callers that handle a miss themselves. With touch a hit refreshes the
+	// GC deadline like Get. The state tells a miss from an entry that is
+	// loading or closing (a caller that must not act on a false miss waits
+	// for the latter, see WaitClosing). Peek counts no metrics: the caller,
+	// which decides whether the result is used, accounts for it.
+	Peek(id string, touch bool) (value Object, state PeekState)
+	// WaitClosing blocks while the entry for id is being closed, bounded by
+	// ctx, and returns at once when there is no such entry or it is not
+	// closing. It is the wait a caller needs before it can add a replacement
+	// for a value whose removal is still running.
+	WaitClosing(ctx context.Context, id string) error
+}
+
+func (c *oCache) Peek(id string, touch bool) (value Object, state PeekState) {
+	c.mu.Lock()
+	e, exists := c.data[id]
+	if c.closed || !exists {
+		c.mu.Unlock()
+		return nil, PeekMiss
+	}
+	if e.isClosing() {
+		c.mu.Unlock()
+		return nil, PeekBusy
+	}
+	select {
+	case <-e.load:
+	default:
+		// still loading
+		c.mu.Unlock()
+		return nil, PeekBusy
+	}
+	// value and loadErr are written before load closes; a failed load deletes
+	// its entry under c.mu, so a non-nil loadErr here means the entry is on
+	// its way out
+	if e.loadErr != nil || e.value == nil {
+		c.mu.Unlock()
+		return nil, PeekBusy
+	}
+	if touch {
+		e.lastUsage = time.Now()
+	}
+	value = e.value
+	c.mu.Unlock()
+	return value, PeekHit
+}
+
+func (c *oCache) WaitClosing(ctx context.Context, id string) error {
+	c.mu.Lock()
+	e, ok := c.data[id]
+	c.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	_, err := e.waitClose(ctx, id)
+	return err
+}
+
 // ctx is the cancellable load context Get created together with the entry.
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	defer func() {
@@ -364,12 +440,31 @@ func (c *oCache) RemoveSame(ctx context.Context, id string, value Object) (ok bo
 	// if this call is the one that transitions it to closing. If e was already
 	// replaced under the same id it is in a closed state and remove() is a
 	// no-op, so a stale caller can never close the newer value that took the id.
-	same := exists && value != nil && e.value == value
+	same := exists && value != nil && sameObject(e.value, value)
 	c.mu.Unlock()
 	if !same {
 		return false, ErrNotExists
 	}
 	return c.removeCtx(ctx, e)
+}
+
+// sameObject reports whether stored is the very instance given. Pointer
+// implementations (the usual kind) compare by identity. A value that is not
+// comparable has no identity to check and must not panic the comparison: it
+// never matches, so nothing is removed by mistake (a caller that needs
+// instance-safe removal of such values stores them behind a pointer). Checked
+// on the values, not the types: a struct with an interface field is
+// comparable as a type and still panics when that field holds a slice.
+func sameObject(stored, given Object) bool {
+	if stored == nil || given == nil {
+		// a still-loading entry has no value yet; nothing matches it
+		return false
+	}
+	sv, gv := reflect.ValueOf(stored), reflect.ValueOf(given)
+	if sv.Type() != gv.Type() || !sv.Comparable() || !gv.Comparable() {
+		return false
+	}
+	return stored == given
 }
 
 func (c *oCache) TryRemove(id string) (ok bool, err error) {

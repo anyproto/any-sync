@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"net"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/exp/slices"
 
@@ -37,6 +39,13 @@ func (he HandshakeError) Error() string {
 		return he.Err.Error()
 	}
 	return he.e.String()
+}
+
+// Unwrap exposes the underlying error (e.g. the TLS transport's EOF, reset or
+// timeout), so callers can match it with errors.Is/As. Protocol-level
+// handshake errors carry none and unwrap to nil.
+func (he HandshakeError) Unwrap() error {
+	return he.Err
 }
 
 var (
@@ -80,7 +89,12 @@ func newHandshake() *handshake {
 }
 
 type handshake struct {
-	conn        io.ReadWriteCloser
+	conn io.ReadWriteCloser
+	// closeConn, when set, replaces conn.Close for closing a net.Conn
+	closeConn func(net.Conn)
+	// abandoned, when set and true, means the caller gave up and closes the
+	// conn itself: an error is then neither acknowledged nor closed here
+	abandoned   *atomic.Bool
 	remoteCred  *handshakeproto.Credentials
 	remoteProto *handshakeproto.Proto
 	remoteAck   *handshakeproto.Ack
@@ -107,9 +121,14 @@ func (h *handshake) writeProto(proto *handshakeproto.Proto) (err error) {
 }
 
 func (h *handshake) tryWriteErrAndClose(err error) {
+	if h.abandoned != nil && h.abandoned.Load() {
+		// the caller has given up and closed the conn: writing an ack to a
+		// silent peer could only block
+		return
+	}
 	if err == ErrUnexpectedPayload {
 		// if we got unexpected message - just close the connection
-		_ = h.conn.Close()
+		h.close()
 		return
 	}
 	var ackErr handshakeproto.Error
@@ -119,6 +138,14 @@ func (h *handshake) tryWriteErrAndClose(err error) {
 		ackErr = handshakeproto.Error_Unexpected
 	}
 	_ = h.writeAck(ackErr)
+	h.close()
+}
+
+func (h *handshake) close() {
+	if nc, ok := h.conn.(net.Conn); ok && h.closeConn != nil {
+		h.closeConn(nc)
+		return
+	}
 	_ = h.conn.Close()
 }
 
@@ -187,6 +214,8 @@ func (h *handshake) readMsg(allowedTypes ...byte) (msg message, err error) {
 func (h *handshake) release() {
 	h.buf = h.buf[:0]
 	h.conn = nil
+	h.closeConn = nil
+	h.abandoned = nil
 	h.localAck.Error = 0
 	h.remoteAck.Error = 0
 	h.remoteCred.Type = 0

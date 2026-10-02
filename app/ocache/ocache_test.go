@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1400,4 +1401,116 @@ func TestOCache_ForEachAfterClose(t *testing.T) {
 	})
 	_, err := c.Pick(ctx, "id")
 	require.ErrorIs(t, err, ErrClosed)
+}
+
+func TestOCache_Peek(t *testing.T) {
+	t.Run("hit touches, nothing is counted", func(t *testing.T) {
+		reg := prometheus.NewRegistry()
+		obj := NewTestObject("a", true, nil)
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			return obj, nil
+		}, WithTTL(time.Hour), WithGCPeriod(0), WithPrometheus(reg, "peek", "test")).(*oCache)
+		_, st := c.Peek("a", true)
+		require.Equal(t, PeekMiss, st, "nothing loaded yet")
+		_, err := c.Get(ctx, "a")
+		require.NoError(t, err)
+		c.mu.Lock()
+		c.data["a"].lastUsage = time.Now().Add(-time.Minute)
+		c.mu.Unlock()
+		v, st := c.Peek("a", false)
+		require.Equal(t, PeekHit, st)
+		require.Same(t, obj, v)
+		c.mu.Lock()
+		require.Less(t, c.data["a"].lastUsage, time.Now().Add(-30*time.Second), "Pick-like peek must not refresh the deadline")
+		c.mu.Unlock()
+		v, st = c.Peek("a", true)
+		require.Equal(t, PeekHit, st)
+		require.Same(t, obj, v)
+		c.mu.Lock()
+		require.Greater(t, c.data["a"].lastUsage, time.Now().Add(-time.Second), "Get-like peek refreshes the deadline")
+		c.mu.Unlock()
+		families, err := reg.Gather()
+		require.NoError(t, err)
+		values := map[string]float64{}
+		for _, mf := range families {
+			if m := mf.GetMetric()[0]; m.GetCounter() != nil {
+				values[mf.GetName()] = m.GetCounter().GetValue()
+			}
+		}
+		// one miss from Get's load; the peeks count nothing
+		require.Equal(t, float64(1), values["peek_test_miss"])
+		require.Equal(t, float64(0), values["peek_test_hit"])
+	})
+	t.Run("loading, closing and closed are misses", func(t *testing.T) {
+		loading := make(chan struct{})
+		release := make(chan struct{})
+		closeCh := make(chan struct{})
+		obj := NewTestObject("a", false, closeCh)
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			close(loading)
+			<-release
+			return obj, nil
+		}, WithTTL(time.Hour), WithGCPeriod(0)).(*oCache)
+		go func() { _, _ = c.Get(ctx, "a") }()
+		<-loading
+		_, st := c.Peek("a", true)
+		require.Equal(t, PeekBusy, st, "loading entry")
+		close(release)
+		require.Eventually(t, func() bool { _, st := c.Peek("a", false); return st == PeekHit }, time.Second, time.Millisecond)
+
+		// a closer holds the entry: Remove blocks in obj.Close until closeCh
+		removed := make(chan struct{})
+		go func() {
+			_, _ = c.Remove(ctx, "a")
+			close(removed)
+		}()
+		require.Eventually(t, func() bool { _, st := c.Peek("a", false); return st == PeekBusy }, time.Second, time.Millisecond)
+		close(closeCh)
+		<-removed
+		_, st = c.Peek("a", false)
+		require.Equal(t, PeekMiss, st, "removed entry")
+
+		require.NoError(t, c.Add("b", NewTestObject("b", true, nil)))
+		v, st := c.Peek("b", false)
+		require.Equal(t, PeekHit, st)
+		require.NotNil(t, v)
+		require.NoError(t, c.Close())
+		_, st = c.Peek("b", false)
+		require.Equal(t, PeekMiss, st, "closed cache")
+	})
+}
+
+// value types with value receivers: sliceObject is not comparable as a
+// type, ifaceObject only as a value when payload holds a slice
+type sliceObject struct {
+	tags []string
+}
+
+func (sliceObject) Close() error                         { return nil }
+func (sliceObject) TryClose(time.Duration) (bool, error) { return true, nil }
+
+type ifaceObject struct {
+	payload any
+}
+
+func (ifaceObject) Close() error                         { return nil }
+func (ifaceObject) TryClose(time.Duration) (bool, error) { return true, nil }
+
+func TestOCache_SameObject(t *testing.T) {
+	a, b := &testObject{name: "a"}, &testObject{name: "b"}
+	// a still-loading entry has no value: nothing matches it, and it never
+	// panics
+	require.False(t, sameObject(nil, a))
+	require.False(t, sameObject(a, nil))
+	// pointers compare by identity
+	require.True(t, sameObject(a, a))
+	require.False(t, sameObject(a, b))
+	// different types never match
+	require.False(t, sameObject(a, sliceObject{}))
+	// values that cannot be compared have no identity: never a match
+	require.False(t, sameObject(sliceObject{tags: []string{"x"}}, sliceObject{tags: []string{"y"}}))
+	// comparable as a type, not as a value: still no panic, no match
+	require.False(t, sameObject(ifaceObject{payload: []string{"x"}}, ifaceObject{payload: []string{"y"}}))
+	require.False(t, sameObject(ifaceObject{payload: "x"}, ifaceObject{payload: "y"}))
+	require.True(t, sameObject(ifaceObject{payload: "x"}, ifaceObject{payload: "x"}))
 }

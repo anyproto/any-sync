@@ -1,6 +1,13 @@
 package handshake
 
 import (
+	"context"
+	"errors"
+	"io"
+	"net"
+	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -200,4 +207,268 @@ func TestEndToEndProto(t *testing.T) {
 
 		t.Log("dur", time.Since(st))
 	})
+}
+
+// blockingCloseConn models a stream whose Close blocks on the transport
+type blockingCloseConn struct {
+	net.Conn
+	closeCalled chan struct{}
+	release     chan struct{}
+	once        sync.Once
+}
+
+func (c *blockingCloseConn) Close() error {
+	c.once.Do(func() { close(c.closeCalled) })
+	<-c.release
+	return c.Conn.Close()
+}
+
+func TestOutgoingProtoHandshakeWithCloser_CancelDoesNotWaitForClose(t *testing.T) {
+	c1, c2 := net.Pipe()
+	defer c2.Close()
+	conn := &blockingCloseConn{Conn: c1, closeCalled: make(chan struct{}), release: make(chan struct{})}
+	defer close(conn.release)
+	// the remote reads the proto but never answers
+	go func() { _, _ = io.Copy(io.Discard, c2) }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	closer := func(c net.Conn) { go func() { _ = c.Close() }() }
+	res := make(chan error, 1)
+	go func() {
+		_, err := OutgoingProtoHandshakeWithCloser(ctx, conn, &handshakeproto.Proto{Proto: 1}, closer)
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	case <-time.After(3 * time.Second):
+		t.Fatal("the caller must not wait on the blocked close")
+	}
+
+	// the conn is still closed, off the caller's path
+	select {
+	case <-conn.closeCalled:
+	case <-time.After(time.Second):
+		t.Fatal("abandoned handshake conn was not closed")
+	}
+}
+
+// recordCloseConn records whether Close has returned
+type recordCloseConn struct {
+	net.Conn
+	closed atomic.Bool
+	// delay makes the close slow, so an asynchronous one is visibly late
+	delay time.Duration
+}
+
+func (c *recordCloseConn) Close() error {
+	time.Sleep(c.delay)
+	err := c.Conn.Close()
+	c.closed.Store(true)
+	return err
+}
+
+// TestOutgoingProtoHandshake_ClosesSynchronously pins the exported contract:
+// the conn is closed by the time OutgoingProtoHandshake returns
+func TestOutgoingProtoHandshake_ClosesSynchronously(t *testing.T) {
+	t.Run("cancel", func(t *testing.T) {
+		c1, c2 := net.Pipe()
+		defer c2.Close()
+		conn := &recordCloseConn{Conn: c1}
+		go func() { _, _ = io.Copy(io.Discard, c2) }()
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		_, err := OutgoingProtoHandshake(ctx, conn, &handshakeproto.Proto{Proto: 1})
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.True(t, conn.closed.Load(), "closed before returning")
+	})
+	t.Run("I/O error", func(t *testing.T) {
+		c1, c2 := net.Pipe()
+		conn := &recordCloseConn{Conn: c1}
+		go func() {
+			h := newHandshake()
+			h.conn = c2
+			_, _ = h.readMsg(msgTypeProto)
+			_ = c2.Close()
+		}()
+		_, err := OutgoingProtoHandshake(context.Background(), conn, &handshakeproto.Proto{Proto: 1})
+		require.Error(t, err)
+		assert.True(t, conn.closed.Load(), "closed before returning")
+	})
+}
+
+// noDeadlineConn models a conn whose SetDeadline is a no-op (as on wasm)
+type noDeadlineConn struct {
+	net.Conn
+}
+
+func (noDeadlineConn) SetDeadline(time.Time) error { return nil }
+
+func TestOutgoingProtoHandshakeWithCloser_Cancel(t *testing.T) {
+	c1, c2 := net.Pipe()
+	defer c2.Close()
+	conn := noDeadlineConn{Conn: c1}
+
+	// the remote reads the proto, then never answers
+	remoteRead := make(chan error, 1)
+	go func() {
+		h := newHandshake()
+		h.conn = c2
+		if _, err := h.readMsg(msgTypeProto); err != nil {
+			remoteRead <- err
+			return
+		}
+		// whatever comes next must be the close, never an ack
+		_, err := c2.Read(make([]byte, 1))
+		remoteRead <- err
+	}()
+
+	closed := make(chan net.Conn, 1)
+	closer := func(c net.Conn) {
+		closed <- c
+		_ = c.Close()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err := OutgoingProtoHandshakeWithCloser(ctx, conn, &handshakeproto.Proto{Proto: 1}, closer)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	// a conn without deadline support is still closed, through the closer
+	select {
+	case c := <-closed:
+		assert.Equal(t, net.Conn(conn), c)
+	case <-time.After(time.Second):
+		t.Fatal("conn was not handed to the closer")
+	}
+	select {
+	case err = <-remoteRead:
+		assert.ErrorIs(t, err, io.EOF, "an abandoned handshake must not write an ack")
+	case <-time.After(time.Second):
+		t.Fatal("remote did not observe the close")
+	}
+}
+
+func TestOutgoingProtoHandshakeWithCloser_IOErrorUsesCloser(t *testing.T) {
+	c1, c2 := net.Pipe()
+	// a conn whose own Close blocks: only the closer may close it
+	conn := &blockingCloseConn{Conn: c1, closeCalled: make(chan struct{}), release: make(chan struct{})}
+	defer close(conn.release)
+	// the remote goes away mid-handshake
+	go func() {
+		h := newHandshake()
+		h.conn = c2
+		_, _ = h.readMsg(msgTypeProto)
+		_ = c2.Close()
+	}()
+	handed := make(chan net.Conn, 2)
+	closer := func(c net.Conn) { handed <- c }
+	res := make(chan error, 1)
+	go func() {
+		_, err := OutgoingProtoHandshakeWithCloser(context.Background(), conn, &handshakeproto.Proto{Proto: 1}, closer)
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		require.Error(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("the handshake ran the blocking Close instead of the closer")
+	}
+	select {
+	case c := <-handed:
+		assert.Equal(t, net.Conn(conn), c)
+	default:
+		t.Fatal("I/O error close did not go through the closer")
+	}
+	assert.Empty(t, handed, "handed over exactly once")
+	select {
+	case <-conn.closeCalled:
+		t.Fatal("Close must be left to the closer")
+	default:
+	}
+}
+
+func TestOutgoingProtoHandshakeWithCloser_ProtocolErrorHandsOver(t *testing.T) {
+	c1, c2 := net.Pipe()
+	defer c2.Close()
+	// the remote declines the protocol: a protocol-level error, which the
+	// legacy function leaves to the caller
+	go func() {
+		_, _ = IncomingProtoHandshake(context.Background(), c2, newProtoChecker(100))
+	}()
+	handed := make(chan net.Conn, 2)
+	_, err := OutgoingProtoHandshakeWithCloser(context.Background(), c1, &handshakeproto.Proto{Proto: 1}, func(c net.Conn) { handed <- c })
+	require.ErrorIs(t, err, ErrRemoteIncompatibleProto)
+	select {
+	case c := <-handed:
+		assert.Equal(t, c1, c)
+	case <-time.After(time.Second):
+		t.Fatal("the conn was not handed to the closer")
+	}
+	assert.Empty(t, handed, "handed over exactly once")
+}
+
+func TestOutgoingProtoHandshakeWithCloser_NilCloserIsSynchronous(t *testing.T) {
+	c1, c2 := net.Pipe()
+	defer c2.Close()
+	conn := &recordCloseConn{Conn: c1, delay: 50 * time.Millisecond}
+	go func() { _, _ = io.Copy(io.Discard, c2) }()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err := OutgoingProtoHandshakeWithCloser(ctx, conn, &handshakeproto.Proto{Proto: 1}, nil)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.True(t, conn.closed.Load(), "a nil closer keeps the synchronous close")
+}
+
+func TestHandshakeError_Unwrap(t *testing.T) {
+	err := error(HandshakeError{Err: io.EOF})
+	assert.ErrorIs(t, err, io.EOF)
+	assert.ErrorIs(t, HandshakeError{Err: os.ErrDeadlineExceeded}, os.ErrDeadlineExceeded)
+	// protocol-level sentinels keep matching by value and wrap nothing
+	assert.ErrorIs(t, ErrIncompatibleVersion, ErrIncompatibleVersion)
+	assert.NotErrorIs(t, ErrIncompatibleProto, ErrIncompatibleVersion)
+	assert.Nil(t, errors.Unwrap(ErrIncompatibleVersion))
+	// a wrapped transport error is not mistaken for a protocol sentinel
+	assert.NotErrorIs(t, HandshakeError{Err: io.EOF}, ErrIncompatibleVersion)
+}
+
+// countingConn counts writes and closes
+type countingConn struct {
+	writes, closes atomic.Int32
+}
+
+func (c *countingConn) Read([]byte) (int, error)         { return 0, io.EOF }
+func (c *countingConn) Write(b []byte) (int, error)      { c.writes.Add(1); return len(b), nil }
+func (c *countingConn) Close() error                     { c.closes.Add(1); return nil }
+func (c *countingConn) LocalAddr() net.Addr              { return nil }
+func (c *countingConn) RemoteAddr() net.Addr             { return nil }
+func (c *countingConn) SetDeadline(time.Time) error      { return nil }
+func (c *countingConn) SetReadDeadline(time.Time) error  { return nil }
+func (c *countingConn) SetWriteDeadline(time.Time) error { return nil }
+
+func TestHandshake_AbandonedSkipsReplyAndClose(t *testing.T) {
+	conn := &countingConn{}
+	var abandoned atomic.Bool
+	abandoned.Store(true)
+	h := &handshake{conn: conn, abandoned: &abandoned, localAck: &handshakeproto.Ack{}}
+	h.tryWriteErrAndClose(ErrUnexpected)
+	assert.Zero(t, conn.writes.Load(), "no ack to a caller that gave up")
+	assert.Zero(t, conn.closes.Load(), "the caller closes it")
+
+	abandoned.Store(false)
+	h.tryWriteErrAndClose(ErrUnexpected)
+	assert.Equal(t, int32(1), conn.writes.Load())
+	assert.Equal(t, int32(1), conn.closes.Load())
+}
+
+func TestHandshake_ReleaseClearsCloser(t *testing.T) {
+	h := newHandshake()
+	h.conn = &countingConn{}
+	h.closeConn = func(net.Conn) {}
+	h.abandoned = &atomic.Bool{}
+	h.release()
+	// a recycled handshake must not carry a previous caller's closer
+	assert.Nil(t, h.closeConn)
+	assert.Nil(t, h.abandoned)
+	assert.Nil(t, h.conn)
 }

@@ -2,8 +2,11 @@ package yamux
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/yamux"
@@ -16,25 +19,130 @@ import (
 func NewMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session) transport.MultiConn {
 	cctx = peer.CtxWithPeerAddr(cctx, transport.Yamux+"://"+sess.RemoteAddr().String())
 	return &yamuxConn{
-		ctx:     cctx,
-		luConn:  luConn,
-		addr:    addr,
-		Session: sess,
+		ctx:          cctx,
+		luConn:       luConn,
+		addr:         addr,
+		Session:      sess,
+		backlogFreed: make(chan struct{}),
 	}
 }
+
+// maxAbandonedOpens bounds the Session.Open helpers a single connection
+// keeps running for callers that have already given up (see Open)
+const maxAbandonedOpens = 16
 
 type yamuxConn struct {
 	ctx    context.Context
 	luConn *connutil.LastUsageConn
 	addr   string
 	*yamux.Session
+
+	backlogMu sync.Mutex
+	// abandonedOpens counts Open helpers still running after their caller
+	// gave up
+	abandonedOpens int
+	// backlogFreed is closed and replaced whenever abandonedOpens drops
+	backlogFreed chan struct{}
 }
 
+type openResult struct {
+	conn net.Conn
+	err  error
+}
+
+// Open opens a new stream, bounded by ctx. yamux's Session.Open takes no
+// context and blocks while too many SYNs are unacknowledged, which on a
+// silent connection lasts until StreamOpenTimeout closes the session. It runs
+// in a helper goroutine instead; a caller whose ctx ends leaves the helper
+// behind, and the helper closes the stream if it arrives late. Opens in
+// progress are not limited (a congested but healthy link must not be
+// throttled further), only the abandoned helpers are: while
+// maxAbandonedOpens of them are running, Open waits, bounded by ctx, for one
+// to finish. The cap is checked before the helper starts, so callers racing
+// past it together can overshoot it by their number.
 func (y *yamuxConn) Open(ctx context.Context) (conn net.Conn, err error) {
-	if conn, err = y.Session.Open(); err != nil {
-		return
+	if conn, err = y.open(ctx); err != nil {
+		if errors.Is(err, yamux.ErrSessionShutdown) {
+			// like Accept and the QUIC transport
+			err = transport.NewConnClosedError(err)
+		}
+		return nil, err
 	}
-	return
+	return y.wrapStream(conn), nil
+}
+
+func (y *yamuxConn) open(ctx context.Context) (conn net.Conn, err error) {
+	if ctx.Done() == nil {
+		// a context that can never end needs no helper
+		return y.Session.Open()
+	}
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
+	// The helper is needed even with free SYN slots: Session.Open also sends
+	// the SYN through the session's send queue, which on a congested link
+	// waits up to ConnectionWriteTimeout regardless of ctx.
+	if err = y.waitBacklog(ctx); err != nil {
+		return nil, err
+	}
+	var (
+		// claimed is taken by whichever side finishes first: the helper
+		// (it delivers the result) or the caller giving up (the helper then
+		// owns the stream and closes it)
+		claimed atomic.Bool
+		res     = make(chan openResult, 1)
+	)
+	go func() {
+		stream, sErr := y.Session.Open()
+		if claimed.CompareAndSwap(false, true) {
+			res <- openResult{conn: stream, err: sErr}
+			return
+		}
+		// the caller is gone: close the late stream. The helper counts as
+		// abandoned until the close returns.
+		if stream != nil {
+			_ = stream.Close()
+		}
+		y.backlogMu.Lock()
+		y.abandonedOpens--
+		close(y.backlogFreed)
+		y.backlogFreed = make(chan struct{})
+		y.backlogMu.Unlock()
+	}()
+	select {
+	case r := <-res:
+		return r.conn, r.err
+	case <-ctx.Done():
+		if claimed.CompareAndSwap(false, true) {
+			y.backlogMu.Lock()
+			y.abandonedOpens++
+			y.backlogMu.Unlock()
+			return nil, ctx.Err()
+		}
+		// the helper won the race and is delivering right now
+		r := <-res
+		return r.conn, r.err
+	}
+}
+
+// waitBacklog waits until fewer than maxAbandonedOpens helpers are running
+func (y *yamuxConn) waitBacklog(ctx context.Context) error {
+	for {
+		y.backlogMu.Lock()
+		if y.abandonedOpens < maxAbandonedOpens {
+			y.backlogMu.Unlock()
+			return nil
+		}
+		freed := y.backlogFreed
+		y.backlogMu.Unlock()
+		select {
+		case <-freed:
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-y.Session.CloseChan():
+			return yamux.ErrSessionShutdown
+		}
+	}
 }
 
 func (y *yamuxConn) LastUsage() time.Time {
@@ -64,5 +172,63 @@ func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 		}
 		return
 	}
-	return
+	return y.wrapStream(conn), nil
+}
+
+func (y *yamuxConn) wrapStream(conn net.Conn) net.Conn {
+	return yamuxStream{Conn: conn, sess: y.Session}
+}
+
+// yamuxStream normalizes stream errors caused by the whole session going
+// away, like the QUIC transport does: on shutdown yamux force-closes every
+// stream, so a pending Read returns a bare io.EOF and a Write
+// ErrSessionShutdown or ErrStreamClosed, indistinguishable from a normal
+// remote close.
+type yamuxStream struct {
+	net.Conn
+	sess *yamux.Session
+}
+
+func (s yamuxStream) Read(b []byte) (n int, err error) {
+	n, err = s.Conn.Read(b)
+	return n, s.wrapSessionDead(err)
+}
+
+func (s yamuxStream) Write(b []byte) (n int, err error) {
+	n, err = s.Conn.Write(b)
+	return n, s.wrapSessionDead(err)
+}
+
+// wrapSessionDead wraps err with transport.NewConnClosedError when it was
+// caused by the session dying. ErrSessionShutdown always is. A stream reset, a
+// closed stream and a connection write timeout count only while the session is
+// closed: on a live session they are stream-level outcomes (a remote reset, or
+// a send that waited out ConnectionWriteTimeout on a slow but live peer, which
+// yamux does not treat as fatal) and are returned unchanged; on a closed one
+// they are reported as caused by ErrSessionShutdown, with the original error
+// still in the chain. A truly stalled session
+// ends through missed keepalives, after which its streams fail with errors
+// covered here.
+//
+// io.EOF is never wrapped: a stream that got its data and FIN before the
+// session died must still end in a plain io.EOF (io.ReadAll, io.Copy and
+// err == io.EOF checks rely on it). An RPC cut short by the session dying is
+// classified above the transport, in the peer's sub conn.
+func (s yamuxStream) wrapSessionDead(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, yamux.ErrSessionShutdown):
+	case errors.Is(err, yamux.ErrConnectionReset), errors.Is(err, yamux.ErrStreamClosed),
+		errors.Is(err, yamux.ErrConnectionWriteTimeout):
+		if !s.sess.IsClosed() {
+			return err
+		}
+		// keeps the cause (and a write timeout's Timeout()) reachable
+		err = errors.Join(yamux.ErrSessionShutdown, err)
+	default:
+		return err
+	}
+	return transport.NewConnClosedError(err)
 }

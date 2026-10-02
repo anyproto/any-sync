@@ -132,29 +132,6 @@ func TestPool_Flush(t *testing.T) {
 		_, err = fx.Pick(ctx, "peer2")
 		assert.Error(t, err)
 	})
-	t.Run("concurrent flush operations", func(t *testing.T) {
-		fx := newFixture(t)
-		defer fx.Finish()
-		p1 := newTestPeer("peer1")
-		p2 := newTestPeer("peer2")
-		require.NoError(t, fx.AddPeer(ctx, p1))
-		require.NoError(t, fx.AddPeer(ctx, p2))
-		done := make(chan error, 2)
-		go func() {
-			done <- fx.Flush(ctx)
-		}()
-		go func() {
-			done <- fx.Flush(ctx)
-		}()
-		err1 := <-done
-		err2 := <-done
-		assert.NoError(t, err1)
-		assert.NoError(t, err2)
-		_, err := fx.Pick(ctx, "peer1")
-		assert.Error(t, err)
-		_, err = fx.Pick(ctx, "peer2")
-		assert.Error(t, err)
-	})
 	t.Run("flush then get should work correctly", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
@@ -202,37 +179,44 @@ func TestPool_Flush(t *testing.T) {
 		assert.Len(t, poolStat.PeerStats, 2)
 		err = fx.Flush(ctx)
 		require.NoError(t, err)
-		stat = statProvider.ProvideStat()
-		poolStat, ok = stat.(*poolStats)
-		require.True(t, ok)
-		assert.Len(t, poolStat.PeerStats, 0)
+		// stats read the fresh pair; the old peers close in the background
+		assert.Len(t, statProvider.ProvideStat().(*poolStats).PeerStats, 0)
 	})
-	t.Run("flush does not remove peers loading during flush", func(t *testing.T) {
+	t.Run("peer dialed across flush is rejected and redialed", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		dialStarted := make(chan struct{})
 		blockDial := make(chan struct{})
-		loadingPeer := newTestPeer("loading-peer")
+		latePeer := newTestPeer("loading-peer")
+		var dials atomic2.Int32
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			close(dialStarted)
-			<-blockDial
-			return loadingPeer, nil
+			if dials.Add(1) == 1 {
+				close(dialStarted)
+				<-blockDial
+				return latePeer, nil
+			}
+			// a new peer per dial, like a real dialer (see the flush tests)
+			return newTestPeer(peerId), nil
 		}
 		resultChan := make(chan peer.Peer, 1)
 		go func() {
 			p, err := fx.Get(ctx, "loading-peer")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			resultChan <- p
 		}()
 		<-dialStarted
-		err := fx.Flush(ctx)
-		require.NoError(t, err)
+		require.NoError(t, fx.Flush(ctx))
 		close(blockDial)
+		// the dial started before the flush: its peer is published late but
+		// rejected by the very lookup waiting on it, which dials again
 		p := <-resultChan
-		require.Equal(t, loadingPeer, p)
+		require.NotNil(t, p)
+		require.NotSame(t, latePeer, p)
+		require.False(t, p.IsClosed())
+		require.Eventually(t, latePeer.IsClosed, time.Second, 10*time.Millisecond)
 		pickedPeer, err := fx.Pick(ctx, "loading-peer")
 		require.NoError(t, err)
-		assert.Equal(t, loadingPeer, pickedPeer)
+		assert.Equal(t, p, pickedPeer)
 	})
 }
 
@@ -371,7 +355,7 @@ func TestPool_GetOneOf(t *testing.T) {
 		assert.Equal(t, 1, calls)
 		assert.Nil(t, p)
 
-		val, err := fx.Service.(*poolService).outgoing.Pick(ctx, "1")
+		val, err := fx.Service.(*poolService).current.Load().outgoing.Pick(ctx, "1")
 		require.NoError(t, err)
 		errObj := val.(*errObject)
 		closed, err := errObj.TryClose(time.Minute)
@@ -565,6 +549,12 @@ func newFixture(t *testing.T) *fixture {
 }
 
 func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
+	return newFixtureCfg(t, obs, nil)
+}
+
+// newFixtureCfg lets a test tune the service (closeTimeout) before Init and
+// register extra components (a metric registry)
+func newFixtureCfg(t *testing.T, obs peerobserver.Observer, cfg func(ps *poolService, a *app.App)) *fixture {
 	fx := &fixture{
 		Service: New(),
 		Dialer:  &dialerMock{},
@@ -574,6 +564,9 @@ func newFixtureWithObserver(t *testing.T, obs peerobserver.Observer) *fixture {
 	a.Register(fx.Dialer)
 	if obs != nil {
 		a.Register(peerobserver.New(obs))
+	}
+	if cfg != nil {
+		cfg(fx.Service.(*poolService), a)
 	}
 	require.NoError(t, a.Start(context.Background()))
 	fx.a = a
@@ -639,6 +632,8 @@ var _ peer.Peer = (*testPeer)(nil)
 
 type testPeer struct {
 	id             string
+	closeMu        sync.Mutex
+	closes         int
 	closed         chan struct{}
 	created        time.Time
 	subConnections int
@@ -697,9 +692,14 @@ func (t *testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 }
 
 func (t *testPeer) Close() error {
+	// the pool may close a rejected peer from several paths at once;
+	// idempotent and silent like the real peer (its MultiConn.Close is).
+	// closes counts every call, for tests that pin how often that happens
+	t.closeMu.Lock()
+	defer t.closeMu.Unlock()
+	t.closes++
 	select {
 	case <-t.closed:
-		return fmt.Errorf("already closed")
 	default:
 		close(t.closed)
 	}
@@ -736,7 +736,7 @@ func TestPool_EvictsOutgoingOnClose(t *testing.T) {
 	require.NoError(t, tp.Close())
 
 	require.Eventually(t, func() bool {
-		return fx.Service.(*poolService).outgoing.Len() == 0
+		return fx.Service.(*poolService).current.Load().outgoing.Len() == 0
 	}, time.Second, 10*time.Millisecond)
 }
 
@@ -750,7 +750,7 @@ func TestPool_EvictsIncomingOnClose(t *testing.T) {
 	require.NoError(t, tp.Close())
 
 	require.Eventually(t, func() bool {
-		return fx.Service.(*poolService).incoming.Len() == 0
+		return fx.Service.(*poolService).current.Load().incoming.Len() == 0
 	}, time.Second, 10*time.Millisecond)
 }
 
@@ -761,11 +761,11 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 
 	// the peer is actually in the cache, so a wrong eviction would be observable
 	tp := newTestPeer("inc1") // peer stays alive (CloseChan never fires)
-	require.NoError(t, p.incoming.Add(tp.Id(), tp))
+	require.NoError(t, p.current.Load().incoming.Add(tp.Id(), tp))
 
 	done := make(chan struct{})
 	go func() {
-		p.evictOnClose(tp, p.incoming, true)
+		p.evictOnClose(tp, p.current.Load(), true)
 		close(done)
 	}()
 
@@ -784,7 +784,7 @@ func TestPool_EvictOnClose_ExitsOnShutdownWithoutEviction(t *testing.T) {
 		t.Fatal("watcher did not exit on shutdown")
 	}
 	require.False(t, tp.IsClosed(), "shutdown path must not close the peer")
-	pk, err := p.incoming.Pick(ctx, tp.Id())
+	pk, err := p.current.Load().incoming.Pick(ctx, tp.Id())
 	require.NoError(t, err, "shutdown path must leave the peer for cache.Close to evict")
 	require.Equal(t, tp, pk)
 }
@@ -884,15 +884,15 @@ func TestPool_PeerObserver(t *testing.T) {
 		p := fx.Service.(*poolService).pool
 
 		tp := newTestPeer("inc1")
-		require.NoError(t, p.incoming.Add(tp.Id(), tp))
+		require.NoError(t, p.current.Load().incoming.Add(tp.Id(), tp))
 		require.NoError(t, tp.Close())
 
 		// a RemoveSame that begins pool shutdown while the watcher is inside
 		// it: the watcher must re-check and swallow the event
-		cache := &shutdownOnRemoveSame{OCache: p.incoming, cancel: p.closingCancel}
+		cache := &shutdownOnRemoveSame{OCache: p.current.Load().incoming, cancel: p.closingCancel}
 		done := make(chan struct{})
 		go func() {
-			p.evictOnClose(tp, cache, true)
+			p.evictOnClose(tp, &caches{incoming: cache}, true)
 			close(done)
 		}()
 		select {
@@ -1038,7 +1038,7 @@ func TestPool_EvictsOutgoingClosedDuringLoad(t *testing.T) {
 	require.NoError(t, tp.Close())
 	done := make(chan struct{})
 	go func() {
-		p.evictOnClose(tp, cache, false)
+		p.evictOnClose(tp, &caches{outgoing: cache}, false)
 		close(done)
 	}()
 

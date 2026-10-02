@@ -295,6 +295,41 @@ func TestPeerService_Accept(t *testing.T) {
 	require.NoError(t, fx.Accept(mc))
 }
 
+func TestPeerService_AcceptBoundedByHungOldPeer(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.finish(t)
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	doRelease := func() { releaseOnce.Do(func() { close(release) }) }
+	// released before the fixture closes the pool, which closes the old peer too
+	defer doRelease()
+	fx.PeerService.(*peerService).acceptAddTimeout = 200 * time.Millisecond
+
+	// the old incoming connection, whose transport hangs on close
+	cctx := peer.CtxWithProtoVersion(peer.CtxWithPeerId(ctx, "p1"), 13)
+	old := mock_transport.NewMockMultiConn(fx.ctrl)
+	old.EXPECT().Context().Return(cctx).AnyTimes()
+	old.EXPECT().Addr().Return("yamux://192.0.2.7:3333").AnyTimes()
+	old.EXPECT().IsClosed().Return(false).AnyTimes()
+	old.EXPECT().Accept().Return(nil, fmt.Errorf("test")).AnyTimes()
+	old.EXPECT().CloseChan().Return((<-chan struct{})(nil)).AnyTimes()
+	old.EXPECT().Close().DoAndReturn(func() error {
+		<-release
+		return nil
+	}).AnyTimes()
+	require.NoError(t, fx.Accept(old))
+
+	// the same peer reconnects: Accept must not wait on the hung teardown
+	done := make(chan error, 1)
+	go func() { done <- fx.Accept(fx.mockMC("p1")) }()
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Accept is held up by the old connection's teardown")
+	}
+}
+
 func TestPeerService_PeerObserver(t *testing.T) {
 	// public (non-local) addrs: the global preferQuic order applies
 	var addrs = []string{

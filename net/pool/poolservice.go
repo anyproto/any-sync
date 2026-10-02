@@ -3,11 +3,11 @@ package pool
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
@@ -23,10 +23,14 @@ const (
 	CName = "common.net.pool"
 )
 
+// closeTimeout bounds a cache close pass and Close's wait on the pairs an
+// earlier Flush is still closing (see pool.closeTimeout)
+const closeTimeout = 10 * time.Second
+
 var log = logger.NewNamed(CName)
 
 func New() Service {
-	return &poolService{}
+	return &poolService{pool: &pool{closeTimeout: closeTimeout}}
 }
 
 type Service interface {
@@ -47,39 +51,37 @@ type poolService struct {
 
 func (p *poolService) Init(a *app.App) (err error) {
 	p.dialer = a.MustComponent("net.peerservice").(dialer)
-	p.pool = &pool{}
 	p.pool.closingCtx, p.pool.closingCancel = context.WithCancel(context.Background())
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}
-	p.pool.outgoing = ocache.New(
-		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			value, err = p.dialer.Dial(ctx, id)
-			if err != nil {
-				if errors.Is(err, handshake.ErrIncompatibleVersion) {
-					return &errObject{err: err, createdTime: atomic.NewTime(time.Now())}, nil
-				}
-				return value, err
-			}
-			if pr, ok := value.(peer.Peer); ok {
-				go p.pool.evictOnClose(pr, p.pool.outgoing, false)
-			}
-			return value, nil
-		},
-		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Minute/2),
-		ocache.WithTTL(time.Minute),
-		ocache.WithPrometheus(p.metricReg, "netpool", "outgoing"),
-	)
-	p.pool.incoming = ocache.New(
-		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return nil, ocache.ErrNotExists
-		},
-		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Minute/2),
-		ocache.WithTTL(time.Minute),
-		ocache.WithPrometheus(p.metricReg, "netpool", "incoming"),
-	)
+	// Flush recreates the caches, so the collectors are built and registered
+	// once here and shared by every instance (WithPrometheus would register
+	// the same names again and panic). The names stay
+	// netpool_{outgoing,incoming}_{hit,miss,gc,size}; size reads the current
+	// pair, so it is registered only once one is published. The hit path
+	// reads the caches through Peek, which counts nothing, and counts for
+	// itself through fastMetrics. ocache skips a nil option.
+	var outgoing, incoming ocache.PrometheusCollectors
+	var outgoingMetrics, incomingMetrics ocache.Option
+	if p.metricReg != nil {
+		outgoing = ocache.NewPrometheusCollectors("netpool", "outgoing", func() int {
+			return p.pool.current.Load().outgoing.Len()
+		})
+		incoming = ocache.NewPrometheusCollectors("netpool", "incoming", func() int {
+			return p.pool.current.Load().incoming.Len()
+		})
+		outgoingMetrics, incomingMetrics = outgoing.Option(), incoming.Option()
+		p.pool.metrics = &fastMetrics{incomingHit: incoming.Hit, incomingMiss: incoming.Miss, outgoingHit: outgoing.Hit}
+	}
+	p.pool.newCaches = func() *caches {
+		return p.newCaches(outgoingMetrics, incomingMetrics)
+	}
+	p.pool.current.Store(p.pool.newCaches())
+	if p.metricReg != nil {
+		outgoing.MustRegister(p.metricReg)
+		incoming.MustRegister(p.metricReg)
+	}
 	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
 	if !ok {
 		comp = debugstat.NewNoOp()
@@ -90,22 +92,115 @@ func (p *poolService) Init(a *app.App) (err error) {
 	return nil
 }
 
+// newCaches builds one cache pair. The outgoing loader belongs to its pair: it
+// never dials for a pair that has been replaced or is closing (the load fails
+// with ErrClosed, and a lookup retries on the current pair), the dial itself
+// ends with the pair, and the watcher it starts is bound to the cache it
+// loads into, not to whichever pair is current when the dial finishes.
+func (p *poolService) newCaches(outgoingMetrics, incomingMetrics ocache.Option) *caches {
+	c := &caches{}
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+	c.outgoing = ocache.New(
+		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			if c.ctx.Err() != nil {
+				return nil, ocache.ErrClosed
+			}
+			dctx, release := c.bind(ctx)
+			defer release()
+			value, err = p.dialer.Dial(dctx, id)
+			if err != nil {
+				if errors.Is(err, handshake.ErrIncompatibleVersion) {
+					return &errObject{id: id, err: err, createdTime: atomic.NewTime(time.Now())}, nil
+				}
+				return value, err
+			}
+			if pr, ok := value.(peer.Peer); ok {
+				value = wrap(pr)
+				go p.pool.evictOnClose(value, c, false)
+			}
+			return value, nil
+		},
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute/2),
+		ocache.WithTTL(time.Minute),
+		ocache.WithCloseTimeout(p.pool.closeTimeout),
+		outgoingMetrics,
+	)
+	c.incoming = ocache.New(
+		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			return nil, ocache.ErrNotExists
+		},
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute/2),
+		ocache.WithTTL(time.Minute),
+		ocache.WithCloseTimeout(p.pool.closeTimeout),
+		incomingMetrics,
+	)
+	c.peekIncoming, c.peekOutgoing = mustPeeker(c.incoming), mustPeeker(c.outgoing)
+	return c
+}
+
+// mustPeeker asserts the hit-path read on a cache; every cache the pool builds
+// comes from ocache.New, so a failure is a programming error
+func mustPeeker(c ocache.OCache) ocache.Peeker {
+	pk, ok := c.(ocache.Peeker)
+	if !ok {
+		panic(fmt.Sprintf("pool: cache %T does not implement ocache.Peeker", c))
+	}
+	return pk
+}
+
 func (p *pool) Run(ctx context.Context) (err error) {
 	return nil
 }
 
+// Close closes the current pair, waits for its peer teardowns and for the
+// pairs earlier flushes are still closing, all bounded by ctx and closeTimeout;
+// on a timeout the teardown goroutine keeps running in the background (it
+// ends when the hung peer close does, which may be never) and Close returns
+// nil. Flush is a no-op from here on. Idempotent.
 func (p *pool) Close(ctx context.Context) (err error) {
+	p.swapMu.Lock()
+	if p.closed {
+		p.swapMu.Unlock()
+		return nil
+	}
+	p.closed = true
+	cur := p.current.Load()
+	p.swapMu.Unlock()
+	if cur == nil {
+		// never initialised: nothing to close
+		return nil
+	}
 	if p.closingCancel != nil {
 		p.closingCancel()
 	}
 	p.statService.RemoveProvider(p)
-	if e := p.incoming.Close(); e != nil {
-		log.Warn("close incoming cache error", zap.Error(e))
+	// lookups blocked on the current pair fail now with ErrClosed (see lookup)
+	cur.cancel()
+	done := make(chan error, 1)
+	go func() {
+		err := closeCaches(cur, cur.snapshot(false))
+		p.closing.Wait()
+		done <- err
+	}()
+	timer := time.NewTimer(p.closeTimeout)
+	defer timer.Stop()
+	select {
+	case err = <-done:
+	case <-ctx.Done():
+		log.Warn("pool close: ctx done before every peer closed")
+	case <-timer.C:
+		log.Warn("pool close: timed out waiting for peers to close")
 	}
-	return p.outgoing.Close()
+	return err
 }
 
+// errObject is a cached dial verdict. The loader stores only
+// incompatible-version ones: they say nothing about the network, so Flush
+// carries them over and their 20-minute backoff survives a recovery.
 type errObject struct {
+	id          string
 	err         error
 	createdTime *atomic.Time
 }

@@ -63,9 +63,16 @@ func (q *quicMultiConn) Context() context.Context {
 	return q.cctx
 }
 
-// isConnDead reports whether err means the underlying QUIC connection is gone
-// (idle timeout, peer-initiated close, or an already-closed connection), as
-// opposed to a transient or stream-level error.
+// isConnDead reports whether err means the underlying QUIC connection is gone,
+// as opposed to a transient or stream-level error.
+//
+// Matching relies on net.ErrClosed: in quic-go (v0.63) every connection-level
+// error unwraps to it, so this covers idle timeout, stateless reset,
+// handshake timeout, transport errors, version negotiation failure and any
+// application close code, besides an already-closed connection. A
+// *quic.StreamError (a reset or cancelled stream) does not unwrap to it and
+// is deliberately not matched: the connection itself is fine. The explicit
+// checks below only document the cases that matter most.
 func isConnDead(err error) bool {
 	if err == nil {
 		return false
@@ -74,11 +81,22 @@ func isConnDead(err error) bool {
 	if errors.As(err, &idle) {
 		return true
 	}
-	var appErr *quic.ApplicationError
-	if errors.As(err, &appErr) && appErr.ErrorCode == 2 {
+	var reset *quic.StatelessResetError
+	if errors.As(err, &reset) {
 		return true
 	}
 	return errors.Is(err, quic.ErrServerClosed) || errors.Is(err, net.ErrClosed)
+}
+
+// wrapConnDead normalizes a stream Read/Write error: one meaning the
+// connection is dead is wrapped with transport.NewConnClosedError, so callers
+// classify it like a failed Open or Accept while the original quic error stays
+// reachable; anything else (io.EOF, stream resets, deadlines) is returned as is.
+func wrapConnDead(err error) error {
+	if err == nil || !isConnDead(err) {
+		return err
+	}
+	return transport.NewConnClosedError(err)
 }
 
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
@@ -201,7 +219,7 @@ func (q quicNetConn) Write(b []byte) (n int, err error) {
 	if n > 0 && q.bytesWritten != nil {
 		q.bytesWritten.Add(int64(n))
 	}
-	return
+	return n, wrapConnDead(err)
 }
 
 func (q quicNetConn) Read(b []byte) (n int, err error) {
@@ -209,7 +227,7 @@ func (q quicNetConn) Read(b []byte) (n int, err error) {
 	if n > 0 && q.bytesRead != nil {
 		q.bytesRead.Add(int64(n))
 	}
-	return
+	return n, wrapConnDead(err)
 }
 
 func (q quicNetConn) LocalAddr() net.Addr {
