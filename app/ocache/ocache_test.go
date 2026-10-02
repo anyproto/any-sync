@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1400,4 +1401,79 @@ func TestOCache_ForEachAfterClose(t *testing.T) {
 	})
 	_, err := c.Pick(ctx, "id")
 	require.ErrorIs(t, err, ErrClosed)
+}
+
+func TestOCache_Peek(t *testing.T) {
+	t.Run("hit touches and counts, miss counts nothing", func(t *testing.T) {
+		reg := prometheus.NewRegistry()
+		obj := NewTestObject("a", true, nil)
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			return obj, nil
+		}, WithTTL(time.Hour), WithGCPeriod(0), WithPrometheus(reg, "peek", "test")).(*oCache)
+		_, ok := c.Peek("a", true)
+		require.False(t, ok, "nothing loaded yet")
+		_, err := c.Get(ctx, "a")
+		require.NoError(t, err)
+		c.mu.Lock()
+		c.data["a"].lastUsage = time.Now().Add(-time.Minute)
+		c.mu.Unlock()
+		v, ok := c.Peek("a", false)
+		require.True(t, ok)
+		require.Same(t, obj, v)
+		c.mu.Lock()
+		require.Less(t, c.data["a"].lastUsage, time.Now().Add(-30*time.Second), "Pick-like peek must not refresh the deadline")
+		c.mu.Unlock()
+		v, ok = c.Peek("a", true)
+		require.True(t, ok)
+		require.Same(t, obj, v)
+		c.mu.Lock()
+		require.Greater(t, c.data["a"].lastUsage, time.Now().Add(-time.Second), "Get-like peek refreshes the deadline")
+		c.mu.Unlock()
+		families, err := reg.Gather()
+		require.NoError(t, err)
+		values := map[string]float64{}
+		for _, mf := range families {
+			if m := mf.GetMetric()[0]; m.GetCounter() != nil {
+				values[mf.GetName()] = m.GetCounter().GetValue()
+			}
+		}
+		// one miss from Get's load, two hits from the two peeks
+		require.Equal(t, float64(1), values["peek_test_miss"])
+		require.Equal(t, float64(2), values["peek_test_hit"])
+	})
+	t.Run("loading, closing and closed are misses", func(t *testing.T) {
+		loading := make(chan struct{})
+		release := make(chan struct{})
+		closeCh := make(chan struct{})
+		obj := NewTestObject("a", false, closeCh)
+		c := New(func(ctx context.Context, id string) (Object, error) {
+			close(loading)
+			<-release
+			return obj, nil
+		}, WithTTL(time.Hour), WithGCPeriod(0)).(*oCache)
+		go func() { _, _ = c.Get(ctx, "a") }()
+		<-loading
+		_, ok := c.Peek("a", true)
+		require.False(t, ok, "loading entry")
+		close(release)
+		require.Eventually(t, func() bool { _, ok := c.Peek("a", false); return ok }, time.Second, time.Millisecond)
+
+		// a closer holds the entry: Remove blocks in obj.Close until closeCh
+		removed := make(chan struct{})
+		go func() {
+			_, _ = c.Remove(ctx, "a")
+			close(removed)
+		}()
+		require.Eventually(t, func() bool { _, ok := c.Peek("a", false); return !ok }, time.Second, time.Millisecond)
+		close(closeCh)
+		<-removed
+
+		require.NoError(t, c.Add("b", NewTestObject("b", true, nil)))
+		v, ok := c.Peek("b", false)
+		require.True(t, ok)
+		require.NotNil(t, v)
+		require.NoError(t, c.Close())
+		_, ok = c.Peek("b", false)
+		require.False(t, ok, "closed cache")
+	})
 }

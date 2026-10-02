@@ -97,6 +97,11 @@ func (m *wtMultiConn) BytesWritten() int64 {
 	return m.bytesWritten.Load()
 }
 
+// WriteTimeout implements transport.WriteTimeouter
+func (m *wtMultiConn) WriteTimeout() time.Duration {
+	return m.writeTimeout
+}
+
 func (m *wtMultiConn) Context() context.Context {
 	return m.cctx
 }

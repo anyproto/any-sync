@@ -251,6 +251,47 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 	return val.waitLoad(ctx, id)
 }
 
+// Peeker is the non-blocking read the cache returned by New offers on top of
+// OCache; kept off that interface so other implementations stay valid.
+type Peeker interface {
+	// Peek returns the value for id only if it is loaded and not being
+	// closed, without loading, waiting or allocating: the hot path for
+	// callers that handle a miss themselves. A hit counts as a cache hit and,
+	// with touch, refreshes the GC deadline like Get; a miss counts nothing
+	// (ok=false also for a loading entry, a closing one or a closed cache).
+	Peek(id string, touch bool) (value Object, ok bool)
+}
+
+func (c *oCache) Peek(id string, touch bool) (value Object, ok bool) {
+	c.mu.Lock()
+	e, exists := c.data[id]
+	if c.closed || !exists || e.isClosing() {
+		c.mu.Unlock()
+		return nil, false
+	}
+	select {
+	case <-e.load:
+	default:
+		// still loading
+		c.mu.Unlock()
+		return nil, false
+	}
+	// value and loadErr are written before load closes; a failed load deletes
+	// its entry under c.mu, so a non-nil loadErr here means the entry is on
+	// its way out
+	if e.loadErr != nil || e.value == nil {
+		c.mu.Unlock()
+		return nil, false
+	}
+	if touch {
+		e.lastUsage = time.Now()
+	}
+	value = e.value
+	c.mu.Unlock()
+	c.metricsGet(true)
+	return value, true
+}
+
 // ctx is the cancellable load context Get created together with the entry.
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	defer func() {
