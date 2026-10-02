@@ -176,17 +176,21 @@ func (s connLostStream) RawWrite(kind drpcwire.Kind, data []byte) error {
 	return s.sc.connLost(s.ctx, rw.RawWrite(kind, data))
 }
 
-// connLost reports an error the caller did not cause, returned while this sub
-// conn is closed or doomed, as transport.ErrConnClosed: the RPC ended because
-// the sub conn did, whether the whole connection died, the remote ended just
-// this sub stream on a live session, or gc or a release closed it here. drpc
-// shows such an end as context.Canceled (its stand-in for a transport
-// io.EOF) or as "manager closed"; callers must be able to tell either from
-// their own cancellation. context.Canceled is kept out of the error chain on
-// purpose; other causes stay reachable. A reply carrying a drpc error code is
-// the server's answer, never a connection loss, and is returned unchanged.
+// connLost reports an error that says the sub conn ended under the caller,
+// returned while this sub conn is closed or doomed, as
+// transport.ErrConnClosed: the RPC ended because the sub conn did, whether
+// the whole connection died, the remote ended just this sub stream on a live
+// session, or gc or a release closed it here. drpc shows such an end as
+// context.Canceled (its stand-in for a transport io.EOF), as a "manager
+// closed" or drpc.ClosedError, or as a transport error matching
+// net.ErrClosed; callers must be able to tell those from their own
+// cancellation. Every other error is returned untouched, even on a closed sub
+// conn: a plain io.EOF (the server ended the stream normally; callers compare
+// it with ==), a reply carrying a drpc error code, any application error.
+// context.Canceled is kept out of the error chain on purpose; other causes
+// stay reachable.
 func (s *subConn) connLost(ctx context.Context, err error) error {
-	if err == nil || ctx.Err() != nil || drpcerr.Code(err) != 0 {
+	if err == nil || err == io.EOF || ctx.Err() != nil || drpcerr.Code(err) != 0 || !subConnEnded(err) {
 		return err
 	}
 	select {
@@ -200,6 +204,25 @@ func (s *subConn) connLost(ctx context.Context, err error) error {
 		return transport.NewConnClosedError(fmt.Errorf("rpc ended by the sub conn closing: %v", err))
 	}
 	return transport.NewConnClosedError(err)
+}
+
+// drpcManagerClosed is the name of drpc's (unexported) error class for a
+// terminated manager
+const drpcManagerClosed = "manager closed"
+
+// subConnEnded reports whether err is how drpc or the transport report the
+// sub conn ending
+func subConnEnded(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) || drpc.ClosedError.Has(err) {
+		return true
+	}
+	var named interface{ Name() (string, bool) }
+	if errors.As(err, &named) {
+		if name, ok := named.Name(); ok && name == drpcManagerClosed {
+			return true
+		}
+	}
+	return false
 }
 
 type peer struct {

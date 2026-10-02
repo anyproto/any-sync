@@ -2406,6 +2406,43 @@ func TestPool_FlushSwap(t *testing.T) {
 			}
 		}))
 	})
+	t.Run("a non-comparable peer comes back as itself from every lookup", func(t *testing.T) {
+		// the pool stores it behind its own pointer; no path may return that
+		fx := newFixture(t)
+		defer fx.Finish()
+		in := newValuePeer("in")
+		require.NoError(t, fx.AddPeer(ctx, in))
+		out := newValuePeer("out")
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer.Peer, error) {
+			return out, nil
+		}
+		isValue := func(pr peer.Peer) {
+			_, ok := pr.(valuePeer)
+			require.True(t, ok, "got %T", pr)
+		}
+		for i := 0; i < 2; i++ { // the second round takes the fast path
+			pr, err := fx.Get(ctx, "in")
+			require.NoError(t, err)
+			isValue(pr)
+			pr, err = fx.Get(ctx, "out")
+			require.NoError(t, err)
+			isValue(pr)
+			pr, err = fx.Pick(ctx, "in")
+			require.NoError(t, err)
+			isValue(pr)
+			pr, err = fx.Pick(ctx, "out")
+			require.NoError(t, err)
+			isValue(pr)
+			pr, err = fx.GetOneOf(ctx, []string{"absent", "out"})
+			require.NoError(t, err)
+			isValue(pr)
+			pr, err = fx.GetOneOf(ctx, []string{"absent", "in"})
+			require.NoError(t, err)
+			isValue(pr)
+		}
+		stats := fx.Service.(*poolService).ProvideStat().(*poolStats)
+		require.Empty(t, stats.PeerStats, "valuePeer is no StatProvider")
+	})
 	t.Run("connected and closed pairing for flushed peers", func(t *testing.T) {
 		obs := &poolEventRecorder{}
 		fx := newFixtureWithObserver(t, obs)
@@ -2457,20 +2494,25 @@ func TestPool_FlushStorm(t *testing.T) {
 			time.Sleep(200 * time.Microsecond)
 			return &taggedPeer{testPeer: newTestPeer(peerId), tag: tr.seqOf(p.current.Load())}, nil
 		}
-		// the workers run until the flusher has done wantFlushes (about
-		// 300ms on an idle machine; with GOMAXPROCS=1 the busy workers starve
-		// it, so a fixed duration would not do)
-		const wantFlushes = 60
+		// The workers drive the flushes themselves (one every 20 Gets each)
+		// on top of a 1ms background flusher, so the number of swaps the
+		// Gets race is proportional to the work and cannot be starved by the
+		// scheduler, whatever the machine load (a busy -race run at
+		// GOMAXPROCS=1 used to starve a background flusher).
+		const perWorker, flushEvery = 200, 20
 		flushes, stopFlusher := startFlusher(t, fx, time.Millisecond)
 		defer stopFlusher()
-		cap := time.Now().Add(20 * time.Second)
 		var stale, failed, ok atomic.Int32
 		var wg sync.WaitGroup
 		for w := 0; w < 8; w++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for i := 0; flushes.Load() < wantFlushes && time.Now().Before(cap); i++ {
+				for i := 0; i < perWorker; i++ {
+					if i%flushEvery == flushEvery-1 {
+						assert.NoError(t, fx.Flush(ctx))
+						flushes.Add(1)
+					}
 					before := tr.seqOf(p.current.Load())
 					gctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 					pr, err := fx.Get(gctx, "a")
@@ -2500,8 +2542,8 @@ func TestPool_FlushStorm(t *testing.T) {
 		wg.Wait()
 		stopFlusher()
 		t.Logf("flushes=%d ok=%d failed=%d stale=%d", flushes.Load(), ok.Load(), failed.Load(), stale.Load())
-		require.GreaterOrEqual(t, flushes.Load(), int64(wantFlushes))
-		require.Greater(t, ok.Load(), int32(100))
+		require.GreaterOrEqual(t, flushes.Load(), int64(8*perWorker/flushEvery))
+		require.Equal(t, int32(8*perWorker), ok.Load())
 		require.Zero(t, failed.Load())
 		require.Zero(t, stale.Load())
 	})

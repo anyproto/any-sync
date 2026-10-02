@@ -925,17 +925,35 @@ func (c *scriptedConn) Invoke(context.Context, string, drpc.Encoding, drpc.Messa
 }
 
 func TestSubConn_ConnLost(t *testing.T) {
-	errManagerClosed := errors.New("manager closed: Close called")
+	errClosed := drpc.ClosedError.New("closed")
 	t.Run("doomed before its close lands", func(t *testing.T) {
-		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errManagerClosed}}
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errClosed}}
 		sc.doomed.Store(true)
 		err := sc.Invoke(ctx, "/x", nil, nil, nil)
 		assert.ErrorIs(t, err, transport.ErrConnClosed)
-		assert.ErrorIs(t, err, errManagerClosed)
+		assert.ErrorIs(t, err, errClosed)
 	})
 	t.Run("live sub conn passes errors through", func(t *testing.T) {
-		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errManagerClosed}}
-		assert.Equal(t, errManagerClosed, sc.Invoke(ctx, "/x", nil, nil, nil))
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: make(chan struct{}), invokeErr: errClosed}}
+		assert.Equal(t, errClosed, sc.Invoke(ctx, "/x", nil, nil, nil))
+	})
+	t.Run("other errors are untouched on a closed sub conn", func(t *testing.T) {
+		closed := make(chan struct{})
+		close(closed)
+		appErr := errors.New("application error")
+		for _, cause := range []error{io.EOF, appErr} {
+			sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: closed, invokeErr: cause}}
+			assert.True(t, sc.Invoke(ctx, "/x", nil, nil, nil) == cause, "%v must be returned as is", cause)
+		}
+	})
+	t.Run("a stream's normal end stays exactly io.EOF", func(t *testing.T) {
+		closed := make(chan struct{})
+		close(closed)
+		sc := &subConn{ConnUnblocked: &scriptedConn{closedCh: closed}}
+		st := connLostStream{Stream: eofStream{}, sc: sc, ctx: ctx}
+		assert.True(t, st.MsgRecv(nil, nil) == io.EOF, "callers compare with ==")
+		assert.True(t, st.MsgSend(nil, nil) == io.EOF)
+		assert.True(t, st.CloseSend() == io.EOF)
 	})
 	t.Run("a coded server reply is never a connection loss", func(t *testing.T) {
 		closed := make(chan struct{})
@@ -955,3 +973,10 @@ func TestSubConn_ConnLost(t *testing.T) {
 		assert.Equal(t, context.Canceled, sc.Invoke(cctx, "/x", nil, nil, nil))
 	})
 }
+
+// eofStream is a drpc stream the server has ended normally
+type eofStream struct{ drpc.Stream }
+
+func (eofStream) MsgRecv(drpc.Message, drpc.Encoding) error { return io.EOF }
+func (eofStream) MsgSend(drpc.Message, drpc.Encoding) error { return io.EOF }
+func (eofStream) CloseSend() error                          { return io.EOF }

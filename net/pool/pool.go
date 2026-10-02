@@ -238,8 +238,10 @@ func (p *pool) fast(id string, touch bool) (pr peer.Peer, missed *caches) {
 			return nil, c
 		}
 	}
-	pr, isPeer := v.(peer.Peer)
-	if !isPeer || pr.IsClosed() || p.current.Load() != c {
+	// getPeer, not a type assertion: a stored pooledPeer satisfies peer.Peer
+	// too and must not reach the caller
+	pr, err := getPeer(v)
+	if err != nil || pr.IsClosed() || p.current.Load() != c {
 		return nil, nil
 	}
 	if m := p.metrics; m != nil {

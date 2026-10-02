@@ -160,10 +160,15 @@ func TestPeer_RPCOnDeadYamuxSessionIsConnClosed(t *testing.T) {
 		case <-time.After(10 * time.Second):
 			t.Fatal("the receive did not return")
 		}
-		assert.ErrorIs(t, err, transport.ErrConnClosed)
+		// drpc ends the receive either as a cancellation, reported as
+		// ErrConnClosed, or with a plain io.EOF, the same value a normal end of
+		// stream gives, which is left as is since callers compare it with ==.
+		// Never a bare context.Canceled.
+		assert.True(t, err == io.EOF || errors.Is(err, transport.ErrConnClosed), "got %v", err)
 		assert.False(t, errors.Is(err, context.Canceled), "must not look like the caller's cancellation: %v", err)
-		// a send after it as well
-		assert.ErrorIs(t, st.MsgSend(&handshakeproto.Proto{Proto: 1}, nil), transport.ErrConnClosed)
+		err = st.MsgSend(&handshakeproto.Proto{Proto: 1}, nil)
+		assert.True(t, err == io.EOF || errors.Is(err, transport.ErrConnClosed), "got %v", err)
+		assert.False(t, errors.Is(err, context.Canceled), "got %v", err)
 	})
 	t.Run("stream cancelled by its caller stays canceled", func(t *testing.T) {
 		mcS, mcC := multiconntest.MultiConnPair(
