@@ -44,7 +44,9 @@ type aclObject struct {
 	store      list.Storage
 
 	list.AclList
+	// ready is closed by the first consensus event, which leaves consErr set when the object failed to load
 	ready   chan struct{}
+	loaded  bool
 	consErr error
 
 	lastUsage atomic.Time
@@ -52,45 +54,57 @@ type aclObject struct {
 	mu sync.Mutex
 }
 
+// AddConsensusRecords builds the list from the first event and adds the records of the later ones.
+// A watch can deliver more events after an error, which only finishes the load once.
 func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	slices.Reverse(recs)
-	if a.store == nil {
-		defer close(a.ready)
-		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
-			return
-		}
-		verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
-		if networkId := a.aclService.nodeConf.Configuration().NetworkId; networkId != "" {
-			netKey, err := crypto.DecodeNetworkId(networkId)
-			if err != nil {
-				a.consErr = fmt.Errorf("invalid networkId: %w", err)
-				return
-			}
-			verifier = recordverifier.New(netKey)
-		}
-		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, verifier); a.consErr != nil {
-			return
-		}
-	} else {
-		a.Lock()
-		defer a.Unlock()
-		if err := a.AddRawRecords(recs); err != nil {
-			log.Warn("unable to add consensus records", zap.Error(err), zap.String("spaceId", a.id))
-			return
-		}
+	if !a.loaded {
+		a.finishLoad(a.build(recs))
+		return
 	}
+	if a.consErr != nil {
+		// the object failed to load and is being dropped
+		return
+	}
+	a.Lock()
+	defer a.Unlock()
+	if err := a.AddRawRecords(recs); err != nil {
+		log.Warn("unable to add consensus records", zap.Error(err), zap.String("spaceId", a.id))
+	}
+}
+
+func (a *aclObject) build(recs []*consensusproto.RawRecordWithId) (err error) {
+	if a.store, err = list.NewInMemoryStorage(a.id, recs); err != nil {
+		return err
+	}
+	verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+	if networkId := a.aclService.nodeConf.Configuration().NetworkId; networkId != "" {
+		netKey, err := crypto.DecodeNetworkId(networkId)
+		if err != nil {
+			return fmt.Errorf("invalid networkId: %w", err)
+		}
+		verifier = recordverifier.New(netKey)
+	}
+	a.AclList, err = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, verifier)
+	return err
+}
+
+// finishLoad ends the wait in newAclObject with err; it is called once, under mu
+func (a *aclObject) finishLoad(err error) {
+	a.loaded = true
+	a.consErr = err
+	close(a.ready)
 }
 
 func (a *aclObject) AddConsensusError(err error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.store == nil {
-		a.consErr = err
-		close(a.ready)
+	if !a.loaded {
+		a.finishLoad(err)
 	} else {
-		log.Warn("got consensus error", zap.Error(err))
+		log.Warn("got consensus error", zap.Error(err), zap.String("spaceId", a.id))
 	}
 }
 
