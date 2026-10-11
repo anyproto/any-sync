@@ -368,7 +368,13 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 		}
 		return
 	}
-	if otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count {
+	// Nodes may answer a root hash query with a synthetic Count=1.
+	// Do not interpret that cached summary as a one-element space when
+	// our local space is large; walk the normal child ranges instead.
+	rootCountUnknown := r.From == 0 && r.To == math.MaxUint64 && !r.Elements &&
+		otherRes.Count == 1 && len(otherRes.Elements) == 0 &&
+		myRes.Count > d.compareThreshold
+	if !rootCountUnknown && (otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count) {
 		r.Elements = true
 		dctx.prepare = append(dctx.prepare, r)
 		return
