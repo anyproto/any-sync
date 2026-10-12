@@ -216,6 +216,21 @@ func genTupleRanges(from, to uint64, divideFactor int) (prepare []rangeTuple) {
 	return
 }
 
+// elementsHash is the hash of a leaf holding els: nil for none
+func elementsHash(els []Element) []byte {
+	if len(els) == 0 {
+		return nil
+	}
+	hasher := hashersPool.Get().(*blake3.Hasher)
+	defer hashersPool.Put(hasher)
+	hasher.Reset()
+	for _, el := range els {
+		hasher.WriteString(el.Id)
+		hasher.WriteString(el.Head)
+	}
+	return hasher.Sum(nil)
+}
+
 func (h *hashRanges) calcElementsHash(from, to uint64) (hash []byte, els int) {
 	hasher := hashersPool.Get().(*blake3.Hasher)
 	defer hashersPool.Put(hasher)

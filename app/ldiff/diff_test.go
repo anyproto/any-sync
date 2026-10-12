@@ -232,6 +232,92 @@ func TestDiff_Diff(t *testing.T) {
 	})
 }
 
+func TestDiff_RangeBelowLeaf(t *testing.T) {
+	ctx := context.Background()
+	const bucketBits, childBits = 5, 10
+	inBucket := func(hash uint64) bool { return hash>>(64-bucketBits) == 0 }
+	inChild := func(hash uint64) bool { return hash>>(64-childBits) == 0 }
+	// b divides root bucket 0 and holds nothing in its child 0, where a holds its only id
+	b := New(32, 256).(CompareDiff)
+	for _, id := range idsMatching(257, func(hash uint64) bool { return inBucket(hash) && !inChild(hash) }) {
+		b.Set(Element{Id: id, Head: "h"})
+	}
+	onlyA := idsMatching(1, inChild)[0]
+	a := New(32, 256).(CompareDiff)
+	a.Set(Element{Id: onlyA, Head: "h"})
+	child := prefixTuple(0, childBits)
+
+	t.Run("hashes like a leaf", func(t *testing.T) {
+		below, err := a.Ranges(ctx, []Range{{From: child.from, To: child.to}}, nil)
+		require.NoError(t, err)
+		require.Equal(t, []Element{{Id: onlyA, Head: "h"}}, below[0].Elements)
+		require.Equal(t, 1, below[0].Count)
+		// the same range is a leaf once bucket 0 is divided
+		c := New(32, 256)
+		c.Set(b.Elements()...)
+		c.Set(Element{Id: onlyA, Head: "h"})
+		leaf, err := c.Ranges(ctx, []Range{{From: child.from, To: child.to}}, nil)
+		require.NoError(t, err)
+		require.Empty(t, leaf[0].Elements)
+		require.NotEmpty(t, leaf[0].Hash)
+		require.Equal(t, leaf[0].Hash, below[0].Hash)
+
+		empty, err := a.Ranges(ctx, []Range{{From: child.to + 1, To: 2*child.to + 1}}, nil)
+		require.NoError(t, err)
+		require.Nil(t, empty[0].Hash)
+		require.Zero(t, empty[0].Count)
+	})
+	t.Run("differs from an empty leaf", func(t *testing.T) {
+		newIds, changedIds, removedIds, err := a.Diff(ctx, b)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, changedIds)
+		require.Equal(t, []string{onlyA}, removedIds)
+
+		newIds, changedIds, removedIds, err = b.Diff(ctx, a)
+		require.NoError(t, err)
+		require.Equal(t, []string{onlyA}, newIds)
+		require.Empty(t, changedIds)
+		require.Len(t, removedIds, 257)
+
+		newIds, ourChangedIds, theirChangedIds, removedIds, err := a.CompareDiff(ctx, b)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, ourChangedIds)
+		require.Empty(t, theirChangedIds)
+		require.Equal(t, []string{onlyA}, removedIds)
+	})
+	t.Run("equals a leaf with the same elements", func(t *testing.T) {
+		c := New(32, 256)
+		c.Set(b.Elements()...)
+		c.Set(Element{Id: onlyA, Head: "h"})
+		// the walk reaches child 0 of bucket 0, held below a leaf by a and as a leaf by c:
+		// equal hashes settle it without fetching elements
+		remote := &elementRequests{Remote: c, ranges: map[rangeTuple]int{}}
+		newIds, changedIds, removedIds, err := a.Diff(ctx, remote)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, changedIds)
+		require.Empty(t, removedIds)
+		require.Zero(t, remote.ranges[child])
+	})
+}
+
+// elementRequests counts the ranges requested with elements
+type elementRequests struct {
+	Remote
+	ranges map[rangeTuple]int
+}
+
+func (r *elementRequests) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) ([]RangeResult, error) {
+	for _, rg := range ranges {
+		if rg.Elements {
+			r.ranges[rangeTuple{from: rg.From, to: rg.To}]++
+		}
+	}
+	return r.Remote.Ranges(ctx, ranges, resBuf)
+}
+
 func TestDiff_ConcurrentSet(t *testing.T) {
 	ctx := context.Background()
 	// the remote fills root bucket 0 beyond the threshold and leaves the other buckets empty,

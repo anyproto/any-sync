@@ -272,6 +272,11 @@ func (d *diff) getRange(r Range) (rr RangeResult) {
 		rr.Elements = append(rr.Elements, elem)
 	}
 	rr.Count = len(rr.Elements)
+	if rng == nil {
+		// a range below a leaf hashes like a leaf holding the same elements,
+		// so only an empty one compares equal to an empty leaf
+		rr.Hash = elementsHash(rr.Elements)
+	}
 	return
 }
 
