@@ -2,7 +2,9 @@ package headsync
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -276,7 +278,7 @@ func TestDiffManager_TryDiff(t *testing.T) {
 		expectedChangedIds := []string{"changed1"}
 		expectedRemovedIds := []string{"removed1"}
 
-		fx.diffMock.EXPECT().Diff(ctx, remoteDiff).Return(expectedNewIds, expectedChangedIds, expectedRemovedIds, nil)
+		fx.diffMock.EXPECT().DiffBelowRoot(ctx, remoteDiff).Return(expectedNewIds, expectedChangedIds, expectedRemovedIds, nil)
 
 		newIds, changedIds, removedIds, err := fx.diffManager.TryDiff(ctx, remoteDiff)
 		require.NoError(t, err)
@@ -542,4 +544,96 @@ func TestDiffManager_HashStability(t *testing.T) {
 		dm.UpdateHeads(u)
 	}
 	require.Equal(t, "9d2101bbe6775d7cd4f1d322d0f227e48ccc27ae3bc745dbda5d05bd4ba61fc1", diff.Hash())
+}
+
+// cachedHeadClient answers HeadSync like a node: a hash-only root request from a head cache
+// with a placeholder count, everything else from the space diff
+type cachedHeadClient struct {
+	diff                ldiff.Diff
+	calls               int
+	rootElementRequests int
+	elements            int
+}
+
+func (c *cachedHeadClient) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+	c.calls++
+	if len(req.Ranges) == 1 && !req.Ranges[0].Elements && req.Ranges[0].From == 0 && req.Ranges[0].To == math.MaxUint64 {
+		hash, err := hex.DecodeString(c.diff.Hash())
+		if err != nil {
+			return nil, err
+		}
+		return &spacesyncproto.HeadSyncResponse{
+			DiffType: spacesyncproto.DiffType_V3,
+			Results:  []*spacesyncproto.HeadSyncResult{{Hash: hash, Count: 1}},
+		}, nil
+	}
+	for _, rg := range req.Ranges {
+		if rg.From == 0 && rg.To == math.MaxUint64 && rg.Elements {
+			c.rootElementRequests++
+		}
+	}
+	resp, err := HandleRangeRequest(ctx, c.diff, req)
+	if err != nil {
+		return nil, err
+	}
+	for _, res := range resp.Results {
+		c.elements += len(res.Elements)
+	}
+	return resp, nil
+}
+
+func TestDiffManager_TryDiff_cachedRoot(t *testing.T) {
+	ctx := context.Background()
+	elements := func(from, to int) []ldiff.Element {
+		els := make([]ldiff.Element, 0, to-from)
+		for i := from; i < to; i++ {
+			els = append(els, ldiff.Element{Id: fmt.Sprintf("id%d", i), Head: "head"})
+		}
+		return els
+	}
+	tryDiff := func(t *testing.T, local, remote []ldiff.Element) (newIds, changedIds, removedIds []string, client *cachedHeadClient) {
+		diff := ldiff.New(32, 256)
+		diff.Set(local...)
+		client = &cachedHeadClient{diff: ldiff.New(32, 256)}
+		client.diff.Set(remote...)
+		dm := NewDiffManager(diff, nil, nil, logger.NewNamed("test"), ctx, nil)
+		newIds, changedIds, removedIds, err := dm.TryDiff(ctx, NewRemoteDiff("spaceId", client))
+		require.NoError(t, err)
+		return
+	}
+	t.Run("a large space with a few differences walks child ranges", func(t *testing.T) {
+		remote := append(elements(2, 5007), ldiff.Element{Id: "id1", Head: "changed"})
+		newIds, changedIds, removedIds, client := tryDiff(t, elements(0, 5000), remote)
+		require.Len(t, newIds, 7)
+		require.Equal(t, []string{"id1"}, changedIds)
+		require.Equal(t, []string{"id0"}, removedIds)
+		require.Zero(t, client.rootElementRequests)
+		// only the leaves holding a difference are fetched
+		require.Less(t, client.elements, 9*256)
+	})
+	t.Run("an empty space fetches every head in one round", func(t *testing.T) {
+		newIds, _, _, client := tryDiff(t, nil, elements(0, 3))
+		require.Len(t, newIds, 3)
+		require.Equal(t, 3, client.calls)
+		require.Equal(t, 3, client.elements)
+	})
+	t.Run("equal hashes need the check only", func(t *testing.T) {
+		newIds, changedIds, removedIds, client := tryDiff(t, elements(0, 1000), elements(0, 1000))
+		require.Empty(t, newIds)
+		require.Empty(t, changedIds)
+		require.Empty(t, removedIds)
+		require.Equal(t, 1, client.calls)
+	})
+	t.Run("a tiny remote", func(t *testing.T) {
+		newIds, changedIds, removedIds, _ := tryDiff(t, elements(0, 5000), elements(0, 1))
+		require.Empty(t, newIds)
+		require.Empty(t, changedIds)
+		require.Len(t, removedIds, 4999)
+	})
+	t.Run("an empty remote", func(t *testing.T) {
+		newIds, changedIds, removedIds, _ := tryDiff(t, elements(0, 5000), nil)
+		require.Empty(t, newIds)
+		require.Empty(t, changedIds)
+		require.Len(t, removedIds, 5000)
+	})
 }

@@ -232,6 +232,69 @@ func TestDiff_Diff(t *testing.T) {
 	})
 }
 
+func TestDiff_DiffBelowRoot(t *testing.T) {
+	ctx := context.Background()
+	els := make([]Element, 5000)
+	for i := range els {
+		els[i] = Element{Id: fmt.Sprintf("id%d", i), Head: "h"}
+	}
+	build := func(els []Element) Diff {
+		d := New(32, 256)
+		d.Set(els...)
+		return d
+	}
+	for name, tc := range map[string]struct{ local, remote []Element }{
+		"few differences": {els[:4995], append(append([]Element{}, els[5:]...), Element{Id: "id1", Head: "changed"})},
+		"empty local":     {nil, els[:3]},
+		"empty remote":    {els, nil},
+		"tiny remote":     {els, els[:1]},
+		"equal":           {els, els},
+	} {
+		t.Run(name, func(t *testing.T) {
+			local, remote := build(tc.local), build(tc.remote)
+			wantNew, wantChanged, wantRemoved, err := local.Diff(ctx, remote)
+			require.NoError(t, err)
+			requests := &rangeRequests{Remote: remote}
+			newIds, changedIds, removedIds, err := local.DiffBelowRoot(ctx, requests)
+			require.NoError(t, err)
+			require.ElementsMatch(t, wantNew, newIds)
+			require.ElementsMatch(t, wantChanged, changedIds)
+			require.ElementsMatch(t, wantRemoved, removedIds)
+			require.False(t, requests.root, "the root was requested")
+			require.Equal(t, 32, requests.first)
+			if name == "equal" {
+				require.Equal(t, 1, requests.calls)
+			}
+		})
+	}
+	t.Run("context cancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		cancel()
+		_, _, _, err := build(els).DiffBelowRoot(ctx, build(nil))
+		require.ErrorIs(t, err, context.Canceled)
+	})
+}
+
+// rangeRequests records what a diff asks the remote for
+type rangeRequests struct {
+	Remote
+	calls, first int
+	root         bool
+}
+
+func (r *rangeRequests) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) ([]RangeResult, error) {
+	r.calls++
+	if r.calls == 1 {
+		r.first = len(ranges)
+	}
+	for _, rg := range ranges {
+		if rg.From == 0 && rg.To == math.MaxUint64 {
+			r.root = true
+		}
+	}
+	return r.Remote.Ranges(ctx, ranges, resBuf)
+}
+
 func TestDiff_RangeBelowLeaf(t *testing.T) {
 	ctx := context.Background()
 	const bucketBits, childBits = 5, 10

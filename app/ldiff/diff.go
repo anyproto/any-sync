@@ -28,6 +28,9 @@ type Diff interface {
 	RemoveId(id string) error
 	// Diff makes diff with remote container
 	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
+	// DiffBelowRoot is Diff for a root hash known to differ: it starts at the ranges below the root,
+	// so the remote's root summary is never requested
+	DiffBelowRoot(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
 	// Elements retrieves all elements in the Diff
 	Elements() []Element
 	// Element returns an element by id
@@ -305,47 +308,39 @@ var errMismatched = errors.New("query and results mismatched")
 // Diff makes diff with remote container
 func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
 	dctx := &diffCtx{compareFunc: d.compareElementsEqual}
-	dctx.toSend = append(dctx.toSend, Range{
-		From: 0,
-		To:   math.MaxUint64,
-	})
-	for len(dctx.toSend) > 0 {
-		select {
-		case <-ctx.Done():
-			err = ctx.Err()
-			return
-		default:
-		}
-		if dctx.otherRes, err = dl.Ranges(ctx, dctx.toSend, dctx.otherRes); err != nil {
-			return
-		}
-		if dctx.myRes, err = d.Ranges(ctx, dctx.toSend, dctx.myRes); err != nil {
-			return
-		}
-		if len(dctx.otherRes) != len(dctx.toSend) || len(dctx.myRes) != len(dctx.toSend) {
-			err = errMismatched
-			return
-		}
-		for i, r := range dctx.toSend {
-			d.compareResults(dctx, r, dctx.myRes[i], dctx.otherRes[i])
-		}
-		dctx.toSend, dctx.prepare = dctx.prepare, dctx.toSend
-		dctx.prepare = dctx.prepare[:0]
+	dctx.toSend = append(dctx.toSend, Range{From: 0, To: math.MaxUint64})
+	if err = d.walk(ctx, dl, dctx); err != nil {
+		return
+	}
+	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
+}
+
+func (d *diff) DiffBelowRoot(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
+	dctx := &diffCtx{compareFunc: d.compareElementsEqual}
+	for _, tuple := range genTupleRanges(0, math.MaxUint64, d.divideFactor) {
+		dctx.toSend = append(dctx.toSend, Range{From: tuple.from, To: tuple.to})
+	}
+	if err = d.walk(ctx, dl, dctx); err != nil {
+		return
 	}
 	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
 }
 
 func (d *diff) CompareDiff(ctx context.Context, dl Remote) (newIds, ourChangedIds, theirChangedIds, removedIds []string, err error) {
 	dctx := &diffCtx{compareFunc: d.compareElementsGreater}
-	dctx.toSend = append(dctx.toSend, Range{
-		From: 0,
-		To:   math.MaxUint64,
-	})
+	dctx.toSend = append(dctx.toSend, Range{From: 0, To: math.MaxUint64})
+	if err = d.walk(ctx, dl, dctx); err != nil {
+		return
+	}
+	return dctx.newIds, dctx.changedIds, dctx.theirChangedIds, dctx.removedIds, nil
+}
+
+// walk compares the ranges in dctx.toSend with the remote and descends until the differing elements are known
+func (d *diff) walk(ctx context.Context, dl Remote, dctx *diffCtx) (err error) {
 	for len(dctx.toSend) > 0 {
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
-			return
+			return ctx.Err()
 		default:
 		}
 		if dctx.otherRes, err = dl.Ranges(ctx, dctx.toSend, dctx.otherRes); err != nil {
@@ -355,8 +350,7 @@ func (d *diff) CompareDiff(ctx context.Context, dl Remote) (newIds, ourChangedId
 			return
 		}
 		if len(dctx.otherRes) != len(dctx.toSend) || len(dctx.myRes) != len(dctx.toSend) {
-			err = errMismatched
-			return
+			return errMismatched
 		}
 		for i, r := range dctx.toSend {
 			d.compareResults(dctx, r, dctx.myRes[i], dctx.otherRes[i])
@@ -364,7 +358,7 @@ func (d *diff) CompareDiff(ctx context.Context, dl Remote) (newIds, ourChangedId
 		dctx.toSend, dctx.prepare = dctx.prepare, dctx.toSend
 		dctx.prepare = dctx.prepare[:0]
 	}
-	return dctx.newIds, dctx.changedIds, dctx.theirChangedIds, dctx.removedIds, nil
+	return nil
 }
 
 func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
