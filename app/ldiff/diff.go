@@ -166,7 +166,17 @@ func (d *diff) Set(elements ...Element) {
 	for _, e := range elements {
 		hash := xxhash.Sum64([]byte(e.Id))
 		el := &element{Element: e, hash: hash}
-		d.sl.Remove(el)
+		if cur := d.sl.Get(el); cur != nil {
+			// known id: counts and division stay, only the leaf hash changes;
+			// the skiplist orders by id hash, so the head can change in place
+			curEl := cur.Key().(*element)
+			if curEl.Head == e.Head {
+				continue
+			}
+			curEl.Head = e.Head
+			d.ranges.updateElement(hash)
+			continue
+		}
 		d.sl.Set(el, nil)
 		d.ranges.addElement(hash)
 	}
@@ -364,7 +374,10 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 			dctx.compareFunc(dctx, myRes.Elements, otherRes.Elements)
 		} else {
 			r.Elements = true
-			dctx.compareFunc(dctx, d.getRange(r).Elements, otherRes.Elements)
+			d.mu.RLock()
+			myElements := d.getRange(r).Elements
+			d.mu.RUnlock()
+			dctx.compareFunc(dctx, myElements, otherRes.Elements)
 		}
 		return
 	}

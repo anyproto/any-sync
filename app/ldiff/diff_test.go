@@ -232,6 +232,48 @@ func TestDiff_Diff(t *testing.T) {
 	})
 }
 
+func TestDiff_ConcurrentSet(t *testing.T) {
+	ctx := context.Background()
+	// the remote fills root bucket 0 beyond the threshold and leaves the other buckets empty,
+	// so the local side reads its own elements of those buckets while comparing
+	remote := New(16, 16)
+	for _, id := range idsWithPrefix(0, 4, 17) {
+		remote.Set(Element{Id: id, Head: id})
+	}
+	local := New(16, 16).(CompareDiff)
+	els := make([]Element, 20000)
+	for i := range els {
+		els[i] = Element{Id: fmt.Sprintf("l%d", i), Head: "h"}
+	}
+	local.Set(els...)
+	newIds, _, removedIds, err := local.Diff(ctx, remote)
+	require.NoError(t, err)
+	require.Len(t, newIds, 17)
+	require.Len(t, removedIds, len(els))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 3000; i++ {
+			local.Set(Element{Id: fmt.Sprintf("n%d", i), Head: "h"})
+			if i%3 == 0 {
+				_ = local.RemoveId(els[i].Id)
+			}
+		}
+	}()
+	for running := true; running; {
+		select {
+		case <-done:
+			running = false
+		default:
+		}
+		_, _, _, err = local.Diff(ctx, remote)
+		require.NoError(t, err)
+		_, _, _, _, err = local.CompareDiff(ctx, remote)
+		require.NoError(t, err)
+	}
+}
+
 func BenchmarkDiff_Ranges(b *testing.B) {
 	d := New(16, 16)
 	for i := 0; i < 10000; i++ {

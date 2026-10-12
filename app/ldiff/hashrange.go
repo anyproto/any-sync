@@ -72,6 +72,15 @@ func (h *hashRanges) addElement(elHash uint64) {
 	}
 }
 
+// updateElement marks the leaf holding elHash for re-hashing; counts do not change
+func (h *hashRanges) updateElement(elHash uint64) {
+	rng := h.topRange
+	for rng.isDivided {
+		rng = h.getBottomRange(rng, elHash)
+	}
+	h.dirty[rng] = struct{}{}
+}
+
 func (h *hashRanges) removeElement(elHash uint64) {
 	rng := h.topRange
 	rng.elements--
@@ -79,19 +88,24 @@ func (h *hashRanges) removeElement(elHash uint64) {
 		rng = h.getBottomRange(rng, elHash)
 		rng.elements--
 	}
-	parent := rng.parent
-	if parent.elements <= h.compareThreshold && parent != h.topRange {
-		ranges := genTupleRanges(parent.from, parent.to, h.divideFactor)
-		for _, tuple := range ranges {
-			child := h.ranges[tuple]
-			delete(h.ranges, tuple)
-			delete(h.dirty, child)
-		}
-		parent.isDivided = false
-		h.dirty[parent] = struct{}{}
-	} else {
-		h.dirty[rng] = struct{}{}
+	h.dirty[rng] = struct{}{}
+	// every ancestor that fits the threshold again becomes a leaf, as a fresh build would have it;
+	// the top range stays divided
+	for parent := rng.parent; parent != h.topRange && parent.elements <= h.compareThreshold; parent = parent.parent {
+		h.mergeRange(parent)
 	}
+}
+
+// mergeRange turns a divided range back into a leaf and drops its children;
+// they are leaves themselves, as each holds at most rng.elements <= compareThreshold
+func (h *hashRanges) mergeRange(rng *hashRange) {
+	for _, tuple := range genTupleRanges(rng.from, rng.to, h.divideFactor) {
+		child := h.ranges[tuple]
+		delete(h.ranges, tuple)
+		delete(h.dirty, child)
+	}
+	rng.isDivided = false
+	h.dirty[rng] = struct{}{}
 }
 
 func (h *hashRanges) recalculateHashes() {
