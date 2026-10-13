@@ -33,7 +33,7 @@ require (
 	github.com/quic-go/quic-go v0.63.0
 	github.com/quic-go/webtransport-go v0.13.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tmc/go-iroh v0.2.1
+	github.com/tmc/go-iroh v0.3.0
 	github.com/zeebo/blake3 v0.2.4
 	go.uber.org/atomic v1.12.0
 	go.uber.org/mock v0.6.0
