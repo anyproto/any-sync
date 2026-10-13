@@ -13,7 +13,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.3
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
-	github.com/gobwas/glob v0.2.3
+	github.com/gobwas/glob v1.0.0
 	github.com/goccy/go-graphviz v0.2.10
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
