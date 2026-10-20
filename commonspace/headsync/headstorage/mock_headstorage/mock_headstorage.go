@@ -111,6 +111,20 @@ func (mr *MockHeadStorageMockRecorder) IterateEntries(ctx, iterOpts, iter any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateEntries", reflect.TypeOf((*MockHeadStorage)(nil).IterateEntries), ctx, iterOpts, iter)
 }
 
+// IterateEntriesWithParent mocks base method.
+func (m *MockHeadStorage) IterateEntriesWithParent(ctx context.Context, iter headstorage.EntryIterator) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IterateEntriesWithParent", ctx, iter)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IterateEntriesWithParent indicates an expected call of IterateEntriesWithParent.
+func (mr *MockHeadStorageMockRecorder) IterateEntriesWithParent(ctx, iter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateEntriesWithParent", reflect.TypeOf((*MockHeadStorage)(nil).IterateEntriesWithParent), ctx, iter)
+}
+
 // MaxLastAddSeq mocks base method.
 func (m *MockHeadStorage) MaxLastAddSeq(ctx context.Context) (uint64, error) {
 	m.ctrl.T.Helper()
