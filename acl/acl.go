@@ -200,14 +200,8 @@ func (as *aclService) HasRecord(ctx context.Context, spaceId, recordId string) (
 	}
 	acl.RLock()
 	defer acl.RUnlock()
-	acl.Iterate(func(record *list.AclRecord) (isContinue bool) {
-		if record.Id == recordId {
-			has = true
-			return false
-		}
-		return true
-	})
-	return
+	// HasHead looks the id up in the list's id -> index map, which holds every record, not only the head
+	return acl.HasHead(recordId), nil
 }
 
 func (as *aclService) Run(ctx context.Context) (err error) {
