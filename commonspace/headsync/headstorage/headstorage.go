@@ -61,6 +61,7 @@ type IterOpts struct {
 type HeadStorage interface {
 	AddObserver(observer Observer)
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
+	IterateEntriesWithParent(ctx context.Context, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
 	GetEntriesByParentId(ctx context.Context, parentId string) ([]HeadsEntry, error)
 	MaxLastAddSeq(ctx context.Context) (uint64, error)
@@ -243,6 +244,31 @@ func (h *headStorage) MaxLastAddSeq(ctx context.Context) (uint64, error) {
 
 func (h *headStorage) DeleteEntry(ctx context.Context, id string) error {
 	return h.headsColl.DeleteId(ctx, id)
+}
+
+// hasParentFilter matches entries with a parent id. The type filter guarantees the field
+// is present, so the query can be answered from the sparse parent id index
+var hasParentFilter = query.Key{Path: []string{parentIdKey}, Filter: query.TypeFilter{Type: anyenc.TypeString}}
+
+// IterateEntriesWithParent iterates all entries that have a parent id, whatever their deleted status
+func (h *headStorage) IterateEntriesWithParent(ctx context.Context, entryIter EntryIterator) error {
+	iter, err := h.headsColl.Find(hasParentFilter).Iter(ctx)
+	if err != nil {
+		return fmt.Errorf("find with parent id: %w", err)
+	}
+	defer iter.Close()
+
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			return fmt.Errorf("doc not found: %w", err)
+		}
+		cont, err := entryIter(entryFromVal(doc.Value()))
+		if !cont {
+			return err
+		}
+	}
+	return iter.Err()
 }
 
 func (h *headStorage) GetEntriesByParentId(ctx context.Context, parentId string) ([]HeadsEntry, error) {
