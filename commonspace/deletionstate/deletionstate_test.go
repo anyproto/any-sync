@@ -112,6 +112,29 @@ func TestDeletionState_Delete(t *testing.T) {
 }
 
 func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
+	for _, scan := range []bool{false, true} {
+		name := "query per deleted id"
+		if scan {
+			name = "scan"
+		}
+		t.Run(name, func(t *testing.T) {
+			testRunOrphanedChildren(t, scan)
+		})
+	}
+}
+
+// setOrphanScan makes Run use the scan for any number of deleted ids, or never
+func setOrphanScan(t *testing.T, scan bool) {
+	prev := orphanQueryMaxDeleted
+	if scan {
+		orphanQueryMaxDeleted = 0
+	} else {
+		orphanQueryMaxDeleted = 1 << 30
+	}
+	t.Cleanup(func() { orphanQueryMaxDeleted = prev })
+}
+
+func testRunOrphanedChildren(t *testing.T, scan bool) {
 	iterDeleted := func(entries ...headstorage.HeadsEntry) func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
 		return func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
 			for _, e := range entries {
@@ -120,16 +143,31 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 			return nil
 		}
 	}
-	iterChildren := func(entries ...headstorage.HeadsEntry) func(ctx context.Context, iter headstorage.EntryIterator) error {
-		return func(ctx context.Context, iter headstorage.EntryIterator) error {
-			for _, e := range entries {
-				_, _ = iter(e)
+	// expectChildren serves the entries with a parent through the path under test
+	expectChildren := func(fx *fixture, deletedIds []string, children ...headstorage.HeadsEntry) {
+		if scan {
+			fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, iter headstorage.EntryIterator) error {
+					for _, e := range children {
+						_, _ = iter(e)
+					}
+					return nil
+				})
+			return
+		}
+		for _, parentId := range deletedIds {
+			var byParent []headstorage.HeadsEntry
+			for _, e := range children {
+				if e.ParentId == parentId {
+					byParent = append(byParent, e)
+				}
 			}
-			return nil
+			fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), parentId).Return(byParent, nil)
 		}
 	}
 
 	t.Run("queues orphaned children of deleted parents", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		fx := newFixture(t)
 		defer fx.stop()
 		parentId := "parentId"
@@ -138,11 +176,10 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
 			DoAndReturn(iterDeleted(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted}))
 		// a non-deleted child of the deleted parent and a child of a live parent
-		fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).
-			DoAndReturn(iterChildren(
-				headstorage.HeadsEntry{Id: childId, ParentId: parentId, DeletedStatus: headstorage.DeletedStatusNotDeleted},
-				headstorage.HeadsEntry{Id: "otherChildId", ParentId: "liveParentId", DeletedStatus: headstorage.DeletedStatusNotDeleted},
-			))
+		expectChildren(fx, []string{parentId},
+			headstorage.HeadsEntry{Id: childId, ParentId: parentId, DeletedStatus: headstorage.DeletedStatusNotDeleted},
+			headstorage.HeadsEntry{Id: "otherChildId", ParentId: "liveParentId", DeletedStatus: headstorage.DeletedStatusNotDeleted},
+		)
 		// Expect the child to be queued
 		fx.headStorage.EXPECT().UpdateEntry(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, update headstorage.HeadsUpdate) error {
 			require.Equal(t, childId, update.Id)
@@ -158,6 +195,7 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 	})
 
 	t.Run("skips already deleted children", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		fx := newFixture(t)
 		defer fx.stop()
 		parentId := "parentId"
@@ -165,8 +203,8 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
 			DoAndReturn(iterDeleted(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted}))
 		// Child is already deleted — should not be queued
-		fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).
-			DoAndReturn(iterChildren(headstorage.HeadsEntry{Id: childId, ParentId: parentId, DeletedStatus: headstorage.DeletedStatusDeleted}))
+		expectChildren(fx, []string{parentId},
+			headstorage.HeadsEntry{Id: childId, ParentId: parentId, DeletedStatus: headstorage.DeletedStatusDeleted})
 		// No UpdateEntry call expected
 
 		err := fx.delState.Run(context.Background())
@@ -175,41 +213,49 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 	})
 
 	t.Run("no children — no error", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		fx := newFixture(t)
 		defer fx.stop()
 		parentId := "parentId"
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
 			DoAndReturn(iterDeleted(headstorage.HeadsEntry{Id: parentId, DeletedStatus: headstorage.DeletedStatusDeleted}))
-		fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).DoAndReturn(iterChildren())
+		expectChildren(fx, []string{parentId})
 
 		err := fx.delState.Run(context.Background())
 		require.NoError(t, err)
 	})
 
-	t.Run("no deleted parents — no scan", func(t *testing.T) {
+	t.Run("no deleted parents — no lookups", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		fx := newFixture(t)
 		defer fx.stop()
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
 			DoAndReturn(iterDeleted(headstorage.HeadsEntry{Id: "queuedId", DeletedStatus: headstorage.DeletedStatusQueued}))
-		// No IterateEntriesWithParent call expected
+		// No IterateEntriesWithParent or GetEntriesByParentId call expected
 
 		err := fx.delState.Run(context.Background())
 		require.NoError(t, err)
 		require.Contains(t, fx.delState.queued, "queuedId")
 	})
 
-	t.Run("scan error — no error", func(t *testing.T) {
+	t.Run("lookup error — no error", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		fx := newFixture(t)
 		defer fx.stop()
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
 			DoAndReturn(iterDeleted(headstorage.HeadsEntry{Id: "parentId", DeletedStatus: headstorage.DeletedStatusDeleted}))
-		fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).Return(fmt.Errorf("scan error"))
+		if scan {
+			fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).Return(fmt.Errorf("scan error"))
+		} else {
+			fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), "parentId").Return(nil, fmt.Errorf("query error"))
+		}
 
 		err := fx.delState.Run(context.Background())
 		require.NoError(t, err)
 	})
 
 	t.Run("same children as a query per deleted parent", func(t *testing.T) {
+		setOrphanScan(t, scan)
 		ctx := context.Background()
 		db, err := anystore.Open(ctx, filepath.Join(t.TempDir(), "test.db"), nil)
 		require.NoError(t, err)
@@ -267,6 +313,39 @@ func TestDeletionState_Run_OrphanedChildren(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, headstorage.DeletedStatusQueued, entry.DeletedStatus)
 		}
+	})
+}
+
+func TestDeletionState_Run_OrphanScanThreshold(t *testing.T) {
+	prev := orphanQueryMaxDeleted
+	orphanQueryMaxDeleted = 2
+	defer func() { orphanQueryMaxDeleted = prev }()
+
+	deleted := func(ids ...string) func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
+		return func(ctx context.Context, opts headstorage.IterOpts, iter headstorage.EntryIterator) error {
+			for _, id := range ids {
+				_, _ = iter(headstorage.HeadsEntry{Id: id, DeletedStatus: headstorage.DeletedStatusDeleted})
+			}
+			return nil
+		}
+	}
+
+	t.Run("at the threshold — query per id", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.stop()
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
+			DoAndReturn(deleted("d1", "d2"))
+		fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), "d1").Return(nil, nil)
+		fx.headStorage.EXPECT().GetEntriesByParentId(gomock.Any(), "d2").Return(nil, nil)
+		require.NoError(t, fx.delState.Run(context.Background()))
+	})
+	t.Run("above the threshold — one scan", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.stop()
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), headstorage.IterOpts{Deleted: true}, gomock.Any()).
+			DoAndReturn(deleted("d1", "d2", "d3"))
+		fx.headStorage.EXPECT().IterateEntriesWithParent(gomock.Any(), gomock.Any()).Return(nil)
+		require.NoError(t, fx.delState.Run(context.Background()))
 	})
 }
 

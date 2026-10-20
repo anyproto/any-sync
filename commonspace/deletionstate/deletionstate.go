@@ -58,12 +58,48 @@ func (st *objectDeletionState) Run(ctx context.Context) (err error) {
 	// Scan for orphaned children of fully deleted parents.
 	// This handles the case where an old client deleted a parent without
 	// cascading to bound children. After upgrade, this queues them for cleanup.
-	// One pass over the entries with a parent instead of a query per deleted id:
-	// almost all deleted ids have no children
 	if len(st.deleted) == 0 {
 		return nil
 	}
 	var orphans []string
+	if len(st.deleted) <= orphanQueryMaxDeleted {
+		orphans = st.orphansByParent(ctx)
+	} else {
+		orphans = st.orphansByScan(ctx)
+	}
+	// update after the reads are done: the scan holds an iterator open
+	for _, childId := range orphans {
+		if uErr := st.updateStatus(childId, headstorage.DeletedStatusQueued); uErr != nil {
+			st.log.Warn("failed to queue orphaned child", zap.String("childId", childId), zap.Error(uErr))
+			continue
+		}
+		st.queued[childId] = struct{}{}
+	}
+	return nil
+}
+
+// up to this many deleted ids Run queries the children of each one: that cost stays bounded
+// (a query costs about as much as scanning ten entries), the number of entries with a parent doesn't
+var orphanQueryMaxDeleted = 100
+
+// orphansByParent queries the children of every deleted id
+func (st *objectDeletionState) orphansByParent(ctx context.Context) (orphans []string) {
+	for parentId := range st.deleted {
+		children, cErr := st.storage.GetEntriesByParentId(ctx, parentId)
+		if cErr != nil {
+			continue
+		}
+		for _, child := range children {
+			if child.DeletedStatus == headstorage.DeletedStatusNotDeleted {
+				orphans = append(orphans, child.Id)
+			}
+		}
+	}
+	return
+}
+
+// orphansByScan makes one pass over the entries with a parent and matches them against the deleted ids
+func (st *objectDeletionState) orphansByScan(ctx context.Context) (orphans []string) {
 	cErr := st.storage.IterateEntriesWithParent(ctx, func(child headstorage.HeadsEntry) (bool, error) {
 		if child.DeletedStatus != headstorage.DeletedStatusNotDeleted {
 			return true, nil
@@ -76,15 +112,7 @@ func (st *objectDeletionState) Run(ctx context.Context) (err error) {
 	if cErr != nil {
 		st.log.Warn("failed to scan for orphaned children", zap.Error(cErr))
 	}
-	// update after the iterator is closed
-	for _, childId := range orphans {
-		if uErr := st.updateStatus(childId, headstorage.DeletedStatusQueued); uErr != nil {
-			st.log.Warn("failed to queue orphaned child", zap.String("childId", childId), zap.Error(uErr))
-			continue
-		}
-		st.queued[childId] = struct{}{}
-	}
-	return nil
+	return
 }
 
 func (st *objectDeletionState) Close(ctx context.Context) (err error) {
