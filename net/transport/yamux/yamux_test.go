@@ -3,6 +3,8 @@ package yamux
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"strings"
@@ -70,6 +72,40 @@ func TestYamuxTransport_Dial(t *testing.T) {
 	assert.NoError(t, acceptErr)
 	assert.Equal(t, data, sData)
 	assert.NoError(t, copyErr)
+}
+
+func TestYamuxTransport_DialSendsServerName(t *testing.T) {
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer lis.Close()
+	serverNameCh := make(chan string, 1)
+	go func() {
+		conn, aerr := lis.Accept()
+		if aerr != nil {
+			return
+		}
+		defer conn.Close()
+		_ = tls.Server(conn, &tls.Config{
+			GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+				serverNameCh <- hello.ServerName
+				return nil, errors.New("hello captured")
+			},
+		}).Handshake()
+	}()
+
+	_, port, err := net.SplitHostPort(lis.Addr().String())
+	require.NoError(t, err)
+	_, err = fxC.Dial(ctx, net.JoinHostPort("localhost", port))
+	require.Error(t, err)
+	select {
+	case serverName := <-serverNameCh:
+		assert.Equal(t, "localhost", serverName)
+	case <-time.After(time.Second * 5):
+		t.Fatal("no ClientHello received")
+	}
 }
 
 func TestYamuxTransport_BytesCounters(t *testing.T) {
