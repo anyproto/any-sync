@@ -13,8 +13,10 @@ type configGetter interface {
 }
 
 type Config struct {
-	RequireClientAuth    bool     `yaml:"requireClientAuth"`
-	CompatibleVersions   []uint32 `yaml:"compatibleVersions"`
+	RequireClientAuth  bool     `yaml:"requireClientAuth"`
+	CompatibleVersions []uint32 `yaml:"compatibleVersions"`
+	// DisableSNI stops outbound TLS handshakes from sending the dialed hostname as SNI
+	DisableSNI bool `yaml:"disableSni"`
 }
 
 // CtxAllowAccountCheck upgrades the context to allow identity check on handshake

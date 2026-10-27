@@ -3,12 +3,14 @@ package secureservice
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"slices"
 
 	"github.com/libp2p/go-libp2p/core/crypto"
+	libp2ppeer "github.com/libp2p/go-libp2p/core/peer"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"go.uber.org/zap"
 
@@ -53,21 +55,23 @@ func New() SecureService {
 }
 
 type SecureService interface {
-	SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error)
+	SecureOutbound(ctx context.Context, conn net.Conn, serverName string) (cctx context.Context, err error)
 	HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error)
 	SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error)
 	HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, remotePeerId string) (cctx context.Context, err error)
-	TlsConfig() (*tls.Config, <-chan crypto.PubKey, error)
+	TlsConfig(serverName string) (*tls.Config, <-chan crypto.PubKey, error)
 	app.Component
 }
 
 type secureService struct {
 	p2pTr              *libp2ptls.Transport
+	p2pIdn             *libp2ptls.Identity
 	account            *accountdata.AccountKeys
 	key                crypto.PrivKey
 	nodeconf           nodeconf.Service
 	protoVersion       uint32
 	compatibleVersions []uint32
+	disableSNI         bool
 
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
@@ -93,6 +97,7 @@ func (s *secureService) Init(a *app.App) (err error) {
 		}
 		s.compatibleVersions = conf.CompatibleVersions
 	}
+	s.disableSNI = conf.DisableSNI
 
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
@@ -114,6 +119,9 @@ func (s *secureService) Init(a *app.App) (err error) {
 	}
 
 	if s.p2pTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
+		return
+	}
+	if s.p2pIdn, err = libp2ptls.NewIdentity(s.key); err != nil {
 		return
 	}
 
@@ -156,12 +164,39 @@ func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteC
 	return
 }
 
-func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error) {
-	sc, err := s.p2pTr.SecureOutbound(ctx, conn, "")
+// SecureOutbound runs the libp2p TLS handshake by hand rather than through
+// p2pTr, which has no way to set the SNI
+func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn, serverName string) (cctx context.Context, err error) {
+	conf, keyCh := s.p2pIdn.ConfigForPeer("")
+	conf.ServerName = s.sniServerName(serverName)
+	tlsConn := tls.Client(conn, conf)
+	remotePeerId, err := tlsClientHandshake(ctx, tlsConn, keyCh)
 	if err != nil {
+		// libp2p closed the conn when its TLS handshake failed, keep doing so
+		_ = conn.Close()
 		return nil, handshake.HandshakeError{Err: err}
 	}
-	return s.HandshakeOutbound(ctx, sc, sc.RemotePeer().String())
+	return s.HandshakeOutbound(ctx, tlsConn, remotePeerId)
+}
+
+// tlsClientHandshake runs the TLS handshake and returns the peer id proven by the server certificate
+func tlsClientHandshake(ctx context.Context, tlsConn *tls.Conn, keyCh <-chan crypto.PubKey) (string, error) {
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
+		return "", err
+	}
+	var remotePubKey crypto.PubKey
+	select {
+	case remotePubKey = <-keyCh:
+	default:
+	}
+	if remotePubKey == nil {
+		return "", errors.New("libp2p tls handshake bug: no key")
+	}
+	remotePeerId, err := libp2ppeer.IDFromPublicKey(remotePubKey)
+	if err != nil {
+		return "", err
+	}
+	return remotePeerId.String(), nil
 }
 
 func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
@@ -184,12 +219,22 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	return cctx, nil
 }
 
-func (s *secureService) TlsConfig() (*tls.Config, <-chan crypto.PubKey, error) {
+func (s *secureService) TlsConfig(serverName string) (*tls.Config, <-chan crypto.PubKey, error) {
 	p2pIdn, err := libp2ptls.NewIdentity(s.key)
 	if err != nil {
 		return nil, nil, err
 	}
 	conf, keyCh := p2pIdn.ConfigForPeer("")
 	conf.NextProtos = []string{"anysync"}
+	conf.ServerName = s.sniServerName(serverName)
 	return conf, keyCh, nil
+}
+
+// sniServerName returns the name to send as SNI when dialing serverName.
+// crypto/tls never puts an IP address into SNI, so IP-addressed dials send none.
+func (s *secureService) sniServerName(serverName string) string {
+	if s.disableSNI {
+		return ""
+	}
+	return serverName
 }

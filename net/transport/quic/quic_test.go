@@ -3,6 +3,7 @@ package quic
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"net"
@@ -228,6 +229,32 @@ func TestWriteBenchNew(t *testing.T) {
 	wg.Wait()
 	dur := time.Since(st)
 	t.Logf("%.2f req per sec", float64(numWrites*numSubConn)/dur.Seconds())
+}
+
+func TestQuicTransport_DialSendsServerName(t *testing.T) {
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	serverNameCh := make(chan string, 1)
+	lis, err := quic.ListenAddr("127.0.0.1:0", &tls.Config{
+		GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+			serverNameCh <- hello.ServerName
+			return nil, errors.New("hello captured")
+		},
+	}, nil)
+	require.NoError(t, err)
+	defer lis.Close()
+
+	_, port, err := net.SplitHostPort(lis.Addr().String())
+	require.NoError(t, err)
+	_, err = fxC.Dial(ctx, net.JoinHostPort("localhost", port))
+	require.Error(t, err)
+	select {
+	case serverName := <-serverNameCh:
+		assert.Equal(t, "localhost", serverName)
+	case <-time.After(time.Second * 5):
+		t.Fatal("no ClientHello received")
+	}
 }
 
 type fixture struct {
