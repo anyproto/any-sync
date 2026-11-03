@@ -13,8 +13,14 @@ type configGetter interface {
 }
 
 type Config struct {
-	RequireClientAuth    bool     `yaml:"requireClientAuth"`
-	CompatibleVersions   []uint32 `yaml:"compatibleVersions"`
+	RequireClientAuth  bool     `yaml:"requireClientAuth"`
+	CompatibleVersions []uint32 `yaml:"compatibleVersions"`
+	// DisableSNI stops outbound TLS handshakes from sending the dialed hostname as SNI
+	DisableSNI bool `yaml:"disableSni"`
+	// EnableQuicSNI makes outbound QUIC handshakes send it too, unless DisableSNI is set.
+	// Off by default: censors that decrypt QUIC Initials filter by SNI, and QUIC
+	// without it gives clients a path that SNI blocklists miss.
+	EnableQuicSNI bool `yaml:"enableQuicSni"`
 }
 
 // CtxAllowAccountCheck upgrades the context to allow identity check on handshake

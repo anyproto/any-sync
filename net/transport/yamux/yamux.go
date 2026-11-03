@@ -122,7 +122,8 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
-	cctx, err := y.secure.SecureOutbound(ctx, conn)
+	host, _, _ := net.SplitHostPort(addr)
+	cctx, err := y.secure.SecureOutbound(ctx, conn, host)
 	if err != nil {
 		_ = conn.Close()
 		return nil, err

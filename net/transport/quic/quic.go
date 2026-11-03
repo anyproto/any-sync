@@ -98,7 +98,7 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 	defer q.mu.Unlock()
 	var tlsConf tls.Config
 	tlsConf.GetConfigForClient = func(_ *tls.ClientHelloInfo) (*tls.Config, error) {
-		conf, _, tlsErr := q.secure.TlsConfig()
+		conf, _, tlsErr := q.secure.TlsConfig("")
 		return conf, tlsErr
 	}
 	tlsConf.NextProtos = []string{"anysync"}
@@ -115,7 +115,9 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (liste
 }
 
 func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
-	tlsConf, keyCh, err := q.secure.TlsConfig()
+	// quic-go would otherwise name the server by the resolved IP, which never goes into SNI
+	host, _, _ := net.SplitHostPort(addr)
+	tlsConf, keyCh, err := q.secure.TlsConfig(host)
 	if err != nil {
 		return nil, err
 	}
