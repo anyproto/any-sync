@@ -94,7 +94,9 @@ func (dm *DiffManager) TryDiff(ctx context.Context, rdiff RemoteDiff) (newIds, c
 		return nil, nil, nil, err
 	}
 	if needsSync {
-		newIds, changedIds, removedIds, err = dm.diff.Diff(ctx, rdiff)
+		// the root hashes differ already: starting below the root skips the remote's root
+		// summary, which nodes and peers answer from a cache with a placeholder count
+		newIds, changedIds, removedIds, err = dm.diff.DiffBelowRoot(ctx, rdiff)
 		err = rpcerr.Unwrap(err)
 		if err != nil {
 			return nil, nil, nil, err

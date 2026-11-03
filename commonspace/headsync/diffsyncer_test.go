@@ -84,7 +84,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("aabbcc")
 		fx.clientMock.EXPECT().HeadSync(gomock.Any(), gomock.Any()).Return(&spacesyncproto.HeadSyncResponse{DiffType: spacesyncproto.DiffType_V3}, nil)
 		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
+			DiffBelowRoot(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
 		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
@@ -109,7 +109,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("aabbcc")
 		fx.clientMock.EXPECT().HeadSync(gomock.Any(), gomock.Any()).Return(&spacesyncproto.HeadSyncResponse{DiffType: spacesyncproto.DiffType_V3}, nil)
 		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remDiff)).
+			DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
 		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed", "aclId"}).Times(1)
@@ -135,7 +135,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("aabbcc")
 		fx.clientMock.EXPECT().HeadSync(gomock.Any(), gomock.Any()).Return(&spacesyncproto.HeadSyncResponse{DiffType: spacesyncproto.DiffType_V3}, nil)
 		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remDiff)).
+			DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
 		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed", "store"}).Times(1)
@@ -224,7 +224,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("aabbcc").Times(2)
 		fx.clientMock.EXPECT().HeadSync(gomock.Any(), gomock.Any()).Return(&spacesyncproto.HeadSyncResponse{DiffType: spacesyncproto.DiffType_V3}, nil).Times(2)
 		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remDiff)).
+			DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing).
 			Times(2)
 
@@ -282,8 +282,8 @@ func TestDiffSyncer(t *testing.T) {
 		// treeSyncer pushes. It is uploaded immediately instead of waiting for the
 		// next periodic head-sync round.
 		gomock.InOrder(
-			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
-			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, []string{"tree1"}, nil),
+			fx.diffMock.EXPECT().DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
+			fx.diffMock.EXPECT().DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, []string{"tree1"}, nil),
 		)
 		fx.storageMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
 		fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
@@ -341,8 +341,8 @@ func TestDiffSyncer(t *testing.T) {
 		// must not sync trees; the round falls back to the periodic loop and Sync
 		// still returns nil (per-peer errors are not fatal).
 		gomock.InOrder(
-			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
-			fx.diffMock.EXPECT().Diff(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, context.Canceled),
+			fx.diffMock.EXPECT().DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing),
+			fx.diffMock.EXPECT().DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).Return(nil, nil, nil, context.Canceled),
 		)
 		fx.storageMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
 		fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
@@ -384,7 +384,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("aabbcc")
 		fx.clientMock.EXPECT().HeadSync(gomock.Any(), gomock.Any()).Return(&spacesyncproto.HeadSyncResponse{DiffType: spacesyncproto.DiffType_V3}, nil)
 		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remDiff)).
+			DiffBelowRoot(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
 		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
 
