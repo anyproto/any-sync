@@ -72,6 +72,7 @@ type secureService struct {
 	protoVersion       uint32
 	compatibleVersions []uint32
 	disableSNI         bool
+	enableQuicSNI      bool
 
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
@@ -98,6 +99,7 @@ func (s *secureService) Init(a *app.App) (err error) {
 		s.compatibleVersions = conf.CompatibleVersions
 	}
 	s.disableSNI = conf.DisableSNI
+	s.enableQuicSNI = conf.EnableQuicSNI
 
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
@@ -226,7 +228,9 @@ func (s *secureService) TlsConfig(serverName string) (*tls.Config, <-chan crypto
 	}
 	conf, keyCh := p2pIdn.ConfigForPeer("")
 	conf.NextProtos = []string{"anysync"}
-	conf.ServerName = s.sniServerName(serverName)
+	if s.enableQuicSNI {
+		conf.ServerName = s.sniServerName(serverName)
+	}
 	return conf, keyCh, nil
 }
 

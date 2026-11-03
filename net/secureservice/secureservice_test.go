@@ -90,25 +90,27 @@ func TestOutboundServerName(t *testing.T) {
 		name       string
 		conf       app.Component
 		serverName string
-		want       string
+		wantTCP    string
+		wantQUIC   string
 	}{
-		{name: "sent by default", conf: nc, serverName: "node1.example.org", want: "node1.example.org"},
-		{name: "ip address never sent", conf: nc, serverName: "127.0.0.1", want: ""},
-		{name: "disableSni", conf: &secureConf{Config: nc, secure: Config{DisableSNI: true}}, serverName: "node1.example.org", want: ""},
+		{name: "default: tcp only", conf: nc, serverName: "node1.example.org", wantTCP: "node1.example.org", wantQUIC: ""},
+		{name: "enableQuicSni", conf: &secureConf{Config: nc, secure: Config{EnableQuicSNI: true}}, serverName: "node1.example.org", wantTCP: "node1.example.org", wantQUIC: "node1.example.org"},
+		{name: "ip address never sent", conf: &secureConf{Config: nc, secure: Config{EnableQuicSNI: true}}, serverName: "127.0.0.1", wantTCP: "", wantQUIC: ""},
+		{name: "disableSni overrides enableQuicSni", conf: &secureConf{Config: nc, secure: Config{DisableSNI: true, EnableQuicSNI: true}}, serverName: "node1.example.org", wantTCP: "", wantQUIC: ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fx := newFixture(t, tc.conf, nc.GetAccountService(0), 1, []uint32{1})
 			defer fx.Finish(t)
 
 			t.Run("SecureOutbound", func(t *testing.T) {
-				assert.Equal(t, tc.want, sentServerName(t, func(conn net.Conn) {
+				assert.Equal(t, tc.wantTCP, sentServerName(t, func(conn net.Conn) {
 					_, _ = fx.SecureOutbound(ctx, conn, tc.serverName)
 				}))
 			})
 			t.Run("TlsConfig", func(t *testing.T) {
 				conf, _, err := fx.TlsConfig(tc.serverName)
 				require.NoError(t, err)
-				assert.Equal(t, tc.want, sentServerName(t, func(conn net.Conn) {
+				assert.Equal(t, tc.wantQUIC, sentServerName(t, func(conn net.Conn) {
 					_ = tls.Client(conn, conf).HandshakeContext(ctx)
 				}))
 			})

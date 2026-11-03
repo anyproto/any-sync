@@ -231,29 +231,42 @@ func TestWriteBenchNew(t *testing.T) {
 	t.Logf("%.2f req per sec", float64(numWrites*numSubConn)/dur.Seconds())
 }
 
-func TestQuicTransport_DialSendsServerName(t *testing.T) {
-	fxC := newFixture(t)
-	defer fxC.finish(t)
+func TestQuicTransport_DialServerName(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		secure secureservice.Config
+		want   string
+	}{
+		{name: "not sent by default", want: ""},
+		{name: "enableQuicSni", secure: secureservice.Config{EnableQuicSNI: true}, want: "localhost"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := newTestConf()
+			conf.secure = tc.secure
+			fxC := newFixtureWithConf(t, conf)
+			defer fxC.finish(t)
 
-	serverNameCh := make(chan string, 1)
-	lis, err := quic.ListenAddr("127.0.0.1:0", &tls.Config{
-		GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
-			serverNameCh <- hello.ServerName
-			return nil, errors.New("hello captured")
-		},
-	}, nil)
-	require.NoError(t, err)
-	defer lis.Close()
+			serverNameCh := make(chan string, 1)
+			lis, err := quic.ListenAddr("127.0.0.1:0", &tls.Config{
+				GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+					serverNameCh <- hello.ServerName
+					return nil, errors.New("hello captured")
+				},
+			}, nil)
+			require.NoError(t, err)
+			defer lis.Close()
 
-	_, port, err := net.SplitHostPort(lis.Addr().String())
-	require.NoError(t, err)
-	_, err = fxC.Dial(ctx, net.JoinHostPort("localhost", port))
-	require.Error(t, err)
-	select {
-	case serverName := <-serverNameCh:
-		assert.Equal(t, "localhost", serverName)
-	case <-time.After(time.Second * 5):
-		t.Fatal("no ClientHello received")
+			_, port, err := net.SplitHostPort(lis.Addr().String())
+			require.NoError(t, err)
+			_, err = fxC.Dial(ctx, net.JoinHostPort("localhost", port))
+			require.Error(t, err)
+			select {
+			case serverName := <-serverNameCh:
+				assert.Equal(t, tc.want, serverName)
+			case <-time.After(time.Second * 5):
+				t.Fatal("no ClientHello received")
+			}
+		})
 	}
 }
 
@@ -268,6 +281,10 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureWithConf(t, newTestConf())
+}
+
+func newFixtureWithConf(t *testing.T, conf *testConf) *fixture {
 	fx := &fixture{
 		quicTransport: New().(*quicTransport),
 		ctrl:          gomock.NewController(t),
@@ -282,7 +299,7 @@ func newFixture(t *testing.T) *fixture {
 	fx.mockNodeConf.EXPECT().Run(ctx)
 	fx.mockNodeConf.EXPECT().Close(ctx)
 	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return([]nodeconf.NodeType{nodeconf.NodeTypeTree}).AnyTimes()
-	fx.a.Register(fx.acc).Register(newTestConf()).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.quicTransport).Register(fx.accepter)
+	fx.a.Register(fx.acc).Register(conf).Register(fx.mockNodeConf).Register(secureservice.New()).Register(fx.quicTransport).Register(fx.accepter)
 	require.NoError(t, fx.a.Start(ctx))
 	fx.addr = fx.listeners[0].Addr().String()
 	return fx
@@ -294,11 +311,16 @@ func (fx *fixture) finish(t *testing.T) {
 }
 
 func newTestConf() *testConf {
-	return &testConf{testnodeconf.GenNodeConfig(1)}
+	return &testConf{Config: testnodeconf.GenNodeConfig(1)}
 }
 
 type testConf struct {
 	*testnodeconf.Config
+	secure secureservice.Config
+}
+
+func (c *testConf) GetSecureService() secureservice.Config {
+	return c.secure
 }
 
 func (c *testConf) GetQuic() Config {
