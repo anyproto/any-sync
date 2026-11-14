@@ -190,21 +190,34 @@ func TestAclService_HasRecord(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.finish(t)
 
+	// root -> inv1 -> inv2: inv1 is neither the root nor the head
+	var recs []*consensusproto.RawRecordWithId
+	for range 2 {
+		inv, err := ownerAcl.RecordBuilder().BuildInvite()
+		require.NoError(t, err)
+		rec := fx.accept(t, inv.InviteRec)
+		require.NoError(t, ownerAcl.AddRawRecord(rec))
+		recs = append(recs, rec)
+	}
+
 	fx.consCl.EXPECT().Watch(spaceId, gomock.Any()).DoAndReturn(func(spaceId string, w consensusclient.Watcher) error {
 		go func() {
+			// consensus sends the records from the head to the root
 			w.AddConsensusRecords([]*consensusproto.RawRecordWithId{
-				ownerAcl.Root(),
+				recs[1], recs[0], ownerAcl.Root(),
 			})
 		}()
 		return nil
 	})
 	fx.consCl.EXPECT().UnWatch(spaceId)
 
-	has, err := fx.HasRecord(ctx, spaceId, ownerAcl.Root().Id)
-	require.NoError(t, err)
-	assert.True(t, has)
+	for _, id := range []string{ownerAcl.Root().Id, recs[0].Id, recs[1].Id} {
+		has, err := fx.HasRecord(ctx, spaceId, id)
+		require.NoError(t, err)
+		assert.True(t, has, id)
+	}
 
-	has, err = fx.HasRecord(ctx, spaceId, "non-exists")
+	has, err := fx.HasRecord(ctx, spaceId, "non-exists")
 	require.NoError(t, err)
 	assert.False(t, has)
 }
@@ -223,8 +236,9 @@ func newFixture(t *testing.T) *fixture {
 	fx.consCl.EXPECT().Run(gomock.Any()).AnyTimes()
 	fx.consCl.EXPECT().Close(gomock.Any()).AnyTimes()
 
-	_, netPub, err := crypto.GenerateRandomEd25519KeyPair()
+	netKey, netPub, err := crypto.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
+	fx.netKey = netKey
 	netPubRaw, err := netPub.Raw()
 	require.NoError(t, err)
 	networkId, err := strkey.Encode(strkey.NetworkAddressVersionByte, netPubRaw)
@@ -247,10 +261,21 @@ type fixture struct {
 	a      *app.App
 	ctrl   *gomock.Controller
 	consCl *mock_consensusclient.MockService
+	netKey crypto.PrivKey
 	AclService
 }
 
 func (fx *fixture) finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
 	fx.ctrl.Finish()
+}
+
+// accept signs the record with the network key, as the consensus node does
+func (fx *fixture) accept(t *testing.T, rec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
+	identity, err := fx.netKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	rec.AcceptorIdentity = identity
+	rec.AcceptorSignature, err = fx.netKey.Sign(rec.Payload)
+	require.NoError(t, err)
+	return listtest.WrapAclRecord(rec)
 }

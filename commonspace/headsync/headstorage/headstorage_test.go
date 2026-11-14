@@ -111,3 +111,55 @@ func TestIterateEntries_MinLastAddSeqWithDeleted(t *testing.T) {
 	}
 	require.Equal(t, []string{"a", "e"}, ids)
 }
+
+func TestIterateEntriesWithParent(t *testing.T) {
+	hs, cleanup := newTestStorage(t)
+	defer cleanup()
+
+	strPtr := func(v string) *string { return &v }
+	seed(t, hs, []HeadsUpdate{
+		{Id: "a"},
+		{Id: "b", ParentId: strPtr("a")},
+		{Id: "c", ParentId: strPtr("a"), DeletedStatus: dsPtr(DeletedStatusDeleted)},
+		{Id: "d", DeletedStatus: dsPtr(DeletedStatusDeleted)},
+		{Id: "e", ParentId: strPtr("d"), DeletedStatus: dsPtr(DeletedStatusQueued)},
+	})
+
+	var got []HeadsEntry
+	err := hs.IterateEntriesWithParent(context.Background(), func(e HeadsEntry) (bool, error) {
+		got = append(got, e)
+		return true, nil
+	})
+	require.NoError(t, err)
+	byId := map[string]HeadsEntry{}
+	for _, e := range got {
+		byId[e.Id] = e
+	}
+	require.Len(t, byId, 3)
+	require.Equal(t, "a", byId["b"].ParentId)
+	require.Equal(t, DeletedStatusNotDeleted, byId["b"].DeletedStatus)
+	require.Equal(t, "a", byId["c"].ParentId)
+	require.Equal(t, DeletedStatusDeleted, byId["c"].DeletedStatus)
+	require.Equal(t, "d", byId["e"].ParentId)
+	require.Equal(t, DeletedStatusQueued, byId["e"].DeletedStatus)
+
+	// stops when the iterator returns false
+	var count int
+	err = hs.IterateEntriesWithParent(context.Background(), func(e HeadsEntry) (bool, error) {
+		count++
+		return false, nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+
+	// answered from the sparse parent id index
+	explain, err := hs.(*headStorage).headsColl.Find(hasParentFilter).Explain(context.Background())
+	require.NoError(t, err)
+	var used bool
+	for _, idx := range explain.Indexes {
+		if idx.Name == parentIdKey && idx.Used {
+			used = true
+		}
+	}
+	require.True(t, used, explain.Indexes)
+}
