@@ -350,6 +350,12 @@ func TestAclService_HasRecord(t *testing.T) {
 }
 
 func newFixture(t *testing.T) *fixture {
+	return newFixtureOfNetwork(t, true)
+}
+
+// newFixtureOfNetwork makes the service of a network, which verifies the network's signature on the
+// records it reads, or of a configuration without a network id, which validates their content in full
+func newFixtureOfNetwork(t *testing.T, hasNetworkId bool) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
 		a:          new(app.App),
@@ -370,6 +376,9 @@ func newFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	networkId, err := strkey.Encode(strkey.NetworkAddressVersionByte, netPubRaw)
 	require.NoError(t, err)
+	if !hasNetworkId {
+		networkId = ""
+	}
 
 	nc := mock_nodeconf.NewMockService(ctrl)
 	nc.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
