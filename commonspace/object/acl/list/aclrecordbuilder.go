@@ -134,6 +134,10 @@ type AclRecordBuilder interface {
 	BuildOwnershipChangeByParent(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
+	// BuildAccountRemoveNoRotate builds the removal an Admin or the Owner of the parent space writes in a
+	// child space, without its read key. The author need not be a member of the child, and only the
+	// coordinator can check the role.
+	BuildAccountRemoveNoRotate(identities []crypto.PubKey) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildSpaceOptionsChange(options *aclrecordproto.AclSpaceOptions) (rawRecord *consensusproto.RawRecord, err error)
 }
@@ -971,6 +975,21 @@ func (a *aclRecordBuilder) buildAccountRemove(payload AccountRemovePayload) (val
 	}
 	removeRec := &aclrecordproto.AclAccountRemove{ReadKeyChange: rkChange, Identities: marshalledIdentities}
 	return &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRemove{AccountRemove: removeRec}}, nil
+}
+
+func (a *aclRecordBuilder) BuildAccountRemoveNoRotate(identities []crypto.PubKey) (rawRecord *consensusproto.RawRecord, err error) {
+	marshalledIdentities := make([][]byte, 0, len(identities))
+	for _, identity := range identities {
+		protoIdentity, err := identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		marshalledIdentities = append(marshalledIdentities, protoIdentity)
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRemoveNoRotate{
+		AccountRemoveNoRotate: &aclrecordproto.AclAccountRemoveNoRotate{Identities: marshalledIdentities},
+	}}
+	return a.buildRecordsWithAuthority([]*aclrecordproto.AclContentValue{content}, ParentAuthority{RemoveMembers: true})
 }
 
 func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error) {

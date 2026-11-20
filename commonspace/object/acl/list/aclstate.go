@@ -97,6 +97,9 @@ type AclState struct {
 
 	optionChanges []OptionChange
 	isOneToOne    bool
+
+	// rotationPending is set while accounts removed without a read key change still hold the current read key
+	rotationPending bool
 }
 
 func newAclStateWithKeys(
@@ -428,6 +431,7 @@ func (st *AclState) Copy() *AclState {
 		pendingRequests: make(map[string]string),
 		keyStore:        st.keyStore,
 		isOneToOne:      st.isOneToOne,
+		rotationPending: st.rotationPending,
 	}
 	for k, v := range st.keys {
 		newSt.keys[k] = v
@@ -483,6 +487,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyRequestCancel(ch.GetRequestCancel(), record)
 	case ch.GetAccountRemove() != nil:
 		return st.applyAccountRemove(ch.GetAccountRemove(), record)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return st.applyAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), record)
 	case ch.GetReadKeyChange() != nil:
 		return st.applyReadKeyChange(ch.GetReadKeyChange(), record, true)
 	case ch.GetAccountRequestRemove() != nil:
@@ -889,7 +895,30 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 	if err != nil {
 		return err
 	}
-	for _, rawIdentity := range ch.Identities {
+	if err = st.removeAccounts(ch.Identities, record); err != nil {
+		return err
+	}
+	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
+}
+
+// applyAccountRemoveNoRotate takes the permissions of the accounts at once. They keep the current read
+// key, so the state is rotation pending until the next read key change.
+func (st *AclState) applyAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, record *AclRecord) error {
+	err := st.contentValidator.ValidateAccountRemoveNoRotate(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	if err = st.removeAccounts(ch.Identities, record); err != nil {
+		return err
+	}
+	if len(ch.Identities) > 0 {
+		st.rotationPending = true
+	}
+	return nil
+}
+
+func (st *AclState) removeAccounts(identities [][]byte, record *AclRecord) error {
+	for _, rawIdentity := range identities {
 		identity, err := st.keyStore.PubKeyFromProto(rawIdentity)
 		if err != nil {
 			return err
@@ -912,7 +941,7 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 			delete(st.requestRecords, recId)
 		}
 	}
-	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
+	return nil
 }
 
 func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, record *AclRecord, validate bool) error {
@@ -923,6 +952,7 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		}
 	}
 	st.readKeyChanges = append(st.readKeyChanges, record.Id)
+	st.rotationPending = false
 	mkPubKey, err := st.keyStore.PubKeyFromProto(ch.MetadataPubKey)
 	if err != nil {
 		return err
@@ -1109,6 +1139,12 @@ func (st *AclState) OwnerPubKeyWithRecordId() (ownerIdentity crypto.PubKey, reco
 
 func (st *AclState) IsOneToOne() bool {
 	return st.isOneToOne
+}
+
+// RotationPending reports that accounts were removed without a read key change and still hold the
+// current read key. An Admin or the Owner ends it with a read key change.
+func (st *AclState) RotationPending() bool {
+	return st.rotationPending
 }
 
 func (st *AclState) applySpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, record *AclRecord) error {

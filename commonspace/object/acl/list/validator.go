@@ -25,6 +25,7 @@ type ContentValidator interface {
 	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 	ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error)
@@ -288,6 +289,8 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateRequestDecline(ch.GetRequestDecline(), authorIdentity)
 	case ch.GetAccountRemove() != nil:
 		return c.ValidateAccountRemove(ch.GetAccountRemove(), authorIdentity)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return c.ValidateAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), authorIdentity)
 	case ch.GetAccountRequestRemove() != nil:
 		return c.ValidateRequestRemove(ch.GetAccountRequestRemove(), authorIdentity)
 	case ch.GetReadKeyChange() != nil:
@@ -557,6 +560,44 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 		seenIdentities[mapKeyFromPubKey(identity)] = struct{}{}
 	}
 	return c.validateReadKeyChange(ch.ReadKeyChange, seenIdentities)
+}
+
+// ValidateAccountRemoveNoRotate accepts the removal only from an author the parent space lets remove
+// members: no role in this acl allows it. Any member but the owner can be removed.
+func (c *contentValidator) ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	err = c.requireParentAuthority(authorIdentity, func(a ParentAuthority) bool { return a.RemoveMembers })
+	if err != nil {
+		return err
+	}
+	if len(ch.Identities) == 0 {
+		return ErrIncorrectNumberOfAccounts
+	}
+	seenIdentities := map[string]struct{}{}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		if identity.Equals(authorIdentity) {
+			return ErrInsufficientPermissions
+		}
+		permissions := c.aclState.Permissions(identity)
+		if permissions.NoPermissions() {
+			return ErrNoSuchAccount
+		}
+		if permissions.IsOwner() {
+			return ErrInsufficientPermissions
+		}
+		idKey := mapKeyFromPubKey(identity)
+		if _, exists := seenIdentities[idKey]; exists {
+			return ErrDuplicateAccounts
+		}
+		seenIdentities[idKey] = struct{}{}
+	}
+	return nil
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
