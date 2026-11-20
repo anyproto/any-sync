@@ -154,6 +154,7 @@ func TestOwnershipChangeByParent_Rules(t *testing.T) {
 	fx := newChildFixture(t)
 	stranger, err := accountdata.NewRandom()
 	require.NoError(t, err)
+	guest := fx.addMember(t, AclPermissionsGuest)
 	builder := fx.parentBuilder(t)
 
 	for name, tc := range map[string]struct {
@@ -161,6 +162,8 @@ func TestOwnershipChangeByParent_Rules(t *testing.T) {
 		err     error
 	}{
 		"the new owner is not a member":         {OwnershipChangePayload{NewOwner: stranger.SignKey.GetPublic(), OldOwnerPermissions: AclPermissionsAdmin}, ErrNoSuchAccount},
+		"the new owner is a guest":              {OwnershipChangePayload{NewOwner: guest.SignKey.GetPublic(), OldOwnerPermissions: AclPermissionsAdmin}, ErrInsufficientPermissions},
+		"the previous owner becomes a guest":    {OwnershipChangePayload{NewOwner: fx.account(), OldOwnerPermissions: AclPermissionsGuest}, ErrInsufficientPermissions},
 		"the new owner is the owner":            {OwnershipChangePayload{NewOwner: fx.owner(), OldOwnerPermissions: AclPermissionsAdmin}, ErrInsufficientPermissions},
 		"the previous owner stays the owner":    {OwnershipChangePayload{NewOwner: fx.account(), OldOwnerPermissions: AclPermissionsOwner}, ErrInsufficientPermissions},
 		"the previous owner is left no role":    {OwnershipChangePayload{NewOwner: fx.account(), OldOwnerPermissions: AclPermissionsNone}, ErrInsufficientPermissions},

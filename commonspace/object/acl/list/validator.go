@@ -145,6 +145,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 		oldOwnerPerms.NoPermissions() {
 		return ErrInsufficientPermissions
 	}
+	// Guest is the role of a guest key's identity, not of a member: such an identity does not become the
+	// owner, and the previous owner does not become a guest. An accepted log can hold either.
+	if !c.acceptedLog && (newOwnerPerms.IsGuest() || oldOwnerPerms.IsGuest()) {
+		return ErrInsufficientPermissions
+	}
 	return nil
 }
 

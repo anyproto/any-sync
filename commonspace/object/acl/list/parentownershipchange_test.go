@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -160,6 +161,70 @@ func TestOwnershipChange_ByChildOwner(t *testing.T) {
 			require.Equal(t, AclPermissionsWriter, st.Permissions(c.pub("owner")))
 			require.Equal(t, StatusActive, c.status(st, "owner"))
 		})
+	}
+}
+
+// Guest is the role of a guest key's identity. Whoever changes the owner, a record that makes such an
+// identity the owner, or a guest of the previous owner, does not enter a log. A log the network accepted
+// with such a record still builds and is still ingested.
+func TestOwnershipChange_Guest(t *testing.T) {
+	for _, author := range []string{"owner", "parent"} {
+		for name, tc := range map[string]struct {
+			newOwner string
+			kept     AclPermissions
+		}{
+			"the new owner is a guest":           {"guest", AclPermissionsAdmin},
+			"the previous owner becomes a guest": {"writer", AclPermissionsGuest},
+		} {
+			t.Run(author+"/"+name, func(t *testing.T) {
+				c := newChildAcl(t, map[string]AclPermissions{"writer": AclPermissionsWriter, "guest": AclPermissionsGuest})
+
+				payload := OwnershipChangePayload{NewOwner: c.pub(tc.newOwner), OldOwnerPermissions: tc.kept}
+				build := c.builder(t, author).BuildOwnershipChange
+				if author == "parent" {
+					build = c.builder(t, author).BuildOwnershipChangeByParent
+				}
+				_, err := build(payload)
+				require.ErrorIs(t, err, ErrInsufficientPermissions)
+
+				rec := c.signed(t, author, c.ownershipChangeContent(t, tc.newOwner, tc.kept))
+				require.ErrorIs(t, c.admit(t, rec, c.grant("parent", authorityAll)), ErrInsufficientPermissions)
+
+				verifiers := map[string]func() recordverifier.AcceptorVerifier{
+					"validating":   recordverifier.NewValidateFull,
+					"accepted log": recordverifier.NewValidateAcceptedLog,
+					"network":      c.networkVerifier,
+				}
+				// lists of the log before the record
+				lists := map[string]AclList{}
+				for name, verifier := range verifiers {
+					lists[name] = c.build(t, "coordinator", verifier())
+				}
+				// the network accepts the record, as it did before it refused guests
+				id := c.accept(t, rec)
+				accepted := c.log[len(c.log)-1]
+				check := func(t *testing.T, st *AclState) {
+					t.Helper()
+					require.Equal(t, id, st.LastRecordId())
+					c.requireOwner(t, st, tc.newOwner)
+					require.Equal(t, tc.kept, st.Permissions(c.pub("owner")))
+				}
+
+				for name, l := range lists {
+					err := l.AddRawRecord(accepted)
+					if name == "validating" {
+						require.ErrorIs(t, err, ErrInsufficientPermissions)
+						c.requireOwner(t, l.AclState(), "owner")
+						continue
+					}
+					require.NoError(t, err, name)
+					check(t, l.AclState())
+				}
+				for _, verifier := range verifiers {
+					check(t, c.build(t, "coordinator", verifier()).AclState())
+				}
+			})
+		}
 	}
 }
 
