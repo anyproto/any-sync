@@ -44,6 +44,9 @@ type SpaceCreatePayload struct {
 	Options *aclrecordproto.AclSpaceOptions
 	// FileProtoVersion gates the file protocol the space uses (embedded in the signed header)
 	FileProtoVersion spacesyncproto.SpaceFileProtoVersion
+	// ParentSpaceId makes the space a child of that space (embedded in the signed header). A child needs
+	// the v1 header. Its ReplicationKey is the parent's, so both live on the same nodes.
+	ParentSpaceId string
 }
 
 type SpaceDerivePayload struct {
@@ -76,8 +79,12 @@ func IsOneToOneType(spaceType string) bool {
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
 var ErrIncorrectOneToOnePayload = errors.New("incorrect onetoone payload")
+var ErrChildNeedsHeaderV1 = errors.New("a child space needs the v1 header")
 
 func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	if payload.ParentSpaceId != "" {
+		return storagePayload, ErrChildNeedsHeaderV1
+	}
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
@@ -186,6 +193,7 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
 		FileprotoVersion:   payload.FileProtoVersion,
+		ParentSpaceId:      payload.ParentSpaceId,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 	}
 
@@ -624,6 +632,9 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		return false, spacestorage.ErrIncorrectSpaceHeader
 	}
 	isV1 := header.Version == spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1
+	if header.ParentSpaceId != "" && !isV1 {
+		return false, ErrChildNeedsHeaderV1
+	}
 	needCheckSpaceId = !isV1
 
 	if isV1 {
