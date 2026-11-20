@@ -55,6 +55,7 @@ type DRPCCoordinatorClient interface {
 	AclDeleteInvite(ctx context.Context, in *AclDeleteInviteRequest) (*AclDeleteInviteResponse, error)
 	FileLimitsGet(ctx context.Context, in *FileLimitsGetRequest) (*FileLimitsGetResponse, error)
 	FileUsageReport(ctx context.Context, in *FileUsageReportRequest) (*FileUsageReportResponse, error)
+	SpaceChildren(ctx context.Context, in *SpaceChildrenRequest) (*SpaceChildrenResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -296,6 +297,15 @@ func (c *drpcCoordinatorClient) FileUsageReport(ctx context.Context, in *FileUsa
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) SpaceChildren(ctx context.Context, in *SpaceChildrenRequest) (*SpaceChildrenResponse, error) {
+	out := new(SpaceChildrenResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/SpaceChildren", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
@@ -319,6 +329,7 @@ type DRPCCoordinatorServer interface {
 	AclDeleteInvite(context.Context, *AclDeleteInviteRequest) (*AclDeleteInviteResponse, error)
 	FileLimitsGet(context.Context, *FileLimitsGetRequest) (*FileLimitsGetResponse, error)
 	FileUsageReport(context.Context, *FileUsageReportRequest) (*FileUsageReportResponse, error)
+	SpaceChildren(context.Context, *SpaceChildrenRequest) (*SpaceChildrenResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -411,9 +422,13 @@ func (s *DRPCCoordinatorUnimplementedServer) FileUsageReport(context.Context, *F
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) SpaceChildren(context.Context, *SpaceChildrenRequest) (*SpaceChildrenResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 22 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 23 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -615,6 +630,15 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*FileUsageReportRequest),
 					)
 			}, DRPCCoordinatorServer.FileUsageReport, true
+	case 22:
+		return "/coordinator.Coordinator/SpaceChildren", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					SpaceChildren(
+						ctx,
+						in1.(*SpaceChildrenRequest),
+					)
+			}, DRPCCoordinatorServer.SpaceChildren, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -1055,6 +1079,26 @@ func (x *drpcCoordinator_FileUsageReportStream) GetStream() drpc.Stream {
 }
 
 func (x *drpcCoordinator_FileUsageReportStream) SendAndClose(m *FileUsageReportResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_SpaceChildrenStream interface {
+	drpc.Stream
+	SendAndClose(*SpaceChildrenResponse) error
+}
+
+type drpcCoordinator_SpaceChildrenStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_SpaceChildrenStream) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcCoordinator_SpaceChildrenStream) SendAndClose(m *SpaceChildrenResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}

@@ -295,6 +295,21 @@ func (mr *MockCoordinatorClientMockRecorder) NetworkConfiguration(ctx, currentId
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockCoordinatorClient)(nil).NetworkConfiguration), ctx, currentId)
 }
 
+// SpaceChildren mocks base method.
+func (m *MockCoordinatorClient) SpaceChildren(ctx context.Context, spaceId string) ([]*coordinatorproto.SpaceChild, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceChildren", ctx, spaceId)
+	ret0, _ := ret[0].([]*coordinatorproto.SpaceChild)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SpaceChildren indicates an expected call of SpaceChildren.
+func (mr *MockCoordinatorClientMockRecorder) SpaceChildren(ctx, spaceId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceChildren", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceChildren), ctx, spaceId)
+}
+
 // SpaceDelete mocks base method.
 func (m *MockCoordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) error {
 	m.ctrl.T.Helper()

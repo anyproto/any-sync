@@ -66,6 +66,9 @@ service Coordinator {
   // FileUsageReport accepts per-(space, identity) durable file usage reports from fileV2 nodes.
   // The reporting node is taken from the authenticated peer context. Values are absolute (idempotent re-reports).
   rpc FileUsageReport(FileUsageReportRequest) returns (FileUsageReportResponse);
+
+  // SpaceChildren lists the child spaces of a space. Only an Admin or the Owner of that space can call it
+  rpc SpaceChildren(SpaceChildrenRequest) returns (SpaceChildrenResponse);
 }
 
 
@@ -571,3 +574,19 @@ message FileUsageRow {
 }
 
 message FileUsageReportResponse {}
+
+// SpaceChildrenRequest contains the id of the parent space
+message SpaceChildrenRequest {
+  string spaceId = 1;
+}
+
+// SpaceChildrenResponse contains the child spaces of the requested space
+message SpaceChildrenResponse {
+  repeated SpaceChild children = 1;
+}
+
+// SpaceChild describes one child space
+message SpaceChild {
+  string spaceId = 1;
+  SpaceStatus status = 2;
+}
