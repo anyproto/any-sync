@@ -508,8 +508,13 @@ func (st *AclState) applyOwnershipChange(ch *aclrecordproto.AclOwnershipChange, 
 	if err != nil {
 		return err
 	}
+	// the previous owner is the state's owner: the record's author can be the owner of the parent space
+	oldOwnerIdentity, err := st.OwnerPubKey()
+	if err != nil {
+		return err
+	}
 	var (
-		oldOwnerKey = mapKeyFromPubKey(record.Identity)
+		oldOwnerKey = mapKeyFromPubKey(oldOwnerIdentity)
 		newOwnerKey = mapKeyFromPubKey(newOwnerIdentity)
 	)
 	st.updatePermissions(oldOwnerKey, ch.OldOwnerPermissions, record)

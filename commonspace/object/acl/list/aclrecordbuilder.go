@@ -129,6 +129,9 @@ type AclRecordBuilder interface {
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error)
+	// BuildOwnershipChangeByParent builds the ownership change the Owner of the parent space writes in a
+	// child space. The author need not be a member of the child, and only the coordinator can check the role.
+	BuildOwnershipChangeByParent(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -177,18 +180,34 @@ func (a *aclRecordBuilder) isOurIdentity(identity []byte) bool {
 }
 
 func (a *aclRecordBuilder) BuildOwnershipChange(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	content, err := a.buildOwnershipChange(ownershipChange)
+	if err != nil {
+		return nil, err
+	}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildOwnershipChangeByParent(ownershipChange OwnershipChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	content, err := a.buildOwnershipChange(ownershipChange)
+	if err != nil {
+		return nil, err
+	}
+	return a.buildRecordsWithAuthority([]*aclrecordproto.AclContentValue{content}, ParentAuthority{ChangeOwner: true})
+}
+
+func (a *aclRecordBuilder) buildOwnershipChange(ownershipChange OwnershipChangePayload) (*aclrecordproto.AclContentValue, error) {
 	newOwnerBytes, err := ownershipChange.NewOwner.Marshall()
 	if err != nil {
 		return nil, err
 	}
-	content := &aclrecordproto.AclContentValue{
+	return &aclrecordproto.AclContentValue{
 		Value: &aclrecordproto.AclContentValue_OwnershipChange{
-			&aclrecordproto.AclOwnershipChange{
+			OwnershipChange: &aclrecordproto.AclOwnershipChange{
 				NewOwnerIdentity:    newOwnerBytes,
-				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions)},
+				OldOwnerPermissions: aclrecordproto.AclUserPermissions(ownershipChange.OldOwnerPermissions),
+			},
 		},
-	}
-	return a.buildRecord(content)
+	}, nil
 }
 
 func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (batchResult BatchResult, err error) {
@@ -301,6 +320,12 @@ func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValu
 }
 
 func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentValue) (rawRec *consensusproto.RawRecord, err error) {
+	return a.buildRecordsWithAuthority(aclContent, ParentAuthority{})
+}
+
+// buildRecordsWithAuthority builds a record whose author acts on the given authority of the parent
+// space. The preflight takes the authority as granted: the coordinator is the one who checks it.
+func (a *aclRecordBuilder) buildRecordsWithAuthority(aclContent []*aclrecordproto.AclContentValue, authority ParentAuthority) (rawRec *consensusproto.RawRecord, err error) {
 	aclData := &aclrecordproto.AclData{AclContent: aclContent}
 	marshalledData, err := aclData.MarshalVT()
 	if err != nil {
@@ -328,17 +353,17 @@ func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentV
 		Payload:   marshalledRec,
 		Signature: signature,
 	}
-	err = a.preflightCheck(rawRec)
+	err = a.preflightCheck(rawRec, authority)
 	return
 }
 
-func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord) (err error) {
+func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord, authority ParentAuthority) (err error) {
 	aclRec, err := a.Unmarshall(rawRecord)
 	if err != nil {
 		return
 	}
 	cp := a.state.Copy()
-	cp.contentValidator = newAdmissionValidator(cp.keyStore, cp)
+	cp.contentValidator = newAdmissionValidator(cp.keyStore, cp, grantParentAuthority(authority))
 	return cp.ApplyRecord(aclRec)
 }
 

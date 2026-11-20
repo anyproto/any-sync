@@ -40,13 +40,15 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 		}
 	}
 	state.list = list
+	state.contentValidator = newStoredLogValidator(state.keyStore, state, list.verifier)
 	for _, rec := range records[1:] {
 		err = state.ApplyRecord(rec)
 		if err != nil {
 			return nil, err
 		}
 	}
-
+	// what the state applies from here on is an ingest
+	state.contentValidator = newContentValidator(state.keyStore, state, list.verifier)
 	return state, err
 }
 

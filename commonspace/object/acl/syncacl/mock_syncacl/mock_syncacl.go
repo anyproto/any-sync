@@ -602,3 +602,17 @@ func (mr *MockSyncAclMockRecorder) ValidateRawRecord(rawRec, afterValid any) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecord), rawRec, afterValid)
 }
+
+// ValidateRawRecordWithAuthorizer mocks base method.
+func (m *MockSyncAcl) ValidateRawRecordWithAuthorizer(rawRec *consensusproto.RawRecord, authorizer list.ParentAuthorizer, afterValid func(*list.AclState) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRawRecordWithAuthorizer", rawRec, authorizer, afterValid)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateRawRecordWithAuthorizer indicates an expected call of ValidateRawRecordWithAuthorizer.
+func (mr *MockSyncAclMockRecorder) ValidateRawRecordWithAuthorizer(rawRec, authorizer, afterValid any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecordWithAuthorizer", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecordWithAuthorizer), rawRec, authorizer, afterValid)
+}

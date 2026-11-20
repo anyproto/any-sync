@@ -38,25 +38,68 @@ type contentValidator struct {
 	// preflight). Only there is a record without applicable content rejected: once the network has
 	// accepted one, replaying it (build, migration, sync) must not fail.
 	admission bool
+	// acceptedLog is true for a record the network already accepted: a stored log being rebuilt, or
+	// ingest from a source declared as the accepted log. Rules that apply only to a record entering a log
+	// are skipped for it.
+	acceptedLog bool
+	// parentAuthorizer tells what the parent space lets a record's author do; nil when nobody has such
+	// authority
+	parentAuthorizer ParentAuthorizer
 }
 
+// newContentValidator validates a record a built list ingests. The record enters the log there, unless
+// the verifier vouches for the accepted log.
 func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
+	accepted, ok := verifier.(acceptedLogVerifier)
 	return &contentValidator{
-		keyStore: keyStore,
-		aclState: aclState,
-		verifier: verifier,
+		keyStore:    keyStore,
+		aclState:    aclState,
+		verifier:    verifier,
+		acceptedLog: ok && accepted.AcceptedLog(),
+	}
+}
+
+// newStoredLogValidator validates the stored records a list is built from: they were accepted before
+// they were stored
+func newStoredLogValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
+	return &contentValidator{
+		keyStore:    keyStore,
+		aclState:    aclState,
+		verifier:    verifier,
+		acceptedLog: true,
 	}
 }
 
 // newAdmissionValidator validates a record before it enters the log: in full, and also rejecting content
-// that no per-type validator would check.
-func newAdmissionValidator(keyStore crypto.KeyStorage, aclState *AclState) ContentValidator {
+// that no per-type validator would check. What an author does on the authority of the parent space is
+// accepted only as far as parentAuthorizer allows.
+func newAdmissionValidator(keyStore crypto.KeyStorage, aclState *AclState, parentAuthorizer ParentAuthorizer) ContentValidator {
 	return &contentValidator{
-		keyStore:  keyStore,
-		aclState:  aclState,
-		verifier:  recordverifier.NewValidateFull(),
-		admission: true,
+		keyStore:         keyStore,
+		aclState:         aclState,
+		verifier:         recordverifier.NewValidateFull(),
+		admission:        true,
+		parentAuthorizer: parentAuthorizer,
 	}
+}
+
+// requireParentAuthority checks that the parent space allows the author what has() names. The
+// coordinator checked it for a record of the accepted log.
+func (c *contentValidator) requireParentAuthority(author crypto.PubKey, has func(ParentAuthority) bool) error {
+	if c.acceptedLog {
+		return nil
+	}
+	if c.parentAuthorizer == nil {
+		return ErrInsufficientPermissions
+	}
+	authority, err := c.parentAuthorizer(author)
+	if err != nil {
+		return err
+	}
+	if !has(authority) {
+		return ErrInsufficientPermissions
+	}
+	return nil
 }
 
 func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error) {
@@ -77,7 +120,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 		return nil
 	}
 	if !c.aclState.Permissions(authorIdentity).IsOwner() {
-		return ErrInsufficientPermissions
+		// an author who is not the owner acts as the Owner of the parent space
+		err = c.requireParentAuthority(authorIdentity, func(a ParentAuthority) bool { return a.ChangeOwner })
+		if err != nil {
+			return err
+		}
 	}
 	identity, err := c.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
 	if err != nil {

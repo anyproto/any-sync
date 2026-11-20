@@ -79,7 +79,8 @@ func (a *aclObject) build(recs []*consensusproto.RawRecordWithId) (err error) {
 	if a.store, err = list.NewInMemoryStorage(a.id, recs); err != nil {
 		return err
 	}
-	verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateFull())
+	// the list reads the consensus log only, which holds what a coordinator admitted
+	verifier := recordverifier.AcceptorVerifier(recordverifier.NewValidateAcceptedLog())
 	if networkId := a.aclService.nodeConf.Configuration().NetworkId; networkId != "" {
 		netKey, err := crypto.DecodeNetworkId(networkId)
 		if err != nil {

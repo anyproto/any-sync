@@ -372,6 +372,20 @@ func (mr *MockAclListMockRecorder) ValidateRawRecord(rawRec, afterValid any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), rawRec, afterValid)
 }
 
+// ValidateRawRecordWithAuthorizer mocks base method.
+func (m *MockAclList) ValidateRawRecordWithAuthorizer(rawRec *consensusproto.RawRecord, authorizer list.ParentAuthorizer, afterValid func(*list.AclState) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRawRecordWithAuthorizer", rawRec, authorizer, afterValid)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateRawRecordWithAuthorizer indicates an expected call of ValidateRawRecordWithAuthorizer.
+func (mr *MockAclListMockRecorder) ValidateRawRecordWithAuthorizer(rawRec, authorizer, afterValid any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecordWithAuthorizer", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecordWithAuthorizer), rawRec, authorizer, afterValid)
+}
+
 // MockStorage is a mock of Storage interface.
 type MockStorage struct {
 	ctrl     *gomock.Controller
