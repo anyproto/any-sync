@@ -566,6 +566,11 @@ func (m *AccountLimits) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.ChildSpacesLimit != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.ChildSpacesLimit))
+		i--
+		dAtA[i] = 0x10
+	}
 	if m.SharedSpacesLimit != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.SharedSpacesLimit))
 		i--
@@ -1818,6 +1823,11 @@ func (m *AccountLimitsSetRequest) MarshalToSizedBufferVT(dAtA []byte) (int, erro
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.ChildSpacesLimit != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.ChildSpacesLimit))
+		i--
+		dAtA[i] = 0x38
 	}
 	if m.SharedSpacesLimit != 0 {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.SharedSpacesLimit))
@@ -3227,6 +3237,9 @@ func (m *AccountLimits) SizeVT() (n int) {
 	if m.SharedSpacesLimit != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.SharedSpacesLimit))
 	}
+	if m.ChildSpacesLimit != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.ChildSpacesLimit))
+	}
 	n += len(m.unknownFields)
 	return n
 }
@@ -3721,6 +3734,9 @@ func (m *AccountLimitsSetRequest) SizeVT() (n int) {
 	}
 	if m.SharedSpacesLimit != 0 {
 		n += 1 + protohelpers.SizeOfVarint(uint64(m.SharedSpacesLimit))
+	}
+	if m.ChildSpacesLimit != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.ChildSpacesLimit))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -5441,6 +5457,25 @@ func (m *AccountLimits) UnmarshalVT(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.SharedSpacesLimit |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildSpacesLimit", wireType)
+			}
+			m.ChildSpacesLimit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ChildSpacesLimit |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -8543,6 +8578,25 @@ func (m *AccountLimitsSetRequest) UnmarshalVT(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.SharedSpacesLimit |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildSpacesLimit", wireType)
+			}
+			m.ChildSpacesLimit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ChildSpacesLimit |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

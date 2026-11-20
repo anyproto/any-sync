@@ -108,7 +108,7 @@ enum ErrorCodes {
   // ParentPermissionDenied - the role of the account in the parent space is too low for what it asks:
   // creating a child, removing a member of a child, changing its owner, deleting it or listing the children
   ParentPermissionDenied = 16;
-  // ChildSpacesLimitReached - the owner of the parent space has no room for one more child
+  // ChildSpacesLimitReached - the owner of the parent space is at its childSpacesLimit
   ChildSpacesLimitReached = 17;
   // NotParentMember - an account added to a child space is not a member of the parent space
   NotParentMember = 18;
@@ -191,6 +191,8 @@ message SpaceStatusCheckManyResponse {
 // AccountLimits describes account level limit
 message AccountLimits {
   uint32 sharedSpacesLimit = 1;
+  // childSpacesLimit caps the child spaces of all the spaces the account owns
+  uint32 childSpacesLimit = 2;
 }
 
 
@@ -417,6 +419,8 @@ message AccountLimitsSetRequest {
   uint32 spaceMembersRead = 4;
   uint32 spaceMembersWrite = 5;
   uint32 sharedSpacesLimit = 6;
+  // childSpacesLimit caps the child spaces of all the spaces the account owns
+  uint32 childSpacesLimit = 7;
 }
 
 message AccountLimitsSetResponse {}

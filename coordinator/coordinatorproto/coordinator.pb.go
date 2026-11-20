@@ -46,7 +46,7 @@ const (
 	// ParentPermissionDenied - the role of the account in the parent space is too low for what it asks:
 	// creating a child, removing a member of a child, changing its owner, deleting it or listing the children
 	ErrorCodes_ParentPermissionDenied ErrorCodes = 16
-	// ChildSpacesLimitReached - the owner of the parent space has no room for one more child
+	// ChildSpacesLimitReached - the owner of the parent space is at its childSpacesLimit
 	ErrorCodes_ChildSpacesLimitReached ErrorCodes = 17
 	// NotParentMember - an account added to a child space is not a member of the parent space
 	ErrorCodes_NotParentMember ErrorCodes = 18
@@ -1231,8 +1231,10 @@ func (x *SpaceStatusCheckManyResponse) GetAccountLimits() *AccountLimits {
 type AccountLimits struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	SharedSpacesLimit uint32                 `protobuf:"varint,1,opt,name=sharedSpacesLimit,proto3" json:"sharedSpacesLimit,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// childSpacesLimit caps the child spaces of all the spaces the account owns
+	ChildSpacesLimit uint32 `protobuf:"varint,2,opt,name=childSpacesLimit,proto3" json:"childSpacesLimit,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AccountLimits) Reset() {
@@ -1268,6 +1270,13 @@ func (*AccountLimits) Descriptor() ([]byte, []int) {
 func (x *AccountLimits) GetSharedSpacesLimit() uint32 {
 	if x != nil {
 		return x.SharedSpacesLimit
+	}
+	return 0
+}
+
+func (x *AccountLimits) GetChildSpacesLimit() uint32 {
+	if x != nil {
+		return x.ChildSpacesLimit
 	}
 	return 0
 }
@@ -2662,8 +2671,10 @@ type AccountLimitsSetRequest struct {
 	SpaceMembersRead      uint32                 `protobuf:"varint,4,opt,name=spaceMembersRead,proto3" json:"spaceMembersRead,omitempty"`
 	SpaceMembersWrite     uint32                 `protobuf:"varint,5,opt,name=spaceMembersWrite,proto3" json:"spaceMembersWrite,omitempty"`
 	SharedSpacesLimit     uint32                 `protobuf:"varint,6,opt,name=sharedSpacesLimit,proto3" json:"sharedSpacesLimit,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// childSpacesLimit caps the child spaces of all the spaces the account owns
+	ChildSpacesLimit uint32 `protobuf:"varint,7,opt,name=childSpacesLimit,proto3" json:"childSpacesLimit,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AccountLimitsSetRequest) Reset() {
@@ -2734,6 +2745,13 @@ func (x *AccountLimitsSetRequest) GetSpaceMembersWrite() uint32 {
 func (x *AccountLimitsSetRequest) GetSharedSpacesLimit() uint32 {
 	if x != nil {
 		return x.SharedSpacesLimit
+	}
+	return 0
+}
+
+func (x *AccountLimitsSetRequest) GetChildSpacesLimit() uint32 {
+	if x != nil {
+		return x.ChildSpacesLimit
 	}
 	return 0
 }
@@ -4089,9 +4107,10 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\bspaceIds\x18\x01 \x03(\tR\bspaceIds\"\x9d\x01\n" +
 	"\x1cSpaceStatusCheckManyResponse\x12;\n" +
 	"\bpayloads\x18\x01 \x03(\v2\x1f.coordinator.SpaceStatusPayloadR\bpayloads\x12@\n" +
-	"\raccountLimits\x18\x02 \x01(\v2\x1a.coordinator.AccountLimitsR\raccountLimits\"=\n" +
+	"\raccountLimits\x18\x02 \x01(\v2\x1a.coordinator.AccountLimitsR\raccountLimits\"i\n" +
 	"\rAccountLimits\x12,\n" +
-	"\x11sharedSpacesLimit\x18\x01 \x01(\rR\x11sharedSpacesLimit\"\xe0\x01\n" +
+	"\x11sharedSpacesLimit\x18\x01 \x01(\rR\x11sharedSpacesLimit\x12*\n" +
+	"\x10childSpacesLimit\x18\x02 \x01(\rR\x10childSpacesLimit\"\xe0\x01\n" +
 	"\x18SpaceStatusChangeRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12,\n" +
 	"\x11deletionPayloadId\x18\x02 \x01(\tR\x11deletionPayloadId\x12(\n" +
@@ -4170,14 +4189,15 @@ const file_coordinator_coordinatorproto_protos_coordinator_proto_rawDesc = "" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x18\n" +
 	"\aaclHead\x18\x02 \x01(\tR\aaclHead\"1\n" +
 	"\x15AclGetRecordsResponse\x12\x18\n" +
-	"\arecords\x18\x01 \x03(\fR\arecords\"\x8b\x02\n" +
+	"\arecords\x18\x01 \x03(\fR\arecords\"\xb7\x02\n" +
 	"\x17AccountLimitsSetRequest\x12\x1a\n" +
 	"\bidentity\x18\x01 \x01(\tR\bidentity\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x124\n" +
 	"\x15fileStorageLimitBytes\x18\x03 \x01(\x04R\x15fileStorageLimitBytes\x12*\n" +
 	"\x10spaceMembersRead\x18\x04 \x01(\rR\x10spaceMembersRead\x12,\n" +
 	"\x11spaceMembersWrite\x18\x05 \x01(\rR\x11spaceMembersWrite\x12,\n" +
-	"\x11sharedSpacesLimit\x18\x06 \x01(\rR\x11sharedSpacesLimit\"\x1a\n" +
+	"\x11sharedSpacesLimit\x18\x06 \x01(\rR\x11sharedSpacesLimit\x12*\n" +
+	"\x10childSpacesLimit\x18\a \x01(\rR\x10childSpacesLimit\"\x1a\n" +
 	"\x18AccountLimitsSetResponse\"n\n" +
 	"\x12AclEventLogRequest\x12(\n" +
 	"\x0faccountIdentity\x18\x01 \x01(\tR\x0faccountIdentity\x12\x18\n" +
