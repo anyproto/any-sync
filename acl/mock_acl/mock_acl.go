@@ -46,18 +46,23 @@ func (m *MockAclService) EXPECT() *MockAclServiceMockRecorder {
 }
 
 // AddRecord mocks base method.
-func (m *MockAclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits acl.Limits) (*consensusproto.RawRecordWithId, error) {
+func (m *MockAclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits acl.Limits, opts ...acl.AddRecordOption) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRecord", ctx, spaceId, rec, limits)
+	varargs := []any{ctx, spaceId, rec, limits}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddRecord", varargs...)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRecord indicates an expected call of AddRecord.
-func (mr *MockAclServiceMockRecorder) AddRecord(ctx, spaceId, rec, limits any) *gomock.Call {
+func (mr *MockAclServiceMockRecorder) AddRecord(ctx, spaceId, rec, limits any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRecord", reflect.TypeOf((*MockAclService)(nil).AddRecord), ctx, spaceId, rec, limits)
+	varargs := append([]any{ctx, spaceId, rec, limits}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRecord", reflect.TypeOf((*MockAclService)(nil).AddRecord), varargs...)
 }
 
 // Close mocks base method.

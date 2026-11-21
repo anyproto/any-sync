@@ -42,6 +42,8 @@ type CoordinatorClient interface {
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	SpaceMakeShareable(ctx context.Context, spaceId string) (err error)
 	SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) (err error)
+	// SpaceChildren lists the child spaces of spaceId. The coordinator answers only an Admin or the Owner of that space.
+	SpaceChildren(ctx context.Context, spaceId string) (children []*coordinatorproto.SpaceChild, err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	IsNetworkNeedsUpdate(ctx context.Context) (bool, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
@@ -346,6 +348,20 @@ func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, a
 		}
 		return nil
 	})
+}
+
+func (c *coordinatorClient) SpaceChildren(ctx context.Context, spaceId string) (children []*coordinatorproto.SpaceChild, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.SpaceChildren(ctx, &coordinatorproto.SpaceChildrenRequest{
+			SpaceId: spaceId,
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		children = resp.Children
+		return nil
+	})
+	return
 }
 
 func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error) {

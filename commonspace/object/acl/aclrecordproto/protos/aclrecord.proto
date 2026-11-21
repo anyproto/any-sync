@@ -152,6 +152,13 @@ message AclAccountRemove {
     AclReadKeyChange readKeyChange = 2;
 }
 
+// AclAccountRemoveNoRotate removes accounts and keeps the read key. An Admin or the Owner of the parent
+// space writes it in a child space whose read key they do not hold. The removed accounts can read with
+// the old key until a member of the child changes it with AclReadKeyChange.
+message AclAccountRemoveNoRotate {
+    repeated bytes identities = 1;
+}
+
 // AclAccountRequestRemove adds a request to remove an account
 message AclAccountRequestRemove {
 }
@@ -176,6 +183,7 @@ message AclContentValue {
         AclAccountInviteChange inviteChange = 14;
         AclOwnershipChange ownershipChange = 15;
         AclSpaceOptionsChange spaceOptionsChange = 16;
+        AclAccountRemoveNoRotate accountRemoveNoRotate = 17;
     }
 }
 

@@ -26,6 +26,14 @@ type AclJoiningClient interface {
 	InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error)
 	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
 	RequestSelfRemove(ctx context.Context, spaceId string, aclList list.AclList) (err error)
+	// RemoveChildMembers removes members of the child space spaceId. The caller is an Admin or the Owner
+	// of its parent space, need not be a member of the child and holds no read key of it: an Admin or
+	// the Owner of the child changes the read key afterwards.
+	RemoveChildMembers(ctx context.Context, spaceId string, identities []crypto.PubKey) (aclHeadId string, err error)
+	// ChangeChildOwner hands the child space spaceId to newOwner, an active member of it. The caller is
+	// the Owner of its parent space and need not be a member of the child. The previous owner stays a
+	// member with oldOwnerPermissions.
+	ChangeChildOwner(ctx context.Context, spaceId string, newOwner crypto.PubKey, oldOwnerPermissions list.AclPermissions) (aclHeadId string, err error)
 }
 
 type aclJoiningClient struct {
@@ -127,6 +135,43 @@ func (c *aclJoiningClient) InviteJoin(ctx context.Context, spaceId string, paylo
 		return
 	}
 	rec, err := acl.RecordBuilder().BuildInviteJoinWithoutApprove(payload)
+	if err != nil {
+		return
+	}
+	recWithId, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
+	if err != nil {
+		return
+	}
+	aclHeadId = recWithId.Id
+	return
+}
+
+func (c *aclJoiningClient) RemoveChildMembers(ctx context.Context, spaceId string, identities []crypto.PubKey) (aclHeadId string, err error) {
+	acl, err := c.getAcl(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	rec, err := acl.RecordBuilder().BuildAccountRemoveNoRotate(identities)
+	if err != nil {
+		return
+	}
+	recWithId, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
+	if err != nil {
+		return
+	}
+	aclHeadId = recWithId.Id
+	return
+}
+
+func (c *aclJoiningClient) ChangeChildOwner(ctx context.Context, spaceId string, newOwner crypto.PubKey, oldOwnerPermissions list.AclPermissions) (aclHeadId string, err error) {
+	acl, err := c.getAcl(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	rec, err := acl.RecordBuilder().BuildOwnershipChangeByParent(list.OwnershipChangePayload{
+		NewOwner:            newOwner,
+		OldOwnerPermissions: oldOwnerPermissions,
+	})
 	if err != nil {
 		return
 	}
