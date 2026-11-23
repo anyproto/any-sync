@@ -47,7 +47,7 @@ require (
 	golang.org/x/tools v0.50.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
-	storj.io/drpc v1.0.0
+	storj.io/drpc v1.1.0
 )
 
 require (
