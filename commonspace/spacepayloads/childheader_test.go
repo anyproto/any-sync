@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -190,4 +193,78 @@ func TestTopLevelHeader_NamesNoParent(t *testing.T) {
 			require.Empty(t, parentOfRawHeader(t, out.SpaceHeaderWithId))
 		})
 	}
+}
+
+// withAclRoot is the storage payload of the space with another acl root: the settings name the root, and
+// the creator signs the header that binds both.
+func withAclRoot(t *testing.T, payload SpaceCreatePayload, root *consensusproto.RawRecordWithId) spacestorage.SpaceStorageCreatePayload {
+	out, err := StoragePayloadForSpaceCreateV1(payload)
+	require.NoError(t, err)
+	_, settings, err := objecttree.NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildRoot(objecttree.InitialContent{
+		AclHeadId:  root.Id,
+		PrivKey:    payload.SigningKey,
+		Seed:       randBytes(32),
+		ChangeType: SpaceReserved,
+	})
+	require.NoError(t, err)
+	header := resignedHeader(t, out.SpaceHeaderWithId, payload.SigningKey, func(h *spacesyncproto.SpaceHeader) {
+		h.AclPayload, h.SettingPayload = root.Payload, settings.RawChange
+	})
+	return spacestorage.SpaceStorageCreatePayload{AclWithId: root, SpaceHeaderWithId: header, SpaceSettingsWithId: settings}
+}
+
+// The creator of a child is its first owner: the acl root of a child is written by the account that
+// signed its header, and it is not a one-to-one root. A top-level space takes any root.
+func TestChildHeader_AclRootIsTheCreators(t *testing.T) {
+	repKey := mrand.Uint64()
+	child := newChildCreatePayload(t, NewSpaceId("parentcid", repKey), repKey)
+	topLevel := newChildCreatePayload(t, "", repKey)
+	outsider, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	outsiderKey, err := outsider.SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	builder := list.NewAclRecordBuilder("", crypto.NewKeyStorage(), nil, recordverifier.NewValidateFull())
+	rootOf := func(author crypto.PrivKey) *consensusproto.RawRecordWithId {
+		root, err := builder.BuildRoot(list.RootContent{PrivKey: author, MasterKey: author})
+		require.NoError(t, err)
+		return root
+	}
+	// notOwn are the roots that are not the creator's own
+	notOwn := func(creator crypto.PrivKey) map[string]*consensusproto.RawRecordWithId {
+		// the creator builds the one-to-one space with the outsider alone
+		oneToOne, err := StoragePayloadForOneToOneSpace(creator, outsider.SignKey.GetPublic())
+		require.NoError(t, err)
+		// a one-to-one root names the accounts of the space itself, whoever signs it
+		creatorKey, err := creator.GetPublic().Marshall()
+		require.NoError(t, err)
+		named, err := builder.BuildOneToOneRoot(list.RootContent{PrivKey: creator, MasterKey: creator}, &aclrecordproto.AclOneToOneInfo{
+			Owner:   outsiderKey,
+			Writers: [][]byte{creatorKey, outsiderKey},
+		})
+		require.NoError(t, err)
+		return map[string]*consensusproto.RawRecordWithId{
+			"the root of another account":              rootOf(outsider.SignKey),
+			"the root of a one-to-one space":           oneToOne.AclWithId,
+			"a one-to-one root that the creator signs": named,
+		}
+	}
+
+	t.Run("a child with the root of its creator", func(t *testing.T) {
+		require.NoError(t, ValidateSpaceStorageCreatePayload(withAclRoot(t, child, rootOf(child.SigningKey))))
+	})
+	for name, root := range notOwn(child.SigningKey) {
+		t.Run("a child with "+name, func(t *testing.T) {
+			require.ErrorIs(t, ValidateSpaceStorageCreatePayload(withAclRoot(t, child, root)), ErrChildNeedsOwnAclRoot)
+		})
+	}
+	for name, root := range notOwn(topLevel.SigningKey) {
+		t.Run("a top-level space with "+name, func(t *testing.T) {
+			require.NoError(t, ValidateSpaceStorageCreatePayload(withAclRoot(t, topLevel, root)))
+		})
+	}
+	t.Run("a one-to-one space", func(t *testing.T) {
+		oneToOne, err := StoragePayloadForOneToOneSpace(child.SigningKey, outsider.SignKey.GetPublic())
+		require.NoError(t, err)
+		require.NoError(t, ValidateSpaceStorageCreatePayload(oneToOne))
+	})
 }
