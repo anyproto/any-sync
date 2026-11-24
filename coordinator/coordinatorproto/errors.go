@@ -29,4 +29,5 @@ var (
 	ErrChildSpacesLimitReached        = errGroup.Register(errors.New("child spaces limit reached"), uint64(ErrorCodes_ChildSpacesLimitReached))
 	ErrNotParentMember                = errGroup.Register(errors.New("not a member of the parent space"), uint64(ErrorCodes_NotParentMember))
 	ErrSpaceHasChildren               = errGroup.Register(errors.New("space has child spaces"), uint64(ErrorCodes_SpaceHasChildren))
+	ErrGuestRoleNotAllowed            = errGroup.Register(errors.New("the space has no guest role"), uint64(ErrorCodes_GuestRoleNotAllowed))
 )

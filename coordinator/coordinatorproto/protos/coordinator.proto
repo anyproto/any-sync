@@ -114,6 +114,8 @@ enum ErrorCodes {
   NotParentMember = 18;
   // SpaceHasChildren - a space that still has child spaces cannot be deleted
   SpaceHasChildren = 19;
+  // GuestRoleNotAllowed - the space type has no guest role, and the record would give an account that role
+  GuestRoleNotAllowed = 20;
   ErrorOffset = 300;
 }
 

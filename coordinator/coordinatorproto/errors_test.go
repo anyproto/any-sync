@@ -20,6 +20,7 @@ func TestParentChildErrorsKeepTheirCode(t *testing.T) {
 		ErrorCodes_ChildSpacesLimitReached: ErrChildSpacesLimitReached,
 		ErrorCodes_NotParentMember:         ErrNotParentMember,
 		ErrorCodes_SpaceHasChildren:        ErrSpaceHasChildren,
+		ErrorCodes_GuestRoleNotAllowed:     ErrGuestRoleNotAllowed,
 	} {
 		wire := drpcerr.WithCode(errors.New("remote"), uint64(ErrorCodes_ErrorOffset)+uint64(code))
 		require.ErrorIs(t, rpcerr.Unwrap(wire), registered, code.String())
