@@ -50,6 +50,9 @@ type AclList interface {
 	RecordBuilder() AclRecordBuilder
 
 	ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(state *AclState) error) (err error)
+	// ValidateRawRecordWithAuthorizer validates as ValidateRawRecord does, and accepts what the record's
+	// author does on the authority of the parent space as far as authorizer allows
+	ValidateRawRecordWithAuthorizer(rawRec *consensusproto.RawRecord, authorizer ParentAuthorizer, afterValid func(state *AclState) error) (err error)
 	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
 	AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error)
 
@@ -235,12 +238,16 @@ func (a *aclList) Records() []*AclRecord {
 }
 
 func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(state *AclState) error) (err error) {
+	return a.ValidateRawRecordWithAuthorizer(rawRec, nil, afterValid)
+}
+
+func (a *aclList) ValidateRawRecordWithAuthorizer(rawRec *consensusproto.RawRecord, authorizer ParentAuthorizer, afterValid func(state *AclState) error) (err error) {
 	record, err := a.recordBuilder.Unmarshall(rawRec)
 	if err != nil {
 		return
 	}
 	stateCopy := a.aclState.Copy()
-	stateCopy.contentValidator = newAdmissionValidator(stateCopy.keyStore, stateCopy)
+	stateCopy.contentValidator = newAdmissionValidator(stateCopy.keyStore, stateCopy, authorizer)
 	err = stateCopy.ApplyRecord(record)
 	if err != nil || afterValid == nil {
 		return

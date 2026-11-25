@@ -44,6 +44,9 @@ type SpaceCreatePayload struct {
 	Options *aclrecordproto.AclSpaceOptions
 	// FileProtoVersion gates the file protocol the space uses (embedded in the signed header)
 	FileProtoVersion spacesyncproto.SpaceFileProtoVersion
+	// ParentSpaceId makes the space a child of that space (embedded in the signed header). A child needs
+	// the v1 header. Its ReplicationKey is the parent's, so both live on the same nodes.
+	ParentSpaceId string
 }
 
 type SpaceDerivePayload struct {
@@ -76,8 +79,13 @@ func IsOneToOneType(spaceType string) bool {
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
 var ErrIncorrectOneToOnePayload = errors.New("incorrect onetoone payload")
+var ErrChildNeedsHeaderV1 = errors.New("a child space needs the v1 header")
+var ErrChildNeedsOwnAclRoot = errors.New("a child space needs the acl root of its creator")
 
 func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+	if payload.ParentSpaceId != "" {
+		return storagePayload, ErrChildNeedsHeaderV1
+	}
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
@@ -186,6 +194,7 @@ func StoragePayloadForSpaceCreateV1(payload SpaceCreatePayload) (storagePayload 
 		ReplicationKey:     payload.ReplicationKey,
 		Seed:               spaceHeaderSeed,
 		FileprotoVersion:   payload.FileProtoVersion,
+		ParentSpaceId:      payload.ParentSpaceId,
 		Version:            spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1,
 	}
 
@@ -588,7 +597,44 @@ func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 		err = spacestorage.ErrIncorrectSpaceHeader
 		return
 	}
-	return
+	return validateChildAclRoot(payload)
+}
+
+// validateChildAclRoot refuses a child space whose acl root is not written by the account that signed
+// its header, or is a one-to-one root: the creator of a child is its first owner, and a one-to-one root
+// names the accounts of the space itself.
+func validateChildAclRoot(payload spacestorage.SpaceStorageCreatePayload) (err error) {
+	var rawHeader spacesyncproto.RawSpaceHeader
+	if err = rawHeader.UnmarshalVT(payload.SpaceHeaderWithId.RawHeader); err != nil {
+		return
+	}
+	var header spacesyncproto.SpaceHeader
+	if err = header.UnmarshalVT(rawHeader.SpaceHeader); err != nil {
+		return
+	}
+	if header.ParentSpaceId == "" {
+		return nil
+	}
+	var rawAcl consensusproto.RawRecord
+	if err = rawAcl.UnmarshalVT(payload.AclWithId.Payload); err != nil {
+		return
+	}
+	var aclRoot aclrecordproto.AclRoot
+	if err = aclRoot.UnmarshalVT(rawAcl.Payload); err != nil {
+		return
+	}
+	creator, err := crypto.UnmarshalEd25519PublicKeyProto(header.Identity)
+	if err != nil {
+		return
+	}
+	owner, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.Identity)
+	if err != nil {
+		return
+	}
+	if aclRoot.OneToOneInfo != nil || !owner.Equals(creator) {
+		return ErrChildNeedsOwnAclRoot
+	}
+	return nil
 }
 
 func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey, aclPayload []byte, settingsPayload []byte) (needCheckSpaceId bool, err error) {
@@ -624,6 +670,9 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		return false, spacestorage.ErrIncorrectSpaceHeader
 	}
 	isV1 := header.Version == spacesyncproto.SpaceHeaderVersion_SpaceHeaderVersion1
+	if header.ParentSpaceId != "" && !isV1 {
+		return false, ErrChildNeedsHeaderV1
+	}
 	needCheckSpaceId = !isV1
 
 	if isV1 {

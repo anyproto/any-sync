@@ -31,12 +31,36 @@ type Limits struct {
 	WriteMembers uint32
 }
 
+// AddRecordOption adjusts how AddRecord validates a record
+type AddRecordOption func(o *addRecordOptions)
+
+type addRecordOptions struct {
+	parentAuthorizer list.ParentAuthorizer
+	afterValid       func(before, after *list.AclState) error
+}
+
+// WithParentAuthorizer tells what the parent space lets the record's author do in this space. Without
+// it a record that needs such authority is refused.
+func WithParentAuthorizer(authorizer list.ParentAuthorizer) AddRecordOption {
+	return func(o *addRecordOptions) {
+		o.parentAuthorizer = authorizer
+	}
+}
+
+// WithAfterValid adds a check of a valid record: it gets the acl state before the record and the state
+// the record leads to, and its error refuses the record. It must not keep or change either state.
+func WithAfterValid(afterValid func(before, after *list.AclState) error) AddRecordOption {
+	return func(o *addRecordOptions) {
+		o.afterValid = afterValid
+	}
+}
+
 func New() AclService {
 	return &aclService{}
 }
 
 type AclService interface {
-	AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits) (result *consensusproto.RawRecordWithId, err error)
+	AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits, opts ...AddRecordOption) (result *consensusproto.RawRecordWithId, err error)
 	RecordsAfter(ctx context.Context, spaceId, aclHead string) (result []*consensusproto.RawRecordWithId, err error)
 	Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error)
 	OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error)
@@ -88,9 +112,13 @@ func (as *aclService) get(ctx context.Context, spaceId string) (list.AclList, er
 	return aObj.AclList, nil
 }
 
-func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits) (result *consensusproto.RawRecordWithId, err error) {
+func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits, opts ...AddRecordOption) (result *consensusproto.RawRecordWithId, err error) {
 	if limits.ReadMembers <= 1 && limits.WriteMembers <= 1 {
 		return nil, ErrLimitExceed
+	}
+	var options addRecordOptions
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	acl, err := as.get(ctx, spaceId)
@@ -115,7 +143,7 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 		return nil, err
 	}
 
-	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
+	checkLimits := func(state *list.AclState) error {
 		newOwner, err := state.OwnerPubKey()
 		if err != nil {
 			return err
@@ -139,6 +167,15 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 		}
 		if writers > beforeWriters && uint32(writers) > limits.WriteMembers {
 			return ErrLimitExceed
+		}
+		return nil
+	}
+	err = acl.ValidateRawRecordWithAuthorizer(rec, options.parentAuthorizer, func(state *list.AclState) error {
+		if err := checkLimits(state); err != nil {
+			return err
+		}
+		if options.afterValid != nil {
+			return options.afterValid(acl.AclState(), state)
 		}
 		return nil
 	})

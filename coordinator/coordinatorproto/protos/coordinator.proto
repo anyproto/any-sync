@@ -66,6 +66,9 @@ service Coordinator {
   // FileUsageReport accepts per-(space, identity) durable file usage reports from fileV2 nodes.
   // The reporting node is taken from the authenticated peer context. Values are absolute (idempotent re-reports).
   rpc FileUsageReport(FileUsageReportRequest) returns (FileUsageReportResponse);
+
+  // SpaceChildren lists the child spaces of a space. Only an Admin or the Owner of that space can call it
+  rpc SpaceChildren(SpaceChildrenRequest) returns (SpaceChildrenResponse);
 }
 
 
@@ -97,6 +100,22 @@ enum ErrorCodes {
   InboxMessageVerifyFailed = 11;
   SubscribePeerAlreadySubscribed = 12;
   InviteStillActive = 13;
+  // ParentSpaceNotAvailable - the parent space does not exist or is deleted
+  ParentSpaceNotAvailable = 14;
+  // ParentSpaceInvalid - the parent or the child is not a space that can be nested: a space of the wrong
+  // kind, a child as the parent, or a child whose header is not v1
+  ParentSpaceInvalid = 15;
+  // ParentPermissionDenied - the role of the account in the parent space is too low for what it asks:
+  // creating a child, removing a member of a child, changing its owner, deleting it or listing the children
+  ParentPermissionDenied = 16;
+  // ChildSpacesLimitReached - the owner of the parent space is at its childSpacesLimit
+  ChildSpacesLimitReached = 17;
+  // NotParentMember - an account added to a child space is not a member of the parent space
+  NotParentMember = 18;
+  // SpaceHasChildren - a space that still has child spaces cannot be deleted
+  SpaceHasChildren = 19;
+  // GuestRoleNotAllowed - the space type has no guest role, and the record would give an account that role
+  GuestRoleNotAllowed = 20;
   ErrorOffset = 300;
 }
 
@@ -174,6 +193,8 @@ message SpaceStatusCheckManyResponse {
 // AccountLimits describes account level limit
 message AccountLimits {
   uint32 sharedSpacesLimit = 1;
+  // childSpacesLimit caps the child spaces of all the spaces the account owns
+  uint32 childSpacesLimit = 2;
 }
 
 
@@ -400,6 +421,8 @@ message AccountLimitsSetRequest {
   uint32 spaceMembersRead = 4;
   uint32 spaceMembersWrite = 5;
   uint32 sharedSpacesLimit = 6;
+  // childSpacesLimit caps the child spaces of all the spaces the account owns
+  uint32 childSpacesLimit = 7;
 }
 
 message AccountLimitsSetResponse {}
@@ -557,3 +580,19 @@ message FileUsageRow {
 }
 
 message FileUsageReportResponse {}
+
+// SpaceChildrenRequest contains the id of the parent space
+message SpaceChildrenRequest {
+  string spaceId = 1;
+}
+
+// SpaceChildrenResponse contains the child spaces of the requested space
+message SpaceChildrenResponse {
+  repeated SpaceChild children = 1;
+}
+
+// SpaceChild describes one child space
+message SpaceChild {
+  string spaceId = 1;
+  SpaceStatus status = 2;
+}

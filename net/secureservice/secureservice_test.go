@@ -84,6 +84,54 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	require.Equal(t, handshake.ErrIncompatibleVersion, res.err)
 }
 
+// A peer of the previous release announces 13 and accepts 12, 13 and 14. It keeps connecting to a peer
+// with the defaults of this release, whichever side dials.
+func TestHandshakeWithPreviousVersion(t *testing.T) {
+	const prevVersion = uint32(13)
+	prevCompatible := []uint32{12, 13, 14}
+	require.Equal(t, []uint32{ProtoVersion - 1, ProtoVersion, ProtoVersion + 1}, defaultCompatibleVersions)
+	require.Contains(t, prevCompatible, ProtoVersion)
+
+	for name, prevDials := range map[string]bool{"previous dials": true, "previous accepts": false} {
+		t.Run(name, func(t *testing.T) {
+			nc := testnodeconf.GenNodeConfig(2)
+			prev := newFixture(t, nc, nc.GetAccountService(0), prevVersion, prevCompatible)
+			defer prev.Finish(t)
+			cur := newFixture(t, nc, nc.GetAccountService(1), 0, nil)
+			defer cur.Finish(t)
+			require.Equal(t, ProtoVersion, cur.protoVersion)
+
+			dialer, acceptor := cur, prev
+			if prevDials {
+				dialer, acceptor = prev, cur
+			}
+			sc, cc := net.Pipe()
+			type acceptRes struct {
+				ctx context.Context
+				err error
+			}
+			resCh := make(chan acceptRes)
+			go func() {
+				var ar acceptRes
+				ar.ctx, ar.err = acceptor.SecureInbound(ctx, sc)
+				resCh <- ar
+			}()
+			dialCtx, err := dialer.SecureOutbound(ctx, cc, "")
+			require.NoError(t, err)
+			res := <-resCh
+			require.NoError(t, res.err)
+
+			// each side learns the version the other one announced
+			seenByDialer, err := peer.CtxProtoVersion(dialCtx)
+			require.NoError(t, err)
+			require.Equal(t, acceptor.protoVersion, seenByDialer)
+			seenByAcceptor, err := peer.CtxProtoVersion(res.ctx)
+			require.NoError(t, err)
+			require.Equal(t, dialer.protoVersion, seenByAcceptor)
+		})
+	}
+}
+
 func TestOutboundServerName(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(1)
 	for _, tc := range []struct {

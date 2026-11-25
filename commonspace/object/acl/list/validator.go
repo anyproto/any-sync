@@ -25,6 +25,7 @@ type ContentValidator interface {
 	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 	ValidateSpaceOptionsChange(ch *aclrecordproto.AclSpaceOptionsChange, authorIdentity crypto.PubKey) (err error)
@@ -38,25 +39,68 @@ type contentValidator struct {
 	// preflight). Only there is a record without applicable content rejected: once the network has
 	// accepted one, replaying it (build, migration, sync) must not fail.
 	admission bool
+	// acceptedLog is true for a record the network already accepted: a stored log being rebuilt, or
+	// ingest from a source declared as the accepted log. Rules that apply only to a record entering a log
+	// are skipped for it.
+	acceptedLog bool
+	// parentAuthorizer tells what the parent space lets a record's author do; nil when nobody has such
+	// authority
+	parentAuthorizer ParentAuthorizer
 }
 
+// newContentValidator validates a record a built list ingests. The record enters the log there, unless
+// the verifier vouches for the accepted log.
 func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
+	accepted, ok := verifier.(acceptedLogVerifier)
 	return &contentValidator{
-		keyStore: keyStore,
-		aclState: aclState,
-		verifier: verifier,
+		keyStore:    keyStore,
+		aclState:    aclState,
+		verifier:    verifier,
+		acceptedLog: ok && accepted.AcceptedLog(),
+	}
+}
+
+// newStoredLogValidator validates the stored records a list is built from: they were accepted before
+// they were stored
+func newStoredLogValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
+	return &contentValidator{
+		keyStore:    keyStore,
+		aclState:    aclState,
+		verifier:    verifier,
+		acceptedLog: true,
 	}
 }
 
 // newAdmissionValidator validates a record before it enters the log: in full, and also rejecting content
-// that no per-type validator would check.
-func newAdmissionValidator(keyStore crypto.KeyStorage, aclState *AclState) ContentValidator {
+// that no per-type validator would check. What an author does on the authority of the parent space is
+// accepted only as far as parentAuthorizer allows.
+func newAdmissionValidator(keyStore crypto.KeyStorage, aclState *AclState, parentAuthorizer ParentAuthorizer) ContentValidator {
 	return &contentValidator{
-		keyStore:  keyStore,
-		aclState:  aclState,
-		verifier:  recordverifier.NewValidateFull(),
-		admission: true,
+		keyStore:         keyStore,
+		aclState:         aclState,
+		verifier:         recordverifier.NewValidateFull(),
+		admission:        true,
+		parentAuthorizer: parentAuthorizer,
 	}
+}
+
+// requireParentAuthority checks that the parent space allows the author what has() names. The
+// coordinator checked it for a record of the accepted log.
+func (c *contentValidator) requireParentAuthority(author crypto.PubKey, has func(ParentAuthority) bool) error {
+	if c.acceptedLog {
+		return nil
+	}
+	if c.parentAuthorizer == nil {
+		return ErrInsufficientPermissions
+	}
+	authority, err := c.parentAuthorizer(author)
+	if err != nil {
+		return err
+	}
+	if !has(authority) {
+		return ErrInsufficientPermissions
+	}
+	return nil
 }
 
 func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error) {
@@ -77,7 +121,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 		return nil
 	}
 	if !c.aclState.Permissions(authorIdentity).IsOwner() {
-		return ErrInsufficientPermissions
+		// an author who is not the owner acts as the Owner of the parent space
+		err = c.requireParentAuthority(authorIdentity, func(a ParentAuthority) bool { return a.ChangeOwner })
+		if err != nil {
+			return err
+		}
 	}
 	identity, err := c.keyStore.PubKeyFromProto(ch.NewOwnerIdentity)
 	if err != nil {
@@ -95,6 +143,11 @@ func (c *contentValidator) ValidateOwnershipChange(ch *aclrecordproto.AclOwnersh
 		newOwnerPerms.IsOwner() ||
 		oldOwnerPerms.IsOwner() ||
 		oldOwnerPerms.NoPermissions() {
+		return ErrInsufficientPermissions
+	}
+	// Guest is the role of a guest key's identity, not of a member: such an identity does not become the
+	// owner, and the previous owner does not become a guest. An accepted log can hold either.
+	if !c.acceptedLog && (newOwnerPerms.IsGuest() || oldOwnerPerms.IsGuest()) {
 		return ErrInsufficientPermissions
 	}
 	return nil
@@ -241,6 +294,8 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateRequestDecline(ch.GetRequestDecline(), authorIdentity)
 	case ch.GetAccountRemove() != nil:
 		return c.ValidateAccountRemove(ch.GetAccountRemove(), authorIdentity)
+	case ch.GetAccountRemoveNoRotate() != nil:
+		return c.ValidateAccountRemoveNoRotate(ch.GetAccountRemoveNoRotate(), authorIdentity)
 	case ch.GetAccountRequestRemove() != nil:
 		return c.ValidateRequestRemove(ch.GetAccountRequestRemove(), authorIdentity)
 	case ch.GetReadKeyChange() != nil:
@@ -510,6 +565,44 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 		seenIdentities[mapKeyFromPubKey(identity)] = struct{}{}
 	}
 	return c.validateReadKeyChange(ch.ReadKeyChange, seenIdentities)
+}
+
+// ValidateAccountRemoveNoRotate accepts the removal only from an author the parent space lets remove
+// members: no role in this acl allows it. Any member but the owner can be removed.
+func (c *contentValidator) ValidateAccountRemoveNoRotate(ch *aclrecordproto.AclAccountRemoveNoRotate, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	err = c.requireParentAuthority(authorIdentity, func(a ParentAuthority) bool { return a.RemoveMembers })
+	if err != nil {
+		return err
+	}
+	if len(ch.Identities) == 0 {
+		return ErrIncorrectNumberOfAccounts
+	}
+	seenIdentities := map[string]struct{}{}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		if identity.Equals(authorIdentity) {
+			return ErrInsufficientPermissions
+		}
+		permissions := c.aclState.Permissions(identity)
+		if permissions.NoPermissions() {
+			return ErrNoSuchAccount
+		}
+		if permissions.IsOwner() {
+			return ErrInsufficientPermissions
+		}
+		idKey := mapKeyFromPubKey(identity)
+		if _, exists := seenIdentities[idKey]; exists {
+			return ErrDuplicateAccounts
+		}
+		seenIdentities[idKey] = struct{}{}
+	}
+	return nil
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {

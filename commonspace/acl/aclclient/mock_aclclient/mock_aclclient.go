@@ -89,6 +89,21 @@ func (mr *MockAclJoiningClientMockRecorder) CancelRemoveSelf(ctx, spaceId any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelRemoveSelf", reflect.TypeOf((*MockAclJoiningClient)(nil).CancelRemoveSelf), ctx, spaceId)
 }
 
+// ChangeChildOwner mocks base method.
+func (m *MockAclJoiningClient) ChangeChildOwner(ctx context.Context, spaceId string, newOwner crypto.PubKey, oldOwnerPermissions list.AclPermissions) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeChildOwner", ctx, spaceId, newOwner, oldOwnerPermissions)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeChildOwner indicates an expected call of ChangeChildOwner.
+func (mr *MockAclJoiningClientMockRecorder) ChangeChildOwner(ctx, spaceId, newOwner, oldOwnerPermissions any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChildOwner", reflect.TypeOf((*MockAclJoiningClient)(nil).ChangeChildOwner), ctx, spaceId, newOwner, oldOwnerPermissions)
+}
+
 // Init mocks base method.
 func (m *MockAclJoiningClient) Init(a *app.App) error {
 	m.ctrl.T.Helper()
@@ -130,6 +145,21 @@ func (m *MockAclJoiningClient) Name() string {
 func (mr *MockAclJoiningClientMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAclJoiningClient)(nil).Name))
+}
+
+// RemoveChildMembers mocks base method.
+func (m *MockAclJoiningClient) RemoveChildMembers(ctx context.Context, spaceId string, identities []crypto.PubKey) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveChildMembers", ctx, spaceId, identities)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoveChildMembers indicates an expected call of RemoveChildMembers.
+func (mr *MockAclJoiningClientMockRecorder) RemoveChildMembers(ctx, spaceId, identities any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveChildMembers", reflect.TypeOf((*MockAclJoiningClient)(nil).RemoveChildMembers), ctx, spaceId, identities)
 }
 
 // RequestJoin mocks base method.

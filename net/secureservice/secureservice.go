@@ -42,12 +42,13 @@ var (
 	// ProtoVersion 11 - reserved (not used, version alignment gap)
 	// ProtoVersion 12 aligns with v0.12.X
 	// ProtoVersion 13 - files v2 (v2 filenodes, chash routing, space header fileprotoVersion), space exchange v2 (token-based LAN discovery), aligns with v0.13.X
-	ProtoVersion = uint32(13)
+	// ProtoVersion 14 - child spaces (space header parentSpaceId, acl account removal without a read key change), aligns with v0.14.X
+	ProtoVersion = uint32(14)
 )
 
 var (
-	// v0.13.X: accept self ±1 (V-1, V, V+1). Bridge v9 is dropped now that v0.12 has shipped.
-	defaultCompatibleVersions = []uint32{12, 13, 14}
+	// v0.14.X: accept self ±1 (V-1, V, V+1).
+	defaultCompatibleVersions = []uint32{13, 14, 15}
 )
 
 func New() SecureService {
