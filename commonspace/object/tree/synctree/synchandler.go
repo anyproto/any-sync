@@ -152,8 +152,8 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
-		// ask back unless the extra heads are duplicates or ancestors of ours,
-		// which the loaded tree always holds
+		// ask back unless every extra head is a duplicate or still attached in
+		// the loaded tree; a redundant head below our snapshot still gets asked
 		if len(curHeads) != len(request.Heads) && !s.tree.HasChanges(request.Heads...) {
 			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 			if err != nil {
@@ -236,14 +236,20 @@ func (s *syncHandler) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 }
 
 // hasChanges reports whether this tree stores every change in ids. HasChanges
-// sees only the loaded tree, which starts at the latest common snapshot, so a
-// change below it is looked up in storage. On a storage error it reports false.
+// sees only the loaded tree, which starts at the latest common snapshot, so if
+// that snapshot is not the tree root, a change below it is looked up in storage.
+// On a storage error it reports false.
 // A store corrupted by the old write bug can hold unattached rows (a change
-// without its parent), so the branch for superset heads does not use this.
+// without its parent). With the tree loaded from its root, a change found only
+// in storage is such a row, so storage is not consulted then. For the same
+// reason the branch for superset heads does not use this.
 func (s *syncHandler) hasChanges(ctx context.Context, ids []string) bool {
 	for _, id := range ids {
 		if s.tree.HasChanges(id) {
 			continue
+		}
+		if root := s.tree.Root(); root == nil || root.Id == s.tree.Id() {
+			return false
 		}
 		has, err := s.tree.Storage().Has(ctx, id)
 		if err != nil || !has {
