@@ -170,7 +170,10 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		}
 		return returnReq, send(protoResp)
 	} else {
-		if len(request.Heads) != 0 {
+		// Ask back only if the requester may hold changes we lack. If we have
+		// every head it sent, asking gains nothing, and a requester that cannot
+		// apply our changes would answer with the same request at once, forever.
+		if len(request.Heads) != 0 && !s.hasChanges(ctx, request.Heads) {
 			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 			if err != nil {
 				s.tree.Unlock()
@@ -228,4 +231,20 @@ func (s *syncHandler) ResponseCollector() syncdeps.ResponseCollector {
 
 func (s *syncHandler) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
+}
+
+// hasChanges reports whether we store every change in ids. HasChanges sees only
+// the loaded tree, which starts at the latest common snapshot, so a change
+// below it is looked up in storage. On a storage error it reports false.
+func (s *syncHandler) hasChanges(ctx context.Context, ids []string) bool {
+	for _, id := range ids {
+		if s.tree.HasChanges(id) {
+			continue
+		}
+		has, err := s.tree.Storage().Has(ctx, id)
+		if err != nil || !has {
+			return false
+		}
+	}
+	return true
 }
