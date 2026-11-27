@@ -213,14 +213,15 @@ func (s *storage) Heads(ctx context.Context) (res []string, err error) {
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
+	doc, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
 		}
 		return false, err
 	}
-	return true, nil
+	// all trees of a space share the changes collection
+	return string(doc.Value().GetStringBytes(TreeKey)) == s.id, nil
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter StorageIterator) error {

@@ -155,3 +155,37 @@ func TestCreateStorageLateArrivingChild(t *testing.T) {
 		require.ErrorIs(t, err, boom)
 	})
 }
+
+func TestStorage_Has(t *testing.T) {
+	StorageChangeBuilder = func(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+		return &nonVerifiableChangeBuilder{
+			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), rootChange),
+		}
+	}
+
+	t.Run("change of another tree in the same store is not found", func(t *testing.T) {
+		// given
+		ctx := context.Background()
+		store := newTestStore(t)
+		hs, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		creator := NewMockChangeCreator(nil)
+		tree1, err := CreateStorage(ctx, creator.CreateRoot("tree1", "aclHead"), hs, store)
+		require.NoError(t, err)
+		_, err = CreateStorage(ctx, creator.CreateRoot("tree2", "aclHead"), hs, store)
+		require.NoError(t, err)
+
+		// when
+		hasOwn, err := tree1.Has(ctx, "tree1")
+		require.NoError(t, err)
+		hasOther, err := tree1.Has(ctx, "tree2")
+		require.NoError(t, err)
+		hasUnknown, err := tree1.Has(ctx, "unknown")
+		require.NoError(t, err)
+
+		// then
+		require.True(t, hasOwn)
+		require.False(t, hasOther)
+		require.False(t, hasUnknown)
+	})
+}

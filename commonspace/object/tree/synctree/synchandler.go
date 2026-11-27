@@ -152,7 +152,8 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
-		if len(curHeads) != len(request.Heads) {
+		// ask back only for an extra head we lack, not a duplicate or a stored change
+		if len(curHeads) != len(request.Heads) && !s.hasChanges(ctx, request.Heads) {
 			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 			if err != nil {
 				s.tree.Unlock()
@@ -233,9 +234,9 @@ func (s *syncHandler) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
 }
 
-// hasChanges reports whether we store every change in ids. HasChanges sees only
-// the loaded tree, which starts at the latest common snapshot, so a change
-// below it is looked up in storage. On a storage error it reports false.
+// hasChanges reports whether this tree stores every change in ids. HasChanges
+// sees only the loaded tree, which starts at the latest common snapshot, so a
+// change below it is looked up in storage. On a storage error it reports false.
 func (s *syncHandler) hasChanges(ctx context.Context, ids []string) bool {
 	for _, id := range ids {
 		if s.tree.HasChanges(id) {
