@@ -152,8 +152,9 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
-		// ask back only for an extra head we lack, not a duplicate or a stored change
-		if len(curHeads) != len(request.Heads) && !s.hasChanges(ctx, request.Heads) {
+		// ask back unless the extra heads are duplicates or ancestors of ours,
+		// which the loaded tree always holds
+		if len(curHeads) != len(request.Heads) && !s.tree.HasChanges(request.Heads...) {
 			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 			if err != nil {
 				s.tree.Unlock()
@@ -237,6 +238,8 @@ func (s *syncHandler) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 // hasChanges reports whether this tree stores every change in ids. HasChanges
 // sees only the loaded tree, which starts at the latest common snapshot, so a
 // change below it is looked up in storage. On a storage error it reports false.
+// A store corrupted by the old write bug can hold unattached rows (a change
+// without its parent), so the branch for superset heads does not use this.
 func (s *syncHandler) hasChanges(ctx context.Context, ids []string) bool {
 	for _, id := range ids {
 		if s.tree.HasChanges(id) {
