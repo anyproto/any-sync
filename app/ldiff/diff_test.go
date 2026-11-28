@@ -232,6 +232,197 @@ func TestDiff_Diff(t *testing.T) {
 	})
 }
 
+func TestDiff_DiffBelowRoot(t *testing.T) {
+	ctx := context.Background()
+	els := make([]Element, 5000)
+	for i := range els {
+		els[i] = Element{Id: fmt.Sprintf("id%d", i), Head: "h"}
+	}
+	build := func(els []Element) Diff {
+		d := New(32, 256)
+		d.Set(els...)
+		return d
+	}
+	for name, tc := range map[string]struct{ local, remote []Element }{
+		"few differences": {els[:4995], append(append([]Element{}, els[5:]...), Element{Id: "id1", Head: "changed"})},
+		"empty local":     {nil, els[:3]},
+		"empty remote":    {els, nil},
+		"tiny remote":     {els, els[:1]},
+		"equal":           {els, els},
+	} {
+		t.Run(name, func(t *testing.T) {
+			local, remote := build(tc.local), build(tc.remote)
+			wantNew, wantChanged, wantRemoved, err := local.Diff(ctx, remote)
+			require.NoError(t, err)
+			requests := &rangeRequests{Remote: remote}
+			newIds, changedIds, removedIds, err := local.DiffBelowRoot(ctx, requests)
+			require.NoError(t, err)
+			require.ElementsMatch(t, wantNew, newIds)
+			require.ElementsMatch(t, wantChanged, changedIds)
+			require.ElementsMatch(t, wantRemoved, removedIds)
+			require.False(t, requests.root, "the root was requested")
+			require.Equal(t, 32, requests.first)
+			if name == "equal" {
+				require.Equal(t, 1, requests.calls)
+			}
+		})
+	}
+	t.Run("context cancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		cancel()
+		_, _, _, err := build(els).DiffBelowRoot(ctx, build(nil))
+		require.ErrorIs(t, err, context.Canceled)
+	})
+}
+
+// rangeRequests records what a diff asks the remote for
+type rangeRequests struct {
+	Remote
+	calls, first int
+	root         bool
+}
+
+func (r *rangeRequests) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) ([]RangeResult, error) {
+	r.calls++
+	if r.calls == 1 {
+		r.first = len(ranges)
+	}
+	for _, rg := range ranges {
+		if rg.From == 0 && rg.To == math.MaxUint64 {
+			r.root = true
+		}
+	}
+	return r.Remote.Ranges(ctx, ranges, resBuf)
+}
+
+func TestDiff_RangeBelowLeaf(t *testing.T) {
+	ctx := context.Background()
+	const bucketBits, childBits = 5, 10
+	inBucket := func(hash uint64) bool { return hash>>(64-bucketBits) == 0 }
+	inChild := func(hash uint64) bool { return hash>>(64-childBits) == 0 }
+	// b divides root bucket 0 and holds nothing in its child 0, where a holds its only id
+	b := New(32, 256).(CompareDiff)
+	for _, id := range idsMatching(257, func(hash uint64) bool { return inBucket(hash) && !inChild(hash) }) {
+		b.Set(Element{Id: id, Head: "h"})
+	}
+	onlyA := idsMatching(1, inChild)[0]
+	a := New(32, 256).(CompareDiff)
+	a.Set(Element{Id: onlyA, Head: "h"})
+	child := prefixTuple(0, childBits)
+
+	t.Run("hashes like a leaf", func(t *testing.T) {
+		below, err := a.Ranges(ctx, []Range{{From: child.from, To: child.to}}, nil)
+		require.NoError(t, err)
+		require.Equal(t, []Element{{Id: onlyA, Head: "h"}}, below[0].Elements)
+		require.Equal(t, 1, below[0].Count)
+		// the same range is a leaf once bucket 0 is divided
+		c := New(32, 256)
+		c.Set(b.Elements()...)
+		c.Set(Element{Id: onlyA, Head: "h"})
+		leaf, err := c.Ranges(ctx, []Range{{From: child.from, To: child.to}}, nil)
+		require.NoError(t, err)
+		require.Empty(t, leaf[0].Elements)
+		require.NotEmpty(t, leaf[0].Hash)
+		require.Equal(t, leaf[0].Hash, below[0].Hash)
+
+		empty, err := a.Ranges(ctx, []Range{{From: child.to + 1, To: 2*child.to + 1}}, nil)
+		require.NoError(t, err)
+		require.Nil(t, empty[0].Hash)
+		require.Zero(t, empty[0].Count)
+	})
+	t.Run("differs from an empty leaf", func(t *testing.T) {
+		newIds, changedIds, removedIds, err := a.Diff(ctx, b)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, changedIds)
+		require.Equal(t, []string{onlyA}, removedIds)
+
+		newIds, changedIds, removedIds, err = b.Diff(ctx, a)
+		require.NoError(t, err)
+		require.Equal(t, []string{onlyA}, newIds)
+		require.Empty(t, changedIds)
+		require.Len(t, removedIds, 257)
+
+		newIds, ourChangedIds, theirChangedIds, removedIds, err := a.CompareDiff(ctx, b)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, ourChangedIds)
+		require.Empty(t, theirChangedIds)
+		require.Equal(t, []string{onlyA}, removedIds)
+	})
+	t.Run("equals a leaf with the same elements", func(t *testing.T) {
+		c := New(32, 256)
+		c.Set(b.Elements()...)
+		c.Set(Element{Id: onlyA, Head: "h"})
+		// the walk reaches child 0 of bucket 0, held below a leaf by a and as a leaf by c:
+		// equal hashes settle it without fetching elements
+		remote := &elementRequests{Remote: c, ranges: map[rangeTuple]int{}}
+		newIds, changedIds, removedIds, err := a.Diff(ctx, remote)
+		require.NoError(t, err)
+		require.Len(t, newIds, 257)
+		require.Empty(t, changedIds)
+		require.Empty(t, removedIds)
+		require.Zero(t, remote.ranges[child])
+	})
+}
+
+// elementRequests counts the ranges requested with elements
+type elementRequests struct {
+	Remote
+	ranges map[rangeTuple]int
+}
+
+func (r *elementRequests) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) ([]RangeResult, error) {
+	for _, rg := range ranges {
+		if rg.Elements {
+			r.ranges[rangeTuple{from: rg.From, to: rg.To}]++
+		}
+	}
+	return r.Remote.Ranges(ctx, ranges, resBuf)
+}
+
+func TestDiff_ConcurrentSet(t *testing.T) {
+	ctx := context.Background()
+	// the remote fills root bucket 0 beyond the threshold and leaves the other buckets empty,
+	// so the local side reads its own elements of those buckets while comparing
+	remote := New(16, 16)
+	for _, id := range idsWithPrefix(0, 4, 17) {
+		remote.Set(Element{Id: id, Head: id})
+	}
+	local := New(16, 16).(CompareDiff)
+	els := make([]Element, 20000)
+	for i := range els {
+		els[i] = Element{Id: fmt.Sprintf("l%d", i), Head: "h"}
+	}
+	local.Set(els...)
+	newIds, _, removedIds, err := local.Diff(ctx, remote)
+	require.NoError(t, err)
+	require.Len(t, newIds, 17)
+	require.Len(t, removedIds, len(els))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 3000; i++ {
+			local.Set(Element{Id: fmt.Sprintf("n%d", i), Head: "h"})
+			if i%3 == 0 {
+				_ = local.RemoveId(els[i].Id)
+			}
+		}
+	}()
+	for running := true; running; {
+		select {
+		case <-done:
+			running = false
+		default:
+		}
+		_, _, _, err = local.Diff(ctx, remote)
+		require.NoError(t, err)
+		_, _, _, _, err = local.CompareDiff(ctx, remote)
+		require.NoError(t, err)
+	}
+}
+
 func BenchmarkDiff_Ranges(b *testing.B) {
 	d := New(16, 16)
 	for i := 0; i < 10000; i++ {

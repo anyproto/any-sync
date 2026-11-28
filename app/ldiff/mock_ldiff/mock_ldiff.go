@@ -59,6 +59,23 @@ func (mr *MockDiffMockRecorder) Diff(ctx, dl any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Diff", reflect.TypeOf((*MockDiff)(nil).Diff), ctx, dl)
 }
 
+// DiffBelowRoot mocks base method.
+func (m *MockDiff) DiffBelowRoot(ctx context.Context, dl ldiff.Remote) ([]string, []string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiffBelowRoot", ctx, dl)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].([]string)
+	ret2, _ := ret[2].([]string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// DiffBelowRoot indicates an expected call of DiffBelowRoot.
+func (mr *MockDiffMockRecorder) DiffBelowRoot(ctx, dl any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffBelowRoot", reflect.TypeOf((*MockDiff)(nil).DiffBelowRoot), ctx, dl)
+}
+
 // DiffType mocks base method.
 func (m *MockDiff) DiffType() spacesyncproto.DiffType {
 	m.ctrl.T.Helper()
